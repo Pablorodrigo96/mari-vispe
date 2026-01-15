@@ -132,7 +132,7 @@ export const ValuationReportDialog = ({
 
     const financialInfo = [
       ['Faturamento Anual:', formatFullCurrency(result.inputs.annualRevenue)],
-      ['Margem EBITDA:', `${result.inputs.ebitdaPercentage}%`],
+      ['Margem de Lucro Líquido:', `${result.inputs.ebitdaPercentage}%`],
       ['Ativos Tangíveis:', formatFullCurrency(result.inputs.tangibleAssets)],
       ['Endividamento:', formatFullCurrency(result.inputs.totalDebt)],
     ];
@@ -335,7 +335,7 @@ export const ValuationReportDialog = ({
                   <span className="font-medium">{formatFullCurrency(result.inputs.annualRevenue)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Margem EBITDA</span>
+                  <span className="text-muted-foreground">Margem de Lucro Líquido</span>
                   <span className="font-medium">{result.inputs.ebitdaPercentage}%</span>
                 </div>
                 <div className="flex justify-between">
