@@ -1,53 +1,68 @@
-import { BarChart3, Calculator, TrendingUp } from 'lucide-react';
+import { TrendingUp, Calculator, BarChart3 } from 'lucide-react';
 
 const methodologies = [
   {
-    icon: BarChart3,
+    icon: TrendingUp,
     title: 'EV/Receita',
-    description: 'Valuation baseado em múltiplos de receita do seu setor.',
+    description: 'Valuation baseado em múltiplos de receita do seu setor no mercado brasileiro.',
   },
   {
     icon: Calculator,
     title: 'EV/EBITDA',
-    description: 'Múltiplo sobre o lucro operacional antes de depreciação.',
+    description: 'Múltiplo sobre o lucro operacional antes de depreciação e amortização.',
   },
   {
-    icon: TrendingUp,
+    icon: BarChart3,
     title: 'Preço/Lucro (P/L)',
-    description: 'Relação entre valor de mercado e lucro líquido.',
+    description: 'Relação entre valor de mercado e lucro líquido da empresa.',
   },
 ];
 
 export const MethodologySection = () => {
   return (
-    <section id="metodologia" className="py-16 bg-background">
+    <section className="py-16 bg-muted/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
-            Metodologia de Avaliação
+            Metodologia de Múltiplos de Mercado
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Utilizamos múltiplos de mercado baseados em transações reais do mercado brasileiro (2024/2025) para estimar o valor da sua empresa.
+            Utilizamos múltiplos de mercado baseados em transações reais do mercado brasileiro 
+            (2024/2025) para estimar o valor da sua empresa com precisão.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {methodologies.map((method, index) => (
-            <div
-              key={index}
-              className="flex flex-col items-center text-center p-8 rounded-xl bg-card border border-border hover:border-gold/30 transition-colors shadow-card"
-            >
-              <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mb-5">
-                <method.icon className="w-7 h-7 text-gold" />
+        <div className="grid md:grid-cols-3 gap-6">
+          {methodologies.map((method, index) => {
+            const Icon = method.icon;
+            return (
+              <div
+                key={index}
+                className="bg-card border border-border rounded-xl p-6 text-center hover:border-accent/30 transition-colors"
+              >
+                <div className="w-14 h-14 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icon className="w-7 h-7 text-accent" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {method.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {method.description}
+                </p>
               </div>
-              <h3 className="font-semibold text-lg text-foreground mb-3">
-                {method.title}
-              </h3>
-              <p className="text-muted-foreground">
-                {method.description}
-              </p>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+
+        <div className="mt-12 bg-card border border-border rounded-xl p-6 max-w-3xl mx-auto">
+          <h3 className="font-semibold text-foreground mb-3 text-center">
+            Como funciona o "Mashup Value"?
+          </h3>
+          <p className="text-sm text-muted-foreground text-center">
+            O Mashup Value é calculado como a <strong>média dos três métodos</strong> de valuation. 
+            Isso proporciona uma estimativa mais equilibrada, combinando diferentes perspectivas 
+            de valor: crescimento (Receita), rentabilidade operacional (EBITDA) e resultado final (Lucro).
+          </p>
         </div>
       </div>
     </section>

@@ -2,43 +2,29 @@ import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WizardProgress } from './WizardProgress';
-import { StepBasicData } from './StepBasicData';
-import { StepPerformance } from './StepPerformance';
+import { StepCompanyProfile } from './StepCompanyProfile';
+import { StepFinancialData } from './StepFinancialData';
 import { StepIdentification } from './StepIdentification';
 import { ValuationReportDialog } from './ValuationReportDialog';
 import { toast } from 'sonner';
-import {
-  calculateValuation,
-  parseCurrency,
-  mapCompanyType,
-  mapRecurrence,
-  mapDependency,
-  ValuationResult,
-} from '@/lib/valuationCalculator';
+import { calculateValuation, parseCurrency, ValuationResult } from '@/lib/valuationCalculator';
+import { Header } from '@/components/layout/Header';
 
 interface ValuationWizardProps {
   onBack: () => void;
 }
 
 interface FormData {
-  // Step 1
+  // Step 1 - Perfil
   companyType: string;
   segment: string;
+  // Step 2 - Financeiro
   annualRevenue: string;
-  ebitdaPercentage: string;
-  tangibleAssets: string;
-  totalDebt: string;
-  // Step 2
-  revenueRecurrence: string;
-  founderDependency: string;
-  // Step 3
+  ebitdaMargin: string;
+  netProfit: string;
+  // Step 3 - Lead
   fullName: string;
   companyName: string;
-  website: string;
-  state: string;
-  city: string;
-  foundingMonth: string;
-  foundingYear: string;
   email: string;
   phone: string;
   acceptTerms: boolean;
@@ -48,18 +34,10 @@ const initialFormData: FormData = {
   companyType: '',
   segment: '',
   annualRevenue: '',
-  ebitdaPercentage: '',
-  tangibleAssets: '',
-  totalDebt: '',
-  revenueRecurrence: '',
-  founderDependency: '',
+  ebitdaMargin: '',
+  netProfit: '',
   fullName: '',
   companyName: '',
-  website: '',
-  state: '',
-  city: '',
-  foundingMonth: '',
-  foundingYear: '',
   email: '',
   phone: '',
   acceptTerms: false,
@@ -88,22 +66,18 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
           toast.error('Selecione o segmento da empresa');
           return false;
         }
+        return true;
+      case 1:
         if (!formData.annualRevenue) {
           toast.error('Informe o faturamento bruto');
           return false;
         }
-        if (!formData.ebitdaPercentage) {
-          toast.error('Informe o EBITDA em %');
+        if (!formData.ebitdaMargin) {
+          toast.error('Informe a margem EBITDA');
           return false;
         }
-        return true;
-      case 1:
-        if (!formData.revenueRecurrence) {
-          toast.error('Selecione o nível de recorrência');
-          return false;
-        }
-        if (!formData.founderDependency) {
-          toast.error('Selecione o nível de dependência do fundador');
+        if (!formData.netProfit) {
+          toast.error('Informe o lucro líquido (0 se prejuízo)');
           return false;
         }
         return true;
@@ -114,18 +88,6 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
         }
         if (!formData.companyName.trim()) {
           toast.error('Informe o nome da empresa');
-          return false;
-        }
-        if (!formData.state) {
-          toast.error('Selecione o estado');
-          return false;
-        }
-        if (!formData.city.trim()) {
-          toast.error('Informe a cidade');
-          return false;
-        }
-        if (!formData.foundingMonth || !formData.foundingYear) {
-          toast.error('Informe a data de fundação');
           return false;
         }
         if (!formData.email.trim() || !formData.email.includes('@')) {
@@ -152,7 +114,6 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
     if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Submit form
       handleSubmit();
     }
   };
@@ -166,27 +127,18 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
   };
 
   const handleSubmit = () => {
-    // Prepare inputs for calculation
     const inputs = {
-      annualRevenue: parseCurrency(formData.annualRevenue),
-      ebitdaPercentage: parseFloat(formData.ebitdaPercentage) || 0,
-      companyType: mapCompanyType(formData.companyType),
-      totalDebt: parseCurrency(formData.totalDebt),
-      tangibleAssets: parseCurrency(formData.tangibleAssets),
-      revenueRecurrence: mapRecurrence(formData.revenueRecurrence),
-      founderDependency: mapDependency(formData.founderDependency),
-      companyName: formData.companyName,
+      companyType: formData.companyType,
       segment: formData.segment,
+      annualRevenue: parseCurrency(formData.annualRevenue),
+      ebitdaMargin: parseFloat(formData.ebitdaMargin) || 0,
+      netProfit: parseCurrency(formData.netProfit),
       fullName: formData.fullName,
-      state: formData.state,
-      city: formData.city,
-      foundingMonth: formData.foundingMonth,
-      foundingYear: formData.foundingYear,
+      companyName: formData.companyName,
       email: formData.email,
-      website: formData.website,
+      phone: formData.phone,
     };
 
-    // Calculate valuation
     const result = calculateValuation(inputs);
     setValuationResult(result);
     setShowReport(true);
@@ -209,24 +161,21 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
     switch (currentStep) {
       case 0:
         return (
-          <StepBasicData
+          <StepCompanyProfile
             data={{
               companyType: formData.companyType,
               segment: formData.segment,
-              annualRevenue: formData.annualRevenue,
-              ebitdaPercentage: formData.ebitdaPercentage,
-              tangibleAssets: formData.tangibleAssets,
-              totalDebt: formData.totalDebt,
             }}
             onChange={updateFormData}
           />
         );
       case 1:
         return (
-          <StepPerformance
+          <StepFinancialData
             data={{
-              revenueRecurrence: formData.revenueRecurrence,
-              founderDependency: formData.founderDependency,
+              annualRevenue: formData.annualRevenue,
+              ebitdaMargin: formData.ebitdaMargin,
+              netProfit: formData.netProfit,
             }}
             onChange={updateFormData}
           />
@@ -237,11 +186,6 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
             data={{
               fullName: formData.fullName,
               companyName: formData.companyName,
-              website: formData.website,
-              state: formData.state,
-              city: formData.city,
-              foundingMonth: formData.foundingMonth,
-              foundingYear: formData.foundingYear,
               email: formData.email,
               phone: formData.phone,
               acceptTerms: formData.acceptTerms,
@@ -255,43 +199,46 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="container mx-auto px-4">
-        <div className="max-w-3xl mx-auto">
-          {/* Back button */}
-          <button
-            onClick={handlePrevious}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {currentStep === 0 ? 'Voltar' : 'Passo anterior'}
-          </button>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="pt-24 pb-8">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            {/* Back button */}
+            <button
+              onClick={handlePrevious}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {currentStep === 0 ? 'Voltar' : 'Passo anterior'}
+            </button>
 
-          {/* Progress */}
-          <WizardProgress currentStep={currentStep} totalSteps={totalSteps} />
+            {/* Progress */}
+            <WizardProgress currentStep={currentStep} totalSteps={totalSteps} />
 
-          {/* Form Card */}
-          <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-card">
-            {renderStep()}
+            {/* Form Card */}
+            <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-card">
+              {renderStep()}
 
-            {/* Navigation */}
-            <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border">
-              <Button
-                onClick={handleNext}
-                className="bg-gold hover:bg-gold/90 text-gold-foreground min-w-[160px]"
-              >
-                {currentStep === totalSteps - 1 ? (
-                  <>
-                    Calcular Valuation
-                    <Send className="w-4 h-4 ml-2" />
-                  </>
-                ) : (
-                  <>
-                    Próximo
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </Button>
+              {/* Navigation */}
+              <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border">
+                <Button
+                  onClick={handleNext}
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[160px]"
+                >
+                  {currentStep === totalSteps - 1 ? (
+                    <>
+                      Gerar Valuation Agora
+                      <Send className="w-4 h-4 ml-2" />
+                    </>
+                  ) : (
+                    <>
+                      Próximo
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

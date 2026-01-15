@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ValuationHeader } from '@/components/valuation/ValuationHeader';
+import { Header } from '@/components/layout/Header';
 import { ValuationHero } from '@/components/valuation/ValuationHero';
 import { MethodologySection } from '@/components/valuation/MethodologySection';
 import { TrustSection } from '@/components/valuation/TrustSection';
@@ -26,7 +26,7 @@ const Valuation = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <ValuationHeader onStartDiagnostic={handleStartDiagnostic} />
+      <Header />
       <ValuationHero onStartDiagnostic={handleStartDiagnostic} />
       <MethodologySection />
       <TrustSection />
