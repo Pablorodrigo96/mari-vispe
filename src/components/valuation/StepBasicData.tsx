@@ -128,7 +128,7 @@ export const StepBasicData = ({ data, onChange }: StepBasicDataProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="ebitdaPercentage">EBITDA em % *</Label>
+          <Label htmlFor="ebitdaPercentage">Lucro Líquido em % *</Label>
           <div className="relative">
             <Input
               id="ebitdaPercentage"
