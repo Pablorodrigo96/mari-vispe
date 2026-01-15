@@ -102,7 +102,7 @@ export const StepBasicData = ({ data, onChange }: StepBasicDataProps) => {
           </SelectTrigger>
           <SelectContent>
             {segments.map((segment) => (
-              <SelectItem key={segment} value={segment.toLowerCase()}>
+              <SelectItem key={segment} value={segment}>
                 {segment}
               </SelectItem>
             ))}

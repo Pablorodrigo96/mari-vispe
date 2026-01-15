@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, X, ArrowLeft, TrendingUp, Building2, Calculator, FileText } from 'lucide-react';
+import { Download, X, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3 } from 'lucide-react';
 import { ValuationResult } from '@/lib/valuationCalculator';
 import { formatFullCurrency } from '@/lib/formatters';
 import jsPDF from 'jspdf';
@@ -35,7 +35,7 @@ export const ValuationReportDialog = ({
 }: ValuationReportDialogProps) => {
   const reportRef = useRef<HTMLDivElement>(null);
 
-  const formatPercent = (value: number) => `${(value * 100).toFixed(2)}%`;
+  const formatMultiple = (min: number, max: number) => `${min.toFixed(1)}x - ${max.toFixed(1)}x`;
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('pt-BR', {
@@ -43,26 +43,6 @@ export const ValuationReportDialog = ({
       month: 'long',
       year: 'numeric',
     });
-  };
-
-  const getRecurrenceLabel = (value: string) => {
-    const labels: Record<string, string> = {
-      none: 'Nenhuma',
-      partial: 'Parcial',
-      moderate: 'Moderada',
-      high: 'Alta',
-    };
-    return labels[value] || value;
-  };
-
-  const getDependencyLabel = (value: string) => {
-    const labels: Record<string, string> = {
-      totally: 'Totalmente dependente',
-      partially: 'Parcialmente dependente',
-      little: 'Pouco dependente',
-      independent: 'Independente',
-    };
-    return labels[value] || value;
   };
 
   const handleDownloadPDF = () => {
@@ -87,7 +67,7 @@ export const ValuationReportDialog = ({
 
     // Header text
     addText('DEALFLOW', margin, 20, { fontSize: 24, fontStyle: 'bold', color: [212, 175, 55] }); // Gold
-    addText('Laudo de Valuation', margin, 32, { fontSize: 14, color: [255, 255, 255] });
+    addText('Laudo de Valuation por Múltiplos', margin, 32, { fontSize: 14, color: [255, 255, 255] });
     addText(`Emitido em ${formatDate(result.calculatedAt)}`, margin, 42, { fontSize: 10, color: [200, 200, 200] });
 
     yPos = 70;
@@ -111,7 +91,7 @@ export const ValuationReportDialog = ({
 
     const companyInfo = [
       ['Empresa:', result.inputs.companyName],
-      ['Segmento:', result.inputs.segment],
+      ['Segmento:', result.multiplesUsed.segment],
       ['Localização:', `${result.inputs.city}, ${result.inputs.state}`],
       ['Fundação:', `${result.inputs.foundingMonth}/${result.inputs.foundingYear}`],
     ];
@@ -131,9 +111,9 @@ export const ValuationReportDialog = ({
     yPos += 10;
 
     const financialInfo = [
-      ['Faturamento Anual:', formatFullCurrency(result.inputs.annualRevenue)],
-      ['Margem de Lucro Líquido:', `${result.inputs.ebitdaPercentage}%`],
-      ['Ativos Tangíveis:', formatFullCurrency(result.inputs.tangibleAssets)],
+      ['Faturamento Anual:', formatFullCurrency(result.metrics.revenue)],
+      ['EBITDA/Lucro Líquido:', formatFullCurrency(result.metrics.ebitda)],
+      ['Margem:', `${result.inputs.ebitdaPercentage}%`],
       ['Endividamento:', formatFullCurrency(result.inputs.totalDebt)],
     ];
 
@@ -145,39 +125,38 @@ export const ValuationReportDialog = ({
 
     yPos += 10;
 
-    // Calculation Premises
-    addText('PREMISSAS DO CÁLCULO', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
+    // Multiples Used Section
+    addText('MÚLTIPLOS UTILIZADOS', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
     yPos += 8;
     doc.line(margin, yPos, margin + 55, yPos);
     yPos += 10;
 
-    const premisesInfo = [
-      ['Taxa de Desconto:', formatPercent(result.discountRate)],
-      ['Taxa de Crescimento:', formatPercent(result.growthRate)],
-      ['Crescimento Perpétuo:', formatPercent(result.perpetualGrowth)],
-      ['Recorrência de Receita:', getRecurrenceLabel(result.inputs.revenueRecurrence)],
-      ['Dependência do Fundador:', getDependencyLabel(result.inputs.founderDependency)],
+    const multiplesInfo = [
+      ['Segmento de Referência:', result.multiplesUsed.segment],
+      ['EV/Receita:', formatMultiple(result.multiplesUsed.ev_revenue[0], result.multiplesUsed.ev_revenue[1])],
+      ['EV/EBITDA:', formatMultiple(result.multiplesUsed.ev_ebitda[0], result.multiplesUsed.ev_ebitda[1])],
+      ['P/L (Preço/Lucro):', formatMultiple(result.multiplesUsed.pe_ratio[0], result.multiplesUsed.pe_ratio[1])],
     ];
 
-    premisesInfo.forEach(([label, value]) => {
+    multiplesInfo.forEach(([label, value]) => {
       addText(label, margin, yPos, { fontSize: 10, fontStyle: 'bold' });
       addText(value, margin + 55, yPos, { fontSize: 10 });
       yPos += 6;
     });
 
-    // New page for projections
+    // New page for breakdown
     doc.addPage();
     yPos = margin;
 
-    // Projections Table
-    addText('PROJEÇÃO DE 3 ANOS', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
+    // Valuation Breakdown Table
+    addText('VALUATION POR MÉTODO', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
     yPos += 8;
-    doc.line(margin, yPos, margin + 45, yPos);
+    doc.line(margin, yPos, margin + 55, yPos);
     yPos += 10;
 
     // Table header
-    const colWidths = [20, 35, 35, 35, 35];
-    const headers = ['Ano', 'Faturamento', 'Lucro', 'FCF', 'VP'];
+    const colWidths = [45, 40, 40, 40];
+    const headers = ['Método', 'Múltiplo', 'Valor Mín', 'Valor Máx'];
     let xPos = margin;
 
     doc.setFillColor(26, 32, 44);
@@ -191,32 +170,32 @@ export const ValuationReportDialog = ({
     yPos += 8;
 
     // Table rows
-    result.projections.forEach((proj) => {
-      xPos = margin;
-      const rowData = [
-        `Ano ${proj.year}`,
-        formatFullCurrency(proj.revenue),
-        formatFullCurrency(proj.netProfit),
-        formatFullCurrency(proj.fcf),
-        formatFullCurrency(proj.presentValue),
-      ];
+    const breakdownRows = [
+      ['EV/Receita', formatMultiple(result.evByRevenue.multipleMin, result.evByRevenue.multipleMax), formatFullCurrency(result.evByRevenue.min), formatFullCurrency(result.evByRevenue.max)],
+      ['EV/EBITDA', formatMultiple(result.evByEbitda.multipleMin, result.evByEbitda.multipleMax), formatFullCurrency(result.evByEbitda.min), formatFullCurrency(result.evByEbitda.max)],
+      ['P/L (Preço/Lucro)', formatMultiple(result.evByPE.multipleMin, result.evByPE.multipleMax), formatFullCurrency(result.evByPE.min), formatFullCurrency(result.evByPE.max)],
+    ];
 
-      rowData.forEach((cell, i) => {
+    breakdownRows.forEach((row) => {
+      xPos = margin;
+      row.forEach((cell, i) => {
         addText(cell, xPos + 2, yPos, { fontSize: 9 });
         xPos += colWidths[i];
       });
       yPos += 7;
     });
 
-    // Terminal Value
-    yPos += 5;
-    addText('Valor Terminal:', margin, yPos, { fontSize: 10, fontStyle: 'bold' });
-    addText(formatFullCurrency(result.terminalValue), margin + 35, yPos, { fontSize: 10 });
-    yPos += 6;
-    addText('VP do Valor Terminal:', margin, yPos, { fontSize: 10, fontStyle: 'bold' });
-    addText(formatFullCurrency(result.terminalValuePV), margin + 45, yPos, { fontSize: 10 });
+    // Weighted average row
+    xPos = margin;
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, yPos - 4, pageWidth - 2 * margin, 8, 'F');
+    const avgRow = ['Média Ponderada', '30% / 40% / 30%', formatFullCurrency(result.valuationMin), formatFullCurrency(result.valuationMax)];
+    avgRow.forEach((cell, i) => {
+      addText(cell, xPos + 2, yPos, { fontSize: 9, fontStyle: 'bold' });
+      xPos += colWidths[i];
+    });
 
-    yPos += 15;
+    yPos += 20;
 
     // Methodology
     addText('METODOLOGIA', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
@@ -224,7 +203,7 @@ export const ValuationReportDialog = ({
     doc.line(margin, yPos, margin + 35, yPos);
     yPos += 10;
 
-    const methodologyText = `Este laudo utiliza o método de Fluxo de Caixa Descontado (DCF), que projeta os fluxos de caixa futuros da empresa e os traz a valor presente utilizando uma taxa de desconto que reflete o risco do negócio. O valor terminal considera um crescimento perpétuo de ${formatPercent(result.perpetualGrowth)} ao ano.`;
+    const methodologyText = `Este laudo utiliza o método de Valuation por Múltiplos de Mercado, que compara métricas financeiras da empresa com benchmarks do setor de ${result.multiplesUsed.segment} no mercado brasileiro (2024/2025). A média ponderada considera 30% EV/Receita, 40% EV/EBITDA e 30% P/L para balancear diferentes perspectivas de valor.`;
 
     const splitText = doc.splitTextToSize(methodologyText, pageWidth - 2 * margin);
     doc.setFontSize(10);
@@ -238,7 +217,7 @@ export const ValuationReportDialog = ({
     doc.setFillColor(255, 250, 230);
     doc.roundedRect(margin, yPos - 3, pageWidth - 2 * margin, 25, 2, 2, 'F');
     addText('AVISO LEGAL', margin + 5, yPos + 3, { fontSize: 9, fontStyle: 'bold', color: [150, 100, 0] });
-    const disclaimerText = 'Este documento é uma estimativa de valor baseada nas informações fornecidas e não constitui oferta ou garantia de valor de mercado. Recomendamos a contratação de auditoria profissional para transações.';
+    const disclaimerText = 'Este documento é uma estimativa de valor baseada nas informações fornecidas e múltiplos de mercado. Não constitui oferta ou garantia de valor. Recomendamos auditoria profissional para transações.';
     const splitDisclaimer = doc.splitTextToSize(disclaimerText, pageWidth - 2 * margin - 10);
     doc.setFontSize(8);
     doc.setTextColor(100, 80, 0);
@@ -261,7 +240,7 @@ export const ValuationReportDialog = ({
           <div className="flex items-center justify-between">
             <div>
               <Badge variant="secondary" className="bg-gold/20 text-gold border-gold/30 mb-2">
-                Laudo de Valuation
+                Laudo de Valuation por Múltiplos
               </Badge>
               <DialogTitle className="text-2xl font-bold text-white">
                 {result.inputs.companyName}
@@ -302,7 +281,7 @@ export const ValuationReportDialog = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Segmento</span>
-                  <span className="font-medium">{result.inputs.segment}</span>
+                  <span className="font-medium">{result.multiplesUsed.segment}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Localização</span>
@@ -332,89 +311,94 @@ export const ValuationReportDialog = ({
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Faturamento Anual</span>
-                  <span className="font-medium">{formatFullCurrency(result.inputs.annualRevenue)}</span>
+                  <span className="font-medium">{formatFullCurrency(result.metrics.revenue)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Margem de Lucro Líquido</span>
+                  <span className="text-muted-foreground">EBITDA / Lucro Líquido</span>
+                  <span className="font-medium">{formatFullCurrency(result.metrics.ebitda)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Margem</span>
                   <span className="font-medium">{result.inputs.ebitdaPercentage}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ativos Tangíveis</span>
-                  <span className="font-medium">{formatFullCurrency(result.inputs.tangibleAssets)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Endividamento</span>
                   <span className="font-medium">{formatFullCurrency(result.inputs.totalDebt)}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ativos Tangíveis</span>
+                  <span className="font-medium">{formatFullCurrency(result.inputs.tangibleAssets)}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Calculation Premises */}
+          {/* Multiples Used */}
           <div className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4 text-gold" />
               </div>
-              <h3 className="font-semibold text-foreground">Premissas do Cálculo</h3>
+              <h3 className="font-semibold text-foreground">Múltiplos de Mercado - {result.multiplesUsed.segment}</h3>
             </div>
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <div className="grid sm:grid-cols-3 gap-4 text-sm">
               <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-muted-foreground text-xs">Taxa de Desconto</p>
-                <p className="font-semibold text-lg">{formatPercent(result.discountRate)}</p>
+                <p className="text-muted-foreground text-xs">EV/Receita</p>
+                <p className="font-semibold text-lg">{formatMultiple(result.multiplesUsed.ev_revenue[0], result.multiplesUsed.ev_revenue[1])}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-muted-foreground text-xs">Taxa de Crescimento</p>
-                <p className="font-semibold text-lg">{formatPercent(result.growthRate)}</p>
+                <p className="text-muted-foreground text-xs">EV/EBITDA</p>
+                <p className="font-semibold text-lg">{formatMultiple(result.multiplesUsed.ev_ebitda[0], result.multiplesUsed.ev_ebitda[1])}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-muted-foreground text-xs">Crescimento Perpétuo</p>
-                <p className="font-semibold text-lg">{formatPercent(result.perpetualGrowth)}</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-muted-foreground text-xs">Recorrência de Receita</p>
-                <p className="font-semibold">{getRecurrenceLabel(result.inputs.revenueRecurrence)}</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-muted-foreground text-xs">Dependência do Fundador</p>
-                <p className="font-semibold">{getDependencyLabel(result.inputs.founderDependency)}</p>
+                <p className="text-muted-foreground text-xs">P/L (Preço/Lucro)</p>
+                <p className="font-semibold text-lg">{formatMultiple(result.multiplesUsed.pe_ratio[0], result.multiplesUsed.pe_ratio[1])}</p>
               </div>
             </div>
           </div>
 
-          {/* 3-Year Projection Table */}
+          {/* Valuation Breakdown Table */}
           <div className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-gold" />
+                <BarChart3 className="w-4 h-4 text-gold" />
               </div>
-              <h3 className="font-semibold text-foreground">Projeção de 3 Anos</h3>
+              <h3 className="font-semibold text-foreground">Valuation por Método</h3>
             </div>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-navy">
-                    <TableHead className="text-white">Ano</TableHead>
-                    <TableHead className="text-white text-right">Faturamento</TableHead>
-                    <TableHead className="text-white text-right">Lucro Líquido</TableHead>
-                    <TableHead className="text-white text-right">FCF</TableHead>
-                    <TableHead className="text-white text-right">Valor Presente</TableHead>
+                    <TableHead className="text-white">Método</TableHead>
+                    <TableHead className="text-white">Peso</TableHead>
+                    <TableHead className="text-white text-right">Valor Mínimo</TableHead>
+                    <TableHead className="text-white text-right">Valor Máximo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {result.projections.map((proj) => (
-                    <TableRow key={proj.year}>
-                      <TableCell className="font-medium">Ano {proj.year}</TableCell>
-                      <TableCell className="text-right">{formatFullCurrency(proj.revenue)}</TableCell>
-                      <TableCell className="text-right">{formatFullCurrency(proj.netProfit)}</TableCell>
-                      <TableCell className="text-right">{formatFullCurrency(proj.fcf)}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatFullCurrency(proj.presentValue)}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="bg-muted/50">
-                    <TableCell colSpan={3} className="font-semibold">Valor Terminal</TableCell>
-                    <TableCell className="text-right">{formatFullCurrency(result.terminalValue)}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatFullCurrency(result.terminalValuePV)}</TableCell>
+                  <TableRow>
+                    <TableCell className="font-medium">EV/Receita</TableCell>
+                    <TableCell>30%</TableCell>
+                    <TableCell className="text-right">{formatFullCurrency(result.evByRevenue.min)}</TableCell>
+                    <TableCell className="text-right">{formatFullCurrency(result.evByRevenue.max)}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">EV/EBITDA</TableCell>
+                    <TableCell>40%</TableCell>
+                    <TableCell className="text-right">{formatFullCurrency(result.evByEbitda.min)}</TableCell>
+                    <TableCell className="text-right">{formatFullCurrency(result.evByEbitda.max)}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">P/L (Preço/Lucro)</TableCell>
+                    <TableCell>30%</TableCell>
+                    <TableCell className="text-right">{formatFullCurrency(result.evByPE.min)}</TableCell>
+                    <TableCell className="text-right">{formatFullCurrency(result.evByPE.max)}</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-gold/10 font-semibold">
+                    <TableCell>Média Ponderada</TableCell>
+                    <TableCell>100%</TableCell>
+                    <TableCell className="text-right">{formatFullCurrency(result.valuationMin)}</TableCell>
+                    <TableCell className="text-right">{formatFullCurrency(result.valuationMax)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -425,14 +409,14 @@ export const ValuationReportDialog = ({
           <div className="bg-muted/30 border border-border rounded-xl p-5">
             <h3 className="font-semibold text-foreground mb-3">Metodologia</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Este laudo utiliza o método de <strong>Fluxo de Caixa Descontado (DCF)</strong>, que projeta os fluxos de caixa futuros da empresa e os traz a valor presente utilizando uma taxa de desconto que reflete o risco do negócio. O valor terminal considera um crescimento perpétuo de {formatPercent(result.perpetualGrowth)} ao ano, que representa uma expectativa conservadora de crescimento de longo prazo alinhada com a economia brasileira.
+              Este laudo utiliza o método de <strong>Valuation por Múltiplos de Mercado</strong>, que compara métricas financeiras da empresa com benchmarks do setor de <strong>{result.multiplesUsed.segment}</strong> no mercado brasileiro (2024/2025). A média ponderada considera 30% EV/Receita, 40% EV/EBITDA e 30% P/L para balancear diferentes perspectivas de valor. O resultado final é ajustado pela dívida líquida da empresa.
             </p>
           </div>
 
           {/* Disclaimer */}
           <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
             <p className="text-xs text-amber-800 dark:text-amber-200">
-              <strong>Aviso Legal:</strong> Este documento é uma estimativa de valor baseada nas informações fornecidas pelo usuário e metodologias padrão de mercado. Não constitui uma oferta, proposta ou garantia de valor de mercado. Para transações de M&A, recomendamos a contratação de auditoria profissional e assessoria especializada.
+              <strong>Aviso Legal:</strong> Este documento é uma estimativa de valor baseada nas informações fornecidas pelo usuário e múltiplos de mercado. Não constitui uma oferta, proposta ou garantia de valor de mercado. Para transações de M&A, recomendamos a contratação de auditoria profissional e assessoria especializada.
             </p>
           </div>
         </div>
