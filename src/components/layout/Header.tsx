@@ -15,6 +15,7 @@ const navigation = [
   { name: 'Vender Empresa', href: '/sell' },
   { name: 'Valuation', href: '/valuation' },
   { name: 'Investidores', href: '/investors' },
+  { name: 'Captação', href: '/capital' },
 ];
 
 export function Header() {
