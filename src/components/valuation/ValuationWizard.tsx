@@ -5,8 +5,16 @@ import { WizardProgress } from './WizardProgress';
 import { StepBasicData } from './StepBasicData';
 import { StepPerformance } from './StepPerformance';
 import { StepIdentification } from './StepIdentification';
-import { ValuationSuccess } from './ValuationSuccess';
+import { ValuationReportDialog } from './ValuationReportDialog';
 import { toast } from 'sonner';
+import {
+  calculateValuation,
+  parseCurrency,
+  mapCompanyType,
+  mapRecurrence,
+  mapDependency,
+  ValuationResult,
+} from '@/lib/valuationCalculator';
 
 interface ValuationWizardProps {
   onBack: () => void;
@@ -60,7 +68,8 @@ const initialFormData: FormData = {
 export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [valuationResult, setValuationResult] = useState<ValuationResult | null>(null);
 
   const totalSteps = 3;
 
@@ -157,21 +166,44 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
   };
 
   const handleSubmit = () => {
-    // Simulate form submission
-    toast.success('Dados enviados com sucesso!');
-    setIsSubmitted(true);
+    // Prepare inputs for calculation
+    const inputs = {
+      annualRevenue: parseCurrency(formData.annualRevenue),
+      ebitdaPercentage: parseFloat(formData.ebitdaPercentage) || 0,
+      companyType: mapCompanyType(formData.companyType),
+      totalDebt: parseCurrency(formData.totalDebt),
+      tangibleAssets: parseCurrency(formData.tangibleAssets),
+      revenueRecurrence: mapRecurrence(formData.revenueRecurrence),
+      founderDependency: mapDependency(formData.founderDependency),
+      companyName: formData.companyName,
+      segment: formData.segment,
+      fullName: formData.fullName,
+      state: formData.state,
+      city: formData.city,
+      foundingMonth: formData.foundingMonth,
+      foundingYear: formData.foundingYear,
+      email: formData.email,
+      website: formData.website,
+    };
+
+    // Calculate valuation
+    const result = calculateValuation(inputs);
+    setValuationResult(result);
+    setShowReport(true);
+    toast.success('Valuation calculado com sucesso!');
   };
 
   const handleBackToStart = () => {
     setFormData(initialFormData);
     setCurrentStep(0);
-    setIsSubmitted(false);
+    setShowReport(false);
+    setValuationResult(null);
     onBack();
   };
 
-  if (isSubmitted) {
-    return <ValuationSuccess onBackToStart={handleBackToStart} />;
-  }
+  const handleCloseReport = () => {
+    setShowReport(false);
+  };
 
   const renderStep = () => {
     switch (currentStep) {
@@ -264,6 +296,16 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
           </div>
         </div>
       </div>
+
+      {/* Valuation Report Dialog */}
+      {valuationResult && (
+        <ValuationReportDialog
+          open={showReport}
+          onClose={handleCloseReport}
+          onBackToStart={handleBackToStart}
+          result={valuationResult}
+        />
+      )}
     </div>
   );
 };
