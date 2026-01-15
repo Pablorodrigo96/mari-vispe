@@ -1,0 +1,34 @@
+import { ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface ValuationFooterCTAProps {
+  onStartDiagnostic: () => void;
+}
+
+export const ValuationFooterCTA = ({ onStartDiagnostic }: ValuationFooterCTAProps) => {
+  return (
+    <section className="py-16 gradient-navy">
+      <div className="container mx-auto px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-primary-foreground mb-4">
+            Pronto para descobrir o valor do seu negócio?
+          </h2>
+          <p className="text-primary-foreground/80 mb-8 text-lg">
+            Faça o diagnóstico gratuito e receba seu laudo profissional em instantes.
+          </p>
+          <Button
+            onClick={onStartDiagnostic}
+            size="lg"
+            className="bg-gold hover:bg-gold/90 text-gold-foreground text-lg px-8 py-6 shadow-gold"
+          >
+            Iniciar Diagnóstico Agora
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+          <p className="mt-6 text-primary-foreground/60 text-sm">
+            © {new Date().getFullYear()} DealFlow. Todos os direitos reservados.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+};
