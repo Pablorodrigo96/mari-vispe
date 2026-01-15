@@ -1,39 +1,24 @@
-// Taxa SELIC atual (pode ser atualizada)
-const SELIC_RATE = 0.15;
-
-// Parâmetros por tipo de empresa
-const companyParams: Record<string, { growth: number; invest: number; debtFactor: number }> = {
-  traditional: { growth: 0.10, invest: 0.03, debtFactor: 0.05 },
-  'new-economy': { growth: 0.15, invest: 0.05, debtFactor: 0.03 },
-  startup: { growth: 0.25, invest: 0.08, debtFactor: 0.02 },
+// Múltiplos de Mercado - Mercado Brasileiro 2024/2025
+export const marketMultiples: Record<string, { ev_revenue: [number, number]; ev_ebitda: [number, number]; pe_ratio: [number, number] }> = {
+  "SaaS": { ev_revenue: [4.0, 8.0], ev_ebitda: [12.0, 20.0], pe_ratio: [25.0, 40.0] },
+  "Fintech": { ev_revenue: [5.0, 9.0], ev_ebitda: [15.0, 25.0], pe_ratio: [30.0, 50.0] },
+  "E-commerce": { ev_revenue: [0.8, 2.5], ev_ebitda: [10.0, 18.0], pe_ratio: [20.0, 35.0] },
+  "Saúde": { ev_revenue: [1.5, 3.0], ev_ebitda: [6.0, 10.0], pe_ratio: [12.0, 18.0] },
+  "Agronegócio": { ev_revenue: [1.0, 2.5], ev_ebitda: [5.0, 8.0], pe_ratio: [8.0, 12.0] },
+  "Educação": { ev_revenue: [1.2, 2.0], ev_ebitda: [5.5, 8.0], pe_ratio: [10.0, 15.0] },
+  "Logística": { ev_revenue: [0.9, 1.6], ev_ebitda: [4.5, 7.5], pe_ratio: [10.0, 14.0] },
+  "Indústria": { ev_revenue: [0.8, 1.5], ev_ebitda: [5.0, 7.0], pe_ratio: [8.0, 12.0] },
+  "Varejo": { ev_revenue: [0.3, 0.8], ev_ebitda: [4.0, 7.0], pe_ratio: [9.0, 14.0] },
+  "Serviços": { ev_revenue: [1.0, 2.0], ev_ebitda: [6.0, 9.0], pe_ratio: [10.0, 15.0] },
+  "Outros": { ev_revenue: [1.2, 1.2], ev_ebitda: [5.5, 7.0], pe_ratio: [7.5, 9.0] }
 };
 
-// Ajustes de taxa de desconto por recorrência
-const recurrenceAdjustments: Record<string, number> = {
-  none: 0.01,        // Penalidade - sem recorrência
-  partial: 0,        // Neutro
-  moderate: -0.0033, // Bônus moderado
-  high: -0.01,       // Bônus alto
+// Pesos para média ponderada
+const WEIGHTS = {
+  revenue: 0.30,  // 30% EV/Revenue
+  ebitda: 0.40,   // 40% EV/EBITDA
+  pe: 0.30,       // 30% P/E
 };
-
-// Ajustes de taxa de desconto por dependência do fundador
-const dependencyAdjustments: Record<string, number> = {
-  totally: 0.03,      // Alta penalidade - totalmente dependente
-  partially: 0.015,   // Média
-  little: 0.005,      // Baixa
-  independent: 0,     // Nenhuma - independente
-};
-
-// Ajuste por nível de dívida (baseado em % do faturamento)
-function getDebtRiskAdjustment(debt: number, revenue: number): number {
-  if (revenue === 0) return 0.03;
-  const debtRatio = debt / revenue;
-  
-  if (debtRatio <= 0.1) return 0.01;      // Dívida baixa
-  if (debtRatio <= 0.3) return 0.02;      // Dívida moderada
-  if (debtRatio <= 0.5) return 0.03;      // Dívida alta
-  return 0.04;                             // Dívida muito alta
-}
 
 export interface ValuationInputs {
   annualRevenue: number;
@@ -55,117 +40,139 @@ export interface ValuationInputs {
   website: string;
 }
 
-export interface YearProjection {
-  year: number;
-  revenue: number;
-  netProfit: number;
-  reinvestment: number;
-  debtService: number;
-  fcf: number;
-  presentValue: number;
+export interface MethodBreakdown {
+  min: number;
+  max: number;
+  avg: number;
+  multipleMin: number;
+  multipleMax: number;
 }
 
 export interface ValuationResult {
   valuation: number;
   valuationMin: number;
   valuationMax: number;
-  discountRate: number;
-  growthRate: number;
-  perpetualGrowth: number;
-  terminalValue: number;
-  terminalValuePV: number;
-  projections: YearProjection[];
+  // Breakdown por método
+  evByRevenue: MethodBreakdown;
+  evByEbitda: MethodBreakdown;
+  evByPE: MethodBreakdown;
+  // Múltiplos utilizados
+  multiplesUsed: {
+    segment: string;
+    ev_revenue: [number, number];
+    ev_ebitda: [number, number];
+    pe_ratio: [number, number];
+  };
+  // Métricas calculadas
+  metrics: {
+    revenue: number;
+    ebitda: number;
+    netProfit: number;
+    netDebt: number;
+  };
   inputs: ValuationInputs;
   calculatedAt: Date;
+}
+
+// Normaliza o segmento para corresponder às chaves do marketMultiples
+function normalizeSegment(segment: string): string {
+  // Verifica se já é uma chave válida
+  if (marketMultiples[segment]) {
+    return segment;
+  }
+  
+  // Tenta encontrar correspondência case-insensitive
+  const normalizedKey = Object.keys(marketMultiples).find(
+    key => key.toLowerCase() === segment.toLowerCase()
+  );
+  
+  return normalizedKey || 'Outros';
 }
 
 export function calculateValuation(inputs: ValuationInputs): ValuationResult {
   const {
     annualRevenue,
     ebitdaPercentage,
-    companyType,
     totalDebt,
-    revenueRecurrence,
-    founderDependency,
+    tangibleAssets,
+    segment,
   } = inputs;
 
-  // Converter margem de % para decimal
-  const margin = ebitdaPercentage / 100;
+  // 1. Normalizar e obter múltiplos do segmento
+  const normalizedSegment = normalizeSegment(segment);
+  const multiples = marketMultiples[normalizedSegment];
 
-  // Obter parâmetros do tipo de empresa
-  const params = companyParams[companyType] || companyParams.traditional;
-  const { growth, invest, debtFactor } = params;
+  // 2. Calcular métricas financeiras
+  const revenue = annualRevenue;
+  const ebitdaMargin = ebitdaPercentage / 100;
+  const ebitda = revenue * ebitdaMargin;
+  const netProfit = ebitda; // Usando EBITDA como proxy para lucro líquido
+  const netDebt = totalDebt - (tangibleAssets * 0.5); // Dívida líquida ajustada
 
-  // 1. Calcular Taxa de Desconto
-  let discountRate = SELIC_RATE + 0.017; // Base
+  // 3. Calcular EV por cada método
+  const evByRevenue: MethodBreakdown = {
+    min: revenue * multiples.ev_revenue[0],
+    max: revenue * multiples.ev_revenue[1],
+    avg: revenue * ((multiples.ev_revenue[0] + multiples.ev_revenue[1]) / 2),
+    multipleMin: multiples.ev_revenue[0],
+    multipleMax: multiples.ev_revenue[1],
+  };
 
-  // Ajuste por risco de dívida
-  discountRate += getDebtRiskAdjustment(totalDebt, annualRevenue);
+  const evByEbitda: MethodBreakdown = {
+    min: ebitda * multiples.ev_ebitda[0],
+    max: ebitda * multiples.ev_ebitda[1],
+    avg: ebitda * ((multiples.ev_ebitda[0] + multiples.ev_ebitda[1]) / 2),
+    multipleMin: multiples.ev_ebitda[0],
+    multipleMax: multiples.ev_ebitda[1],
+  };
 
-  // Ajuste por dependência do fundador
-  discountRate += dependencyAdjustments[founderDependency] || 0;
+  const evByPE: MethodBreakdown = {
+    min: netProfit * multiples.pe_ratio[0],
+    max: netProfit * multiples.pe_ratio[1],
+    avg: netProfit * ((multiples.pe_ratio[0] + multiples.pe_ratio[1]) / 2),
+    multipleMin: multiples.pe_ratio[0],
+    multipleMax: multiples.pe_ratio[1],
+  };
 
-  // Ajuste por recorrência de receita
-  discountRate += recurrenceAdjustments[revenueRecurrence] || 0;
+  // 4. Calcular média ponderada
+  const valuationMin = 
+    (evByRevenue.min * WEIGHTS.revenue) + 
+    (evByEbitda.min * WEIGHTS.ebitda) + 
+    (evByPE.min * WEIGHTS.pe);
 
-  // 2. Loop de Projeção (3 anos)
-  let valuation = 0;
-  let currentRevenue = annualRevenue;
-  const projections: YearProjection[] = [];
-  let terminalValue = 0;
-  let terminalValuePV = 0;
-  const perpetualGrowth = 0.03; // 3% crescimento perpétuo
+  const valuationMax = 
+    (evByRevenue.max * WEIGHTS.revenue) + 
+    (evByEbitda.max * WEIGHTS.ebitda) + 
+    (evByPE.max * WEIGHTS.pe);
 
-  for (let year = 1; year <= 3; year++) {
-    // Crescer Faturamento
-    currentRevenue = currentRevenue * (1 + growth);
+  const valuation = (valuationMin + valuationMax) / 2;
 
-    // Calcular Lucro
-    const netProfit = currentRevenue * margin;
-
-    // Deduções (Investimento + Fator Dívida)
-    const reinvestment = currentRevenue * invest;
-    const debtService = currentRevenue * debtFactor;
-
-    // Fluxo de Caixa Livre
-    const fcf = netProfit - reinvestment - debtService;
-
-    // Valor Presente
-    const presentValue = fcf / Math.pow(1 + discountRate, year);
-    valuation += presentValue;
-
-    projections.push({
-      year,
-      revenue: currentRevenue,
-      netProfit,
-      reinvestment,
-      debtService,
-      fcf,
-      presentValue,
-    });
-
-    // Se for o ano 3, calcular Perpetuidade
-    if (year === 3) {
-      terminalValue = (fcf * (1 + perpetualGrowth)) / (discountRate - perpetualGrowth);
-      terminalValuePV = terminalValue / Math.pow(1 + discountRate, year);
-      valuation += terminalValuePV;
-    }
-  }
-
-  // Range de ±15%
-  const valuationMin = valuation * 0.85;
-  const valuationMax = valuation * 1.15;
+  // 5. Ajustar por dívida líquida (EV → Equity Value)
+  // Se netDebt é positivo, reduz o equity value
+  // Se netDebt é negativo (mais caixa que dívida), aumenta o equity value
+  const adjustedValuation = Math.max(0, valuation - netDebt);
+  const adjustedMin = Math.max(0, valuationMin - netDebt);
+  const adjustedMax = Math.max(0, valuationMax - netDebt);
 
   return {
-    valuation,
-    valuationMin,
-    valuationMax,
-    discountRate,
-    growthRate: growth,
-    perpetualGrowth,
-    terminalValue,
-    terminalValuePV,
-    projections,
+    valuation: adjustedValuation,
+    valuationMin: adjustedMin,
+    valuationMax: adjustedMax,
+    evByRevenue,
+    evByEbitda,
+    evByPE,
+    multiplesUsed: {
+      segment: normalizedSegment,
+      ev_revenue: multiples.ev_revenue,
+      ev_ebitda: multiples.ev_ebitda,
+      pe_ratio: multiples.pe_ratio,
+    },
+    metrics: {
+      revenue,
+      ebitda,
+      netProfit,
+      netDebt,
+    },
     inputs,
     calculatedAt: new Date(),
   };
@@ -182,34 +189,17 @@ export function parseCurrency(value: string): number {
   return parseFloat(cleaned) || 0;
 }
 
-// Helper para mapear companyType do form para o cálculo
+// Helper para mapear companyType do form para o cálculo (mantido para compatibilidade)
 export function mapCompanyType(formType: string): string {
-  const mapping: Record<string, string> = {
-    'Empresa Tradicional': 'traditional',
-    'Empresa Nova Economia': 'new-economy',
-    'Empresa Startup': 'startup',
-  };
-  return mapping[formType] || 'traditional';
+  return formType;
 }
 
-// Helper para mapear recurrence do form para o cálculo
+// Helper para mapear recurrence do form para o cálculo (mantido para compatibilidade)
 export function mapRecurrence(formRecurrence: string): string {
-  const mapping: Record<string, string> = {
-    none: 'none',
-    partial: 'partial',
-    moderate: 'moderate',
-    high: 'high',
-  };
-  return mapping[formRecurrence] || 'partial';
+  return formRecurrence;
 }
 
-// Helper para mapear dependency do form para o cálculo
+// Helper para mapear dependency do form para o cálculo (mantido para compatibilidade)
 export function mapDependency(formDependency: string): string {
-  const mapping: Record<string, string> = {
-    totally: 'totally',
-    partially: 'partially',
-    little: 'little',
-    independent: 'independent',
-  };
-  return mapping[formDependency] || 'partially';
+  return formDependency;
 }

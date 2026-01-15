@@ -1,20 +1,20 @@
-import { BarChart3, Calculator, Building2 } from 'lucide-react';
+import { BarChart3, Calculator, TrendingUp } from 'lucide-react';
 
 const methodologies = [
   {
     icon: BarChart3,
-    title: 'Múltiplos de EBITDA',
-    description: 'Análise baseada em transações reais do seu setor.',
+    title: 'EV/Receita',
+    description: 'Valuation baseado em múltiplos de receita do seu setor.',
   },
   {
     icon: Calculator,
-    title: 'Fluxo de Caixa Descontado',
-    description: 'Projeção de resultados futuros trazidos a valor presente.',
+    title: 'EV/EBITDA',
+    description: 'Múltiplo sobre o lucro operacional antes de depreciação.',
   },
   {
-    icon: Building2,
-    title: 'Abordagem por Ativos',
-    description: 'Soma de ativos tangíveis e circulantes.',
+    icon: TrendingUp,
+    title: 'Preço/Lucro (P/L)',
+    description: 'Relação entre valor de mercado e lucro líquido.',
   },
 ];
 
@@ -27,7 +27,7 @@ export const MethodologySection = () => {
             Metodologia de Avaliação
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Utilizamos três abordagens complementares para garantir um valuation preciso e confiável.
+            Utilizamos múltiplos de mercado baseados em transações reais do mercado brasileiro (2024/2025) para estimar o valor da sua empresa.
           </p>
         </div>
 
