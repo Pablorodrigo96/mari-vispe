@@ -375,7 +375,7 @@ export const DCFReportDialog = ({
             </p>
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <a 
-                href="https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa."
+                href="https://wa.me/5551992338258?text=Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa."
                 target="_blank"
                 rel="noopener noreferrer"
               >
