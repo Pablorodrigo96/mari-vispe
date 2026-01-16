@@ -42,7 +42,7 @@ export interface DCFInputs {
   companyType: CompanyType;
   annualRevenue: number;
   ebitdaMargin: number; // Percentual (ex: 20 para 20%)
-  netProfit: number;
+  netProfitMargin: number; // Percentual (ex: 15 para 15%)
   capex: number; // Investimentos anuais
   debtPayment: number; // Pagamento de dívidas anual
   // Dados do lead
