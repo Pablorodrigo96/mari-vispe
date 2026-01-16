@@ -13,6 +13,7 @@ import { calculateDCF, parseCurrency, DCFResult, CompanyType } from '@/lib/dcfCa
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 interface DCFWizardProps {
   onBack: () => void;
@@ -169,8 +170,8 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
           valuation_type: 'dcf',
           company_type: formData.companyType,
           segment: formData.segment,
-          inputs: inputs as unknown as Record<string, unknown>,
-          result: result as unknown as Record<string, unknown>,
+          inputs: inputs as unknown as Json,
+          result: result as unknown as Json,
         }]);
 
         // Increment usage
