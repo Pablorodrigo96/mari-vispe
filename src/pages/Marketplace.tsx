@@ -7,7 +7,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
-import { FilterSidebar } from '@/components/marketplace/FilterSidebar';
+import { FilterSidebar, FilterState, defaultFilters } from '@/components/marketplace/FilterSidebar';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -19,6 +19,7 @@ const Marketplace = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<FilterState>(defaultFilters);
 
   useEffect(() => {
     async function fetchListings() {
@@ -29,6 +30,32 @@ const Marketplace = () => {
         .from('listings')
         .select('*')
         .eq('status', 'active');
+
+      // Apply category filter
+      if (filters.categories.length > 0) {
+        query = query.in('category', filters.categories);
+      }
+
+      // Apply state filter
+      if (filters.states.length > 0) {
+        query = query.in('state', filters.states);
+      }
+
+      // Apply price range filter (only if not at default max)
+      if (filters.priceRange[0] > 0) {
+        query = query.gte('asking_price', filters.priceRange[0]);
+      }
+      if (filters.priceRange[1] < 10000000) {
+        query = query.lte('asking_price', filters.priceRange[1]);
+      }
+
+      // Apply revenue range filter (only if not at default max)
+      if (filters.revenueRange[0] > 0) {
+        query = query.gte('annual_revenue', filters.revenueRange[0]);
+      }
+      if (filters.revenueRange[1] < 20000000) {
+        query = query.lte('annual_revenue', filters.revenueRange[1]);
+      }
 
       // Apply sorting
       switch (sortBy) {
@@ -60,7 +87,7 @@ const Marketplace = () => {
     }
 
     fetchListings();
-  }, [sortBy]);
+  }, [sortBy, filters]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,7 +107,7 @@ const Marketplace = () => {
             {/* Sidebar - Desktop */}
             <aside className="hidden lg:block w-72 flex-shrink-0">
               <div className="sticky top-24">
-                <FilterSidebar />
+                <FilterSidebar filters={filters} onFiltersChange={setFilters} />
               </div>
             </aside>
 
@@ -96,7 +123,11 @@ const Marketplace = () => {
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-80 p-0">
-                    <FilterSidebar className="border-0 rounded-none h-full" />
+                    <FilterSidebar 
+                      className="border-0 rounded-none h-full" 
+                      filters={filters} 
+                      onFiltersChange={setFilters} 
+                    />
                   </SheetContent>
                 </Sheet>
 

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,49 +10,55 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { categories, states, revenueRanges, priceRanges } from '@/data/mockData';
+import { categories, states } from '@/data/mockData';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+
+export interface FilterState {
+  categories: string[];
+  states: string[];
+  priceRange: [number, number];
+  revenueRange: [number, number];
+}
+
+export const defaultFilters: FilterState = {
+  categories: [],
+  states: [],
+  priceRange: [0, 10000000],
+  revenueRange: [0, 20000000],
+};
 
 interface FilterSidebarProps {
   className?: string;
   onClose?: () => void;
+  filters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
 }
 
-export function FilterSidebar({ className, onClose }: FilterSidebarProps) {
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedStates, setSelectedStates] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState([0, 10000000]);
-  const [revenueRange, setRevenueRange] = useState([0, 20000000]);
-
+export function FilterSidebar({ className, onClose, filters, onFiltersChange }: FilterSidebarProps) {
   const toggleCategory = (catId: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(catId)
-        ? prev.filter((id) => id !== catId)
-        : [...prev, catId]
-    );
+    const newCategories = filters.categories.includes(catId)
+      ? filters.categories.filter((id) => id !== catId)
+      : [...filters.categories, catId];
+    onFiltersChange({ ...filters, categories: newCategories });
   };
 
   const toggleState = (state: string) => {
-    setSelectedStates((prev) =>
-      prev.includes(state)
-        ? prev.filter((s) => s !== state)
-        : [...prev, state]
-    );
+    const newStates = filters.states.includes(state)
+      ? filters.states.filter((s) => s !== state)
+      : [...filters.states, state];
+    onFiltersChange({ ...filters, states: newStates });
   };
 
   const clearFilters = () => {
-    setSelectedCategories([]);
-    setSelectedStates([]);
-    setPriceRange([0, 10000000]);
-    setRevenueRange([0, 20000000]);
+    onFiltersChange(defaultFilters);
   };
 
   const activeFiltersCount =
-    selectedCategories.length +
-    selectedStates.length +
-    (priceRange[0] > 0 || priceRange[1] < 10000000 ? 1 : 0) +
-    (revenueRange[0] > 0 || revenueRange[1] < 20000000 ? 1 : 0);
+    filters.categories.length +
+    filters.states.length +
+    (filters.priceRange[0] > 0 || filters.priceRange[1] < 10000000 ? 1 : 0) +
+    (filters.revenueRange[0] > 0 || filters.revenueRange[1] < 20000000 ? 1 : 0);
 
   return (
     <div className={cn("bg-card rounded-xl border border-border p-4", className)}>
@@ -94,7 +99,7 @@ export function FilterSidebar({ className, onClose }: FilterSidebarProps) {
                 <div key={cat.id} className="flex items-center gap-2">
                   <Checkbox
                     id={cat.id}
-                    checked={selectedCategories.includes(cat.id)}
+                    checked={filters.categories.includes(cat.id)}
                     onCheckedChange={() => toggleCategory(cat.id)}
                   />
                   <Label
@@ -118,15 +123,15 @@ export function FilterSidebar({ className, onClose }: FilterSidebarProps) {
           <AccordionContent className="pt-2">
             <div className="space-y-4">
               <Slider
-                value={priceRange}
-                onValueChange={setPriceRange}
+                value={filters.priceRange}
+                onValueChange={(value) => onFiltersChange({ ...filters, priceRange: value as [number, number] })}
                 max={10000000}
                 step={100000}
                 className="w-full"
               />
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>{formatCurrency(priceRange[0])}</span>
-                <span>{formatCurrency(priceRange[1])}</span>
+                <span>{formatCurrency(filters.priceRange[0])}</span>
+                <span>{formatCurrency(filters.priceRange[1])}</span>
               </div>
             </div>
           </AccordionContent>
@@ -140,15 +145,15 @@ export function FilterSidebar({ className, onClose }: FilterSidebarProps) {
           <AccordionContent className="pt-2">
             <div className="space-y-4">
               <Slider
-                value={revenueRange}
-                onValueChange={setRevenueRange}
+                value={filters.revenueRange}
+                onValueChange={(value) => onFiltersChange({ ...filters, revenueRange: value as [number, number] })}
                 max={20000000}
                 step={500000}
                 className="w-full"
               />
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>{formatCurrency(revenueRange[0])}</span>
-                <span>{formatCurrency(revenueRange[1])}</span>
+                <span>{formatCurrency(filters.revenueRange[0])}</span>
+                <span>{formatCurrency(filters.revenueRange[1])}</span>
               </div>
             </div>
           </AccordionContent>
@@ -165,7 +170,7 @@ export function FilterSidebar({ className, onClose }: FilterSidebarProps) {
                 <div key={state} className="flex items-center gap-2">
                   <Checkbox
                     id={state}
-                    checked={selectedStates.includes(state)}
+                    checked={filters.states.includes(state)}
                     onCheckedChange={() => toggleState(state)}
                   />
                   <Label
