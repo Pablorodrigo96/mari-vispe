@@ -12,7 +12,7 @@ const TERMINAL_GROWTH = 0.03; // 3%
 export const companyTypeConfig = {
   tradicional: {
     label: 'Empresa Tradicional',
-    description: 'Negócios estabelecidos com crescimento estável',
+    description: 'Produto validado, crescimento estável. Ideal para negócios consolidados que buscam segurança e constância nos resultados.',
     growthRate: 0.20, // 20%
     riskPremium: 0.0537, // 5.37%
     wacc: 0.2037, // 20.37%
@@ -20,7 +20,7 @@ export const companyTypeConfig = {
   },
   nova_economia: {
     label: 'Empresa Nova Economia',
-    description: 'Empresas digitais e tech com alto potencial',
+    description: 'Produto em validação, foco em eficiência. Para negócios que usam canais digitais e buscam acelerar o crescimento com otimização operacional.',
     growthRate: 0.22, // 22%
     riskPremium: 0.0723, // 7.23%
     wacc: 0.2223, // 22.23%
@@ -28,7 +28,7 @@ export const companyTypeConfig = {
   },
   startup: {
     label: 'Startup',
-    description: 'Empresas em estágio inicial com crescimento agressivo',
+    description: 'Fase de teste e escala acelerada. Para negócios inovadores focados em validar hipóteses e crescer exponencialmente, assumindo maior risco.',
     growthRate: 0.35, // 35%
     riskPremium: 0.1057, // 10.57%
     wacc: 0.2557, // 25.57%
@@ -58,7 +58,9 @@ export interface YearProjection {
   revenue: number;
   ebitdaMargin: number;
   ebitda: number;
-  fcff: number; // Free Cash Flow to Firm
+  netProfitMargin: number;
+  netProfit: number;
+  fcff: number; // Free Cash Flow to Firm (baseado em Lucro Líquido)
   discountFactor: number;
   presentValue: number;
 }
@@ -103,6 +105,7 @@ export function calculateDCF(inputs: DCFInputs): DCFResult {
     companyType,
     annualRevenue,
     ebitdaMargin,
+    netProfitMargin,
     capex,
     debtPayment,
   } = inputs;
@@ -113,25 +116,31 @@ export function calculateDCF(inputs: DCFInputs): DCFResult {
   // Projetar 3 anos
   const projections: YearProjection[] = [];
   let revenue = annualRevenue;
-  let currentMargin = ebitdaMargin;
+  let currentEbitdaMargin = ebitdaMargin;
+  let currentNetProfitMargin = netProfitMargin;
 
   for (let year = 1; year <= 3; year++) {
     // Calcular receita do ano
     revenue = year === 1 ? annualRevenue * (1 + growthRate) : revenue * (1 + growthRate);
     
-    // Atualizar margem se empresa tiver crescimento de margem
+    // Atualizar margens se empresa tiver crescimento de margem
     if (marginGrowth && year > 1) {
-      currentMargin += 1; // +1 p.p. por ano
+      currentEbitdaMargin += 1; // +1 p.p. por ano
+      currentNetProfitMargin += 1; // +1 p.p. por ano
     } else if (marginGrowth && year === 1) {
-      currentMargin += 1; // +1 p.p. no primeiro ano também
+      currentEbitdaMargin += 1; // +1 p.p. no primeiro ano também
+      currentNetProfitMargin += 1; // +1 p.p. no primeiro ano também
     }
     
-    // Calcular EBITDA
-    const ebitda = revenue * (currentMargin / 100);
+    // Calcular EBITDA (para exibição)
+    const ebitda = revenue * (currentEbitdaMargin / 100);
+    
+    // Calcular Lucro Líquido
+    const netProfit = revenue * (currentNetProfitMargin / 100);
     
     // Calcular FCFF (Free Cash Flow to Firm)
-    // FCFF = EBITDA - CapEx - Pagamento de Dívidas
-    const fcff = ebitda - capex - debtPayment;
+    // FCFF = Lucro Líquido - CapEx - Pagamento de Dívidas
+    const fcff = netProfit - capex - debtPayment;
     
     // Fator de desconto
     const discountFactor = 1 / Math.pow(1 + wacc, year);
@@ -142,8 +151,10 @@ export function calculateDCF(inputs: DCFInputs): DCFResult {
     projections.push({
       year,
       revenue,
-      ebitdaMargin: currentMargin,
+      ebitdaMargin: currentEbitdaMargin,
       ebitda,
+      netProfitMargin: currentNetProfitMargin,
+      netProfit,
       fcff,
       discountFactor,
       presentValue,
