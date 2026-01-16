@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const navigation = [
   { name: 'Comprar Empresa', href: '/marketplace' },
-  { name: 'Vender Empresa', href: '/sell' },
+  { name: 'Vender Empresa', href: '/vender' },
   { name: 'Valuation', href: '/valuation' },
   { name: 'Investidores', href: '/investors' },
   { name: 'Captação', href: '/capital' },
