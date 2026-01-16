@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      listings: {
+        Row: {
+          annual_profit: number | null
+          annual_revenue: number | null
+          asking_price: number | null
+          category: string
+          cep: string | null
+          city: string | null
+          cnpj: string | null
+          created_at: string | null
+          description: string | null
+          foundation_year: number | null
+          hide_price: boolean | null
+          id: string
+          images: string[] | null
+          iptu_value: number | null
+          neighborhood: string | null
+          plan: string | null
+          rent_value: number | null
+          sale_reason: string | null
+          show_address: boolean | null
+          square_meters: number | null
+          state: string | null
+          status: string | null
+          street: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          annual_profit?: number | null
+          annual_revenue?: number | null
+          asking_price?: number | null
+          category: string
+          cep?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          description?: string | null
+          foundation_year?: number | null
+          hide_price?: boolean | null
+          id?: string
+          images?: string[] | null
+          iptu_value?: number | null
+          neighborhood?: string | null
+          plan?: string | null
+          rent_value?: number | null
+          sale_reason?: string | null
+          show_address?: boolean | null
+          square_meters?: number | null
+          state?: string | null
+          status?: string | null
+          street?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          annual_profit?: number | null
+          annual_revenue?: number | null
+          asking_price?: number | null
+          category?: string
+          cep?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          description?: string | null
+          foundation_year?: number | null
+          hide_price?: boolean | null
+          id?: string
+          images?: string[] | null
+          iptu_value?: number | null
+          neighborhood?: string | null
+          plan?: string | null
+          rent_value?: number | null
+          sale_reason?: string | null
+          show_address?: boolean | null
+          square_meters?: number | null
+          state?: string | null
+          status?: string | null
+          street?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_name: string | null

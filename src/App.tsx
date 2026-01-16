@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import Sell from "./pages/Sell";
 import Vender from "./pages/Vender";
+import ListingDetail from "./pages/ListingDetail";
 import Valuation from "./pages/Valuation";
 import Investors from "./pages/Investors";
 import Capital from "./pages/Capital";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/sell" element={<Sell />} />
             <Route path="/vender" element={<Vender />} />
+            <Route path="/anuncio/:id" element={<ListingDetail />} />
             <Route path="/valuation" element={<Valuation />} />
             <Route path="/investors" element={<Investors />} />
             <Route path="/capital" element={<Capital />} />
