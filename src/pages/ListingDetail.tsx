@@ -48,6 +48,7 @@ interface Listing {
   square_meters: number | null;
   rent_value: number | null;
   sale_reason: string;
+  images: string[];
   plan: string;
   status: string;
   created_at: string;
@@ -77,6 +78,7 @@ const ListingDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(0);
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
@@ -94,7 +96,7 @@ const ListingDetail = () => {
           .from('listings')
           .select('*')
           .eq('id', id)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
         setListing(data);
@@ -224,23 +226,56 @@ const ListingDetail = () => {
               </div>
             </div>
 
-            {/* Image Gallery Placeholder */}
+            {/* Image Gallery */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <div className="md:col-span-3 aspect-video bg-muted rounded-xl flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <Building2 className="w-16 h-16 mx-auto mb-2 opacity-50" />
-                  <p>Galeria de Fotos</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="aspect-square bg-muted rounded-xl flex items-center justify-center"
-                  >
-                    <span className="text-muted-foreground text-sm">+{i}</span>
+              <div className="md:col-span-3 aspect-video bg-muted rounded-xl overflow-hidden">
+                {listing.images && listing.images.length > 0 ? (
+                  <img
+                    src={listing.images[selectedImage]}
+                    alt={`${listing.title} - Foto ${selectedImage + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <Building2 className="w-16 h-16 mx-auto mb-2 opacity-50" />
+                      <p>Sem fotos disponíveis</p>
+                    </div>
                   </div>
-                ))}
+                )}
+              </div>
+              <div className="grid grid-cols-3 md:grid-cols-1 gap-2">
+                {listing.images && listing.images.length > 0 ? (
+                  listing.images.slice(0, 4).map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
+                        selectedImage === index ? 'border-accent' : 'border-transparent'
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`Thumbnail ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {index === 3 && listing.images.length > 4 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="text-white font-medium">+{listing.images.length - 4}</span>
+                        </div>
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  [1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="aspect-square bg-muted rounded-lg flex items-center justify-center"
+                    >
+                      <span className="text-muted-foreground text-sm opacity-50">—</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
