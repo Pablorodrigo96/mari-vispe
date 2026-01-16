@@ -479,7 +479,7 @@ const ListingDetail = () => {
                       asChild
                     >
                       <a
-                        href={`https://wa.me/5511999999999?text=Olá! Tenho interesse no anúncio: ${listing.title}`}
+                        href={`https://wa.me/5551992338258?text=Olá! Tenho interesse no anúncio: ${listing.title}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
