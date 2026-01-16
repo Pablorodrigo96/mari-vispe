@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, Target, PieChart } from 'lucide-react';
+import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, Target, PieChart, MessageCircle } from 'lucide-react';
 import { DCFResult } from '@/lib/dcfCalculator';
 import { EnterpriseValueDiagram } from './EnterpriseValueDiagram';
 import { formatFullCurrency } from '@/lib/formatters';
@@ -363,6 +363,26 @@ export const DCFReportDialog = ({
               informações fornecidas e premissas padrão de mercado. Não constitui oferta ou garantia de valor. 
               Recomendamos due diligence profissional para transações.
             </p>
+          </div>
+
+          {/* CTA WhatsApp */}
+          <div className="bg-gradient-to-r from-accent/10 to-accent/5 border border-accent/30 rounded-xl p-5 text-center">
+            <h3 className="font-semibold text-foreground mb-2">
+              Quer um Valuation mais preciso?
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Fale com nossos especialistas para um projeto consultivo exclusivo com análise aprofundada do seu negócio.
+            </p>
+            <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
+              <a 
+                href="https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa."
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Falar com Especialista
+              </a>
+            </Button>
           </div>
 
           {/* Actions */}

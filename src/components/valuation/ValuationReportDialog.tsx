@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3 } from 'lucide-react';
+import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle } from 'lucide-react';
 import { ValuationResult } from '@/lib/valuationCalculator';
 import { formatFullCurrency } from '@/lib/formatters';
 import jsPDF from 'jspdf';
@@ -450,6 +450,26 @@ export const ValuationReportDialog = ({
               informações fornecidas e múltiplos de mercado. Não constitui oferta ou garantia de valor. 
               Recomendamos auditoria profissional para transações.
             </p>
+          </div>
+
+          {/* CTA WhatsApp */}
+          <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border border-emerald-500/30 rounded-xl p-5 text-center">
+            <h3 className="font-semibold text-foreground mb-2">
+              Quer um Valuation mais preciso?
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Fale com nossos especialistas para um projeto consultivo exclusivo com análise aprofundada do seu negócio.
+            </p>
+            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white">
+              <a 
+                href="https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa."
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Falar com Especialista
+              </a>
+            </Button>
           </div>
 
           {/* Actions */}
