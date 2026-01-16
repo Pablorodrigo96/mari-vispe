@@ -79,7 +79,7 @@ export const StepCompanyType = ({ data, onChange }: StepCompanyTypeProps) => {
         <ul className="text-xs text-muted-foreground space-y-1">
           <li>• Taxa Selic base: 15% a.a.</li>
           <li>• Projeção: 3 anos + valor terminal</li>
-          <li>• Crescimento terminal (g): 3% a.a.</li>
+          <li>• Crescimento terminal (g): 4,5% a.a.</li>
           <li>• Análise de sensibilidade: ±6%</li>
         </ul>
       </div>
