@@ -61,7 +61,7 @@ const TEST_MODE = true;
 const dcfWizardSteps: WizardStep[] = [
   { icon: TrendingUp, label: 'Mercado e Estratégia' },
   { icon: BarChart3, label: 'Desempenho Financeiro' },
-  { icon: Wallet, label: 'Fluxo de Investimentos e Dívida' },
+  { icon: Wallet, label: 'Investimentos e Dívida' },
   { icon: User, label: 'Identificação' },
 ];
 
