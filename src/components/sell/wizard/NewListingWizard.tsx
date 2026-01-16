@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Store, CheckCircle } from 'lucide-react';
+import { Building2, MapPin, Store, CheckCircle, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -10,14 +10,16 @@ import StepIndicator from '../StepIndicator';
 import StepBasicFinancial from './StepBasicFinancial';
 import StepDescriptionLocation from './StepDescriptionLocation';
 import StepCommercialSpace from './StepCommercialSpace';
+import StepImages from './StepImages';
 import PlanSelectionModal from './PlanSelectionModal';
 import { stepValidationSchemas, initialFormData } from './listingSchema';
 
 const steps = [
   { id: 1, title: 'Empresa', icon: <Building2 className="w-4 h-4" /> },
   { id: 2, title: 'Descrição', icon: <MapPin className="w-4 h-4" /> },
-  { id: 3, title: 'Ponto', icon: <Store className="w-4 h-4" /> },
-  { id: 4, title: 'Finalizar', icon: <CheckCircle className="w-4 h-4" /> },
+  { id: 3, title: 'Fotos', icon: <Camera className="w-4 h-4" /> },
+  { id: 4, title: 'Ponto', icon: <Store className="w-4 h-4" /> },
+  { id: 5, title: 'Finalizar', icon: <CheckCircle className="w-4 h-4" /> },
 ];
 
 const parseCurrencyToNumber = (value: string): number => {
@@ -30,15 +32,41 @@ const parseNumberString = (value: string): number => {
   return numbers ? parseInt(numbers) : 0;
 };
 
+interface FormData {
+  title: string;
+  category: string;
+  foundationYear: string;
+  cnpj: string;
+  annualRevenue: string;
+  annualProfit: string;
+  askingPrice: string;
+  hidePrice: boolean;
+  description: string;
+  cep: string;
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  showAddress: boolean;
+  images: string[];
+  squareMeters: string;
+  rentValue: string;
+  iptuValue: string;
+  saleReason: string;
+}
+
 const NewListingWizard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState(initialFormData);
+  const [formData, setFormData] = useState<FormData>({
+    ...initialFormData,
+    images: [],
+  });
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const updateFormData = (field: string, value: string | boolean) => {
+  const updateFormData = (field: string, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -69,6 +97,9 @@ const NewListingWizard = () => {
           });
           break;
         case 3:
+          // Images are optional, no validation needed
+          break;
+        case 4:
           stepValidationSchemas.step3.parse({
             squareMeters: formData.squareMeters,
             rentValue: formData.rentValue,
@@ -89,11 +120,11 @@ const NewListingWizard = () => {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      if (currentStep < 3) {
+      if (currentStep < 4) {
         setCurrentStep(currentStep + 1);
         toast.success('Etapa salva com sucesso!');
       } else {
-        // Step 3 completed, show plan modal
+        // Step 4 completed, show plan modal
         setShowPlanModal(true);
       }
     }
@@ -137,6 +168,7 @@ const NewListingWizard = () => {
           rent_value: parseCurrencyToNumber(formData.rentValue) || null,
           iptu_value: parseCurrencyToNumber(formData.iptuValue) || null,
           sale_reason: formData.saleReason,
+          images: formData.images,
           plan: plan,
           status: plan === 'basic' ? 'active' : 'pending_payment',
         })
@@ -194,6 +226,12 @@ const NewListingWizard = () => {
             />
           )}
           {currentStep === 3 && (
+            <StepImages
+              images={formData.images}
+              onChange={(images) => updateFormData('images', images)}
+            />
+          )}
+          {currentStep === 4 && (
             <StepCommercialSpace
               data={{
                 squareMeters: formData.squareMeters,
@@ -215,7 +253,7 @@ const NewListingWizard = () => {
             Voltar
           </Button>
           <Button onClick={handleNext} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-            {currentStep === 3 ? 'Criar Anúncio' : 'Próximo'}
+            {currentStep === 4 ? 'Criar Anúncio' : 'Próximo'}
           </Button>
         </div>
       </Card>
