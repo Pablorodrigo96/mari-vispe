@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Menu, X, Building2, LogOut, ClipboardList } from 'lucide-react';
+import { Bell, Menu, X, Building2, LogOut, ClipboardList, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -89,6 +89,10 @@ export function Header() {
                     {user.email}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/meu-perfil')}>
+                    <User className="w-4 h-4 mr-2" />
+                    Meu Perfil
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/meus-anuncios')}>
                     <ClipboardList className="w-4 h-4 mr-2" />
                     Meus Anúncios
@@ -143,10 +147,28 @@ export function Header() {
               ))}
               <div className="pt-4 mt-2 border-t border-border flex flex-col gap-2">
                 {user ? (
-                  <Button variant="outline" className="w-full justify-center" onClick={handleSignOut}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sair
-                  </Button>
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start" 
+                      onClick={() => { navigate('/meu-perfil'); setMobileMenuOpen(false); }}
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Meu Perfil
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start" 
+                      onClick={() => { navigate('/meus-anuncios'); setMobileMenuOpen(false); }}
+                    >
+                      <ClipboardList className="w-4 h-4 mr-2" />
+                      Meus Anúncios
+                    </Button>
+                    <Button variant="outline" className="w-full justify-center" onClick={handleSignOut}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sair
+                    </Button>
+                  </>
                 ) : (
                   <Button variant="outline" className="w-full justify-center" asChild>
                     <Link to="/auth">Entrar</Link>
