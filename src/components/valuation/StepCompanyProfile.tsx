@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, Rocket, Lightbulb } from 'lucide-react';
+import { Building2, Rocket, Zap } from 'lucide-react';
 
 interface StepCompanyProfileProps {
   data: {
@@ -21,19 +21,19 @@ const companyTypes = [
   {
     value: 'tradicional',
     label: 'Empresa Tradicional',
-    description: 'Negócio estabelecido com modelo tradicional',
+    description: 'Produto validado, crescimento estável. Ideal para negócios consolidados que buscam segurança e constância nos resultados.',
     icon: Building2,
   },
   {
     value: 'nova-economia',
-    label: 'Nova Economia',
-    description: 'Empresa digital ou baseada em tecnologia',
-    icon: Lightbulb,
+    label: 'Empresa Nova Economia',
+    description: 'Produto em validação, foco em eficiência. Para negócios que usam canais digitais e buscam acelerar o crescimento com otimização operacional.',
+    icon: Zap,
   },
   {
     value: 'startup',
     label: 'Startup',
-    description: 'Empresa em fase inicial de alto crescimento',
+    description: 'Fase de teste e escala acelerada. Para negócios inovadores focados em validar hipóteses e crescer exponencialmente, assumindo maior risco.',
     icon: Rocket,
   },
 ];
@@ -70,46 +70,33 @@ export const StepCompanyProfile = ({ data, onChange }: StepCompanyProfileProps) 
         <RadioGroup
           value={data.companyType}
           onValueChange={(value) => onChange('companyType', value)}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+          className="space-y-4"
         >
           {companyTypes.map((type) => {
             const Icon = type.icon;
+            const isSelected = data.companyType === type.value;
             return (
               <label
                 key={type.value}
-                className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer transition-all text-center ${
-                  data.companyType === type.value
+                className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  isSelected
                     ? 'border-accent bg-accent/5'
-                    : 'border-border bg-card hover:border-accent/30'
+                    : 'border-border bg-card hover:border-accent/50'
                 }`}
               >
                 <RadioGroupItem value={type.value} className="sr-only" />
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    data.companyType === type.value
-                      ? 'bg-accent/20'
-                      : 'bg-muted'
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    isSelected ? 'bg-accent/20' : 'bg-accent/10'
                   }`}
                 >
-                  <Icon
-                    className={`w-6 h-6 ${
-                      data.companyType === type.value
-                        ? 'text-accent'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
+                  <Icon className="w-6 h-6 text-accent" />
                 </div>
-                <div>
-                  <p
-                    className={`font-medium ${
-                      data.companyType === type.value
-                        ? 'text-accent'
-                        : 'text-foreground'
-                    }`}
-                  >
+                <div className="flex-1">
+                  <p className={`font-semibold ${isSelected ? 'text-accent' : 'text-foreground'}`}>
                     {type.label}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     {type.description}
                   </p>
                 </div>
