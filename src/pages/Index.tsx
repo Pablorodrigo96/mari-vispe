@@ -1,15 +1,33 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, TrendingUp, Users, Building2, Clock } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { SearchBar } from '@/components/home/SearchBar';
-import { BusinessCard } from '@/components/marketplace/BusinessCard';
-import { mockBusinesses, stats, categories } from '@/data/mockData';
+import { ListingCard } from '@/components/marketplace/ListingCard';
+import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
+import { stats, categories } from '@/data/mockData';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
-  const featuredBusinesses = mockBusinesses.slice(0, 4);
+  // Fetch featured listings (Master plan only)
+  const { data: featuredListings, isLoading } = useQuery({
+    queryKey: ['featured-listings-master'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('plan', 'master')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(4);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -89,9 +107,31 @@ const Index = () => {
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredBusinesses.map((business) => (
-              <BusinessCard key={business.id} business={business} featured />
-            ))}
+            {isLoading ? (
+              // Loading skeletons
+              Array.from({ length: 4 }).map((_, i) => (
+                <BusinessCardSkeleton key={i} />
+              ))
+            ) : featuredListings && featuredListings.length > 0 ? (
+              // Master listings from database
+              featuredListings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))
+            ) : (
+              // Empty state
+              <div className="col-span-full text-center py-12">
+                <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium text-foreground mb-2">
+                  Seja o primeiro destaque!
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Anuncie sua empresa com o plano Master e apareça aqui.
+                </p>
+                <Button asChild variant="default">
+                  <Link to="/vender">Anunciar Agora</Link>
+                </Button>
+              </div>
+            )}
           </div>
           <div className="mt-8 text-center md:hidden">
             <Button asChild variant="outline">
