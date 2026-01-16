@@ -19,6 +19,7 @@ import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, Targ
 import { DCFResult } from '@/lib/dcfCalculator';
 import { EnterpriseValueDiagram } from './EnterpriseValueDiagram';
 import { formatFullCurrency } from '@/lib/formatters';
+import { getWhatsAppLink } from '@/lib/whatsapp';
 import jsPDF from 'jspdf';
 
 interface DCFReportDialogProps {
@@ -375,7 +376,7 @@ export const DCFReportDialog = ({
             </p>
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <a 
-                href="https://wa.me/5551992338258?text=Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa."
+                href={getWhatsAppLink('Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa.')}
                 target="_blank"
                 rel="noopener noreferrer"
               >

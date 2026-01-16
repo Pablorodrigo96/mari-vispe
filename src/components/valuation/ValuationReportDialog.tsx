@@ -18,6 +18,7 @@ import {
 import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle } from 'lucide-react';
 import { ValuationResult } from '@/lib/valuationCalculator';
 import { formatFullCurrency } from '@/lib/formatters';
+import { getWhatsAppLink } from '@/lib/whatsapp';
 import jsPDF from 'jspdf';
 
 interface ValuationReportDialogProps {
@@ -462,7 +463,7 @@ export const ValuationReportDialog = ({
             </p>
             <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white">
               <a 
-                href="https://wa.me/5551992338258?text=Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa."
+                href={getWhatsAppLink('Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa.')}
                 target="_blank"
                 rel="noopener noreferrer"
               >

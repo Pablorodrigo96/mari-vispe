@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { getWhatsAppLink } from '@/lib/whatsapp';
 import { toast } from 'sonner';
 import {
   MapPin,
@@ -479,7 +480,7 @@ const ListingDetail = () => {
                       asChild
                     >
                       <a
-                        href={`https://wa.me/5551992338258?text=Olá! Tenho interesse no anúncio: ${listing.title}`}
+                        href={getWhatsAppLink(`Olá! Tenho interesse no anúncio: ${listing.title}`)}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
