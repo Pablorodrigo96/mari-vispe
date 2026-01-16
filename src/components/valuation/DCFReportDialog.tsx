@@ -15,8 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, Target } from 'lucide-react';
+import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, Target, PieChart } from 'lucide-react';
 import { DCFResult } from '@/lib/dcfCalculator';
+import { EnterpriseValueDiagram } from './EnterpriseValueDiagram';
 import { formatFullCurrency } from '@/lib/formatters';
 import jsPDF from 'jspdf';
 
@@ -326,6 +327,22 @@ export const DCFReportDialog = ({
                 <p className="font-semibold text-lg text-accent">{formatFullCurrency(result.enterpriseValue)}</p>
               </div>
             </div>
+          </div>
+
+          {/* Enterprise Value Breakdown Diagram */}
+          <div className="bg-card border border-border rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+                <PieChart className="w-4 h-4 text-accent" />
+              </div>
+              <h3 className="font-semibold text-foreground">Composição do Enterprise Value</h3>
+            </div>
+            <EnterpriseValueDiagram 
+              projections={result.projections}
+              terminalValuePV={result.terminalValuePV}
+              sumProjectedPV={result.sumProjectedPV}
+              enterpriseValue={result.enterpriseValue}
+            />
           </div>
 
           {/* Methodology */}
