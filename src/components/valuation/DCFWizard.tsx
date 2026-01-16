@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Header } from '@/components/layout/Header';
-import { WizardProgress } from './WizardProgress';
+import { WizardProgress, WizardStep } from './WizardProgress';
 import { StepCompanyType } from './StepCompanyType';
 import { StepFinancialData } from './StepFinancialData';
 import { StepDCFPremises } from './StepDCFPremises';
 import { StepIdentification } from './StepIdentification';
 import { DCFReportDialog } from './DCFReportDialog';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, Calculator } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calculator, TrendingUp, BarChart3, Wallet, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { calculateDCF, parseCurrency, DCFResult, CompanyType } from '@/lib/dcfCalculator';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,6 +57,13 @@ const TOTAL_STEPS = 4;
 
 // 🧪 MODO DE TESTE - Mudar para false em produção
 const TEST_MODE = true;
+
+const dcfWizardSteps: WizardStep[] = [
+  { icon: TrendingUp, label: 'Mercado e Estratégia' },
+  { icon: BarChart3, label: 'Desempenho Financeiro' },
+  { icon: Wallet, label: 'Fluxo de Investimentos e Dívida' },
+  { icon: User, label: 'Identificação' },
+];
 
 export const DCFWizard = ({ onBack }: DCFWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -257,7 +264,7 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
         <div className="max-w-2xl mx-auto">
           {/* Progress */}
           <div className="mb-8">
-            <WizardProgress currentStep={currentStep} totalSteps={TOTAL_STEPS} />
+            <WizardProgress currentStep={currentStep - 1} totalSteps={TOTAL_STEPS} steps={dcfWizardSteps} />
           </div>
 
           {/* Step Content */}

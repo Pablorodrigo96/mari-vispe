@@ -1,21 +1,29 @@
-import { Check, FileText, BarChart3, User } from 'lucide-react';
+import { Check, FileText, BarChart3, User, TrendingUp, Wallet, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+export interface WizardStep {
+  icon: LucideIcon;
+  label: string;
+}
 
 interface WizardProgressProps {
   currentStep: number;
   totalSteps: number;
+  steps?: WizardStep[];
 }
 
-const steps = [
+const defaultSteps: WizardStep[] = [
   { icon: FileText, label: 'Dados Básicos' },
   { icon: BarChart3, label: 'Desempenho' },
   { icon: User, label: 'Identificação' },
 ];
 
-export const WizardProgress = ({ currentStep, totalSteps }: WizardProgressProps) => {
+export const WizardProgress = ({ currentStep, totalSteps, steps = defaultSteps }: WizardProgressProps) => {
+  const stepsToRender = steps.slice(0, totalSteps);
+  
   return (
     <div className="flex items-center justify-center gap-2 sm:gap-4 mb-8">
-      {steps.map((step, index) => {
+      {stepsToRender.map((step, index) => {
         const isActive = index === currentStep;
         const isCompleted = index < currentStep;
         const Icon = step.icon;
