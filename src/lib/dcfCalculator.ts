@@ -6,7 +6,7 @@
 // Constantes fixas
 const SELIC_RATE = 0.15; // 15%
 const SENSITIVITY_RANGE = 0.06; // ±6%
-const TERMINAL_GROWTH = 0.03; // 3%
+const TERMINAL_GROWTH = 0.045; // 4.5%
 
 // Configurações por tipo de empresa
 export const companyTypeConfig = {
