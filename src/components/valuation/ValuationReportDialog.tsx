@@ -462,7 +462,7 @@ export const ValuationReportDialog = ({
             </p>
             <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white">
               <a 
-                href="https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa."
+                href="https://wa.me/5551992338258?text=Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa."
                 target="_blank"
                 rel="noopener noreferrer"
               >
