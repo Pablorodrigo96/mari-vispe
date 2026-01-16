@@ -103,29 +103,44 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cep: string | null
+          city: string | null
           company_name: string | null
+          cpf_cnpj: string | null
           created_at: string
           full_name: string | null
           id: string
+          neighborhood: string | null
           phone: string | null
+          state: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          cep?: string | null
+          city?: string | null
           company_name?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
+          neighborhood?: string | null
           phone?: string | null
+          state?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          cep?: string | null
+          city?: string | null
           company_name?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
+          neighborhood?: string | null
           phone?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string
         }
