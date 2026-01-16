@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Bell, Menu, X, ChevronDown, Building2 } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Bell, Menu, X, Building2, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const navigation = [
   { name: 'Comprar Empresa', href: '/marketplace' },
@@ -21,6 +23,15 @@ const navigation = [
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  const userInitials = user?.email?.slice(0, 2).toUpperCase() || 'U';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
@@ -61,7 +72,32 @@ export function Header() {
               <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
             </Button>
             
-            <Button variant="ghost">Entrar</Button>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-accent text-accent-foreground text-xs">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="text-muted-foreground text-xs">
+                    {user.email}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="ghost" asChild>
+                <Link to="/auth">Entrar</Link>
+              </Button>
+            )}
             
             <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold">
               Anunciar Grátis
@@ -99,9 +135,16 @@ export function Header() {
                 </Link>
               ))}
               <div className="pt-4 mt-2 border-t border-border flex flex-col gap-2">
-                <Button variant="outline" className="w-full justify-center">
-                  Entrar
-                </Button>
+                {user ? (
+                  <Button variant="outline" className="w-full justify-center" onClick={handleSignOut}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair
+                  </Button>
+                ) : (
+                  <Button variant="outline" className="w-full justify-center" asChild>
+                    <Link to="/auth">Entrar</Link>
+                  </Button>
+                )}
                 <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground">
                   Anunciar Grátis
                 </Button>
