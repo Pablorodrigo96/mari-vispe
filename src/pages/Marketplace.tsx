@@ -1,17 +1,66 @@
-import { useState } from 'react';
-import { Filter, Grid, List, SlidersHorizontal } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Grid, List, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { BusinessCard } from '@/components/marketplace/BusinessCard';
+import { ListingCard } from '@/components/marketplace/ListingCard';
+import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
 import { FilterSidebar } from '@/components/marketplace/FilterSidebar';
-import { mockBusinesses } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
+
+type Listing = Tables<'listings'>;
 
 const Marketplace = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('recent');
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchListings() {
+      setLoading(true);
+      setError(null);
+
+      let query = supabase
+        .from('listings')
+        .select('*')
+        .eq('status', 'active');
+
+      // Apply sorting
+      switch (sortBy) {
+        case 'price-asc':
+          query = query.order('asking_price', { ascending: true, nullsFirst: false });
+          break;
+        case 'price-desc':
+          query = query.order('asking_price', { ascending: false, nullsFirst: false });
+          break;
+        case 'revenue':
+          query = query.order('annual_revenue', { ascending: false, nullsFirst: false });
+          break;
+        case 'recent':
+        default:
+          query = query.order('created_at', { ascending: false });
+          break;
+      }
+
+      const { data, error: fetchError } = await query;
+
+      if (fetchError) {
+        console.error('Error fetching listings:', fetchError);
+        setError('Erro ao carregar anúncios. Tente novamente.');
+      } else {
+        setListings(data || []);
+      }
+
+      setLoading(false);
+    }
+
+    fetchListings();
+  }, [sortBy]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -22,7 +71,9 @@ const Marketplace = () => {
           {/* Page Header */}
           <div className="py-8 border-b border-border mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">Empresas à Venda</h1>
-            <p className="text-muted-foreground">{mockBusinesses.length} oportunidades encontradas</p>
+            <p className="text-muted-foreground">
+              {loading ? 'Carregando...' : `${listings.length} oportunidades encontradas`}
+            </p>
           </div>
 
           <div className="flex gap-8">
@@ -74,14 +125,41 @@ const Marketplace = () => {
               </div>
 
               {/* Business Grid */}
-              <div className={viewMode === 'grid' 
-                ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
-                : 'flex flex-col gap-4'
-              }>
-                {mockBusinesses.map((business) => (
-                  <BusinessCard key={business.id} business={business} />
-                ))}
-              </div>
+              {error ? (
+                <div className="text-center py-12">
+                  <p className="text-destructive">{error}</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => window.location.reload()}
+                  >
+                    Tentar novamente
+                  </Button>
+                </div>
+              ) : loading ? (
+                <div className={viewMode === 'grid' 
+                  ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
+                  : 'flex flex-col gap-4'
+                }>
+                  {[...Array(6)].map((_, i) => (
+                    <BusinessCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : listings.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground text-lg mb-2">Nenhuma empresa encontrada</p>
+                  <p className="text-muted-foreground text-sm">Seja o primeiro a anunciar!</p>
+                </div>
+              ) : (
+                <div className={viewMode === 'grid' 
+                  ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
+                  : 'flex flex-col gap-4'
+                }>
+                  {listings.map((listing) => (
+                    <ListingCard key={listing.id} listing={listing} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
