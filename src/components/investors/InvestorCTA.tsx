@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, MessageCircle } from 'lucide-react';
-import { getWhatsAppLink } from '@/lib/whatsapp';
+import { getWhatsAppLink, getWhatsAppTarget } from '@/lib/whatsapp';
 
 export function InvestorCTA() {
   return (
@@ -26,7 +26,7 @@ export function InvestorCTA() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10">
-            <a href={getWhatsAppLink()} target="_blank" rel="noopener noreferrer">
+            <a href={getWhatsAppLink()} target={getWhatsAppTarget()} rel="noopener noreferrer">
               <MessageCircle className="mr-2 h-5 w-5" />
               Falar com Especialista
             </a>
