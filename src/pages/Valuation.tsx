@@ -14,6 +14,9 @@ import { toast } from 'sonner';
 
 type ViewState = 'landing' | 'free-wizard' | 'dcf-wizard';
 
+// 🧪 MODO DE TESTE - Mudar para false em produção
+const TEST_MODE = true;
+
 const Valuation = () => {
   const [view, setView] = useState<ViewState>('landing');
   const navigate = useNavigate();
@@ -26,18 +29,18 @@ const Valuation = () => {
   };
 
   const handleSelectDCF = () => {
-    if (!user) {
+    if (!TEST_MODE && !user) {
       toast.info('Faça login para acessar o Valuation DCF');
       navigate('/auth');
       return;
     }
 
-    if (!hasPaidPlan) {
+    if (!TEST_MODE && !hasPaidPlan) {
       toast.error('O Valuation DCF está disponível apenas para assinantes dos planos Standard ou Premium.');
       return;
     }
 
-    if (!canUseDCF()) {
+    if (!TEST_MODE && !canUseDCF()) {
       toast.error('Você atingiu o limite de valuations DCF do seu plano este mês.');
       return;
     }

@@ -55,6 +55,9 @@ const initialFormData: FormData = {
 
 const TOTAL_STEPS = 4;
 
+// 🧪 MODO DE TESTE - Mudar para false em produção
+const TEST_MODE = true;
+
 export const DCFWizard = ({ onBack }: DCFWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -132,13 +135,13 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
   };
 
   const handleSubmit = async () => {
-    // Check if user can use DCF
-    if (!hasPaidPlan) {
+    // Check if user can use DCF (bypass in test mode)
+    if (!TEST_MODE && !hasPaidPlan) {
       toast.error('O Valuation DCF está disponível apenas para assinantes dos planos Standard ou Premium.');
       return;
     }
 
-    if (!canUseDCF()) {
+    if (!TEST_MODE && !canUseDCF()) {
       toast.error('Você atingiu o limite de valuations DCF do seu plano este mês.');
       return;
     }
