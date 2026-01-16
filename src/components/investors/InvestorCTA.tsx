@@ -1,9 +1,17 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, MessageCircle } from 'lucide-react';
-import { getWhatsAppLink, getWhatsAppTarget } from '@/lib/whatsapp';
+import { openWhatsApp } from '@/lib/whatsapp';
+import { toast } from 'sonner';
 
 export function InvestorCTA() {
+  const handleWhatsAppClick = async () => {
+    const opened = await openWhatsApp();
+    if (!opened) {
+      toast.success('Link do WhatsApp copiado! Cole no navegador para abrir.');
+    }
+  };
+
   return (
     <section className="py-20 relative overflow-hidden">
       {/* Background */}
@@ -25,11 +33,14 @@ export function InvestorCTA() {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10">
-            <a href={getWhatsAppLink()} target={getWhatsAppTarget()} rel="noopener noreferrer">
-              <MessageCircle className="mr-2 h-5 w-5" />
-              Falar com Especialista
-            </a>
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="border-white/30 text-white hover:bg-white/10"
+            onClick={handleWhatsAppClick}
+          >
+            <MessageCircle className="mr-2 h-5 w-5" />
+            Falar com Especialista
           </Button>
         </div>
       </div>

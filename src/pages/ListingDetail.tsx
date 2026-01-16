@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
-import { getWhatsAppLink, getWhatsAppTarget } from '@/lib/whatsapp';
+import { openWhatsApp } from '@/lib/whatsapp';
 import { toast } from 'sonner';
 import {
   MapPin,
@@ -477,16 +477,15 @@ const ListingDetail = () => {
                     <Button
                       variant="outline"
                       className="w-full"
-                      asChild
+                      onClick={async () => {
+                        const opened = await openWhatsApp(`Olá! Tenho interesse no anúncio: ${listing.title}`);
+                        if (!opened) {
+                          toast.success('Link do WhatsApp copiado! Cole no navegador para abrir.');
+                        }
+                      }}
                     >
-                      <a
-                        href={getWhatsAppLink(`Olá! Tenho interesse no anúncio: ${listing.title}`)}
-                        target={getWhatsAppTarget()}
-                        rel="noopener noreferrer"
-                      >
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Conversar no WhatsApp
-                      </a>
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Conversar no WhatsApp
                     </Button>
                   </div>
                 </Card>

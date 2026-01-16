@@ -18,7 +18,8 @@ import {
 import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle } from 'lucide-react';
 import { ValuationResult } from '@/lib/valuationCalculator';
 import { formatFullCurrency } from '@/lib/formatters';
-import { getWhatsAppLink, getWhatsAppTarget } from '@/lib/whatsapp';
+import { openWhatsApp } from '@/lib/whatsapp';
+import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 
 interface ValuationReportDialogProps {
@@ -461,15 +462,17 @@ export const ValuationReportDialog = ({
             <p className="text-sm text-muted-foreground mb-4">
               Fale com nossos especialistas para um projeto consultivo exclusivo com análise aprofundada do seu negócio.
             </p>
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white">
-              <a 
-                href={getWhatsAppLink('Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa.')}
-                target={getWhatsAppTarget()}
-                rel="noopener noreferrer"
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Falar com Especialista
-              </a>
+            <Button 
+              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              onClick={async () => {
+                const opened = await openWhatsApp('Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa.');
+                if (!opened) {
+                  toast.success('Link do WhatsApp copiado! Cole no navegador para abrir.');
+                }
+              }}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Falar com Especialista
             </Button>
           </div>
 

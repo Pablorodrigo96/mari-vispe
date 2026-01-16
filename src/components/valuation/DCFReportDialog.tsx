@@ -19,7 +19,8 @@ import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, Targ
 import { DCFResult } from '@/lib/dcfCalculator';
 import { EnterpriseValueDiagram } from './EnterpriseValueDiagram';
 import { formatFullCurrency } from '@/lib/formatters';
-import { getWhatsAppLink, getWhatsAppTarget } from '@/lib/whatsapp';
+import { openWhatsApp } from '@/lib/whatsapp';
+import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 
 interface DCFReportDialogProps {
@@ -374,15 +375,17 @@ export const DCFReportDialog = ({
             <p className="text-sm text-muted-foreground mb-4">
               Fale com nossos especialistas para um projeto consultivo exclusivo com análise aprofundada do seu negócio.
             </p>
-            <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <a 
-                href={getWhatsAppLink('Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa.')}
-                target={getWhatsAppTarget()}
-                rel="noopener noreferrer"
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Falar com Especialista
-              </a>
+            <Button 
+              className="bg-accent hover:bg-accent/90 text-accent-foreground"
+              onClick={async () => {
+                const opened = await openWhatsApp('Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa.');
+                if (!opened) {
+                  toast.success('Link do WhatsApp copiado! Cole no navegador para abrir.');
+                }
+              }}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Falar com Especialista
             </Button>
           </div>
 
