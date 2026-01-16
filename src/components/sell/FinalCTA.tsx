@@ -10,7 +10,7 @@ export const FinalCTA = () => {
           Anuncie gratuitamente e alcance milhares de compradores e investidores qualificados.
         </p>
         <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold">
-          <Link to="/auth">Anunciar Grátis</Link>
+          <Link to="/auth?redirect=/vender">Anunciar Grátis</Link>
         </Button>
       </div>
     </section>
