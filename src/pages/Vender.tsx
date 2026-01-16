@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import SellWizard from '@/components/sell/SellWizard';
+import NewListingWizard from '@/components/sell/wizard/NewListingWizard';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Vender = () => {
@@ -11,7 +11,7 @@ const Vender = () => {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/auth');
+      navigate('/auth?redirect=/vender');
     }
   }, [user, loading, navigate]);
 
@@ -43,7 +43,7 @@ const Vender = () => {
               </p>
             </div>
             
-            <SellWizard />
+            <NewListingWizard />
           </div>
         </div>
       </main>
