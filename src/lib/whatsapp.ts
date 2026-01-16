@@ -20,35 +20,17 @@ export function getWhatsAppTarget(): "_blank" | "_top" {
 export async function openWhatsApp(message?: string): Promise<boolean> {
   const url = getWhatsAppLink(message);
   
-  // Try opening in new tab/window first
+  // Try opening in new tab/window - never redirect current page
   try {
     const newWindow = window.open(url, "_blank", "noopener,noreferrer");
     if (newWindow) {
       return true;
     }
   } catch (e) {
-    // Popup blocked or error, continue to fallback
+    // Popup blocked or error
   }
   
-  // Fallback: try top-level navigation (works in iframes)
-  try {
-    if (isInIframe() && window.top) {
-      window.top.location.href = url;
-      return true;
-    }
-  } catch (e) {
-    // Cross-origin or blocked, continue to final fallback
-  }
-  
-  // Final fallback: try current window navigation
-  try {
-    window.location.href = url;
-    return true;
-  } catch (e) {
-    // Everything failed
-  }
-  
-  // Copy link to clipboard as last resort
+  // If popup was blocked, copy link to clipboard (user stays on page)
   try {
     await navigator.clipboard.writeText(url);
     return false; // Returns false to indicate link was copied, not opened
