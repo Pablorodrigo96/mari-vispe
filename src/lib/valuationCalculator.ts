@@ -20,7 +20,7 @@ export interface ValuationInputs {
   // Step 2 - Financeiro
   annualRevenue: number;
   ebitdaMargin: number; // Percentual
-  netProfit: number;
+  netProfitMargin: number; // Percentual
   // Step 3 - Lead
   fullName: string;
   companyName: string;
@@ -83,7 +83,7 @@ export function calculateValuation(inputs: ValuationInputs): ValuationResult {
   const {
     annualRevenue,
     ebitdaMargin,
-    netProfit,
+    netProfitMargin,
     segment,
   } = inputs;
 
@@ -94,6 +94,7 @@ export function calculateValuation(inputs: ValuationInputs): ValuationResult {
   // 2. Calcular métricas financeiras
   const revenue = annualRevenue;
   const ebitda = revenue * (ebitdaMargin / 100);
+  const netProfit = revenue * (netProfitMargin / 100);
 
   // 3. Calcular valuation por cada método
   const revenueValuation = revenue * multiples.rev;

@@ -21,7 +21,7 @@ interface FormData {
   // Step 2 - Financeiro
   annualRevenue: string;
   ebitdaMargin: string;
-  netProfit: string;
+  netProfitMargin: string;
   // Step 3 - Lead
   fullName: string;
   companyName: string;
@@ -35,7 +35,7 @@ const initialFormData: FormData = {
   segment: '',
   annualRevenue: '',
   ebitdaMargin: '',
-  netProfit: '',
+  netProfitMargin: '',
   fullName: '',
   companyName: '',
   email: '',
@@ -76,8 +76,8 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
           toast.error('Informe a margem EBITDA');
           return false;
         }
-        if (!formData.netProfit) {
-          toast.error('Informe o lucro líquido (0 se prejuízo)');
+        if (!formData.netProfitMargin) {
+          toast.error('Informe a margem de lucro líquido');
           return false;
         }
         return true;
@@ -132,7 +132,7 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
       segment: formData.segment,
       annualRevenue: parseCurrency(formData.annualRevenue),
       ebitdaMargin: parseFloat(formData.ebitdaMargin) || 0,
-      netProfit: parseCurrency(formData.netProfit),
+      netProfitMargin: parseFloat(formData.netProfitMargin) || 0,
       fullName: formData.fullName,
       companyName: formData.companyName,
       email: formData.email,
@@ -175,7 +175,7 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
             data={{
               annualRevenue: formData.annualRevenue,
               ebitdaMargin: formData.ebitdaMargin,
-              netProfit: formData.netProfit,
+              netProfitMargin: formData.netProfitMargin,
             }}
             onChange={updateFormData}
           />

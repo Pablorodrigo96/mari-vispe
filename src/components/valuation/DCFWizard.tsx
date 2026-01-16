@@ -25,7 +25,7 @@ interface FormData {
   // Step 2 - Financial Data
   annualRevenue: string;
   ebitdaMargin: string;
-  netProfit: string;
+  netProfitMargin: string;
   // Step 3 - DCF Premises
   capex: string;
   debtPayment: string;
@@ -42,7 +42,7 @@ const initialFormData: FormData = {
   companyType: '',
   annualRevenue: '',
   ebitdaMargin: '',
-  netProfit: '',
+  netProfitMargin: '',
   capex: '',
   debtPayment: '',
   fullName: '',
@@ -150,7 +150,7 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
         companyType: formData.companyType as CompanyType,
         annualRevenue: parseCurrency(formData.annualRevenue),
         ebitdaMargin: parseFloat(formData.ebitdaMargin) || 0,
-        netProfit: parseCurrency(formData.netProfit),
+        netProfitMargin: parseFloat(formData.netProfitMargin) || 0,
         capex: parseCurrency(formData.capex),
         debtPayment: parseCurrency(formData.debtPayment),
         fullName: formData.fullName,
@@ -213,7 +213,7 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
             data={{
               annualRevenue: formData.annualRevenue,
               ebitdaMargin: formData.ebitdaMargin,
-              netProfit: formData.netProfit,
+              netProfitMargin: formData.netProfitMargin,
             }}
             onChange={updateFormData}
           />

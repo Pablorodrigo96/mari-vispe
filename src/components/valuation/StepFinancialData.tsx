@@ -7,7 +7,7 @@ interface StepFinancialDataProps {
   data: {
     annualRevenue: string;
     ebitdaMargin: string;
-    netProfit: string;
+    netProfitMargin: string;
   };
   onChange: (field: string, value: string) => void;
 }
@@ -25,10 +25,12 @@ export const StepFinancialData = ({ data, onChange }: StepFinancialDataProps) =>
     onChange(field, formatted);
   };
 
-  // Calcular EBITDA absoluto
+  // Calcular valores absolutos
   const revenue = parseCurrency(data.annualRevenue);
-  const margin = parseFloat(data.ebitdaMargin) || 0;
-  const calculatedEbitda = revenue * (margin / 100);
+  const ebitdaMargin = parseFloat(data.ebitdaMargin) || 0;
+  const netProfitMargin = parseFloat(data.netProfitMargin) || 0;
+  const calculatedEbitda = revenue * (ebitdaMargin / 100);
+  const calculatedNetProfit = revenue * (netProfitMargin / 100);
 
   return (
     <div className="space-y-8">
@@ -85,7 +87,7 @@ export const StepFinancialData = ({ data, onChange }: StepFinancialDataProps) =>
           </div>
           
           {/* EBITDA Calculado */}
-          {revenue > 0 && margin > 0 && (
+          {revenue > 0 && ebitdaMargin > 0 && (
             <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 mt-2">
               <p className="text-sm text-muted-foreground">
                 EBITDA Calculado:{' '}
@@ -97,24 +99,39 @@ export const StepFinancialData = ({ data, onChange }: StepFinancialDataProps) =>
           )}
         </div>
 
-        {/* Lucro Líquido */}
+        {/* Margem de Lucro Líquido */}
         <div className="space-y-2">
-          <Label htmlFor="netProfit" className="text-base font-semibold">
-            Lucro Líquido (Últimos 12 meses) *
+          <Label htmlFor="netProfitMargin" className="text-base font-semibold">
+            Margem de Lucro Líquido (%) *
           </Label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              R$
-            </span>
             <Input
-              id="netProfit"
-              type="text"
-              value={data.netProfit}
-              onChange={(e) => handleCurrencyChange('netProfit', e.target.value)}
-              placeholder="0"
-              className="pl-10 h-12 text-lg"
+              id="netProfitMargin"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={data.netProfitMargin}
+              onChange={(e) => onChange('netProfitMargin', e.target.value)}
+              placeholder="Ex: 15"
+              className="pr-10 h-12 text-lg"
             />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              %
+            </span>
           </div>
+          
+          {/* Lucro Líquido Calculado */}
+          {revenue > 0 && netProfitMargin > 0 && (
+            <div className="bg-accent/10 border border-accent/30 rounded-lg p-3 mt-2">
+              <p className="text-sm text-muted-foreground">
+                Lucro Líquido Calculado:{' '}
+                <span className="font-semibold text-accent">
+                  {formatFullCurrency(calculatedNetProfit)}
+                </span>
+              </p>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             Informe 0 se a empresa estiver com prejuízo
           </p>
