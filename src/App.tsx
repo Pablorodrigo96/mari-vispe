@@ -12,6 +12,7 @@ import Vender from "./pages/Vender";
 import ListingDetail from "./pages/ListingDetail";
 import MyListings from "./pages/MyListings";
 import MyProfile from "./pages/MyProfile";
+import MyValuations from "./pages/MyValuations";
 import Valuation from "./pages/Valuation";
 import Investors from "./pages/Investors";
 import Capital from "./pages/Capital";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/anuncio/:id" element={<ListingDetail />} />
             <Route path="/meus-anuncios" element={<MyListings />} />
             <Route path="/meu-perfil" element={<MyProfile />} />
+            <Route path="/meus-valuations" element={<MyValuations />} />
             <Route path="/valuation" element={<Valuation />} />
             <Route path="/investors" element={<Investors />} />
             <Route path="/capital" element={<Capital />} />
