@@ -15,8 +15,6 @@ const footerLinks = {
   ] as Array<{ name: string; href: string; external?: boolean }>,
   company: [
     { name: 'Sobre Nós', href: '/about' },
-    { name: 'Carreiras', href: '/careers' },
-    { name: 'Imprensa', href: '/press' },
     { name: 'Contato', href: '/contact' },
   ],
   legal: [
