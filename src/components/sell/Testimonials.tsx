@@ -2,28 +2,28 @@ import { Star } from 'lucide-react';
 
 const testimonials = [
   {
-    name: 'Carlos Mendes',
-    role: 'Ex-proprietário de e-commerce',
+    name: 'PDN Telecom',
+    role: 'Provedor de Internet',
     content:
-      'Vendi minha loja virtual em apenas 45 dias. O processo foi transparente e seguro do início ao fim.',
+      'Passamos por todas as etapas de reestruturação seguindo as orientações dos consultores e os resultados foram maravilhosos. Temos orgulho de ser clientes.',
     rating: 5,
-    avatar: 'CM',
+    avatar: 'PT',
   },
   {
-    name: 'Patricia Lima',
-    role: 'Fundadora de rede de franquias',
+    name: 'RedFibra',
+    role: 'Provedor de Internet',
     content:
-      'Recebi propostas de investidores qualificados em menos de uma semana. Recomendo para quem quer vender com seriedade.',
+      'Parceria de longa data com atendimento excelente, foco na qualidade dos serviços e sucesso nas metas estabelecidas, atingindo os resultados esperados.',
     rating: 5,
-    avatar: 'PL',
+    avatar: 'RF',
   },
   {
-    name: 'Roberto Silva',
-    role: 'Ex-dono de indústria têxtil',
+    name: 'GLP Net',
+    role: 'Provedor de Internet',
     content:
-      'A assessoria especializada fez toda diferença na negociação. Consegui um valor acima do esperado.',
+      'Quando precisava organizar minha empresa e tinha planos para expansão sem saber por onde começar, vi a diferença de perto. O planejamento foi essencial!',
     rating: 5,
-    avatar: 'RS',
+    avatar: 'GN',
   },
 ];
 

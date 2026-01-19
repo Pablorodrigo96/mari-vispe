@@ -10,32 +10,32 @@ import {
 
 const testimonials = [
   {
-    name: 'Ricardo Mendes',
-    role: 'Investidor Anjo',
-    avatar: 'RM',
+    name: 'NavegMAIS',
+    role: 'Provedor de Internet',
+    avatar: 'NM',
     rating: 5,
-    text: 'A DealFlow me conectou com oportunidades que eu nunca teria acesso sozinho. Já fiz 3 investimentos através da plataforma com retornos excelentes.',
+    text: 'Passamos por todas as etapas da reestruturação e organização da empresa. Os resultados têm sido excelentes, serviço de qualidade e confiança.',
   },
   {
-    name: 'Fernanda Costa',
-    role: 'Family Office',
-    avatar: 'FC',
+    name: 'Aonet',
+    role: 'Provedor de Internet',
+    avatar: 'AO',
     rating: 5,
-    text: 'O processo de due diligence é impecável. Recebemos toda a documentação organizada e a equipe nos acompanhou em cada etapa da negociação.',
+    text: 'Há anos somos clientes e fazemos questão de contatá-los em todos os nossos planos e processos, dos mais simples aos mais estratégicos.',
   },
   {
-    name: 'Eduardo Silva',
-    role: 'Investidor Privado',
-    avatar: 'ES',
+    name: 'Virtex',
+    role: 'Provedor de Internet',
+    avatar: 'VX',
     rating: 5,
-    text: 'Adquiri uma empresa de e-commerce através da DealFlow. O suporte foi excepcional desde a primeira reunião até o fechamento do deal.',
+    text: 'Temos muita admiração pela transparência e dedicação em todas as demandas já solicitadas. Após os serviços prestados, tivemos o resultado alcançado.',
   },
   {
-    name: 'Mariana Oliveira',
-    role: 'Gestora de Fundos',
-    avatar: 'MO',
+    name: 'TR Dream',
+    role: 'Provedor de Internet',
+    avatar: 'TD',
     rating: 5,
-    text: 'A curadoria de oportunidades é o grande diferencial. Só recebemos propostas que realmente fazem sentido para o nosso perfil de investimento.',
+    text: 'Devido à ótima experiência que tivemos, recomendamos os serviços. Sempre nos atenderam com muito profissionalismo, segurança e dedicação.',
   },
 ];
 
