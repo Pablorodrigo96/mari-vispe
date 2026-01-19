@@ -14,9 +14,9 @@ const footerLinks = {
     { name: 'Calculadora de Valuation', href: '/valuation' },
   ] as Array<{ name: string; href: string; external?: boolean }>,
   company: [
-    { name: 'Sobre Nós', href: '/about' },
+    { name: 'Sobre Nós', href: 'https://vispe.com.br/sobre/', external: true },
     { name: 'Contato', href: '/contact' },
-  ],
+  ] as Array<{ name: string; href: string; external?: boolean }>,
   legal: [
     { name: 'Termos de Uso', href: '/terms' },
     { name: 'Privacidade', href: '/privacy' },
@@ -103,9 +103,20 @@ export function Footer() {
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.href} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-                    {link.name}
-                  </Link>
+                  {link.external ? (
+                    <a 
+                      href={link.href} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                    >
+                      {link.name}
+                    </a>
+                  ) : (
+                    <Link to={link.href} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                      {link.name}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
