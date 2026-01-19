@@ -232,6 +232,8 @@ export type Database = {
           dcf_used: number
           expires_at: string | null
           id: string
+          multiples_limit: number
+          multiples_used: number
           plan: string
           status: string
           updated_at: string
@@ -243,6 +245,8 @@ export type Database = {
           dcf_used?: number
           expires_at?: string | null
           id?: string
+          multiples_limit?: number
+          multiples_used?: number
           plan?: string
           status?: string
           updated_at?: string
@@ -254,6 +258,8 @@ export type Database = {
           dcf_used?: number
           expires_at?: string | null
           id?: string
+          multiples_limit?: number
+          multiples_used?: number
           plan?: string
           status?: string
           updated_at?: string
@@ -267,9 +273,11 @@ export type Database = {
           created_at: string
           id: string
           inputs: Json | null
+          locked_at: string | null
           payment_id: string | null
           result: Json | null
           segment: string | null
+          status: string
           user_id: string | null
           valuation_type: string
         }
@@ -278,9 +286,11 @@ export type Database = {
           created_at?: string
           id?: string
           inputs?: Json | null
+          locked_at?: string | null
           payment_id?: string | null
           result?: Json | null
           segment?: string | null
+          status?: string
           user_id?: string | null
           valuation_type: string
         }
@@ -289,11 +299,46 @@ export type Database = {
           created_at?: string
           id?: string
           inputs?: Json | null
+          locked_at?: string | null
           payment_id?: string | null
           result?: Json | null
           segment?: string | null
+          status?: string
           user_id?: string | null
           valuation_type?: string
+        }
+        Relationships: []
+      }
+      valuation_purchases: {
+        Row: {
+          created_at: string | null
+          id: string
+          price_cents: number
+          status: string
+          stripe_payment_id: string | null
+          type: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          price_cents: number
+          status?: string
+          stripe_payment_id?: string | null
+          type: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          price_cents?: number
+          status?: string
+          stripe_payment_id?: string | null
+          type?: string
+          used_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

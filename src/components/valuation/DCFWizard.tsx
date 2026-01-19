@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { WizardProgress, WizardStep } from './WizardProgress';
 import { StepCompanyType } from './StepCompanyType';
@@ -6,12 +7,13 @@ import { StepFinancialData } from './StepFinancialData';
 import { StepDCFPremises } from './StepDCFPremises';
 import { StepIdentification } from './StepIdentification';
 import { DCFReportDialog } from './DCFReportDialog';
+import { ValuationPaymentModal } from './ValuationPaymentModal';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calculator, TrendingUp, BarChart3, Wallet, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { calculateDCF, parseCurrency, DCFResult, CompanyType } from '@/lib/dcfCalculator';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useValuationAccess } from '@/hooks/useValuationAccess';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -55,9 +57,6 @@ const initialFormData: FormData = {
 
 const TOTAL_STEPS = 4;
 
-// 🧪 MODO DE TESTE - Mudar para false em produção
-const TEST_MODE = true;
-
 const dcfWizardSteps: WizardStep[] = [
   { icon: TrendingUp, label: 'Mercado e Estratégia' },
   { icon: BarChart3, label: 'Desempenho Financeiro' },
@@ -66,14 +65,16 @@ const dcfWizardSteps: WizardStep[] = [
 ];
 
 export const DCFWizard = ({ onBack }: DCFWizardProps) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { canUseDCF, consumeDCFAccess, loading: accessLoading } = useValuationAccess();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [showReport, setShowReport] = useState(false);
   const [dcfResult, setDcfResult] = useState<DCFResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const { user } = useAuth();
-  const { canUseDCF, incrementDCFUsage, hasPaidPlan } = useSubscription();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const updateFormData = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -142,14 +143,16 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
   };
 
   const handleSubmit = async () => {
-    // Check if user can use DCF (bypass in test mode)
-    if (!TEST_MODE && !hasPaidPlan) {
-      toast.error('O Valuation DCF está disponível apenas para assinantes dos planos Standard ou Premium.');
+    // Verificar login
+    if (!user) {
+      toast.info('Faça login para acessar o Valuation DCF');
+      navigate('/auth?redirect=/valuation');
       return;
     }
 
-    if (!TEST_MODE && !canUseDCF()) {
-      toast.error('Você atingiu o limite de valuations DCF do seu plano este mês.');
+    // Verificar acesso
+    if (!canUseDCF()) {
+      setShowPaymentModal(true);
       return;
     }
 
@@ -171,24 +174,25 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
       };
 
       const result = calculateDCF(inputs);
+      
+      // Salvar no histórico (bloqueado)
+      await supabase.from('valuation_history').insert([{
+        user_id: user.id,
+        valuation_type: 'dcf',
+        company_type: formData.companyType,
+        segment: formData.segment,
+        inputs: inputs as unknown as Json,
+        result: result as unknown as Json,
+        status: 'completed',
+        locked_at: new Date().toISOString(),
+      }]);
+
+      // Consumir crédito
+      await consumeDCFAccess();
+
       setDcfResult(result);
-
-      // Save to valuation_history
-      if (user) {
-        await supabase.from('valuation_history').insert([{
-          user_id: user.id,
-          valuation_type: 'dcf',
-          company_type: formData.companyType,
-          segment: formData.segment,
-          inputs: inputs as unknown as Json,
-          result: result as unknown as Json,
-        }]);
-
-        // Increment usage
-        await incrementDCFUsage();
-      }
-
       setShowReport(true);
+      toast.success('Valuation DCF calculado com sucesso!');
     } catch (error) {
       console.error('Error calculating DCF:', error);
       toast.error('Erro ao calcular o valuation. Tente novamente.');
@@ -256,6 +260,17 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
     }
   };
 
+  if (accessLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="pt-24 pb-8 flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Carregando...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -318,6 +333,13 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
           result={dcfResult}
         />
       )}
+
+      {/* Payment Modal */}
+      <ValuationPaymentModal
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        type="dcf"
+      />
     </div>
   );
 };

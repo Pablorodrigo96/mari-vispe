@@ -8,40 +8,53 @@ import { ValuationTestimonials } from '@/components/valuation/ValuationTestimoni
 import { ValuationFooterCTA } from '@/components/valuation/ValuationFooterCTA';
 import { ValuationWizard } from '@/components/valuation/ValuationWizard';
 import { DCFWizard } from '@/components/valuation/DCFWizard';
+import { ValuationPaymentModal } from '@/components/valuation/ValuationPaymentModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useValuationAccess } from '@/hooks/useValuationAccess';
 import { toast } from 'sonner';
 
 type ViewState = 'landing' | 'free-wizard' | 'dcf-wizard';
 
-// 🧪 MODO DE TESTE - Mudar para false em produção
-const TEST_MODE = true;
-
 const Valuation = () => {
   const [view, setView] = useState<ViewState>('landing');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentType, setPaymentType] = useState<'multiples' | 'dcf'>('multiples');
+  
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { hasPaidPlan, canUseDCF } = useSubscription();
+  const { canUseMultiples, canUseDCF, loading } = useValuationAccess();
 
   const handleSelectFree = () => {
+    // Verificar login
+    if (!user) {
+      toast.info('Faça login para fazer seu valuation');
+      navigate('/auth?redirect=/valuation');
+      return;
+    }
+
+    // Verificar acesso
+    if (!canUseMultiples()) {
+      setPaymentType('multiples');
+      setShowPaymentModal(true);
+      return;
+    }
+
     setView('free-wizard');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectDCF = () => {
-    if (!TEST_MODE && !user) {
+    // Verificar login
+    if (!user) {
       toast.info('Faça login para acessar o Valuation DCF');
-      navigate('/auth');
+      navigate('/auth?redirect=/valuation');
       return;
     }
 
-    if (!TEST_MODE && !hasPaidPlan) {
-      toast.error('O Valuation DCF está disponível apenas para assinantes dos planos Standard ou Premium.');
-      return;
-    }
-
-    if (!TEST_MODE && !canUseDCF()) {
-      toast.error('Você atingiu o limite de valuations DCF do seu plano este mês.');
+    // Verificar acesso
+    if (!canUseDCF()) {
+      setPaymentType('dcf');
+      setShowPaymentModal(true);
       return;
     }
 
@@ -52,6 +65,21 @@ const Valuation = () => {
   const handleBackToLanding = () => {
     setView('landing');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBuyMultiples = () => {
+    setPaymentType('multiples');
+    setShowPaymentModal(true);
+  };
+
+  const handleBuyDCF = () => {
+    setPaymentType('dcf');
+    setShowPaymentModal(true);
+  };
+
+  const handleSubscribeMaster = () => {
+    // Stripe não configurado ainda
+    toast.info('Assinatura do Plano Master em breve!');
   };
 
   if (view === 'free-wizard') {
@@ -65,11 +93,25 @@ const Valuation = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <ValuationTypeSelector onSelectFree={handleSelectFree} onSelectDCF={handleSelectDCF} />
+      <ValuationTypeSelector 
+        onSelectFree={handleSelectFree} 
+        onSelectDCF={handleSelectDCF}
+        onBuyMultiples={handleBuyMultiples}
+        onBuyDCF={handleBuyDCF}
+        onSubscribeMaster={handleSubscribeMaster}
+      />
       <MethodologySection />
       <TrustSection />
       <ValuationTestimonials />
       <ValuationFooterCTA onStartDiagnostic={handleSelectFree} />
+
+      {/* Payment Modal */}
+      <ValuationPaymentModal
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        type={paymentType}
+        onSubscribeMaster={handleSubscribeMaster}
+      />
     </div>
   );
 };

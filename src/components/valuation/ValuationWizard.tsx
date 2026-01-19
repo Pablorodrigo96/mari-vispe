@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WizardProgress } from './WizardProgress';
@@ -6,9 +7,14 @@ import { StepCompanyProfile } from './StepCompanyProfile';
 import { StepFinancialData } from './StepFinancialData';
 import { StepIdentification } from './StepIdentification';
 import { ValuationReportDialog } from './ValuationReportDialog';
+import { ValuationPaymentModal } from './ValuationPaymentModal';
 import { toast } from 'sonner';
 import { calculateValuation, parseCurrency, ValuationResult } from '@/lib/valuationCalculator';
 import { Header } from '@/components/layout/Header';
+import { useAuth } from '@/contexts/AuthContext';
+import { useValuationAccess } from '@/hooks/useValuationAccess';
+import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 interface ValuationWizardProps {
   onBack: () => void;
@@ -44,10 +50,16 @@ const initialFormData: FormData = {
 };
 
 export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { canUseMultiples, consumeMultiplesAccess, loading: accessLoading } = useValuationAccess();
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [showReport, setShowReport] = useState(false);
   const [valuationResult, setValuationResult] = useState<ValuationResult | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalSteps = 3;
 
@@ -126,23 +138,60 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
     }
   };
 
-  const handleSubmit = () => {
-    const inputs = {
-      companyType: formData.companyType,
-      segment: formData.segment,
-      annualRevenue: parseCurrency(formData.annualRevenue),
-      ebitdaMargin: parseFloat(formData.ebitdaMargin) || 0,
-      netProfitMargin: parseFloat(formData.netProfitMargin) || 0,
-      fullName: formData.fullName,
-      companyName: formData.companyName,
-      email: formData.email,
-      phone: formData.phone,
-    };
+  const handleSubmit = async () => {
+    // Verificar login
+    if (!user) {
+      toast.info('Faça login para continuar');
+      navigate('/auth?redirect=/valuation');
+      return;
+    }
 
-    const result = calculateValuation(inputs);
-    setValuationResult(result);
-    setShowReport(true);
-    toast.success('Valuation calculado com sucesso!');
+    // Verificar acesso
+    if (!canUseMultiples()) {
+      setShowPaymentModal(true);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const inputs = {
+        companyType: formData.companyType,
+        segment: formData.segment,
+        annualRevenue: parseCurrency(formData.annualRevenue),
+        ebitdaMargin: parseFloat(formData.ebitdaMargin) || 0,
+        netProfitMargin: parseFloat(formData.netProfitMargin) || 0,
+        fullName: formData.fullName,
+        companyName: formData.companyName,
+        email: formData.email,
+        phone: formData.phone,
+      };
+
+      const result = calculateValuation(inputs);
+      
+      // Salvar no histórico (bloqueado)
+      await supabase.from('valuation_history').insert([{
+        user_id: user.id,
+        valuation_type: 'multiples',
+        segment: formData.segment,
+        inputs: inputs as unknown as Json,
+        result: result as unknown as Json,
+        status: 'completed',
+        locked_at: new Date().toISOString(),
+      }]);
+
+      // Consumir crédito
+      await consumeMultiplesAccess();
+
+      setValuationResult(result);
+      setShowReport(true);
+      toast.success('Valuation calculado com sucesso!');
+    } catch (error) {
+      console.error('Error calculating valuation:', error);
+      toast.error('Erro ao calcular o valuation. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBackToStart = () => {
@@ -198,6 +247,17 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
     }
   };
 
+  if (accessLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="pt-24 pb-8 flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Carregando...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -224,9 +284,12 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
               <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border">
                 <Button
                   onClick={handleNext}
+                  disabled={isSubmitting}
                   className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[160px]"
                 >
-                  {currentStep === totalSteps - 1 ? (
+                  {isSubmitting ? (
+                    'Calculando...'
+                  ) : currentStep === totalSteps - 1 ? (
                     <>
                       Gerar Valuation Agora
                       <Send className="w-4 h-4 ml-2" />
@@ -253,6 +316,13 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
           result={valuationResult}
         />
       )}
+
+      {/* Payment Modal */}
+      <ValuationPaymentModal
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        type="multiples"
+      />
     </div>
   );
 };

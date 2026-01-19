@@ -8,6 +8,8 @@ export interface Subscription {
   status: string;
   dcf_limit: number;
   dcf_used: number;
+  multiples_limit: number;
+  multiples_used: number;
   expires_at: string | null;
 }
 
@@ -42,19 +44,32 @@ export function useSubscription() {
     fetchSubscription();
   }, [user]);
 
+  const isMasterPlan = subscription?.plan === 'master';
+
   const canUseDCF = () => {
     if (!subscription) return false;
-    if (subscription.plan === 'premium') return true;
-    if (subscription.plan === 'standard') {
+    if (isMasterPlan) {
       return subscription.dcf_used < subscription.dcf_limit;
     }
     return false;
   };
 
+  const canUseMultiples = () => {
+    if (!subscription) return false;
+    return subscription.multiples_used < subscription.multiples_limit;
+  };
+
   const remainingDCF = () => {
     if (!subscription) return 0;
-    if (subscription.plan === 'premium') return Infinity;
-    return Math.max(0, subscription.dcf_limit - subscription.dcf_used);
+    if (isMasterPlan) {
+      return Math.max(0, subscription.dcf_limit - subscription.dcf_used);
+    }
+    return 0;
+  };
+
+  const remainingMultiples = () => {
+    if (!subscription) return 0;
+    return Math.max(0, subscription.multiples_limit - subscription.multiples_used);
   };
 
   const incrementDCFUsage = async () => {
@@ -74,12 +89,33 @@ export function useSubscription() {
     return true;
   };
 
+  const incrementMultiplesUsage = async () => {
+    if (!subscription || !user) return false;
+    
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({ multiples_used: subscription.multiples_used + 1 })
+      .eq('id', subscription.id);
+
+    if (error) {
+      console.error('Error incrementing multiples usage:', error);
+      return false;
+    }
+
+    setSubscription(prev => prev ? { ...prev, multiples_used: prev.multiples_used + 1 } : null);
+    return true;
+  };
+
   return {
     subscription,
     loading,
+    isMasterPlan,
     canUseDCF,
+    canUseMultiples,
     remainingDCF,
+    remainingMultiples,
     incrementDCFUsage,
-    hasPaidPlan: subscription?.plan === 'standard' || subscription?.plan === 'premium',
+    incrementMultiplesUsage,
+    hasPaidPlan: isMasterPlan,
   };
 }
