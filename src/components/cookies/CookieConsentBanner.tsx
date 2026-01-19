@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Cookie } from 'lucide-react';
-import { useCookieConsent } from '@/hooks/useCookieConsent';
+import { useCookieConsent, useOnOpenCookiePreferences } from '@/hooks/useCookieConsent';
 import { CookiePreferencesModal } from './CookiePreferencesModal';
 
 export function CookieConsentBanner() {
@@ -28,9 +28,12 @@ export function CookieConsentBanner() {
     setShowPreferences(false);
   };
 
-  if (!showBanner && !showPreferences) {
-    return null;
-  }
+  const openPreferences = useCallback(() => {
+    setShowPreferences(true);
+  }, []);
+
+  // Listen for external open requests (from Footer)
+  useOnOpenCookiePreferences(openPreferences);
 
   return (
     <>

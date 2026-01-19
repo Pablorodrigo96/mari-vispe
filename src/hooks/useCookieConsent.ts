@@ -18,6 +18,21 @@ const defaultPreferences: CookiePreferences = {
   timestamp: null,
 };
 
+// Global event for opening preferences
+const OPEN_PREFERENCES_EVENT = 'open-cookie-preferences';
+
+export function openCookiePreferences() {
+  window.dispatchEvent(new CustomEvent(OPEN_PREFERENCES_EVENT));
+}
+
+export function useOnOpenCookiePreferences(callback: () => void) {
+  useEffect(() => {
+    const handler = () => callback();
+    window.addEventListener(OPEN_PREFERENCES_EVENT, handler);
+    return () => window.removeEventListener(OPEN_PREFERENCES_EVENT, handler);
+  }, [callback]);
+}
+
 export function useCookieConsent() {
   const [preferences, setPreferences] = useState<CookiePreferences>(defaultPreferences);
   const [isLoaded, setIsLoaded] = useState(false);

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Building2, Linkedin, Instagram, Youtube, Mail } from 'lucide-react';
+import { openCookiePreferences } from '@/hooks/useCookieConsent';
 
 const footerLinks = {
   marketplace: [
@@ -131,6 +132,14 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <button
+                  onClick={openCookiePreferences}
+                  className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors text-left"
+                >
+                  Configurações de Cookies
+                </button>
+              </li>
             </ul>
           </div>
         </div>
