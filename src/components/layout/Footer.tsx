@@ -11,7 +11,7 @@ const footerLinks = {
   resources: [
     { name: 'Blog', href: 'https://vispe.com.br/educacao/', external: true },
     { name: 'Guia de M&A', href: 'https://vispe.com.br/ma-fusoes-e-aquisicoes/', external: true },
-    { name: 'Calculadora de Valuation', href: '/calculator' },
+    { name: 'Calculadora de Valuation', href: '/valuation' },
     { name: 'Cases de Sucesso', href: '/cases' },
   ] as Array<{ name: string; href: string; external?: boolean }>,
   company: [
