@@ -15,7 +15,7 @@ const footerLinks = {
   ] as Array<{ name: string; href: string; external?: boolean }>,
   company: [
     { name: 'Sobre Nós', href: 'https://vispe.com.br/sobre/', external: true },
-    { name: 'Contato', href: '/contact' },
+    { name: 'Contato', href: 'https://vispe.com.br/contato/', external: true },
   ] as Array<{ name: string; href: string; external?: boolean }>,
   legal: [
     { name: 'Termos de Uso', href: '/terms' },
