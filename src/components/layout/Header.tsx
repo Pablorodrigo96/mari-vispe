@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Menu, X, Building2, LogOut, ClipboardList, User } from 'lucide-react';
+import { Menu, X, Building2, LogOut, ClipboardList, User } from 'lucide-react';
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -68,10 +69,7 @@ export function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex lg:items-center lg:gap-3">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
-            </Button>
+            <NotificationDropdown />
             
             {user ? (
               <DropdownMenu>

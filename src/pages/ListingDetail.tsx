@@ -116,12 +116,29 @@ const ListingDetail = () => {
     e.preventDefault();
     setIsSending(true);
     
-    // Simulate sending
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast.success('Mensagem enviada com sucesso! O anunciante entrará em contato.');
-    setContactForm({ name: '', email: '', phone: '', message: '' });
-    setIsSending(false);
+    try {
+      const { error } = await supabase.from('messages').insert({
+        listing_id: listing?.id,
+        sender_name: contactForm.name,
+        sender_email: contactForm.email,
+        sender_phone: contactForm.phone || null,
+        message: contactForm.message,
+      });
+
+      if (error) {
+        console.error('Error sending message:', error);
+        toast.error('Erro ao enviar mensagem. Tente novamente.');
+        return;
+      }
+
+      toast.success('Mensagem enviada com sucesso! O anunciante será notificado.');
+      setContactForm({ name: '', email: '', phone: '', message: '' });
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Erro ao enviar mensagem. Tente novamente.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const getCategoryLabel = (categoryId: string) => {

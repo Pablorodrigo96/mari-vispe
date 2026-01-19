@@ -101,6 +101,85 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          listing_id: string
+          message: string
+          sender_email: string
+          sender_name: string
+          sender_phone: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          listing_id: string
+          message: string
+          sender_email: string
+          sender_name: string
+          sender_phone?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          listing_id?: string
+          message?: string
+          sender_email?: string
+          sender_name?: string
+          sender_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          listing_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          listing_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          listing_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           cep: string | null
