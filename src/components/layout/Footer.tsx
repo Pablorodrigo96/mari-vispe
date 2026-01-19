@@ -9,11 +9,11 @@ const footerLinks = {
     { name: 'Para Investidores', href: '/investors' },
   ],
   resources: [
-    { name: 'Blog', href: '/blog' },
+    { name: 'Blog', href: 'https://vispe.com.br/educacao/', external: true },
     { name: 'Guia de M&A', href: '/guides' },
     { name: 'Calculadora de Valuation', href: '/calculator' },
     { name: 'Cases de Sucesso', href: '/cases' },
-  ],
+  ] as Array<{ name: string; href: string; external?: boolean }>,
   company: [
     { name: 'Sobre Nós', href: '/about' },
     { name: 'Carreiras', href: '/careers' },
@@ -81,9 +81,20 @@ export function Footer() {
             <ul className="space-y-3">
               {footerLinks.resources.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.href} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-                    {link.name}
-                  </Link>
+                  {link.external ? (
+                    <a 
+                      href={link.href} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                    >
+                      {link.name}
+                    </a>
+                  ) : (
+                    <Link to={link.href} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                      {link.name}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
