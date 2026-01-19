@@ -19,8 +19,6 @@ const footerLinks = {
   ] as Array<{ name: string; href: string; external?: boolean }>,
   legal: [
     { name: 'Termos de Uso', href: '/terms' },
-    { name: 'Privacidade', href: '/privacy' },
-    { name: 'Cookies', href: '/cookies' },
   ],
 };
 
