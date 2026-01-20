@@ -4,22 +4,49 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Mail, Lock, ArrowLeft } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Building2, Mail, Lock, ArrowLeft, User, Phone } from 'lucide-react';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
+const nameSchema = z.string().min(3, 'Nome deve ter pelo menos 3 caracteres');
+const phoneSchema = z.string().min(14, 'Telefone inválido');
+
+const formatPhone = (value: string) => {
+  const numbers = value.replace(/\D/g, '');
+  if (numbers.length <= 2) return `(${numbers}`;
+  if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+  return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+};
+
+const roleOptions: { id: UserRole; label: string; description: string }[] = [
+  { id: 'seller', label: 'Vendedor', description: 'Quero vender minha empresa' },
+  { id: 'buyer', label: 'Comprador/Investidor', description: 'Quero comprar ou investir' },
+  { id: 'advisor', label: 'Assessor/Representante', description: 'Represento empresas' },
+];
 
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
   const { user, signIn, signUp, loading } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  
+  // Login state
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  
+  // Signup state
+  const [signupFullName, setSignupFullName] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [signupRoles, setSignupRoles] = useState<UserRole[]>([]);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -28,25 +55,36 @@ export default function Auth() {
     }
   }, [user, loading, navigate, redirectTo]);
 
-  const validateInputs = () => {
-    try {
-      emailSchema.parse(email);
-      passwordSchema.parse(password);
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
-      }
-      return false;
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    if (formatted.length <= 15) {
+      setSignupPhone(formatted);
     }
+  };
+
+  const toggleRole = (role: UserRole) => {
+    setSignupRoles(prev => 
+      prev.includes(role) 
+        ? prev.filter(r => r !== role)
+        : [...prev, role]
+    );
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateInputs()) return;
+    
+    try {
+      emailSchema.parse(loginEmail);
+      passwordSchema.parse(loginPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      }
+      return;
+    }
 
     setIsSubmitting(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(loginEmail, loginPassword);
     setIsSubmitting(false);
 
     if (error) {
@@ -63,10 +101,54 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateInputs()) return;
+
+    // Validations
+    try {
+      nameSchema.parse(signupFullName);
+    } catch {
+      toast.error('Nome deve ter pelo menos 3 caracteres');
+      return;
+    }
+
+    try {
+      phoneSchema.parse(signupPhone);
+    } catch {
+      toast.error('Informe um telefone válido');
+      return;
+    }
+
+    try {
+      emailSchema.parse(signupEmail);
+    } catch {
+      toast.error('Informe um email válido');
+      return;
+    }
+
+    try {
+      passwordSchema.parse(signupPassword);
+    } catch {
+      toast.error('Senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    if (signupPassword !== signupConfirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+
+    if (signupRoles.length === 0) {
+      toast.error('Selecione pelo menos um perfil');
+      return;
+    }
 
     setIsSubmitting(true);
-    const { error } = await signUp(email, password);
+    const { error } = await signUp({
+      email: signupEmail,
+      password: signupPassword,
+      fullName: signupFullName,
+      phone: signupPhone,
+      roles: signupRoles,
+    });
     setIsSubmitting(false);
 
     if (error) {
@@ -90,7 +172,7 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-muted to-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-muted to-background px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
@@ -112,6 +194,7 @@ export default function Auth() {
               <TabsTrigger value="signup">Criar Conta</TabsTrigger>
             </TabsList>
 
+            {/* Login Tab */}
             <TabsContent value="login">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
@@ -122,8 +205,8 @@ export default function Auth() {
                       id="login-email"
                       type="email"
                       placeholder="seu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
                       className="pl-10"
                       required
                     />
@@ -138,8 +221,8 @@ export default function Auth() {
                       id="login-password"
                       type="password"
                       placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
                       className="pl-10"
                       required
                     />
@@ -156,8 +239,44 @@ export default function Auth() {
               </form>
             </TabsContent>
 
+            {/* Signup Tab */}
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
+                {/* Full Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Nome Completo</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="Seu nome completo"
+                      value={signupFullName}
+                      onChange={(e) => setSignupFullName(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Telefone</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="(11) 99999-9999"
+                      value={signupPhone}
+                      onChange={handlePhoneChange}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Email */}
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <div className="relative">
@@ -166,14 +285,15 @@ export default function Auth() {
                       id="signup-email"
                       type="email"
                       placeholder="seu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
                       className="pl-10"
                       required
                     />
                   </div>
                 </div>
 
+                {/* Password */}
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>
                   <div className="relative">
@@ -182,11 +302,62 @@ export default function Auth() {
                       id="signup-password"
                       type="password"
                       placeholder="Mínimo 6 caracteres"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
                       className="pl-10"
                       required
                     />
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="signup-confirm-password">Confirmar Senha</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-confirm-password"
+                      type="password"
+                      placeholder="Repita a senha"
+                      value={signupConfirmPassword}
+                      onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Roles */}
+                <div className="space-y-3">
+                  <Label>Eu sou:</Label>
+                  <div className="space-y-2">
+                    {roleOptions.map((role) => (
+                      <div
+                        key={role.id}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          signupRoles.includes(role.id)
+                            ? 'border-accent bg-accent/5'
+                            : 'border-border hover:border-muted-foreground/50'
+                        }`}
+                        onClick={() => toggleRole(role.id)}
+                      >
+                        <Checkbox
+                          id={`role-${role.id}`}
+                          checked={signupRoles.includes(role.id)}
+                          onCheckedChange={() => toggleRole(role.id)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <label
+                            htmlFor={`role-${role.id}`}
+                            className="text-sm font-medium cursor-pointer"
+                          >
+                            {role.label}
+                          </label>
+                          <p className="text-xs text-muted-foreground">{role.description}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 

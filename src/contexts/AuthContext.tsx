@@ -2,11 +2,21 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+export type UserRole = 'seller' | 'buyer' | 'advisor';
+
+interface SignUpData {
+  email: string;
+  password: string;
+  fullName: string;
+  phone: string;
+  roles: UserRole[];
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (data: SignUpData) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -38,17 +48,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (data: SignUpData) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
+    // 1. Create user in auth
+    const { data: authData, error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
       options: {
-        emailRedirectTo: redirectUrl
+        emailRedirectTo: redirectUrl,
+        data: { full_name: data.fullName }
       }
     });
-    return { error };
+    
+    if (error) return { error };
+
+    // 2. Update profile with phone (trigger already creates profile)
+    if (authData.user) {
+      // Wait a bit for the trigger to create the profile
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await supabase.from('profiles').update({
+        full_name: data.fullName,
+        phone: data.phone,
+      }).eq('user_id', authData.user.id);
+
+      // 3. Insert selected roles
+      if (data.roles.length > 0) {
+        const rolesToInsert = data.roles.map(role => ({
+          user_id: authData.user!.id,
+          role,
+        }));
+        await supabase.from('user_roles').insert(rolesToInsert);
+      }
+    }
+
+    return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
