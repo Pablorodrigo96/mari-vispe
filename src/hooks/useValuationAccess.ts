@@ -1,8 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-
 export interface ValuationPurchase {
   id: string;
   user_id: string;
@@ -22,7 +22,7 @@ export const VALUATION_PRICES = {
 export function useValuationAccess() {
   const { user } = useAuth();
   const { subscription, loading: subscriptionLoading } = useSubscription();
-
+  const { isAdmin, loading: rolesLoading } = useUserRoles();
   // Fetch available purchases (paid but not used)
   const { data: purchases = [], isLoading: purchasesLoading } = useQuery({
     queryKey: ['valuation-purchases', user?.id],
@@ -46,7 +46,7 @@ export function useValuationAccess() {
     enabled: !!user,
   });
 
-  const loading = subscriptionLoading || purchasesLoading;
+  const loading = subscriptionLoading || purchasesLoading || rolesLoading;
 
   // Check if user has Master plan
   const isMasterPlan = subscription?.plan === 'master';
@@ -93,14 +93,15 @@ export function useValuationAccess() {
     return fromPlan + fromPurchases;
   };
 
-  // Can use valuation?
-  const canUseMultiples = () => remainingMultiples() > 0;
-  const canUseDCF = () => remainingDCF() > 0;
+  // Can use valuation? (Admin tem acesso ilimitado)
+  const canUseMultiples = () => isAdmin || remainingMultiples() > 0;
+  const canUseDCF = () => isAdmin || remainingDCF() > 0;
 
   // Consume access (prefer plan credits first, then purchases)
+  // Admin não consome créditos
   const consumeMultiplesAccess = async (): Promise<boolean> => {
+    if (isAdmin) return true; // Admin bypass
     if (!user || !subscription) return false;
-
     // First try to use plan credits
     if (remainingMultiplesFromPlan() > 0) {
       const { error } = await supabase
@@ -134,8 +135,8 @@ export function useValuationAccess() {
   };
 
   const consumeDCFAccess = async (): Promise<boolean> => {
+    if (isAdmin) return true; // Admin bypass
     if (!user || !subscription) return false;
-
     // First try to use plan credits
     if (remainingDCFFromPlan() > 0) {
       const { error } = await supabase
@@ -170,6 +171,8 @@ export function useValuationAccess() {
 
   return {
     loading,
+    // Admin status
+    isAdmin,
     // Plan info
     planName,
     isMasterPlan,
