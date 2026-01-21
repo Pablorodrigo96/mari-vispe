@@ -18,6 +18,7 @@ import Investors from "./pages/Investors";
 import Capital from "./pages/Capital";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/capital" element={<Capital />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
