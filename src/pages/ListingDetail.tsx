@@ -117,17 +117,33 @@ const ListingDetail = () => {
     setIsSending(true);
     
     try {
-      const { error } = await supabase.from('messages').insert({
-        listing_id: listing?.id,
-        sender_name: contactForm.name,
-        sender_email: contactForm.email,
-        sender_phone: contactForm.phone || null,
-        message: contactForm.message,
-      });
+      // Use edge function with rate limiting
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-message`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            listing_id: listing?.id,
+            sender_name: contactForm.name.trim(),
+            sender_email: contactForm.email.trim(),
+            sender_phone: contactForm.phone?.trim() || undefined,
+            message: contactForm.message.trim(),
+          }),
+        }
+      );
 
-      if (error) {
-        console.error('Error sending message:', error);
-        toast.error('Erro ao enviar mensagem. Tente novamente.');
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast.error('Muitas mensagens enviadas. Aguarde alguns minutos e tente novamente.');
+        } else {
+          toast.error(data.error || 'Erro ao enviar mensagem. Tente novamente.');
+        }
         return;
       }
 
