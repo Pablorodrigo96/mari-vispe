@@ -137,6 +137,13 @@ export type Database = {
             referencedRelation: "listings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       notifications: {
@@ -176,6 +183,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_listings"
             referencedColumns: ["id"]
           },
         ]
@@ -225,6 +239,27 @@ export type Database = {
           stripe_customer_id?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          identifier: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          identifier: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          identifier?: string
         }
         Relationships: []
       }
@@ -371,9 +406,81 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_listings: {
+        Row: {
+          annual_profit: number | null
+          annual_revenue: number | null
+          asking_price: number | null
+          category: string | null
+          city: string | null
+          created_at: string | null
+          description: string | null
+          foundation_year: number | null
+          hide_price: boolean | null
+          id: string | null
+          images: string[] | null
+          iptu_value: number | null
+          neighborhood: string | null
+          plan: string | null
+          rent_value: number | null
+          sale_reason: string | null
+          square_meters: number | null
+          state: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          annual_profit?: number | null
+          annual_revenue?: number | null
+          asking_price?: number | null
+          category?: string | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          foundation_year?: number | null
+          hide_price?: boolean | null
+          id?: string | null
+          images?: string[] | null
+          iptu_value?: number | null
+          neighborhood?: string | null
+          plan?: string | null
+          rent_value?: number | null
+          sale_reason?: string | null
+          square_meters?: number | null
+          state?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          annual_profit?: number | null
+          annual_revenue?: number | null
+          asking_price?: number | null
+          category?: string | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          foundation_year?: number | null
+          hide_price?: boolean | null
+          id?: string | null
+          images?: string[] | null
+          iptu_value?: number | null
+          neighborhood?: string | null
+          plan?: string | null
+          rent_value?: number | null
+          sale_reason?: string | null
+          square_meters?: number | null
+          state?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -1,9 +1,12 @@
 project_id = "eiprjgotjruiutztjavp"
 
+[functions.check-subscription]
+verify_jwt = false
+
 [functions.create-checkout]
 verify_jwt = false
 
-[functions.check-subscription]
+[functions.send-message]
 verify_jwt = false
 
 [functions.verify-payment]
