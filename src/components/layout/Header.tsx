@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Building2, LogOut, ClipboardList, User } from 'lucide-react';
+import { Menu, X, Building2, LogOut, ClipboardList, User, Shield } from 'lucide-react';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const navigation = [
@@ -27,6 +28,7 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useUserRoles();
 
   const handleSignOut = async () => {
     await signOut();
@@ -87,6 +89,12 @@ export function Header() {
                     {user.email}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate('/admin')}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Painel Admin
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => navigate('/meu-perfil')}>
                     <User className="w-4 h-4 mr-2" />
                     Meu Perfil
