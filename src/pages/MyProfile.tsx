@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, MapPin, CreditCard, Crown, Check, Loader2 } from 'lucide-react';
+import { User, MapPin, CreditCard, Crown, Check, Loader2, ExternalLink } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,7 @@ const MyProfile = () => {
   const { user, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
 
   const form = useForm<ProfileFormData>({
@@ -171,6 +172,22 @@ const MyProfile = () => {
 
   const currentPlan = subscription?.plan || 'free';
   const isBasicPlan = currentPlan === 'free' || currentPlan === 'basic';
+
+  const handleManageSubscription = async () => {
+    setIsLoadingPortal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (err) {
+      console.error('Error opening customer portal:', err);
+      toast.error('Erro ao abrir portal de assinatura');
+    } finally {
+      setIsLoadingPortal(false);
+    }
+  };
 
   if (authLoading || isLoading) {
     return (
@@ -440,7 +457,7 @@ const MyProfile = () => {
                           Suporte prioritário
                         </li>
                       </ul>
-                      {isBasicPlan && (
+                      {isBasicPlan ? (
                         <Button 
                           type="button" 
                           className="w-full bg-amber-500 hover:bg-amber-600"
@@ -448,6 +465,26 @@ const MyProfile = () => {
                         >
                           <Crown className="h-4 w-4 mr-2" />
                           Fazer Upgrade
+                        </Button>
+                      ) : (
+                        <Button 
+                          type="button" 
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleManageSubscription}
+                          disabled={isLoadingPortal}
+                        >
+                          {isLoadingPortal ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Carregando...
+                            </>
+                          ) : (
+                            <>
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Gerenciar Assinatura
+                            </>
+                          )}
                         </Button>
                       )}
                     </div>
