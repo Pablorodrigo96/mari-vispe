@@ -21,6 +21,13 @@ import Terms from "./pages/Terms";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
 
+// Admin pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminListings from "./pages/admin/AdminListings";
+import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
+import AdminValuations from "./pages/admin/AdminValuations";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -45,6 +52,14 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/listings" element={<AdminListings />} />
+            <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+            <Route path="/admin/valuations" element={<AdminValuations />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
