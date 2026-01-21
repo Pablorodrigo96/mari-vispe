@@ -192,6 +192,7 @@ export type Database = {
           neighborhood: string | null
           phone: string | null
           state: string | null
+          stripe_customer_id: string | null
           updated_at: string
           user_id: string
         }
@@ -206,6 +207,7 @@ export type Database = {
           neighborhood?: string | null
           phone?: string | null
           state?: string | null
+          stripe_customer_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -220,6 +222,7 @@ export type Database = {
           neighborhood?: string | null
           phone?: string | null
           state?: string | null
+          stripe_customer_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -236,6 +239,7 @@ export type Database = {
           multiples_used: number
           plan: string
           status: string
+          stripe_subscription_id: string | null
           updated_at: string
           user_id: string
         }
@@ -249,6 +253,7 @@ export type Database = {
           multiples_used?: number
           plan?: string
           status?: string
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -262,6 +267,7 @@ export type Database = {
           multiples_used?: number
           plan?: string
           status?: string
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
         }

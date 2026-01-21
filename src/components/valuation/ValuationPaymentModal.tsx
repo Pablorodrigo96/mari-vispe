@@ -1,4 +1,5 @@
-import { Crown, CreditCard, Check, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Crown, CreditCard, Check, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,6 +9,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { VALUATION_PRICES } from '@/hooks/useValuationAccess';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ValuationPaymentModalProps {
   open: boolean;
@@ -28,9 +31,10 @@ export const ValuationPaymentModal = ({
   open,
   onClose,
   type,
-  onSubscribeMaster,
-  onBuySingle,
 }: ValuationPaymentModalProps) => {
+  const [loadingSingle, setLoadingSingle] = useState(false);
+  const [loadingMaster, setLoadingMaster] = useState(false);
+  
   const price = VALUATION_PRICES[type];
   const typeName = type === 'multiples' ? 'Múltiplos de Mercado' : 'Fluxo de Caixa Descontado';
 
@@ -41,6 +45,46 @@ export const ValuationPaymentModal = ({
     'Suporte prioritário',
     'Histórico completo',
   ];
+
+  const handleBuySingle = async () => {
+    setLoadingSingle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { type },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error creating checkout:', err);
+      toast.error('Erro ao iniciar pagamento. Tente novamente.');
+    } finally {
+      setLoadingSingle(false);
+    }
+  };
+
+  const handleSubscribeMaster = async () => {
+    setLoadingMaster(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { type: 'master' },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error creating checkout:', err);
+      toast.error('Erro ao iniciar pagamento. Tente novamente.');
+    } finally {
+      setLoadingMaster(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -74,15 +118,15 @@ export const ValuationPaymentModal = ({
 
             <ul className="space-y-2 mb-4">
               <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Check className="w-4 h-4 text-emerald-500" />
+                <Check className="w-4 h-4 text-primary" />
                 1 Valuation completo
               </li>
               <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Check className="w-4 h-4 text-emerald-500" />
+                <Check className="w-4 h-4 text-primary" />
                 Relatório em PDF
               </li>
               <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Check className="w-4 h-4 text-emerald-500" />
+                <Check className="w-4 h-4 text-primary" />
                 Acesso imediato
               </li>
             </ul>
@@ -90,10 +134,17 @@ export const ValuationPaymentModal = ({
             <Button
               variant="outline"
               className="w-full"
-              onClick={onBuySingle}
-              disabled // Stripe não configurado ainda
+              onClick={handleBuySingle}
+              disabled={loadingSingle || loadingMaster}
             >
-              Em breve
+              {loadingSingle ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                `Comprar por ${formatPrice(price)}`
+              )}
             </Button>
           </div>
 
@@ -141,10 +192,17 @@ export const ValuationPaymentModal = ({
 
             <Button
               className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
-              onClick={onSubscribeMaster}
-              disabled // Stripe não configurado ainda
+              onClick={handleSubscribeMaster}
+              disabled={loadingSingle || loadingMaster}
             >
-              Em breve
+              {loadingMaster ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                'Assinar Plano Master'
+              )}
             </Button>
           </div>
         </div>
