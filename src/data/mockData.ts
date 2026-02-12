@@ -38,7 +38,7 @@ export const categories = [
   { id: 'services', label: 'Serviços', image: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=400&h=300&fit=crop' },
   { id: 'food', label: 'Alimentação', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop' },
   { id: 'health', label: 'Saúde & Bem-estar', image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=300&fit=crop' },
-  { id: 'education', label: 'Educação', image: 'https://images.unsplash.com/photo-1427504494785-cdaa41e57ae0?w=400&h=300&fit=crop' },
+  { id: 'education', label: 'Educação', image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop' },
   { id: 'logistics', label: 'Logística', image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&h=300&fit=crop' },
 ];
 
