@@ -339,12 +339,14 @@ export default function Auth() {
                             ? 'border-accent bg-accent/5'
                             : 'border-border hover:border-muted-foreground/50'
                         }`}
-                        onClick={() => toggleRole(role.id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleRole(role.id);
+                        }}
                       >
                         <Checkbox
                           id={`role-${role.id}`}
                           checked={signupRoles.includes(role.id)}
-                          onCheckedChange={() => toggleRole(role.id)}
                           className="mt-0.5"
                         />
                         <div className="flex-1">
