@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Filter } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { BusinessMap } from '@/components/map/BusinessMap';
-import { MapFilterSidebar, defaultMapFilters, type MapFilterState } from '@/components/map/MapFilterSidebar';
+import { MapFilterSidebar, defaultMapFilters, DEFAULT_MAX_PRICE, type MapFilterState } from '@/components/map/MapFilterSidebar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
@@ -33,6 +33,20 @@ const MapView = () => {
     }
     fetchListings();
   }, []);
+
+  // Derive max price from listings
+  const maxPrice = useMemo(() => {
+    const highest = Math.max(...listings.map((l) => l.asking_price ?? 0), DEFAULT_MAX_PRICE);
+    return Math.ceil(highest / 1000000) * 1000000; // round up to nearest million
+  }, [listings]);
+
+  // Reset price range when maxPrice changes
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      priceRange: [prev.priceRange[0], maxPrice],
+    }));
+  }, [maxPrice]);
 
   // Derive available states from all listings
   const availableStates = useMemo(() => {
@@ -66,7 +80,7 @@ const MapView = () => {
     filters.categories.length +
     filters.states.length +
     filters.cities.length +
-    (filters.priceRange[0] > 0 || filters.priceRange[1] < 10000000 ? 1 : 0);
+    (filters.priceRange[0] > 0 || filters.priceRange[1] < maxPrice ? 1 : 0);
 
   const sidebarContent = (
     <MapFilterSidebar
@@ -76,6 +90,7 @@ const MapView = () => {
       availableCities={availableCities}
       onClose={isMobile ? () => setSheetOpen(false) : undefined}
       isMobile={isMobile}
+      maxPrice={maxPrice}
     />
   );
 
