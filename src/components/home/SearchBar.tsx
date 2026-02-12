@@ -45,8 +45,10 @@ export function SearchBar() {
                 <SelectItem value="all">Qualquer setor</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
-                    <span className="mr-2">{cat.icon}</span>
-                    {cat.label}
+                    <span className="flex items-center gap-2">
+                      <img src={cat.image} alt={cat.label} className="w-5 h-5 rounded object-cover" />
+                      {cat.label}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

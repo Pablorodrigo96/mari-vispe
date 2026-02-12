@@ -32,14 +32,14 @@ export interface Business {
 }
 
 export const categories = [
-  { id: 'tech', label: 'Tecnologia & SaaS', icon: '💻' },
-  { id: 'commerce', label: 'Comércio & Varejo', icon: '🛒' },
-  { id: 'industry', label: 'Indústria', icon: '🏭' },
-  { id: 'services', label: 'Serviços', icon: '💼' },
-  { id: 'food', label: 'Alimentação', icon: '🍽️' },
-  { id: 'health', label: 'Saúde & Bem-estar', icon: '🏥' },
-  { id: 'education', label: 'Educação', icon: '📚' },
-  { id: 'logistics', label: 'Logística', icon: '🚚' },
+  { id: 'tech', label: 'Tecnologia & SaaS', image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=300&fit=crop' },
+  { id: 'commerce', label: 'Comércio & Varejo', image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop' },
+  { id: 'industry', label: 'Indústria', image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop' },
+  { id: 'services', label: 'Serviços', image: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=400&h=300&fit=crop' },
+  { id: 'food', label: 'Alimentação', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop' },
+  { id: 'health', label: 'Saúde & Bem-estar', image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=300&fit=crop' },
+  { id: 'education', label: 'Educação', image: 'https://images.unsplash.com/photo-1523050854058-8df90110c8f1?w=400&h=300&fit=crop' },
+  { id: 'logistics', label: 'Logística', image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&h=300&fit=crop' },
 ];
 
 export const states = [

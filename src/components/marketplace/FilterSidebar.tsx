@@ -106,7 +106,7 @@ export function FilterSidebar({ className, onClose, filters, onFiltersChange }: 
                     htmlFor={cat.id}
                     className="text-sm font-normal cursor-pointer flex items-center gap-2"
                   >
-                    <span>{cat.icon}</span>
+                    <img src={cat.image} alt={cat.label} className="w-5 h-5 rounded object-cover" />
                     {cat.label}
                   </Label>
                 </div>

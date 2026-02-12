@@ -84,7 +84,9 @@ const Index = () => {
                 to={`/marketplace?sector=${cat.id}`}
                 className="group p-6 bg-card rounded-xl border border-border hover:border-accent hover:shadow-soft transition-all text-center"
               >
-                <span className="text-4xl mb-3 block">{cat.icon}</span>
+                <div className="w-full h-24 mb-3 rounded-lg overflow-hidden bg-muted">
+                  <img src={cat.image} alt={cat.label} className="w-full h-full object-cover" loading="lazy" />
+                </div>
                 <h3 className="font-medium text-foreground group-hover:text-accent transition-colors">{cat.label}</h3>
               </Link>
             ))}
