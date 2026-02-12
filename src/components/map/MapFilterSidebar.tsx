@@ -84,10 +84,10 @@ export function MapFilterSidebar({
   return (
     <div className={cn('bg-card border-r border-border flex flex-col h-full', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between p-5 border-b border-border">
+      <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold">Filtros</h2>
+          <Filter className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Filtros</h2>
           {activeFiltersCount > 0 && (
             <Badge className="ml-1 bg-primary text-primary-foreground text-xs px-2">
               {activeFiltersCount}
@@ -109,27 +109,27 @@ export function MapFilterSidebar({
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-5">
-          <Accordion type="multiple" defaultValue={['category', 'state', 'city', 'price']} className="space-y-2">
+        <div className="px-3 py-2">
+          <Accordion type="multiple" defaultValue={['category', 'state', 'city', 'price']} className="space-y-0">
             {/* Category */}
             <AccordionItem value="category" className="border-b-0">
-              <AccordionTrigger className="py-3 hover:no-underline">
-                <span className="text-sm font-medium flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
+              <AccordionTrigger className="py-2 hover:no-underline">
+                <span className="text-xs font-medium flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                   Setor de Atuação
                 </span>
               </AccordionTrigger>
-              <AccordionContent className="pt-2 pb-4">
-                <div className="space-y-2.5">
+              <AccordionContent className="pt-1 pb-2">
+                <div className="space-y-1">
                   {categories.map((cat) => (
-                    <div key={cat.id} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors">
+                    <div key={cat.id} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/50 transition-colors">
                       <Checkbox
                         id={`map-cat-${cat.id}`}
                         checked={filters.categories.includes(cat.id)}
                         onCheckedChange={() => toggleCategory(cat.id)}
                       />
-                      <Label htmlFor={`map-cat-${cat.id}`} className="text-sm font-normal cursor-pointer flex items-center gap-2 flex-1">
-                        <span className="text-base">{cat.icon}</span>
+                      <Label htmlFor={`map-cat-${cat.id}`} className="text-xs font-normal cursor-pointer flex items-center gap-2 flex-1">
+                        <span className="text-sm">{cat.icon}</span>
                         {cat.label}
                       </Label>
                     </div>
@@ -140,22 +140,22 @@ export function MapFilterSidebar({
 
             {/* State */}
             <AccordionItem value="state" className="border-b-0">
-              <AccordionTrigger className="py-3 hover:no-underline">
-                <span className="text-sm font-medium flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
+              <AccordionTrigger className="py-2 hover:no-underline">
+                <span className="text-xs font-medium flex items-center gap-2">
+                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                   Estado
                 </span>
               </AccordionTrigger>
-              <AccordionContent className="pt-2 pb-4">
-                <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1">
+              <AccordionContent className="pt-1 pb-2">
+                <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
                   {availableStates.map((state) => (
-                    <div key={state} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors">
+                    <div key={state} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/50 transition-colors">
                       <Checkbox
                         id={`map-state-${state}`}
                         checked={filters.states.includes(state)}
                         onCheckedChange={() => toggleState(state)}
                       />
-                      <Label htmlFor={`map-state-${state}`} className="text-sm font-normal cursor-pointer flex-1">
+                      <Label htmlFor={`map-state-${state}`} className="text-xs font-normal cursor-pointer flex-1">
                         {state}
                       </Label>
                     </div>
@@ -167,22 +167,22 @@ export function MapFilterSidebar({
             {/* City */}
             {availableCities.length > 0 && (
               <AccordionItem value="city" className="border-b-0">
-                <AccordionTrigger className="py-3 hover:no-underline">
-                  <span className="text-sm font-medium flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                <AccordionTrigger className="py-2 hover:no-underline">
+                  <span className="text-xs font-medium flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                     Cidade
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-4">
-                  <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1">
+                <AccordionContent className="pt-1 pb-2">
+                  <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
                     {availableCities.map((city) => (
-                      <div key={city} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors">
-                        <Checkbox
+                      <div key={city} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/50 transition-colors">
+                      <Checkbox
                           id={`map-city-${city}`}
                           checked={filters.cities.includes(city)}
                           onCheckedChange={() => toggleCity(city)}
                         />
-                        <Label htmlFor={`map-city-${city}`} className="text-sm font-normal cursor-pointer flex-1">
+                      <Label htmlFor={`map-city-${city}`} className="text-xs font-normal cursor-pointer flex-1">
                           {city}
                         </Label>
                       </div>
@@ -194,14 +194,14 @@ export function MapFilterSidebar({
 
             {/* Price */}
             <AccordionItem value="price" className="border-b-0">
-              <AccordionTrigger className="py-3 hover:no-underline">
-                <span className="text-sm font-medium flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <AccordionTrigger className="py-2 hover:no-underline">
+                <span className="text-xs font-medium flex items-center gap-2">
+                  <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
                   Faixa de Preço
                 </span>
               </AccordionTrigger>
-              <AccordionContent className="pt-2 pb-4">
-                <div className="space-y-4">
+              <AccordionContent className="pt-1 pb-2">
+                <div className="space-y-2">
                   <Slider
                     value={filters.priceRange}
                     onValueChange={(v) => onFiltersChange({ ...filters, priceRange: v as [number, number] })}
@@ -209,7 +209,7 @@ export function MapFilterSidebar({
                     step={100000}
                     className="w-full"
                   />
-                  <div className="flex justify-between text-sm text-muted-foreground">
+                  <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{formatCurrency(filters.priceRange[0])}</span>
                     <span>{filters.priceRange[1] >= 10000000 ? 'R$ 10 mi+' : formatCurrency(filters.priceRange[1])}</span>
                   </div>
@@ -222,7 +222,7 @@ export function MapFilterSidebar({
 
       {/* Mobile apply button */}
       {isMobile && (
-        <div className="p-5 border-t border-border">
+        <div className="p-3 border-t border-border">
           <Button className="w-full" onClick={onClose}>
             Aplicar Filtros
           </Button>
