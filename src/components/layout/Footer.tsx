@@ -32,6 +32,7 @@ const footerLinks = {
 export function Footer() {
   return (
     <footer className="bg-primary text-primary-foreground">
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
       <div className="container mx-auto px-4 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand */}
@@ -173,7 +174,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/50">
-            © 2024 PME.B3. Todos os direitos reservados.
+            © 2025 PME.B3. Todos os direitos reservados.
           </p>
           <p className="text-sm text-primary-foreground/50">
             Feito com ❤️ no Brasil
