@@ -1,71 +1,43 @@
 
-## Melhoria do Design do Menu de Filtros Lateral
 
-### Análise Atual
+## Compactar o Design do Menu de Filtros Lateral
 
-O componente `MapFilterSidebar` tem um design funcional, mas pode ser melhorado em:
-- **Visual:** Fundo simples sem destaque visual (apenas `bg-card`)
-- **Espaçamento:** Acordeons com spacing minimal (`space-y-1`)
-- **Headers:** Seções sem diferenciação visual clara
-- **Interatividade:** Sem feedback visual ou hover states melhorados
-- **Mobile:** Design não otimizado especificamente para telas pequenas
-- **Contraste:** Labels e filtros podem ter melhor hierarquia visual
+### Problema
 
-Comparando com `FilterSidebar` do marketplace (que tem mais polimento):
-- Usa `rounded-xl border` para mais destaque
-- Spacing maior (`space-y-2`, `mb-4`, `mt-6`)
-- Botão de ação visual ("Aplicar Filtros" no mobile)
-- Padding interno melhor distribuído
+O sidebar de filtros esta com elementos grandes demais: textos, checkboxes, espacamentos e padding excessivos, ocupando muito espaco vertical e visual.
 
-### Melhorias Propostas
+### Alteracoes em `src/components/map/MapFilterSidebar.tsx`
 
-**1. Visual e Layout**
-- Adicionar `rounded-lg` (ou `rounded-xl` no desktop) para maior destaque
-- Melhorar padding/spacing interno (p-4 → p-5 ou p-6)
-- Adicionar fundo gradiente sutil ou efeito de superfície elevada
-- Melhorar espaçamento entre acordeons (`space-y-2` em vez de `space-y-1`)
-- Adicionar borda sutil que combine com o tema
+**1. Header mais compacto**
+- Reduzir padding de `p-5` para `p-3`
+- Titulo "Filtros" de `font-semibold` para `text-sm font-semibold`
+- Icone do filtro de `h-5 w-5` para `h-4 w-4`
 
-**2. Header**
-- Aumentar tamanho do ícone (`h-4 w-4` → `h-5 w-5`)
-- Melhorar alinhamento e spacing do header (`mb-4` explícito)
-- Melhorar visual do badge (maior ou com background melhor)
+**2. Area de conteudo**
+- Reduzir padding interno de `p-5` para `px-3 py-2`
+- Reduzir spacing entre acordeons de `space-y-2` para `space-y-0`
 
-**3. Seções de Filtro (Acordeons)**
-- Aumentar padding dos triggers (`py-2.5` → `py-3`)
-- Melhorar spacing do conteúdo (`pt-1 pb-3` → `pt-2 pb-4`)
-- Adicionar ícones visuais para cada categoria de filtro (opcional)
-- Melhorar contraste de texto selecionado
+**3. Accordion triggers**
+- Reduzir padding de `py-3` para `py-2`
+- Reduzir texto das secoes de `text-sm` para `text-xs`
+- Icones das secoes de `h-4 w-4` para `h-3.5 w-3.5`
 
-**4. Checkboxes e Labels**
-- Aumentar spacing entre items (`space-y-2` está ok, manter)
-- Melhorar label styling (mais legibilidade)
-- Adicionar hover states mais sutis
+**4. Checkboxes e labels**
+- Reduzir texto dos labels de `text-sm` para `text-xs`
+- Reduzir emoji/icone de `text-base` para `text-sm`
+- Reduzir spacing entre items de `space-y-2.5` para `space-y-1`
+- Reduzir padding dos items de `px-2 py-1.5` para `px-1.5 py-1`
+- Reduzir gap de `gap-2.5` para `gap-2`
 
-**5. Price Range Slider**
-- Melhorar spacing em volta do slider
-- Aumentar tamanho do texto de valores (`text-xs` → `text-sm`)
-- Melhorar apresentação (valores em cards pequenos, opcional)
+**5. Accordion content**
+- Reduzir padding de `pt-2 pb-4` para `pt-1 pb-2`
 
-**6. Botão Limpar**
-- Melhorar visual do botão "Limpar"
-- Considerar usar variant "outline" em vez de "ghost" para maior destaque
+**6. Slider de preco**
+- Reduzir texto de valores de `text-sm` para `text-xs`
+- Reduzir spacing de `space-y-4` para `space-y-2`
 
-**7. Responsividade**
-- Garantir que funciona bem no mobile sheet (`w-80`)
-- Melhorar padding em telas pequenas
-- Considerar adicionar botão "Aplicar Filtros" visual (como no FilterSidebar) no mobile
+**7. Botao mobile**
+- Reduzir padding do container de `p-5` para `p-3`
 
-### Implementação
-
-As alterações serão apenas em `src/components/map/MapFilterSidebar.tsx`:
-
-**Alterações de styling:**
-- Header: melhorar spacing e visual
-- Container: adicionar `rounded-lg`, melhorar padding
-- Acordeons: aumentar `space-y-2`, ajustar py/pt/pb
-- Buttons: melhorar variantes e styling
-- Overall: seguir pattern do `FilterSidebar` (que é mais polido)
-
-**Sem mudanças estruturais:** Lógica de filtros permanece igual, apenas CSS/Tailwind.
+Nenhuma alteracao de logica, apenas Tailwind classes para tornar tudo mais compacto e proporcional ao espaco disponivel (w-72).
 
