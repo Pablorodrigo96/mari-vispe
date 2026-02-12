@@ -23,7 +23,7 @@ export function InvestorCTA() {
           Pronto para encontrar sua próxima oportunidade?
         </h2>
         <p className="text-lg text-white/70 max-w-2xl mx-auto mb-8">
-          Junte-se a centenas de investidores que já descobriram negócios lucrativos através da DealFlow.
+          Junte-se a centenas de investidores que já descobriram negócios lucrativos através da PME.B3.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

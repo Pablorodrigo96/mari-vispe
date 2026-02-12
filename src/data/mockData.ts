@@ -1,4 +1,4 @@
-// Mock data for DealFlow marketplace
+// Mock data for PME.B3 marketplace
 
 export interface Business {
   id: string;

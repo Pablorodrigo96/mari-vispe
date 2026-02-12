@@ -48,7 +48,7 @@ export function Header() {
               <Building2 className="h-5 w-5 text-accent-foreground" />
             </div>
             <span className="text-xl font-bold text-foreground">
-              Deal<span className="text-accent">Flow</span>
+              PME<span className="text-accent">.B3</span>
             </span>
           </Link>
 

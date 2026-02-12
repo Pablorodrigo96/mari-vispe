@@ -99,7 +99,7 @@ const StepContact = ({ data, onChange }: StepContactProps) => {
             <a href="/privacy" className="text-gold hover:underline">
               Política de Privacidade
             </a>
-            . Autorizo o DealFlow a divulgar meu anúncio e entrar em contato
+            . Autorizo a PME.B3 a divulgar meu anúncio e entrar em contato
             sobre oportunidades relevantes.
           </Label>
         </div>

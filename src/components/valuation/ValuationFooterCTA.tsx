@@ -25,7 +25,7 @@ export const ValuationFooterCTA = ({ onStartDiagnostic }: ValuationFooterCTAProp
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
           <p className="mt-6 text-primary-foreground/60 text-sm">
-            © {new Date().getFullYear()} DealFlow. Todos os direitos reservados.
+            © {new Date().getFullYear()} PME.B3. Todos os direitos reservados.
           </p>
         </div>
       </div>

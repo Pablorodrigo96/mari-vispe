@@ -30,7 +30,7 @@ export function InvestorBenefits() {
       <div className="container mx-auto px-4 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Por que investir com a DealFlow?
+            Por que investir com a PME.B3?
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Oferecemos uma experiência completa para investidores que buscam oportunidades reais de crescimento.

@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 const mediaItems = [
   {
     source: 'Exame',
-    title: 'DealFlow conecta PMEs a investidores e revoluciona o mercado de M&A',
+    title: 'PME.B3 conecta PMEs a investidores e revoluciona o mercado de M&A',
     date: '15 Jan 2024',
   },
   {
@@ -25,7 +25,7 @@ export function MediaSection() {
       <div className="container mx-auto px-4 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            DealFlow na Mídia
+            PME.B3 na Mídia
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             O que os principais veículos de comunicação dizem sobre nós.

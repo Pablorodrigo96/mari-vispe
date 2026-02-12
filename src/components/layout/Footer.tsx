@@ -41,7 +41,7 @@ export function Footer() {
                 <Building2 className="h-5 w-5 text-accent-foreground" />
               </div>
               <span className="text-xl font-bold">
-                Deal<span className="text-accent">Flow</span>
+                PME<span className="text-accent">.B3</span>
               </span>
             </Link>
             <p className="text-sm text-primary-foreground/70 mb-6">
@@ -173,7 +173,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/50">
-            © 2024 DealFlow. Todos os direitos reservados.
+            © 2024 PME.B3. Todos os direitos reservados.
           </p>
           <p className="text-sm text-primary-foreground/50">
             Feito com ❤️ no Brasil
