@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Building2, LogOut, ClipboardList, User, Shield } from 'lucide-react';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
@@ -24,12 +24,27 @@ const navigation = [
   { name: 'Captação', href: '/capital' },
 ];
 
+function useScrollPosition() {
+  const [scrollY, setScrollY] = useState(0);
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  return scrollY;
+}
+
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRoles();
+  const scrollY = useScrollPosition();
+
+  const isHome = location.pathname === '/';
+  const isScrolled = scrollY > 20;
+  const isTransparent = isHome && !isScrolled && !mobileMenuOpen;
 
   const handleSignOut = async () => {
     await signOut();
@@ -39,7 +54,14 @@ export function Header() {
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || 'U';
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
+    <header
+      className={cn(
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+        isTransparent
+          ? 'bg-transparent border-b border-transparent'
+          : 'bg-card/80 backdrop-blur-lg border-b border-border'
+      )}
+    >
       <nav className="container mx-auto px-4 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -47,7 +69,7 @@ export function Header() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
               <Building2 className="h-5 w-5 text-accent-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">
+            <span className={cn('text-xl font-bold transition-colors duration-300', isTransparent ? 'text-white' : 'text-foreground')}>
               PME<span className="text-accent">.B3</span>
             </span>
           </Link>
@@ -62,7 +84,9 @@ export function Header() {
                   'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
                   location.pathname === item.href
                     ? 'text-accent'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    : isTransparent
+                      ? 'text-white/80 hover:text-white hover:bg-white/10'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 )}
               >
                 {item.name}
@@ -77,7 +101,7 @@ export function Header() {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2">
+                  <Button variant="ghost" className={cn('gap-2', isTransparent && 'hover:bg-white/10')}>
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-accent text-accent-foreground text-xs">
                         {userInitials}
@@ -112,7 +136,7 @@ export function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" asChild className={cn(isTransparent && 'text-white hover:bg-white/10')}>
                 <Link to="/auth">Entrar</Link>
               </Button>
             )}
@@ -126,7 +150,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className={cn('lg:hidden', isTransparent && 'text-white hover:bg-white/10')}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

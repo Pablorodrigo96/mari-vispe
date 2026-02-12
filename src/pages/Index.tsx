@@ -32,46 +32,62 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      {/* Hero Section - Dark Corporate */}
-      <section className="relative pt-24 pb-20 md:pt-32 md:pb-28 gradient-navy-deep bg-grid-pattern overflow-hidden">
-        {/* Subtle radial glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsla(38,92%,50%,0.06)_0%,_transparent_70%)]" />
+      {/* Hero Section */}
+      <section className="relative pt-28 pb-24 md:pt-40 md:pb-36 gradient-navy-deep bg-grid-pattern overflow-hidden">
+        {/* Asymmetric radial glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_30%,_hsla(38,92%,50%,0.08)_0%,_transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,_hsla(222,47%,30%,0.15)_0%,_transparent_50%)]" />
         
         <div className="container mx-auto px-4 lg:px-8 relative z-10">
-          <div className="text-center max-w-4xl mx-auto mb-12 animate-fade-in">
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight tracking-tight">
+          <div className="text-center max-w-4xl mx-auto mb-14 animate-fade-in">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent/30 bg-accent/10 mb-8">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              <span className="text-xs font-medium tracking-widest uppercase text-accent">Plataforma #1 de M&A no Brasil</span>
+            </div>
+
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-[1.1] tracking-tight text-balance">
               A plataforma líder em{' '}
-              <span className="text-accent">negociação de empresas</span>{' '}
+              <span className="text-gradient-gold">negociação de empresas</span>{' '}
               do Brasil
             </h1>
-            <p className="text-lg md:text-xl text-white/60 mb-10 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed">
               Conectamos compradores, vendedores e investidores em um ambiente seguro e transparente para transações de M&A.
             </p>
+
+            {/* Dual CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
+              <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold h-12 px-8 text-base rounded-xl">
+                <Link to="/marketplace">Explorar Marketplace</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 h-12 px-8 text-base rounded-xl bg-transparent">
+                <Link to="/valuation">Avaliar Minha Empresa</Link>
+              </Button>
+            </div>
           </div>
 
           {/* Search Bar */}
           <div className="animate-fade-in-up">
+            <p className="text-center text-white/40 text-sm tracking-widest uppercase mb-4">Encontre o negócio ideal</p>
             <SearchBar />
           </div>
 
-          {/* Stats - Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-14 max-w-4xl mx-auto">
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-16 max-w-4xl mx-auto">
             {[
-              { icon: Building2, label: 'Empresas Listadas', value: formatNumber(stats.totalListings) },
-              { icon: TrendingUp, label: 'Transações Fechadas', value: formatNumber(stats.totalTransactions) },
-              { icon: Users, label: 'Volume Negociado', value: formatCurrency(stats.totalVolume) },
-              { icon: Clock, label: 'Dias Médio de Venda', value: `${stats.averageTime} dias` },
+              { label: 'Empresas Listadas', value: formatNumber(stats.totalListings) },
+              { label: 'Transações Fechadas', value: formatNumber(stats.totalTransactions) },
+              { label: 'Volume Negociado', value: formatCurrency(stats.totalVolume) },
+              { label: 'Dias Médio de Venda', value: `${stats.averageTime} dias` },
             ].map((stat, i) => (
               <div
                 key={i}
-                className="bg-white/[0.07] backdrop-blur-sm border border-white/10 rounded-xl p-5 text-center animate-count-up"
+                className="glass-card rounded-xl p-5 text-center group hover:border-accent/30 transition-all duration-300 animate-count-up"
                 style={{ animationDelay: `${i * 100}ms` }}
               >
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent/15 mb-3">
-                  <stat.icon className="h-5 w-5 text-accent" />
-                </div>
-                <p className="text-2xl md:text-3xl font-bold text-white">{stat.value}</p>
-                <p className="text-xs text-white/50 mt-1">{stat.label}</p>
+                <p className="text-2xl md:text-3xl font-bold text-white font-mono tracking-tight">{stat.value}</p>
+                <div className="w-8 h-px bg-accent/40 mx-auto my-2" />
+                <p className="text-xs text-white/50">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -79,9 +95,9 @@ const Index = () => {
       </section>
 
       {/* Categories Section */}
-      <section className="py-16 bg-background">
+      <section className="py-20 bg-background">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center mb-10">
+          <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Explore por Setor</h2>
             <div className="w-12 h-1 bg-accent mx-auto rounded-full mt-3 mb-3" />
             <p className="text-muted-foreground">Encontre oportunidades no segmento ideal para você</p>
@@ -91,7 +107,7 @@ const Index = () => {
               <Link
                 key={cat.id}
                 to={`/marketplace?sector=${cat.id}`}
-                className="group relative rounded-xl overflow-hidden shadow-card h-40 md:h-48"
+                className="group relative rounded-xl overflow-hidden shadow-card h-44 md:h-56"
               >
                 <img
                   src={cat.image}
@@ -99,9 +115,10 @@ const Index = () => {
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-4">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
                   <h3 className="font-semibold text-white text-sm md:text-base">{cat.label}</h3>
+                  <ArrowRight className="h-4 w-4 text-white/0 group-hover:text-white/80 transition-all duration-300 translate-x-[-4px] group-hover:translate-x-0" />
                 </div>
               </Link>
             ))}
@@ -110,13 +127,15 @@ const Index = () => {
       </section>
 
       {/* Featured Listings */}
-      <section className="py-16 bg-background">
+      <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex items-center justify-between mb-10">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Oportunidades em Destaque</h2>
-              <div className="w-12 h-1 bg-accent rounded-full mt-1" />
-              <p className="text-muted-foreground mt-3">Negócios verificados e com alto potencial</p>
+          <div className="flex items-start justify-between mb-12">
+            <div className="flex gap-4">
+              <div className="w-1 h-16 bg-accent rounded-full hidden md:block" />
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Oportunidades em Destaque</h2>
+                <p className="text-muted-foreground tracking-wide">Negócios verificados e com alto potencial</p>
+              </div>
             </div>
             <Button asChild variant="outline" className="hidden md:flex">
               <Link to="/marketplace">
@@ -157,15 +176,22 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-20 gradient-navy-deep bg-grid-pattern overflow-hidden">
+      <section className="relative py-24 md:py-32 gradient-navy-deep bg-grid-pattern overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_hsla(38,92%,50%,0.08)_0%,_transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_hsla(222,47%,30%,0.12)_0%,_transparent_50%)]" />
         <div className="container mx-auto px-4 lg:px-8 text-center relative z-10">
-          <h2 className="text-2xl md:text-4xl font-bold text-white mb-4">Pronto para vender sua empresa?</h2>
-          <p className="text-white/50 mb-8 max-w-2xl mx-auto">
+          {/* Social proof */}
+          <p className="text-white/40 text-sm italic mb-6 max-w-lg mx-auto">
+            "A PME.B3 nos conectou com o comprador ideal em menos de 60 dias. Processo transparente e profissional."
+          </p>
+          <p className="text-accent text-xs font-medium tracking-widest uppercase mb-8">— Carlos M., Empresário</p>
+          
+          <h2 className="text-2xl md:text-4xl font-bold text-white mb-4 text-balance">Pronto para vender sua empresa?</h2>
+          <p className="text-white/50 mb-10 max-w-2xl mx-auto leading-relaxed">
             Anuncie gratuitamente e alcance milhares de compradores e investidores qualificados.
           </p>
-          <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold px-10 h-12 text-base">
-            Anunciar Grátis
+          <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold px-12 h-14 text-lg rounded-xl">
+            <Link to="/vender">Anunciar Grátis</Link>
           </Button>
         </div>
       </section>

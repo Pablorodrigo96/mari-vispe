@@ -27,7 +27,7 @@ export function SearchBar() {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <div className="bg-card rounded-2xl shadow-lg border border-white/10 p-2 md:p-3">
+      <div className="bg-card rounded-2xl shadow-2xl shadow-black/10 border border-white/15 p-2 md:p-3">
         <div className="flex flex-col md:flex-row gap-2 md:gap-0">
           {/* Sector */}
           <div className="flex-1 md:border-r border-border">
