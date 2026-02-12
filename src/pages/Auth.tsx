@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Building2, Mail, Lock, ArrowLeft, User, Phone } from 'lucide-react';
+import { Building2, Mail, Lock, ArrowLeft, User, Phone, Check } from 'lucide-react';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -344,10 +343,15 @@ export default function Auth() {
                           toggleRole(role.id);
                         }}
                       >
-                        <Checkbox
-                          checked={signupRoles.includes(role.id)}
-                          className="mt-0.5 pointer-events-none"
-                        />
+                        <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${
+                          signupRoles.includes(role.id)
+                            ? 'bg-primary border-primary text-primary-foreground'
+                            : 'border-primary'
+                        }`}>
+                          {signupRoles.includes(role.id) && (
+                            <Check className="h-3 w-3" />
+                          )}
+                        </div>
                         <div className="flex-1">
                           <span className="text-sm font-medium cursor-pointer">
                             {role.label}
