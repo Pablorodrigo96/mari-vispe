@@ -22,11 +22,13 @@ export interface MapFilterState {
   priceRange: [number, number];
 }
 
+export const DEFAULT_MAX_PRICE = 50000000;
+
 export const defaultMapFilters: MapFilterState = {
   categories: [],
   states: [],
   cities: [],
-  priceRange: [0, 10000000],
+  priceRange: [0, DEFAULT_MAX_PRICE],
 };
 
 interface MapFilterSidebarProps {
@@ -37,6 +39,7 @@ interface MapFilterSidebarProps {
   availableStates: string[];
   availableCities: string[];
   isMobile?: boolean;
+  maxPrice?: number;
 }
 
 export function MapFilterSidebar({
@@ -47,6 +50,7 @@ export function MapFilterSidebar({
   availableStates,
   availableCities,
   isMobile = false,
+  maxPrice = DEFAULT_MAX_PRICE,
 }: MapFilterSidebarProps) {
   const toggleCategory = (catId: string) => {
     const next = filters.categories.includes(catId)
@@ -79,7 +83,7 @@ export function MapFilterSidebar({
     filters.categories.length +
     filters.states.length +
     filters.cities.length +
-    (filters.priceRange[0] > 0 || filters.priceRange[1] < 10000000 ? 1 : 0);
+    (filters.priceRange[0] > 0 || filters.priceRange[1] < maxPrice ? 1 : 0);
 
   return (
     <div className={cn('bg-card border-r border-border flex flex-col h-full', className)}>
@@ -205,13 +209,13 @@ export function MapFilterSidebar({
                   <Slider
                     value={filters.priceRange}
                     onValueChange={(v) => onFiltersChange({ ...filters, priceRange: v as [number, number] })}
-                    max={10000000}
+                    max={maxPrice}
                     step={100000}
                     className="w-full"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{formatCurrency(filters.priceRange[0])}</span>
-                    <span>{filters.priceRange[1] >= 10000000 ? 'R$ 10 mi+' : formatCurrency(filters.priceRange[1])}</span>
+                    <span>{filters.priceRange[1] >= maxPrice ? formatCurrency(maxPrice) + '+' : formatCurrency(filters.priceRange[1])}</span>
                   </div>
                 </div>
               </AccordionContent>
