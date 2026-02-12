@@ -1,62 +1,76 @@
 
+## Nova Pagina: Mapa de Empresas
 
-## Correcao: Navegacao Presa na Pagina de Valuation
+### Visao Geral
 
-### Problema
+Criar uma nova pagina `/mapa` acessivel pelo Header, mostrando um mapa interativo do Brasil com marcadores nas localizacoes das empresas cadastradas. O mapa tera tema escuro, clustering de marcadores, e um painel de resumo na parte inferior.
 
-A pagina `/valuation` usa estado interno do React (`useState`) para alternar entre 3 telas:
-- Landing (selecao de tipo)
-- Wizard de Multiplos
-- Wizard DCF
+### Componentes
 
-Como a URL nao muda (sempre `/valuation`), o usuario fica "preso" porque:
-1. Clicar em "Valuation" no menu nao faz nada - o React Router ve que ja esta em `/valuation`
-2. O botao Voltar do navegador nao funciona - nao houve troca de rota
-3. Clicar em outras abas pode conflitar com o estado interno
+**1. Nova rota e navegacao**
 
-### Solucao
+- Adicionar "Mapa" ao array `navigation` no `Header.tsx` (entre "Comprar Empresa" e "Vender Empresa")
+- Criar rota `/mapa` no `App.tsx`
 
-Converter os wizards em rotas proprias usando React Router, eliminando o controle por estado interno:
+**2. Nova pagina `src/pages/MapView.tsx`**
 
-- `/valuation` - Pagina landing (selecao de plano)
-- `/valuation/multiplos` - Wizard de Multiplos
-- `/valuation/dcf` - Wizard DCF
+Pagina principal que:
+- Busca listings ativos do banco de dados (mesma query do Marketplace)
+- Converte cidade/estado em coordenadas usando um dicionario estatico de capitais e principais cidades brasileiras
+- Renderiza o mapa com Header e rodape
+
+**3. Novo componente `src/components/map/BusinessMap.tsx`**
+
+Mapa interativo usando **Leaflet** + **react-leaflet** + **react-leaflet-cluster**:
+- Tema escuro usando tiles do CartoDB dark_all (gratuito, sem API key)
+- Centro inicial no Brasil (-14.235, -51.925), zoom 4
+- Marcadores clusterizados com contagem (estilo circular como nas imagens de referencia)
+- Popup ao clicar no marcador mostrando: titulo, categoria, cidade/estado, preco, link para detalhes
+- Rodape fixo no mapa com: total de oportunidades, valor total, contagem de estados
+
+**4. Arquivo auxiliar `src/lib/brazilCoordinates.ts`**
+
+Dicionario estatico com coordenadas lat/lng das capitais e principais cidades brasileiras (SP, RJ, BH, Curitiba, etc.), usado para posicionar marcadores no mapa a partir dos campos `city` e `state` da tabela listings.
+
+### Dependencias Novas
+
+- `leaflet` - biblioteca de mapas (gratuita, sem API key)
+- `react-leaflet` - wrapper React para Leaflet
+- `react-leaflet-cluster` - clustering de marcadores
 
 ### Detalhes Tecnicos
 
-**1. Arquivo: `src/App.tsx`**
+**Geocodificacao**: Como os listings tem apenas `city` e `state` (sem lat/lng), sera usado um dicionario estatico com ~50 cidades brasileiras. Listings sem cidade encontrada no dicionario usarao as coordenadas da capital do estado. Listings sem estado serao omitidos do mapa.
 
-Adicionar duas novas rotas:
+**Estilo do mapa**: Tiles escuros do CartoDB (`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`) - gratuito, sem registro necessario.
 
-```tsx
-import ValuationMultiplos from "./pages/ValuationMultiplos";
-import ValuationDCF from "./pages/ValuationDCF";
+**Clusters**: Circulos coloridos com contagem, semelhantes as imagens de referencia. Ao dar zoom, os clusters se dividem em marcadores individuais.
 
-// Dentro de Routes:
-<Route path="/valuation" element={<Valuation />} />
-<Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
-<Route path="/valuation/dcf" element={<ValuationDCF />} />
+**Popup do marcador**: Card compacto com titulo, categoria, localizacao, preco e botao "Ver Detalhes" que leva ao `/anuncio/:id`.
+
+**Painel inferior**: Barra fixa na parte de baixo do mapa mostrando:
+- Oportunidades: total de listings no mapa
+- Valor: soma de asking_price formatada
+- Estados: quantidade de estados distintos
+
+### Estrutura de Arquivos
+
+```text
+src/
+  pages/
+    MapView.tsx              (nova pagina)
+  components/
+    map/
+      BusinessMap.tsx         (componente do mapa)
+  lib/
+    brazilCoordinates.ts     (dicionario de coordenadas)
 ```
 
-**2. Novo arquivo: `src/pages/ValuationMultiplos.tsx`**
+### Fluxo do Usuario
 
-Pagina wrapper que renderiza o `ValuationWizard` com `onBack` fazendo `navigate('/valuation')`.
-
-**3. Novo arquivo: `src/pages/ValuationDCF.tsx`**
-
-Pagina wrapper que renderiza o `DCFWizard` com `onBack` fazendo `navigate('/valuation')`.
-
-**4. Arquivo: `src/pages/Valuation.tsx`**
-
-Simplificar removendo o estado `view` e as renderizacoes condicionais dos wizards. Os botoes `onSelectFree` e `onSelectDCF` passam a fazer `navigate('/valuation/multiplos')` e `navigate('/valuation/dcf')` respectivamente. A verificacao de login e acesso continua antes de navegar.
-
-**5. Arquivos: `ValuationWizard.tsx` e `DCFWizard.tsx`**
-
-Atualizar o botao "Voltar" do primeiro passo para usar `navigate('/valuation')` ao inves de chamar `onBack()` (ou manter `onBack` que agora fara o navigate na pagina wrapper).
-
-### Beneficios
-
-- Navegacao do Header funciona normalmente em todas as telas
-- Botao Voltar do navegador funciona corretamente
-- Cada tela tem sua propria URL (compartilhavel, bookmark)
-- Sem estado interno que pode travar
+1. Usuario clica em "Mapa" no menu de navegacao
+2. Pagina carrega e busca listings ativos do banco
+3. Mapa renderiza centrado no Brasil com marcadores clusterizados
+4. Usuario pode dar zoom para ver marcadores individuais
+5. Ao clicar em um marcador, popup mostra informacoes da empresa
+6. Botao "Ver Detalhes" no popup leva para a pagina do anuncio
