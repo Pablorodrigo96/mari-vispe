@@ -1,10 +1,6 @@
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-
+import { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { Link } from 'react-router-dom';
-import { MapPin, Building2, DollarSign, Map } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Building2, DollarSign, Map } from 'lucide-react';
 import { formatCurrency, getCategoryLabel } from '@/lib/formatters';
 import { getCoordinates } from '@/lib/brazilCoordinates';
 import type { Tables } from '@/integrations/supabase/types';
@@ -28,22 +24,10 @@ const customIcon = new L.DivIcon({
   popupAnchor: [0, -32],
 });
 
-
 interface ListingWithCoords {
   listing: Listing;
   lat: number;
   lng: number;
-}
-
-function FitBounds({ markers }: { markers: ListingWithCoords[] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (markers.length > 0) {
-      const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-    }
-  }, [markers, map]);
-  return null;
 }
 
 interface BusinessMapProps {
@@ -52,11 +36,13 @@ interface BusinessMapProps {
 }
 
 export function BusinessMap({ listings, loading }: BusinessMapProps) {
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const markers: ListingWithCoords[] = listings
     .map(listing => {
       const coords = getCoordinates(listing.city, listing.state);
       if (!coords) return null;
-      // Add small random offset to prevent exact overlap
       return {
         listing,
         lat: coords.lat + (Math.random() - 0.5) * 0.02,
@@ -68,20 +54,68 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
   const totalValue = markers.reduce((sum, m) => sum + (m.listing.asking_price || 0), 0);
   const uniqueStates = new Set(markers.map(m => m.listing.state).filter(Boolean)).size;
 
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      center: [-14.235, -51.925],
+      zoom: 4,
+      zoomControl: true,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    }).addTo(map);
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear existing markers
+    map.eachLayer(layer => {
+      if (layer instanceof L.Marker) map.removeLayer(layer);
+    });
+
+    markers.forEach(m => {
+      const marker = L.marker([m.lat, m.lng], { icon: customIcon }).addTo(map);
+
+      const cityState = [m.listing.city, m.listing.state].filter(Boolean).join(', ');
+      const priceHtml = m.listing.asking_price && !m.listing.hide_price
+        ? `<p style="font-weight:700;font-size:14px;margin-top:8px;color:hsl(45,93%,47%)">${formatCurrency(Number(m.listing.asking_price))}</p>`
+        : '';
+
+      marker.bindPopup(`
+        <div style="padding:4px">
+          <h3 style="font-weight:700;font-size:13px;margin-bottom:4px;color:hsl(0,0%,95%)">${m.listing.title}</h3>
+          <p style="font-size:12px;margin-bottom:8px;color:hsl(45,93%,47%)">${getCategoryLabel(m.listing.category)}</p>
+          <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:hsl(0,0%,70%)">
+            <span>📍</span> ${cityState}
+          </div>
+          ${priceHtml}
+          <a href="/anuncio/${m.listing.id}" style="display:block;margin-top:12px;text-align:center;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;background:hsl(45,93%,47%);color:hsl(0,0%,10%);text-decoration:none">Ver Detalhes</a>
+        </div>
+      `, { minWidth: 240, maxWidth: 300 });
+    });
+
+    if (markers.length > 0) {
+      const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    }
+  }, [markers.length, listings]);
+
   return (
     <div className="relative w-full h-full">
-      {/* Cluster CSS */}
       <style>{`
-        .map-cluster {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          font-weight: 700;
-          color: hsl(0, 0%, 10%);
-          box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-        }
-        .map-cluster span { font-size: 13px; }
+        .leaflet-popup-content-wrapper {
+          background: hsl(222, 20%, 14%) !important;
           color: hsl(0, 0%, 95%) !important;
           border-radius: 12px !important;
           border: 1px solid hsl(222, 15%, 25%) !important;
@@ -91,57 +125,7 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
         .leaflet-popup-close-button { color: hsl(0,0%,70%) !important; }
       `}</style>
 
-      <MapContainer
-        center={[-14.235, -51.925]}
-        zoom={4}
-        className="w-full h-full z-0"
-        style={{ background: 'hsl(222, 20%, 10%)' }}
-        zoomControl={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
-
-        {markers.length > 0 && <FitBounds markers={markers} />}
-
-        <>
-          {markers.map((m) => (
-            <Marker key={m.listing.id} position={[m.lat, m.lng]} icon={customIcon}>
-              <Popup minWidth={240} maxWidth={300}>
-                <div className="p-1">
-                  <h3 className="font-bold text-sm mb-1 leading-tight" style={{ color: 'hsl(0,0%,95%)' }}>
-                    {m.listing.title}
-                  </h3>
-                  <p className="text-xs mb-2" style={{ color: 'hsl(45, 93%, 47%)' }}>
-                    {getCategoryLabel(m.listing.category)}
-                  </p>
-                  <div className="flex items-center gap-1 text-xs mb-1" style={{ color: 'hsl(0,0%,70%)' }}>
-                    <MapPin className="w-3 h-3" />
-                    {[m.listing.city, m.listing.state].filter(Boolean).join(', ')}
-                  </div>
-                  {m.listing.asking_price && !m.listing.hide_price && (
-                    <p className="font-bold text-sm mt-2" style={{ color: 'hsl(45, 93%, 47%)' }}>
-                      {formatCurrency(Number(m.listing.asking_price))}
-                    </p>
-                  )}
-                  <Link to={`/anuncio/${m.listing.id}`}>
-                    <button
-                      className="mt-3 w-full text-xs font-semibold py-1.5 px-3 rounded-md"
-                      style={{
-                        background: 'hsl(45, 93%, 47%)',
-                        color: 'hsl(0, 0%, 10%)',
-                      }}
-                    >
-                      Ver Detalhes
-                    </button>
-                  </Link>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </>
-      </MapContainer>
+      <div ref={containerRef} className="w-full h-full z-0" style={{ background: 'hsl(222, 20%, 10%)' }} />
 
       {/* Bottom Stats Bar */}
       <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-card/90 backdrop-blur-lg border-t border-border">
@@ -164,7 +148,6 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
         </div>
       </div>
 
-      {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 z-[1001] flex items-center justify-center bg-background/60 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3">
