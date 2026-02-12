@@ -14,6 +14,8 @@ import MyListings from "./pages/MyListings";
 import MyProfile from "./pages/MyProfile";
 import MyValuations from "./pages/MyValuations";
 import Valuation from "./pages/Valuation";
+import ValuationMultiplos from "./pages/ValuationMultiplos";
+import ValuationDCF from "./pages/ValuationDCF";
 import Investors from "./pages/Investors";
 import Capital from "./pages/Capital";
 import Auth from "./pages/Auth";
@@ -47,6 +49,8 @@ const App = () => (
             <Route path="/meu-perfil" element={<MyProfile />} />
             <Route path="/meus-valuations" element={<MyValuations />} />
             <Route path="/valuation" element={<Valuation />} />
+            <Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
+            <Route path="/valuation/dcf" element={<ValuationDCF />} />
             <Route path="/investors" element={<Investors />} />
             <Route path="/capital" element={<Capital />} />
             <Route path="/auth" element={<Auth />} />
