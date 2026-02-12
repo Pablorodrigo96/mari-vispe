@@ -126,7 +126,7 @@ const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
                 {categories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     <span className="flex items-center gap-2">
-                      <span>{cat.icon}</span>
+                      <img src={cat.image} alt={cat.label} className="w-5 h-5 rounded object-cover" />
                       <span>{cat.label}</span>
                     </span>
                   </SelectItem>

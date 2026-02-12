@@ -157,9 +157,8 @@ const ListingDetail = () => {
     }
   };
 
-  const getCategoryLabel = (categoryId: string) => {
-    const category = categories.find(c => c.id === categoryId);
-    return category ? `${category.icon} ${category.label}` : categoryId;
+  const getCategoryInfo = (categoryId: string) => {
+    return categories.find(c => c.id === categoryId);
   };
 
   const margin = listing ? (listing.annual_profit / listing.annual_revenue) * 100 : 0;
@@ -229,7 +228,12 @@ const ListingDetail = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline">{getCategoryLabel(listing.category)}</Badge>
+                  <Badge variant="outline" className="flex items-center gap-1.5">
+                    {getCategoryInfo(listing.category)?.image && (
+                      <img src={getCategoryInfo(listing.category)!.image} alt="" className="w-4 h-4 rounded object-cover" />
+                    )}
+                    {getCategoryInfo(listing.category)?.label || listing.category}
+                  </Badge>
                   {listing.plan === 'master' && (
                     <Badge className="bg-accent text-accent-foreground">Master</Badge>
                   )}

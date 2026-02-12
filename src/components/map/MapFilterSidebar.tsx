@@ -129,7 +129,7 @@ export function MapFilterSidebar({
                         onCheckedChange={() => toggleCategory(cat.id)}
                       />
                       <Label htmlFor={`map-cat-${cat.id}`} className="text-xs font-normal cursor-pointer flex items-center gap-2 flex-1">
-                        <span className="text-sm">{cat.icon}</span>
+                        <img src={cat.image} alt={cat.label} className="w-4 h-4 rounded object-cover" />
                         {cat.label}
                       </Label>
                     </div>
