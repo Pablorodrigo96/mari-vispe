@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import { Building2, DollarSign, Map } from 'lucide-react';
 import { formatCurrency, getCategoryLabel } from '@/lib/formatters';
-import { getCoordinates } from '@/lib/brazilCoordinates';
+import { getCoordinates, resolveAllCoordinates } from '@/lib/brazilCoordinates';
+import type { CityCoordinates } from '@/lib/brazilCoordinates';
 import type { Tables } from '@/integrations/supabase/types';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -41,22 +42,67 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const clusterRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [resolvedMarkers, setResolvedMarkers] = useState<ListingWithCoords[]>([]);
+  const [resolving, setResolving] = useState(false);
 
-  const markers: ListingWithCoords[] = listings
-    .map(listing => {
-      const coords = getCoordinates(listing.city, listing.state);
-      if (!coords) return null;
-      return {
-        listing,
-        lat: coords.lat + (Math.random() - 0.5) * 0.02,
-        lng: coords.lng + (Math.random() - 0.5) * 0.02,
-      };
-    })
-    .filter(Boolean) as ListingWithCoords[];
+  // Resolve coordinates: sync first, then async for unknowns
+  useEffect(() => {
+    let cancelled = false;
 
-  const totalValue = markers.reduce((sum, m) => sum + (m.listing.asking_price || 0), 0);
-  const uniqueStates = new Set(markers.map(m => m.listing.state).filter(Boolean)).size;
+    async function resolve() {
+      // Immediate sync pass
+      const syncMarkers: ListingWithCoords[] = [];
+      const needsAsync: typeof listings = [];
 
+      for (const listing of listings) {
+        const coords = getCoordinates(listing.city, listing.state);
+        if (coords) {
+          syncMarkers.push({
+            listing,
+            lat: coords.lat + (Math.random() - 0.5) * 0.02,
+            lng: coords.lng + (Math.random() - 0.5) * 0.02,
+          });
+        } else if (listing.city || listing.state) {
+          needsAsync.push(listing);
+        }
+      }
+
+      if (cancelled) return;
+      setResolvedMarkers(syncMarkers);
+
+      if (needsAsync.length === 0) return;
+
+      setResolving(true);
+      const asyncCoords = await resolveAllCoordinates(
+        needsAsync.map(l => ({ city: l.city, state: l.state, id: l.id }))
+      );
+
+      if (cancelled) return;
+
+      const asyncMarkers: ListingWithCoords[] = [];
+      for (const listing of needsAsync) {
+        const coords = asyncCoords.get(listing.id);
+        if (coords) {
+          asyncMarkers.push({
+            listing,
+            lat: coords.lat + (Math.random() - 0.5) * 0.02,
+            lng: coords.lng + (Math.random() - 0.5) * 0.02,
+          });
+        }
+      }
+
+      setResolvedMarkers(prev => [...prev, ...asyncMarkers]);
+      setResolving(false);
+    }
+
+    resolve();
+    return () => { cancelled = true; };
+  }, [listings]);
+
+  const totalValue = resolvedMarkers.reduce((sum, m) => sum + (m.listing.asking_price || 0), 0);
+  const uniqueStates = new Set(resolvedMarkers.map(m => m.listing.state).filter(Boolean)).size;
+
+  // Initialize map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -78,11 +124,11 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
     };
   }, []);
 
+  // Update markers when resolvedMarkers changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Remove previous cluster group
     if (clusterRef.current) {
       map.removeLayer(clusterRef.current);
       clusterRef.current = null;
@@ -94,7 +140,7 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
       animate: true,
-      iconCreateFunction: (cluster) => {
+      iconCreateFunction: (cluster: any) => {
         const count = cluster.getChildCount();
         let size = 'small';
         let px = 52;
@@ -108,7 +154,7 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
       },
     });
 
-    markers.forEach(m => {
+    resolvedMarkers.forEach(m => {
       const marker = L.marker([m.lat, m.lng], { icon: customIcon });
 
       const cityState = [m.listing.city, m.listing.state].filter(Boolean).join(', ');
@@ -134,11 +180,11 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
     map.addLayer(clusterGroup);
     clusterRef.current = clusterGroup;
 
-    if (markers.length > 0) {
-      const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
+    if (resolvedMarkers.length > 0) {
+      const bounds = L.latLngBounds(resolvedMarkers.map(m => [m.lat, m.lng]));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
     }
-  }, [markers.length, listings]);
+  }, [resolvedMarkers]);
 
   return (
     <div className="relative w-full h-full">
@@ -162,7 +208,7 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-accent" />
             <span className="text-muted-foreground">Oportunidades:</span>
-            <span className="font-bold text-foreground">{markers.length}</span>
+            <span className="font-bold text-foreground">{resolvedMarkers.length}</span>
           </div>
           <div className="flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-accent" />
@@ -177,11 +223,13 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
         </div>
       </div>
 
-      {loading && (
+      {(loading || resolving) && (
         <div className="absolute inset-0 z-[1001] flex items-center justify-center bg-background/60 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-muted-foreground">Carregando mapa...</span>
+            <span className="text-sm text-muted-foreground">
+              {resolving ? 'Resolvendo coordenadas...' : 'Carregando mapa...'}
+            </span>
           </div>
         </div>
       )}
