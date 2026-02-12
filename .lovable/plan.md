@@ -1,43 +1,73 @@
 
+## Troca de Nome da Plataforma: DealFlow → PME.B3
 
-## Compactar o Design do Menu de Filtros Lateral
+### Visão Geral
+Alterar o nome da plataforma em todos os arquivos do projeto de "DealFlow" para "PME.B3". Isso inclui:
+- Logo/nome em header e footer
+- Títulos e descrições em componentes
+- Metadados em HTML
+- Comentários e textos em documentação
+- PDFs e relatórios gerados
 
-### Problema
+### Arquivos a Modificar (18 arquivos)
 
-O sidebar de filtros esta com elementos grandes demais: textos, checkboxes, espacamentos e padding excessivos, ocupando muito espaco vertical e visual.
+**1. Arquivos HTML/Meta**
+- `index.html`: Alterar título, og:title, twitter:title de "VCE - Deal Flow" para "PME.B3"
 
-### Alteracoes em `src/components/map/MapFilterSidebar.tsx`
+**2. Componentes de Layout**
+- `src/components/layout/Header.tsx`: Trocar logo "Deal<span>Flow</span>" por "PME<span>.B3</span>"
+- `src/components/layout/Footer.tsx`: 
+  - Logo no footer
+  - Copyright "© 2024 DealFlow" → "© 2024 PME.B3"
 
-**1. Header mais compacto**
-- Reduzir padding de `p-5` para `p-3`
-- Titulo "Filtros" de `font-semibold` para `text-sm font-semibold`
-- Icone do filtro de `h-5 w-5` para `h-4 w-4`
+**3. Componentes Valuation**
+- `src/components/valuation/ValuationFooterCTA.tsx`: Copyright "© {ano} DealFlow" → "© {ano} PME.B3"
+- `src/components/valuation/ValuationReportDialog.tsx`: 
+  - Cabeçalho PDF "DEALFLOW" → "PME.B3"
+  - Footer PDF "© DealFlow - Marketplace M&A" → "© PME.B3 - Marketplace M&A"
+  - URL "www.dealflow.com.br" → "www.pmeb3.com.br"
+- `src/components/valuation/DCFReportDialog.tsx`: Mesmo padrão do ValuationReportDialog
 
-**2. Area de conteudo**
-- Reduzir padding interno de `p-5` para `px-3 py-2`
-- Reduzir spacing entre acordeons de `space-y-2` para `space-y-0`
+**4. Componentes de Marketing**
+- `src/components/capital/TrustLogos.tsx`: "Quem confia na DealFlow" → "Quem confia na PME.B3"
+- `src/components/capital/CapitalHowItWorks.tsx`: "Como funciona a captação com a DealFlow?" → "Como funciona a captação com a PME.B3?"
+- `src/components/capital/MediaSection.tsx`: 
+  - Título "DealFlow na Mídia" → "PME.B3 na Mídia"
+  - Headlines que mencionam "DealFlow" → "PME.B3"
+- `src/components/investors/InvestorBenefits.tsx`: "Por que investir com a DealFlow?" → "Por que investir com a PME.B3?"
+- `src/components/investors/InvestorCTA.tsx`: "centenas de investidores que já descobriram negócios lucrativos através da DealFlow" → "...através da PME.B3"
+- `src/components/investors/InvestorTestimonials.tsx`: "Investidores que já encontraram oportunidades através da DealFlow" → "...através da PME.B3"
+- `src/components/sell/StepContact.tsx`: "Autorizo o DealFlow a divulgar meu anúncio" → "Autorizo a PME.B3 a divulgar meu anúncio"
 
-**3. Accordion triggers**
-- Reduzir padding de `py-3` para `py-2`
-- Reduzir texto das secoes de `text-sm` para `text-xs`
-- Icones das secoes de `h-4 w-4` para `h-3.5 w-3.5`
+**5. Dados e Utilitários**
+- `src/data/mockData.ts`: Comentário "Mock data for DealFlow marketplace" → "Mock data for PME.B3 marketplace"
+- `src/components/valuation/TrustSection.tsx`: Label "DealFlow" → "PME.B3"
 
-**4. Checkboxes e labels**
-- Reduzir texto dos labels de `text-sm` para `text-xs`
-- Reduzir emoji/icone de `text-base` para `text-sm`
-- Reduzir spacing entre items de `space-y-2.5` para `space-y-1`
-- Reduzir padding dos items de `px-2 py-1.5` para `px-1.5 py-1`
-- Reduzir gap de `gap-2.5` para `gap-2`
+**6. Estilos**
+- `src/index.css`: Comentários "DealFlow - Premium M&A Marketplace" → "PME.B3 - Premium M&A Marketplace"
 
-**5. Accordion content**
-- Reduzir padding de `pt-2 pb-4` para `pt-1 pb-2`
+### Estratégia de Implementação
 
-**6. Slider de preco**
-- Reduzir texto de valores de `text-sm` para `text-xs`
-- Reduzir spacing de `space-y-4` para `space-y-2`
+**Abordagem:**
+- Usar `lov-line-replace` para cada arquivo, substituindo ocorrências de "DealFlow", "Deal Flow", "DEALFLOW" e "dealflow.com.br"
+- Manter consistência: "PME.B3" é o nome formal (com ponto)
+- Para logotipos visuais em header/footer que quebram em duas linhas: "PME<span class="text-accent">.B3</span>"
+- URLs: mudar para "pmeb3.com.br"
 
-**7. Botao mobile**
-- Reduzir padding do container de `p-5` para `p-3`
+**Ordem de implementação:**
+1. Header e Footer (mais visíveis)
+2. Componentes de marketing e investidores
+3. Valuation e relatórios PDF
+4. Dados e comentários
 
-Nenhuma alteracao de logica, apenas Tailwind classes para tornar tudo mais compacto e proporcional ao espaco disponivel (w-72).
+### Detalhes Técicos
 
+- **Logo HTML**: Manter o padrão de duas cores usando `<span>` com a classe `text-accent`
+- **Metadados**: Alterar título, og:title, twitter:title
+- **PDFs**: Modificar nome em cabeçalhos e rodapés de relatórios
+- **URLs**: Se houver referências a domínios, atualizar para pmeb3.com.br
+- **Sem mudanças em lógica**: Todas as alterações são puramente textuais/visuais
+
+### Impacto
+- **Usuário final**: Nome e branding da plataforma atualizado em toda a interface
+- **Dev**: Sem impacto em funcionalidade ou estrutura de código
