@@ -1,47 +1,62 @@
 
 
-## Correcao Definitiva: Tela Branca ao Selecionar Perfil (Checkbox)
+## Correcao: Navegacao Presa na Pagina de Valuation
 
-### Problema Confirmado
+### Problema
 
-Testei diretamente no navegador e confirmei: clicar em qualquer perfil (Vendedor, Comprador, Assessor) causa tela branca com o erro **"Maximum update depth exceeded"**.
+A pagina `/valuation` usa estado interno do React (`useState`) para alternar entre 3 telas:
+- Landing (selecao de tipo)
+- Wizard de Multiplos
+- Wizard DCF
 
-A causa raiz nao e o duplo clique - e o proprio componente Radix Checkbox. Quando a prop `checked` muda, o Radix Checkbox dispara internamente um `setState` via callback de ref durante a fase de commit do React, criando um loop infinito de atualizacoes.
+Como a URL nao muda (sempre `/valuation`), o usuario fica "preso" porque:
+1. Clicar em "Valuation" no menu nao faz nada - o React Router ve que ja esta em `/valuation`
+2. O botao Voltar do navegador nao funciona - nao houve troca de rota
+3. Clicar em outras abas pode conflitar com o estado interno
 
 ### Solucao
 
-Substituir o componente `Checkbox` do Radix por um indicador visual simples (um `div` estilizado com o icone de check). Isso elimina completamente o problema porque nao ha mais estado interno do Radix envolvido.
+Converter os wizards em rotas proprias usando React Router, eliminando o controle por estado interno:
+
+- `/valuation` - Pagina landing (selecao de plano)
+- `/valuation/multiplos` - Wizard de Multiplos
+- `/valuation/dcf` - Wizard DCF
 
 ### Detalhes Tecnicos
 
-**Arquivo:** `src/pages/Auth.tsx`
+**1. Arquivo: `src/App.tsx`**
 
-Trocar:
+Adicionar duas novas rotas:
+
 ```tsx
-<Checkbox
-  checked={signupRoles.includes(role.id)}
-  className="mt-0.5 pointer-events-none"
-/>
+import ValuationMultiplos from "./pages/ValuationMultiplos";
+import ValuationDCF from "./pages/ValuationDCF";
+
+// Dentro de Routes:
+<Route path="/valuation" element={<Valuation />} />
+<Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
+<Route path="/valuation/dcf" element={<ValuationDCF />} />
 ```
 
-Por um div visual simples:
-```tsx
-<div className={`mt-0.5 h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${
-  signupRoles.includes(role.id)
-    ? 'bg-primary border-primary text-primary-foreground'
-    : 'border-primary'
-}`}>
-  {signupRoles.includes(role.id) && (
-    <Check className="h-3 w-3" />
-  )}
-</div>
-```
+**2. Novo arquivo: `src/pages/ValuationMultiplos.tsx`**
 
-- Remover a importacao do `Checkbox` (se nao for mais usado em outro lugar do arquivo)
-- Adicionar importacao do icone `Check` do lucide-react (ja importado no arquivo)
+Pagina wrapper que renderiza o `ValuationWizard` com `onBack` fazendo `navigate('/valuation')`.
 
-Isso resolve o problema de forma definitiva porque:
-1. Nenhum componente Radix e usado - zero risco de loop interno
-2. O visual e identico ao checkbox original
-3. O controle de estado fica 100% no `onClick` do div pai
+**3. Novo arquivo: `src/pages/ValuationDCF.tsx`**
 
+Pagina wrapper que renderiza o `DCFWizard` com `onBack` fazendo `navigate('/valuation')`.
+
+**4. Arquivo: `src/pages/Valuation.tsx`**
+
+Simplificar removendo o estado `view` e as renderizacoes condicionais dos wizards. Os botoes `onSelectFree` e `onSelectDCF` passam a fazer `navigate('/valuation/multiplos')` e `navigate('/valuation/dcf')` respectivamente. A verificacao de login e acesso continua antes de navegar.
+
+**5. Arquivos: `ValuationWizard.tsx` e `DCFWizard.tsx`**
+
+Atualizar o botao "Voltar" do primeiro passo para usar `navigate('/valuation')` ao inves de chamar `onBack()` (ou manter `onBack` que agora fara o navigate na pagina wrapper).
+
+### Beneficios
+
+- Navegacao do Header funciona normalmente em todas as telas
+- Botao Voltar do navegador funciona corretamente
+- Cada tela tem sua propria URL (compartilhavel, bookmark)
+- Sem estado interno que pode travar
