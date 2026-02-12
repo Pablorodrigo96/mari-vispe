@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import MarkerClusterGroup from 'react-leaflet-cluster';
+
 import L from 'leaflet';
 import { Link } from 'react-router-dom';
 import { MapPin, Building2, DollarSign, Map } from 'lucide-react';
@@ -28,19 +28,6 @@ const customIcon = new L.DivIcon({
   popupAnchor: [0, -32],
 });
 
-const createClusterIcon = (cluster: any) => {
-  const count = cluster.getChildCount();
-  let size = 40;
-  let className = 'cluster-small';
-  if (count >= 100) { size = 56; className = 'cluster-large'; }
-  else if (count >= 10) { size = 48; className = 'cluster-medium'; }
-
-  return new L.DivIcon({
-    html: `<div class="map-cluster ${className}"><span>${count}</span></div>`,
-    className: '',
-    iconSize: [size, size],
-  });
-};
 
 interface ListingWithCoords {
   listing: Listing;
@@ -95,13 +82,6 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
           box-shadow: 0 2px 12px rgba(0,0,0,0.4);
         }
         .map-cluster span { font-size: 13px; }
-        .cluster-small { background: hsl(45, 93%, 47%); border: 3px solid hsl(45, 93%, 60%); }
-        .cluster-medium { background: hsl(30, 90%, 50%); border: 3px solid hsl(30, 90%, 65%); }
-        .cluster-medium span { font-size: 14px; }
-        .cluster-large { background: hsl(15, 85%, 50%); border: 3px solid hsl(15, 85%, 65%); }
-        .cluster-large span { font-size: 15px; color: white; }
-        .leaflet-popup-content-wrapper {
-          background: hsl(222, 20%, 14%) !important;
           color: hsl(0, 0%, 95%) !important;
           border-radius: 12px !important;
           border: 1px solid hsl(222, 15%, 25%) !important;
@@ -125,11 +105,7 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
 
         {markers.length > 0 && <FitBounds markers={markers} />}
 
-        <MarkerClusterGroup
-          chunkedLoading
-          iconCreateFunction={createClusterIcon}
-          maxClusterRadius={60}
-        >
+        <>
           {markers.map((m) => (
             <Marker key={m.listing.id} position={[m.lat, m.lng]} icon={customIcon}>
               <Popup minWidth={240} maxWidth={300}>
@@ -164,7 +140,7 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
               </Popup>
             </Marker>
           ))}
-        </MarkerClusterGroup>
+        </>
       </MapContainer>
 
       {/* Bottom Stats Bar */}
