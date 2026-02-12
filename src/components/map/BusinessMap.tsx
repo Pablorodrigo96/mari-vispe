@@ -97,9 +97,9 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
       iconCreateFunction: (cluster) => {
         const count = cluster.getChildCount();
         let size = 'small';
-        let px = 40;
-        if (count >= 100) { size = 'large'; px = 50; }
-        else if (count >= 10) { size = 'medium'; px = 44; }
+        let px = 52;
+        if (count >= 100) { size = 'large'; px = 76; }
+        else if (count >= 10) { size = 'medium'; px = 64; }
         return L.divIcon({
           html: `<div>${count}</div>`,
           className: `marker-cluster marker-cluster-${size}`,
