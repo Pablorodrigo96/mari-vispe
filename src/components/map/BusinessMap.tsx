@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import 'leaflet.markercluster';
 import { Building2, DollarSign, Map } from 'lucide-react';
 import { formatCurrency, getCategoryLabel } from '@/lib/formatters';
 import { getCoordinates } from '@/lib/brazilCoordinates';
 import type { Tables } from '@/integrations/supabase/types';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
 
 type Listing = Tables<'listings'>;
 
@@ -37,6 +39,7 @@ interface BusinessMapProps {
 
 export function BusinessMap({ listings, loading }: BusinessMapProps) {
   const mapRef = useRef<L.Map | null>(null);
+  const clusterRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const markers: ListingWithCoords[] = listings
@@ -79,13 +82,34 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
     const map = mapRef.current;
     if (!map) return;
 
-    // Clear existing markers
-    map.eachLayer(layer => {
-      if (layer instanceof L.Marker) map.removeLayer(layer);
+    // Remove previous cluster group
+    if (clusterRef.current) {
+      map.removeLayer(clusterRef.current);
+      clusterRef.current = null;
+    }
+
+    const clusterGroup = (L as any).markerClusterGroup({
+      maxClusterRadius: 60,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      animate: true,
+      iconCreateFunction: (cluster) => {
+        const count = cluster.getChildCount();
+        let size = 'small';
+        let px = 40;
+        if (count >= 100) { size = 'large'; px = 50; }
+        else if (count >= 10) { size = 'medium'; px = 44; }
+        return L.divIcon({
+          html: `<div>${count}</div>`,
+          className: `marker-cluster marker-cluster-${size}`,
+          iconSize: L.point(px, px),
+        });
+      },
     });
 
     markers.forEach(m => {
-      const marker = L.marker([m.lat, m.lng], { icon: customIcon }).addTo(map);
+      const marker = L.marker([m.lat, m.lng], { icon: customIcon });
 
       const cityState = [m.listing.city, m.listing.state].filter(Boolean).join(', ');
       const priceHtml = m.listing.asking_price && !m.listing.hide_price
@@ -103,7 +127,12 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
           <a href="/anuncio/${m.listing.id}" style="display:block;margin-top:12px;text-align:center;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;background:hsl(45,93%,47%);color:hsl(0,0%,10%);text-decoration:none">Ver Detalhes</a>
         </div>
       `, { minWidth: 240, maxWidth: 300 });
+
+      clusterGroup.addLayer(marker);
     });
+
+    map.addLayer(clusterGroup);
+    clusterRef.current = clusterGroup;
 
     if (markers.length > 0) {
       const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
