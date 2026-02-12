@@ -171,9 +171,6 @@
   box-shadow: 0 0 10px hsla(38, 92%, 50%, 0.3) !important;
   transition: transform 0.2s ease !important;
 }
-.marker-cluster-small:hover {
-  transform: scale(1.1) !important;
-}
 .marker-cluster-small div {
   background: hsl(38, 92%, 45%) !important;
   color: hsl(222, 47%, 11%) !important;
@@ -186,9 +183,6 @@
   border: 3px solid hsl(38, 92%, 70%) !important;
   box-shadow: 0 0 14px hsla(38, 92%, 50%, 0.35) !important;
   transition: transform 0.2s ease !important;
-}
-.marker-cluster-medium:hover {
-  transform: scale(1.1) !important;
 }
 .marker-cluster-medium div {
   background: hsl(38, 92%, 42%) !important;
@@ -203,9 +197,6 @@
   box-shadow: 0 0 20px hsla(38, 92%, 50%, 0.4) !important;
   transition: transform 0.2s ease !important;
   animation: cluster-pulse 2s ease-in-out infinite !important;
-}
-.marker-cluster-large:hover {
-  transform: scale(1.1) !important;
 }
 .marker-cluster-large div {
   background: hsl(38, 92%, 40%) !important;
