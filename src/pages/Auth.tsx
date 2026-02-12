@@ -345,17 +345,13 @@ export default function Auth() {
                         }}
                       >
                         <Checkbox
-                          id={`role-${role.id}`}
                           checked={signupRoles.includes(role.id)}
-                          className="mt-0.5"
+                          className="mt-0.5 pointer-events-none"
                         />
                         <div className="flex-1">
-                          <label
-                            htmlFor={`role-${role.id}`}
-                            className="text-sm font-medium cursor-pointer"
-                          >
+                          <span className="text-sm font-medium cursor-pointer">
                             {role.label}
-                          </label>
+                          </span>
                           <p className="text-xs text-muted-foreground">{role.description}</p>
                         </div>
                       </div>
