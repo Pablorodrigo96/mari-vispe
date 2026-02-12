@@ -1,73 +1,61 @@
 
-## Troca de Nome da Plataforma: DealFlow → PME.B3
 
-### Visão Geral
-Alterar o nome da plataforma em todos os arquivos do projeto de "DealFlow" para "PME.B3". Isso inclui:
-- Logo/nome em header e footer
-- Títulos e descrições em componentes
-- Metadados em HTML
-- Comentários e textos em documentação
-- PDFs e relatórios gerados
+## Substituir Emojis por Fotografias Profissionais nas Categorias
 
-### Arquivos a Modificar (18 arquivos)
+### Problema
+As categorias de negocio usam emojis (💻, 🛒, 🏭, etc.) que parecem informais e remetem a WhatsApp, prejudicando a imagem profissional da plataforma.
 
-**1. Arquivos HTML/Meta**
-- `index.html`: Alterar título, og:title, twitter:title de "VCE - Deal Flow" para "PME.B3"
+### Solucao
+Substituir os emojis por imagens fotograficas profissionais (URLs de bancos de imagem gratuitos como Unsplash) e atualizar todos os componentes que exibem essas categorias.
 
-**2. Componentes de Layout**
-- `src/components/layout/Header.tsx`: Trocar logo "Deal<span>Flow</span>" por "PME<span>.B3</span>"
-- `src/components/layout/Footer.tsx`: 
-  - Logo no footer
-  - Copyright "© 2024 DealFlow" → "© 2024 PME.B3"
+### Alteracoes
 
-**3. Componentes Valuation**
-- `src/components/valuation/ValuationFooterCTA.tsx`: Copyright "© {ano} DealFlow" → "© {ano} PME.B3"
-- `src/components/valuation/ValuationReportDialog.tsx`: 
-  - Cabeçalho PDF "DEALFLOW" → "PME.B3"
-  - Footer PDF "© DealFlow - Marketplace M&A" → "© PME.B3 - Marketplace M&A"
-  - URL "www.dealflow.com.br" → "www.pmeb3.com.br"
-- `src/components/valuation/DCFReportDialog.tsx`: Mesmo padrão do ValuationReportDialog
+**1. `src/data/mockData.ts` - Dados das categorias**
+- Trocar o campo `icon` (string emoji) por `image` (URL de foto profissional)
+- Manter o campo `icon` como fallback ou remover
+- Cada categoria recebera uma foto representativa:
+  - Tecnologia e SaaS: foto de escritorio tech moderno
+  - Comercio e Varejo: foto de loja/vitrine elegante
+  - Industria: foto de fabrica/linha de producao
+  - Servicos: foto de reuniao corporativa
+  - Alimentacao: foto de restaurante profissional
+  - Saude e Bem-estar: foto de clinica/consultorio
+  - Educacao: foto de ambiente educacional
+  - Logistica: foto de centro de distribuicao
 
-**4. Componentes de Marketing**
-- `src/components/capital/TrustLogos.tsx`: "Quem confia na DealFlow" → "Quem confia na PME.B3"
-- `src/components/capital/CapitalHowItWorks.tsx`: "Como funciona a captação com a DealFlow?" → "Como funciona a captação com a PME.B3?"
-- `src/components/capital/MediaSection.tsx`: 
-  - Título "DealFlow na Mídia" → "PME.B3 na Mídia"
-  - Headlines que mencionam "DealFlow" → "PME.B3"
-- `src/components/investors/InvestorBenefits.tsx`: "Por que investir com a DealFlow?" → "Por que investir com a PME.B3?"
-- `src/components/investors/InvestorCTA.tsx`: "centenas de investidores que já descobriram negócios lucrativos através da DealFlow" → "...através da PME.B3"
-- `src/components/investors/InvestorTestimonials.tsx`: "Investidores que já encontraram oportunidades através da DealFlow" → "...através da PME.B3"
-- `src/components/sell/StepContact.tsx`: "Autorizo o DealFlow a divulgar meu anúncio" → "Autorizo a PME.B3 a divulgar meu anúncio"
+**2. `src/pages/Index.tsx` - Grid de categorias na home**
+- Substituir `<span className="text-4xl">{cat.icon}</span>` por `<img>` com a foto da categoria
+- Aplicar `rounded-lg`, `object-cover`, tamanho fixo (ex: `w-16 h-16` ou `w-full h-24`)
 
-**5. Dados e Utilitários**
-- `src/data/mockData.ts`: Comentário "Mock data for DealFlow marketplace" → "Mock data for PME.B3 marketplace"
-- `src/components/valuation/TrustSection.tsx`: Label "DealFlow" → "PME.B3"
+**3. `src/components/marketplace/FilterSidebar.tsx` - Filtros do marketplace**
+- Substituir `<span>{cat.icon}</span>` por `<img>` pequena (ex: `w-5 h-5 rounded`)
 
-**6. Estilos**
-- `src/index.css`: Comentários "DealFlow - Premium M&A Marketplace" → "PME.B3 - Premium M&A Marketplace"
+**4. `src/components/map/MapFilterSidebar.tsx` - Filtros do mapa**
+- Mesmo padrao do FilterSidebar
 
-### Estratégia de Implementação
+**5. `src/components/home/SearchBar.tsx` - Dropdown de categorias**
+- Substituir emoji no `<SelectItem>` por imagem pequena inline
 
-**Abordagem:**
-- Usar `lov-line-replace` para cada arquivo, substituindo ocorrências de "DealFlow", "Deal Flow", "DEALFLOW" e "dealflow.com.br"
-- Manter consistência: "PME.B3" é o nome formal (com ponto)
-- Para logotipos visuais em header/footer que quebram em duas linhas: "PME<span class="text-accent">.B3</span>"
-- URLs: mudar para "pmeb3.com.br"
+**6. `src/components/sell/wizard/StepBasicFinancial.tsx` - Wizard de venda**
+- Substituir emoji no `<SelectItem>` por imagem pequena
 
-**Ordem de implementação:**
-1. Header e Footer (mais visíveis)
-2. Componentes de marketing e investidores
-3. Valuation e relatórios PDF
-4. Dados e comentários
+**7. `src/pages/ListingDetail.tsx` - Badge de categoria**
+- Substituir emoji na funcao `getCategoryLabel` por imagem inline
 
-### Detalhes Técicos
+### Detalhes Tecnicos
 
-- **Logo HTML**: Manter o padrão de duas cores usando `<span>` com a classe `text-accent`
-- **Metadados**: Alterar título, og:title, twitter:title
-- **PDFs**: Modificar nome em cabeçalhos e rodapés de relatórios
-- **URLs**: Se houver referências a domínios, atualizar para pmeb3.com.br
-- **Sem mudanças em lógica**: Todas as alterações são puramente textuais/visuais
+- As imagens serao sourced de Unsplash (URLs publicas e gratuitas) com tamanho otimizado (ex: `?w=200&h=200&fit=crop`)
+- O tipo da interface `categories` mudara de `icon: string` (emoji) para `image: string` (URL)
+- Nos componentes menores (filtros, selects), as imagens terao `w-5 h-5 rounded object-cover`
+- Na home page, as imagens terao tamanho maior (`w-full h-24 rounded-lg object-cover`)
+- Fallback com `bg-muted` caso a imagem nao carregue
 
-### Impacto
-- **Usuário final**: Nome e branding da plataforma atualizado em toda a interface
-- **Dev**: Sem impacto em funcionalidade ou estrutura de código
+### Arquivos modificados
+1. `src/data/mockData.ts`
+2. `src/pages/Index.tsx`
+3. `src/components/marketplace/FilterSidebar.tsx`
+4. `src/components/map/MapFilterSidebar.tsx`
+5. `src/components/home/SearchBar.tsx`
+6. `src/components/sell/wizard/StepBasicFinancial.tsx`
+7. `src/pages/ListingDetail.tsx`
+
