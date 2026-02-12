@@ -13,7 +13,7 @@ export function TrustLogos() {
       <div className="container mx-auto px-4 lg:px-8">
         <div className="text-center mb-10">
           <h3 className="text-lg font-medium text-muted-foreground">
-            Quem confia na DealFlow
+            Quem confia na PME.B3
           </h3>
         </div>
         

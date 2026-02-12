@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* DealFlow - Premium M&A Marketplace Design System */
+/* PME.B3 - Premium M&A Marketplace Design System */
 
 @layer base {
   :root {
@@ -36,7 +36,7 @@
 
     --radius: 0.5rem;
 
-    /* Custom DealFlow tokens */
+    /* Custom PME.B3 tokens */
     --gold: 38 92% 50%;
     --gold-light: 38 92% 60%;
     --gold-dark: 38 92% 40%;

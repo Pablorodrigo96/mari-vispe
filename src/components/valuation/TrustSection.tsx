@@ -19,7 +19,7 @@ export const TrustSection = () => {
                 <FileText className="w-8 h-8 text-gold" />
                 <div>
                   <p className="text-primary-foreground font-semibold text-sm">Laudo de Valuation</p>
-                  <p className="text-primary-foreground/70 text-xs">DealFlow</p>
+                  <p className="text-primary-foreground/70 text-xs">PME.B3</p>
                 </div>
               </div>
               

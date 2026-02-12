@@ -69,7 +69,7 @@ export const DCFReportDialog = ({
     doc.rect(0, 0, pageWidth, 50, 'F');
 
     // Header text
-    addText('DEALFLOW', margin, 20, { fontSize: 24, fontStyle: 'bold', color: [212, 175, 55] });
+    addText('PME.B3', margin, 20, { fontSize: 24, fontStyle: 'bold', color: [212, 175, 55] });
     addText('Valuation DCF - Fluxo de Caixa Descontado', margin, 32, { fontSize: 14, color: [255, 255, 255] });
     addText(`Emitido em ${formatDate(result.calculatedAt)}`, margin, 42, { fontSize: 10, color: [200, 200, 200] });
 
@@ -161,8 +161,8 @@ export const DCFReportDialog = ({
     // Footer
     doc.setFillColor(15, 23, 42);
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-    addText('© DealFlow - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
-    addText('www.dealflow.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: [212, 175, 55] });
+    addText('© PME.B3 - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
+    addText('www.pmeb3.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: [212, 175, 55] });
 
     // Save
     doc.save(`valuation-dcf-${result.inputs.companyName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`);
