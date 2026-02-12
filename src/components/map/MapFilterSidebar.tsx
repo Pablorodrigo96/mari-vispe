@@ -1,4 +1,4 @@
-import { Filter, X } from 'lucide-react';
+import { Filter, X, MapPin, DollarSign, Building2, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -36,6 +36,7 @@ interface MapFilterSidebarProps {
   onFiltersChange: (filters: MapFilterState) => void;
   availableStates: string[];
   availableCities: string[];
+  isMobile?: boolean;
 }
 
 export function MapFilterSidebar({
@@ -45,6 +46,7 @@ export function MapFilterSidebar({
   onFiltersChange,
   availableStates,
   availableCities,
+  isMobile = false,
 }: MapFilterSidebarProps) {
   const toggleCategory = (catId: string) => {
     const next = filters.categories.includes(catId)
@@ -57,10 +59,9 @@ export function MapFilterSidebar({
     const next = filters.states.includes(state)
       ? filters.states.filter((s) => s !== state)
       : [...filters.states, state];
-    // Clear cities that no longer belong to selected states
     const newFilters = { ...filters, states: next };
     if (next.length > 0) {
-      newFilters.cities = filters.cities; // cities will be filtered by availableCities in parent
+      newFilters.cities = filters.cities;
     }
     onFiltersChange(newFilters);
   };
@@ -83,24 +84,24 @@ export function MapFilterSidebar({
   return (
     <div className={cn('bg-card border-r border-border flex flex-col h-full', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between p-5 border-b border-border">
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-semibold text-sm">Filtros</h2>
+          <Filter className="h-5 w-5 text-primary" />
+          <h2 className="font-semibold">Filtros</h2>
           {activeFiltersCount > 0 && (
-            <Badge variant="secondary" className="ml-1 text-xs">
+            <Badge className="ml-1 bg-primary text-primary-foreground text-xs px-2">
               {activeFiltersCount}
             </Badge>
           )}
         </div>
         <div className="flex items-center gap-1">
           {activeFiltersCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs h-7 px-2">
+            <Button variant="outline" size="sm" onClick={clearFilters} className="text-xs h-8 px-3">
               Limpar
             </Button>
           )}
           {onClose && (
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
               <X className="h-4 w-4" />
             </Button>
           )}
@@ -108,24 +109,27 @@ export function MapFilterSidebar({
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-4">
-          <Accordion type="multiple" defaultValue={['category', 'state', 'city', 'price']} className="space-y-1">
+        <div className="p-5">
+          <Accordion type="multiple" defaultValue={['category', 'state', 'city', 'price']} className="space-y-2">
             {/* Category */}
             <AccordionItem value="category" className="border-b-0">
-              <AccordionTrigger className="py-2.5 hover:no-underline">
-                <span className="text-sm font-medium">Setor de Atuação</span>
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <span className="text-sm font-medium flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  Setor de Atuação
+                </span>
               </AccordionTrigger>
-              <AccordionContent className="pt-1 pb-3">
-                <div className="space-y-2">
+              <AccordionContent className="pt-2 pb-4">
+                <div className="space-y-2.5">
                   {categories.map((cat) => (
-                    <div key={cat.id} className="flex items-center gap-2">
+                    <div key={cat.id} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors">
                       <Checkbox
                         id={`map-cat-${cat.id}`}
                         checked={filters.categories.includes(cat.id)}
                         onCheckedChange={() => toggleCategory(cat.id)}
                       />
-                      <Label htmlFor={`map-cat-${cat.id}`} className="text-sm font-normal cursor-pointer flex items-center gap-1.5">
-                        <span>{cat.icon}</span>
+                      <Label htmlFor={`map-cat-${cat.id}`} className="text-sm font-normal cursor-pointer flex items-center gap-2 flex-1">
+                        <span className="text-base">{cat.icon}</span>
                         {cat.label}
                       </Label>
                     </div>
@@ -136,19 +140,22 @@ export function MapFilterSidebar({
 
             {/* State */}
             <AccordionItem value="state" className="border-b-0">
-              <AccordionTrigger className="py-2.5 hover:no-underline">
-                <span className="text-sm font-medium">Estado</span>
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <span className="text-sm font-medium flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  Estado
+                </span>
               </AccordionTrigger>
-              <AccordionContent className="pt-1 pb-3">
-                <div className="space-y-2 max-h-40 overflow-y-auto">
+              <AccordionContent className="pt-2 pb-4">
+                <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1">
                   {availableStates.map((state) => (
-                    <div key={state} className="flex items-center gap-2">
+                    <div key={state} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors">
                       <Checkbox
                         id={`map-state-${state}`}
                         checked={filters.states.includes(state)}
                         onCheckedChange={() => toggleState(state)}
                       />
-                      <Label htmlFor={`map-state-${state}`} className="text-sm font-normal cursor-pointer">
+                      <Label htmlFor={`map-state-${state}`} className="text-sm font-normal cursor-pointer flex-1">
                         {state}
                       </Label>
                     </div>
@@ -160,19 +167,22 @@ export function MapFilterSidebar({
             {/* City */}
             {availableCities.length > 0 && (
               <AccordionItem value="city" className="border-b-0">
-                <AccordionTrigger className="py-2.5 hover:no-underline">
-                  <span className="text-sm font-medium">Cidade</span>
+                <AccordionTrigger className="py-3 hover:no-underline">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    Cidade
+                  </span>
                 </AccordionTrigger>
-                <AccordionContent className="pt-1 pb-3">
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                <AccordionContent className="pt-2 pb-4">
+                  <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1">
                     {availableCities.map((city) => (
-                      <div key={city} className="flex items-center gap-2">
+                      <div key={city} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors">
                         <Checkbox
                           id={`map-city-${city}`}
                           checked={filters.cities.includes(city)}
                           onCheckedChange={() => toggleCity(city)}
                         />
-                        <Label htmlFor={`map-city-${city}`} className="text-sm font-normal cursor-pointer">
+                        <Label htmlFor={`map-city-${city}`} className="text-sm font-normal cursor-pointer flex-1">
                           {city}
                         </Label>
                       </div>
@@ -184,10 +194,13 @@ export function MapFilterSidebar({
 
             {/* Price */}
             <AccordionItem value="price" className="border-b-0">
-              <AccordionTrigger className="py-2.5 hover:no-underline">
-                <span className="text-sm font-medium">Faixa de Preço</span>
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <span className="text-sm font-medium flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  Faixa de Preço
+                </span>
               </AccordionTrigger>
-              <AccordionContent className="pt-1 pb-3">
+              <AccordionContent className="pt-2 pb-4">
                 <div className="space-y-4">
                   <Slider
                     value={filters.priceRange}
@@ -196,7 +209,7 @@ export function MapFilterSidebar({
                     step={100000}
                     className="w-full"
                   />
-                  <div className="flex justify-between text-xs text-muted-foreground">
+                  <div className="flex justify-between text-sm text-muted-foreground">
                     <span>{formatCurrency(filters.priceRange[0])}</span>
                     <span>{filters.priceRange[1] >= 10000000 ? 'R$ 10 mi+' : formatCurrency(filters.priceRange[1])}</span>
                   </div>
@@ -206,6 +219,15 @@ export function MapFilterSidebar({
           </Accordion>
         </div>
       </ScrollArea>
+
+      {/* Mobile apply button */}
+      {isMobile && (
+        <div className="p-5 border-t border-border">
+          <Button className="w-full" onClick={onClose}>
+            Aplicar Filtros
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

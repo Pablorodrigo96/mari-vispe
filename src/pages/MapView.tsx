@@ -75,6 +75,7 @@ const MapView = () => {
       availableStates={availableStates}
       availableCities={availableCities}
       onClose={isMobile ? () => setSheetOpen(false) : undefined}
+      isMobile={isMobile}
     />
   );
 
