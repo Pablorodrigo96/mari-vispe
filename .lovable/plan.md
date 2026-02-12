@@ -1,34 +1,62 @@
 
+## Ajuste de Estilo Visual dos Clusters
 
-## Implementar Clustering de Marcadores no Mapa
+### Análise Atual
+Os clusters atualmente têm:
+- Tamanhos: small (40px), medium (44px), large (50px)
+- Cores: Navy escuro com detalhes dourados
+- Inner divs com 36px x 36px
+- Efeitos de transição básicos
 
-### Problema
-Com muitos marcadores no mapa, a visualizacao fica pesada e confusa quando o zoom esta afastado. O usuario quer que marcadores proximos sejam agrupados em clusters mostrando a contagem de empresas, e que ao dar zoom os clusters se expandam revelando os marcadores individuais.
+### Melhorias Propostas
 
-### Solucao
-Usar o plugin **Leaflet.markercluster** que e o padrao da industria para clustering com Leaflet vanilla. Ele agrupa marcadores automaticamente com base no nivel de zoom e mostra circulos com a contagem de empresas em cada regiao.
+**1. Aumentar Tamanhos Base**
+- Small: 40px → 52px
+- Medium: 44px → 64px
+- Large: 50px → 76px
+- Inner divs: 36px → aumentar proporcionalmente
 
-### Detalhes Tecnicos
+**2. Cores Mais Vibrantes e Profissionais**
+- **Small clusters** (até 10): Fundo dourado com logo sutil (não mais navy/dourado misturado)
+  - Background: `hsl(38, 92%, 50%)` (dourado sólido)
+  - Border: `hsl(38, 92%, 60%)` com glow leve
+  - Text: Branco/navy escuro com contraste alto
+  - Adicionar sombra/glow para destacar mais
 
-**1. Adicionar dependencia**
-- Instalar `leaflet.markercluster` (pacote npm) e seus tipos `@types/leaflet.markercluster`
+- **Medium clusters** (10-100): Dourado mais intenso com efeito visual
+  - Background: `hsl(38, 92%, 47%)` com borda mais espessa
+  - Border: `hsl(38, 92%, 70%)` (mais claro) com 3px
+  - Text: Navy escuro, maior e mais bold
+  - Adicionar shadow externo mais pronunciado
 
-**2. Arquivo: `src/components/map/BusinessMap.tsx`**
-- Importar o CSS do markercluster e o plugin
-- Substituir a adicao individual de marcadores (`marker.addTo(map)`) por um `L.markerClusterGroup()`
-- Adicionar todos os marcadores ao cluster group, e adicionar o grupo ao mapa
-- Estilizar os clusters com cores alinhadas ao tema escuro/dourado da plataforma (fundo navy escuro, texto dourado, borda dourada)
-- Ao limpar marcadores, remover o cluster group inteiro em vez de iterar markers individuais
+- **Large clusters** (100+): Destaque máximo com efeito premium
+  - Background: Gradiente dourado (de `hsl(38, 92%, 50%)` a `hsl(38, 85%, 45%)`)
+  - Border: 4px solid com cor mais clara
+  - Text: Navy, muito bold, maior
+  - Shadow com glow dourado (`box-shadow: 0 0 20px hsla(38, 92%, 50%, 0.4)`)
 
-**3. Arquivo: `src/index.css`**
-- Adicionar estilos customizados para os clusters (`.marker-cluster-small`, `.marker-cluster-medium`, `.marker-cluster-large`) com o visual corporativo da plataforma:
-  - Clusters pequenos (ate 10): fundo navy com borda dourada sutil
-  - Clusters medios (10-100): fundo dourado com texto escuro
-  - Clusters grandes (100+): fundo dourado intenso, maior
+**3. Efeitos Interativos**
+- Adicionar `transform: scale(1.1)` no hover dos clusters
+- Efeito de pulsação suave (`pulse` animation) nos clusters grandes
+- Transição de 200ms para suavidade
+
+**4. Tipografia Aprimorada**
+- Aumentar font-size: 13px → 16px (small), 14px → 18px (medium), 15px → 20px (large)
+- Adicionar `letter-spacing: -0.5px` para números mais compactos
+- Usar `font-weight: 900` em todos
+
+**5. Border Styling**
+- Small: 2px → 3px
+- Medium: 2px → 3px
+- Large: 3px → 4px
+- Adicionar `box-shadow` com glow externo em todas as variantes
+
+### Arquivos a Modificar
+1. `src/components/map/BusinessMap.tsx` - Aumentar `px` (tamanho do ícone) nas 3 variantes
+2. `src/index.css` - Revisar estilos `.marker-cluster-*` e `.marker-cluster div`
 
 ### Comportamento Esperado
-- Zoom afastado: marcadores proximos se agrupam em circulos com numero de empresas
-- Zoom aproximado: clusters se dividem progressivamente ate mostrar marcadores individuais
-- Clicar em um cluster: zoom automatico para expandir aquele grupo
-- Animacao suave de spiderfy quando marcadores estao muito proximos no zoom maximo
-
+- Clusters muito mais visíveis e destacados no mapa
+- Transição suave ao hover
+- Cores vibrantes (dourado/navy) alinhadas com o design corporativo
+- Sensação premium similar a plataformas financeiras de alto nível
