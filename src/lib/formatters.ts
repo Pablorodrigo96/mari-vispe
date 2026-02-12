@@ -52,6 +52,7 @@ export const getCategoryLabel = (category: string): string => {
     health: 'Saúde',
     education: 'Educação',
     logistics: 'Logística',
+    telecom: 'Telecomunicações',
   };
   return labels[category] || category;
 };
