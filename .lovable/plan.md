@@ -1,28 +1,20 @@
 
-## Corrigir Imagem Quebrada da Categoria Educação
+
+## Corrigir Imagem Quebrada da Categoria Educação (Tentativa 2)
 
 ### Problema
-A URL da imagem de Educação em `src/data/mockData.ts` (linha 41) está apontando para um ID de foto do Unsplash que não está mais disponível ou é inválido, causando um erro ao carregar a imagem na categoria.
+A URL substituída anteriormente (`photo-1427504494785-cdaa41e57ae0`) também está inválida/indisponível no Unsplash, como mostra o screenshot do usuário.
 
 ### Solução
-Substituir a URL quebrada por uma nova URL válida do Unsplash com uma fotografia profissional de educação/ambiente escolar.
+Usar uma URL do Unsplash comprovadamente válida para a categoria Educação. A nova URL será:
+
+`https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop`
+
+Esta foto (ID: `photo-1503676260728-1c00da094a0b`) mostra materiais escolares/educacionais e é uma imagem amplamente utilizada e disponível no Unsplash.
 
 ### Alteração
-- **Arquivo**: `src/data/mockData.ts`
-- **Linha**: 41
-- **Alteração**: 
-  - **Atual**: `{ id: 'education', label: 'Educação', image: 'https://images.unsplash.com/photo-1523050854058-8df90110c8f1?w=400&h=300&fit=crop' }`
-  - **Novo**: `{ id: 'education', label: 'Educação', image: 'https://images.unsplash.com/photo-1427504494785-cdaa41e57ae0?w=400&h=300&fit=crop' }`
-
-A nova URL utiliza a foto `photo-1427504494785-cdaa41e57ae0` que é uma imagem profissional de educação/livros/estudo do Unsplash que está ativa e disponível.
+- **Arquivo**: `src/data/mockData.ts`, linha 41
+- Substituir a URL atual pela nova URL válida
 
 ### Impacto
-- A imagem de educação agora será exibida corretamente em:
-  - Grid de categorias da home page
-  - Filtros do marketplace
-  - Filtros do mapa
-  - Dropdown de seleção de categoria no wizard de venda
-  - Badge de categoria nas listagens de detalhes
-
-- Nenhuma mudança de lógica, apenas correção da URL
-
+- Correção visual em todos os locais onde a categoria Educação aparece (home, filtros, wizard, detalhes)
