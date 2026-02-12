@@ -1,76 +1,74 @@
 
-## Nova Pagina: Mapa de Empresas
+
+## Filtros Laterais no Mapa
 
 ### Visao Geral
 
-Criar uma nova pagina `/mapa` acessivel pelo Header, mostrando um mapa interativo do Brasil com marcadores nas localizacoes das empresas cadastradas. O mapa tera tema escuro, clustering de marcadores, e um painel de resumo na parte inferior.
+Adicionar um painel de filtros na lateral esquerda do mapa, permitindo filtrar as empresas exibidas por setor, estado, cidade e faixa de preco. O painel sera colapsavel no mobile (abrindo via Sheet/drawer) e fixo no desktop.
 
-### Componentes
+### Alteracoes
 
-**1. Nova rota e navegacao**
+**1. Novo componente: `src/components/map/MapFilterSidebar.tsx`**
 
-- Adicionar "Mapa" ao array `navigation` no `Header.tsx` (entre "Comprar Empresa" e "Vender Empresa")
-- Criar rota `/mapa` no `App.tsx`
+Painel de filtros especifico para o mapa, reutilizando os mesmos componentes UI (Accordion, Checkbox, Slider) ja usados no `FilterSidebar` do marketplace. Incluira:
 
-**2. Nova pagina `src/pages/MapView.tsx`**
+- **Setor de Atuacao**: Checkboxes com as categorias existentes (do `mockData.ts`)
+- **Estado**: Checkboxes com os estados existentes
+- **Cidade**: Checkboxes dinamicos baseados nas cidades presentes nos listings carregados (filtradas pelo estado selecionado quando aplicavel)
+- **Faixa de Preco**: Slider de intervalo (0 a R$ 10M)
+- Botao "Limpar Filtros" e badge com contagem de filtros ativos
+- Estilo escuro para combinar com o tema do mapa
 
-Pagina principal que:
-- Busca listings ativos do banco de dados (mesma query do Marketplace)
-- Converte cidade/estado em coordenadas usando um dicionario estatico de capitais e principais cidades brasileiras
-- Renderiza o mapa com Header e rodape
+Interface de estado dos filtros:
+```typescript
+interface MapFilterState {
+  categories: string[];
+  states: string[];
+  cities: string[];
+  priceRange: [number, number];
+}
+```
 
-**3. Novo componente `src/components/map/BusinessMap.tsx`**
+**2. Arquivo modificado: `src/pages/MapView.tsx`**
 
-Mapa interativo usando **Leaflet** + **react-leaflet** + **react-leaflet-cluster**:
-- Tema escuro usando tiles do CartoDB dark_all (gratuito, sem API key)
-- Centro inicial no Brasil (-14.235, -51.925), zoom 4
-- Marcadores clusterizados com contagem (estilo circular como nas imagens de referencia)
-- Popup ao clicar no marcador mostrando: titulo, categoria, cidade/estado, preco, link para detalhes
-- Rodape fixo no mapa com: total de oportunidades, valor total, contagem de estados
+- Adicionar estado `filters` com `useState<MapFilterState>`
+- Extrair lista de cidades unicas dos listings (filtradas por estado quando aplicavel)
+- Aplicar filtros aos listings antes de passar para o `BusinessMap`
+- Filtrar no lado do cliente (os dados ja estao carregados) para resposta instantanea
+- No desktop: layout flex com sidebar fixa (w-72) + mapa ocupando o restante
+- No mobile: botao flutuante "Filtros" que abre um Sheet/drawer lateral
 
-**4. Arquivo auxiliar `src/lib/brazilCoordinates.ts`**
+**3. Layout resultante**
 
-Dicionario estatico com coordenadas lat/lng das capitais e principais cidades brasileiras (SP, RJ, BH, Curitiba, etc.), usado para posicionar marcadores no mapa a partir dos campos `city` e `state` da tabela listings.
+```text
+Desktop:
++------------------+--------------------------------+
+| Header                                            |
++------------------+--------------------------------+
+| Filtros (w-72)   | Mapa (flex-1)                  |
+| - Setor          |                                |
+| - Estado         |                                |
+| - Cidade         |                                |
+| - Preco          |                                |
++------------------+----------[Barra de Stats]------+
 
-### Dependencias Novas
-
-- `leaflet` - biblioteca de mapas (gratuita, sem API key)
-- `react-leaflet` - wrapper React para Leaflet
-- `react-leaflet-cluster` - clustering de marcadores
+Mobile:
++----------------------------------------+
+| Header                                 |
++----------------------------------------+
+| Mapa (tela cheia)                      |
+|                                        |
+|  [Botao Filtros flutuante]             |
+|                                        |
++----------[Barra de Stats]-------------+
+```
 
 ### Detalhes Tecnicos
 
-**Geocodificacao**: Como os listings tem apenas `city` e `state` (sem lat/lng), sera usado um dicionario estatico com ~50 cidades brasileiras. Listings sem cidade encontrada no dicionario usarao as coordenadas da capital do estado. Listings sem estado serao omitidos do mapa.
+- A filtragem sera feita no cliente (array `.filter()`) para evitar re-fetches ao banco
+- A lista de cidades sera extraida dinamicamente dos listings carregados usando `new Set()`
+- Quando o usuario seleciona um estado no filtro, a lista de cidades mostrara apenas cidades daquele(s) estado(s)
+- O componente `BusinessMap` nao precisa de alteracoes - ele ja recebe `listings` como prop e renderiza marcadores com base neles
+- No mobile, o botao flutuante usara o componente `Sheet` do shadcn/ui para abrir o painel de filtros
+- A barra de stats no rodape do mapa refletira automaticamente os listings filtrados (pois os totais sao calculados dentro do `BusinessMap`)
 
-**Estilo do mapa**: Tiles escuros do CartoDB (`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`) - gratuito, sem registro necessario.
-
-**Clusters**: Circulos coloridos com contagem, semelhantes as imagens de referencia. Ao dar zoom, os clusters se dividem em marcadores individuais.
-
-**Popup do marcador**: Card compacto com titulo, categoria, localizacao, preco e botao "Ver Detalhes" que leva ao `/anuncio/:id`.
-
-**Painel inferior**: Barra fixa na parte de baixo do mapa mostrando:
-- Oportunidades: total de listings no mapa
-- Valor: soma de asking_price formatada
-- Estados: quantidade de estados distintos
-
-### Estrutura de Arquivos
-
-```text
-src/
-  pages/
-    MapView.tsx              (nova pagina)
-  components/
-    map/
-      BusinessMap.tsx         (componente do mapa)
-  lib/
-    brazilCoordinates.ts     (dicionario de coordenadas)
-```
-
-### Fluxo do Usuario
-
-1. Usuario clica em "Mapa" no menu de navegacao
-2. Pagina carrega e busca listings ativos do banco
-3. Mapa renderiza centrado no Brasil com marcadores clusterizados
-4. Usuario pode dar zoom para ver marcadores individuais
-5. Ao clicar em um marcador, popup mostra informacoes da empresa
-6. Botao "Ver Detalhes" no popup leva para a pagina do anuncio
