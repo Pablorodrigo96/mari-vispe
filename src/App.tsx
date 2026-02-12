@@ -21,6 +21,7 @@ import Capital from "./pages/Capital";
 import Auth from "./pages/Auth";
 import Terms from "./pages/Terms";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import MapView from "./pages/MapView";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -42,6 +43,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/mapa" element={<MapView />} />
             <Route path="/sell" element={<Sell />} />
             <Route path="/vender" element={<Vender />} />
             <Route path="/anuncio/:id" element={<ListingDetail />} />
