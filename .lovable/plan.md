@@ -1,74 +1,71 @@
 
+## Melhoria do Design do Menu de Filtros Lateral
 
-## Filtros Laterais no Mapa
+### Análise Atual
 
-### Visao Geral
+O componente `MapFilterSidebar` tem um design funcional, mas pode ser melhorado em:
+- **Visual:** Fundo simples sem destaque visual (apenas `bg-card`)
+- **Espaçamento:** Acordeons com spacing minimal (`space-y-1`)
+- **Headers:** Seções sem diferenciação visual clara
+- **Interatividade:** Sem feedback visual ou hover states melhorados
+- **Mobile:** Design não otimizado especificamente para telas pequenas
+- **Contraste:** Labels e filtros podem ter melhor hierarquia visual
 
-Adicionar um painel de filtros na lateral esquerda do mapa, permitindo filtrar as empresas exibidas por setor, estado, cidade e faixa de preco. O painel sera colapsavel no mobile (abrindo via Sheet/drawer) e fixo no desktop.
+Comparando com `FilterSidebar` do marketplace (que tem mais polimento):
+- Usa `rounded-xl border` para mais destaque
+- Spacing maior (`space-y-2`, `mb-4`, `mt-6`)
+- Botão de ação visual ("Aplicar Filtros" no mobile)
+- Padding interno melhor distribuído
 
-### Alteracoes
+### Melhorias Propostas
 
-**1. Novo componente: `src/components/map/MapFilterSidebar.tsx`**
+**1. Visual e Layout**
+- Adicionar `rounded-lg` (ou `rounded-xl` no desktop) para maior destaque
+- Melhorar padding/spacing interno (p-4 → p-5 ou p-6)
+- Adicionar fundo gradiente sutil ou efeito de superfície elevada
+- Melhorar espaçamento entre acordeons (`space-y-2` em vez de `space-y-1`)
+- Adicionar borda sutil que combine com o tema
 
-Painel de filtros especifico para o mapa, reutilizando os mesmos componentes UI (Accordion, Checkbox, Slider) ja usados no `FilterSidebar` do marketplace. Incluira:
+**2. Header**
+- Aumentar tamanho do ícone (`h-4 w-4` → `h-5 w-5`)
+- Melhorar alinhamento e spacing do header (`mb-4` explícito)
+- Melhorar visual do badge (maior ou com background melhor)
 
-- **Setor de Atuacao**: Checkboxes com as categorias existentes (do `mockData.ts`)
-- **Estado**: Checkboxes com os estados existentes
-- **Cidade**: Checkboxes dinamicos baseados nas cidades presentes nos listings carregados (filtradas pelo estado selecionado quando aplicavel)
-- **Faixa de Preco**: Slider de intervalo (0 a R$ 10M)
-- Botao "Limpar Filtros" e badge com contagem de filtros ativos
-- Estilo escuro para combinar com o tema do mapa
+**3. Seções de Filtro (Acordeons)**
+- Aumentar padding dos triggers (`py-2.5` → `py-3`)
+- Melhorar spacing do conteúdo (`pt-1 pb-3` → `pt-2 pb-4`)
+- Adicionar ícones visuais para cada categoria de filtro (opcional)
+- Melhorar contraste de texto selecionado
 
-Interface de estado dos filtros:
-```typescript
-interface MapFilterState {
-  categories: string[];
-  states: string[];
-  cities: string[];
-  priceRange: [number, number];
-}
-```
+**4. Checkboxes e Labels**
+- Aumentar spacing entre items (`space-y-2` está ok, manter)
+- Melhorar label styling (mais legibilidade)
+- Adicionar hover states mais sutis
 
-**2. Arquivo modificado: `src/pages/MapView.tsx`**
+**5. Price Range Slider**
+- Melhorar spacing em volta do slider
+- Aumentar tamanho do texto de valores (`text-xs` → `text-sm`)
+- Melhorar apresentação (valores em cards pequenos, opcional)
 
-- Adicionar estado `filters` com `useState<MapFilterState>`
-- Extrair lista de cidades unicas dos listings (filtradas por estado quando aplicavel)
-- Aplicar filtros aos listings antes de passar para o `BusinessMap`
-- Filtrar no lado do cliente (os dados ja estao carregados) para resposta instantanea
-- No desktop: layout flex com sidebar fixa (w-72) + mapa ocupando o restante
-- No mobile: botao flutuante "Filtros" que abre um Sheet/drawer lateral
+**6. Botão Limpar**
+- Melhorar visual do botão "Limpar"
+- Considerar usar variant "outline" em vez de "ghost" para maior destaque
 
-**3. Layout resultante**
+**7. Responsividade**
+- Garantir que funciona bem no mobile sheet (`w-80`)
+- Melhorar padding em telas pequenas
+- Considerar adicionar botão "Aplicar Filtros" visual (como no FilterSidebar) no mobile
 
-```text
-Desktop:
-+------------------+--------------------------------+
-| Header                                            |
-+------------------+--------------------------------+
-| Filtros (w-72)   | Mapa (flex-1)                  |
-| - Setor          |                                |
-| - Estado         |                                |
-| - Cidade         |                                |
-| - Preco          |                                |
-+------------------+----------[Barra de Stats]------+
+### Implementação
 
-Mobile:
-+----------------------------------------+
-| Header                                 |
-+----------------------------------------+
-| Mapa (tela cheia)                      |
-|                                        |
-|  [Botao Filtros flutuante]             |
-|                                        |
-+----------[Barra de Stats]-------------+
-```
+As alterações serão apenas em `src/components/map/MapFilterSidebar.tsx`:
 
-### Detalhes Tecnicos
+**Alterações de styling:**
+- Header: melhorar spacing e visual
+- Container: adicionar `rounded-lg`, melhorar padding
+- Acordeons: aumentar `space-y-2`, ajustar py/pt/pb
+- Buttons: melhorar variantes e styling
+- Overall: seguir pattern do `FilterSidebar` (que é mais polido)
 
-- A filtragem sera feita no cliente (array `.filter()`) para evitar re-fetches ao banco
-- A lista de cidades sera extraida dinamicamente dos listings carregados usando `new Set()`
-- Quando o usuario seleciona um estado no filtro, a lista de cidades mostrara apenas cidades daquele(s) estado(s)
-- O componente `BusinessMap` nao precisa de alteracoes - ele ja recebe `listings` como prop e renderiza marcadores com base neles
-- No mobile, o botao flutuante usara o componente `Sheet` do shadcn/ui para abrir o painel de filtros
-- A barra de stats no rodape do mapa refletira automaticamente os listings filtrados (pois os totais sao calculados dentro do `BusinessMap`)
+**Sem mudanças estruturais:** Lógica de filtros permanece igual, apenas CSS/Tailwind.
 
