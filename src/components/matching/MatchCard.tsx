@@ -18,6 +18,7 @@ interface MatchCardProps {
     asking_price: number | null;
     images: string[] | null;
     score: number;
+    matchType?: 'horizontal' | 'vertical';
   };
 }
 
@@ -38,6 +39,10 @@ export function MatchCard({ match }: MatchCardProps) {
   };
 
   const thumbnail = match.images?.[0];
+  const typeLabel = match.matchType === 'vertical' ? 'Vertical' : 'Horizontal';
+  const typeColor = match.matchType === 'vertical'
+    ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
+    : 'bg-blue-500/10 text-blue-600 border-blue-500/20';
 
   return (
     <Card className="border-border/50 hover:border-accent/30 transition-colors overflow-hidden">
@@ -50,7 +55,10 @@ export function MatchCard({ match }: MatchCardProps) {
         <div className="flex items-start justify-between mb-3">
           <div>
             <h3 className="font-semibold text-foreground line-clamp-1">{match.title}</h3>
-            <Badge variant="secondary" className="text-xs mt-1">{match.category}</Badge>
+            <div className="flex gap-1.5 mt-1">
+              <Badge variant="secondary" className="text-xs">{match.category}</Badge>
+              <Badge variant="outline" className={`text-xs ${typeColor}`}>{typeLabel}</Badge>
+            </div>
           </div>
           <Badge variant="outline" className={compatibilityColor}>
             {compatibilityLabel}
