@@ -79,12 +79,16 @@ export function CompanySearchCard() {
       <div className="container mx-auto px-4">
         <Card className="max-w-2xl mx-auto border-border/50 shadow-lg">
           <CardContent className="p-6 md:p-8">
+            {/* Label */}
+            <h2 className="text-lg font-semibold text-foreground mb-1">Busque sua empresa pelo nome</h2>
+            <p className="text-sm text-muted-foreground mb-4">Digite o nome e encontraremos negócios compatíveis com o seu.</p>
+
             {/* Search input */}
             <div className="flex gap-3 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  placeholder="Busque por nome, categoria ou cidade..."
+                  placeholder="Digite o nome da sua empresa..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -162,7 +166,10 @@ export function CompanySearchCard() {
                     </div>
                   </div>
 
-                  {/* Opportunities badge */}
+                  {/* Context text + Opportunities badge */}
+                  <p className="text-center text-sm text-muted-foreground font-medium">
+                    Encontramos oportunidades compatíveis com o seu negócio!
+                  </p>
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}

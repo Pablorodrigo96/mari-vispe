@@ -1,4 +1,10 @@
-import { Search, TrendingUp } from 'lucide-react';
+import { Search, MousePointerClick, Eye } from 'lucide-react';
+
+const steps = [
+  { icon: Search, label: 'Digite o nome da sua empresa' },
+  { icon: MousePointerClick, label: 'Selecione a empresa correta' },
+  { icon: Eye, label: 'Veja as oportunidades para você' },
+];
 
 export function MatchingHero() {
   return (
@@ -15,19 +21,27 @@ export function MatchingHero() {
           </div>
           
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight">
-            Encontre negócios{' '}
-            <span className="text-accent">compatíveis</span>
+            Sua empresa já está{' '}
+            <span className="text-accent">em nosso radar</span>
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Nosso motor de matching analisa categoria, localização e faturamento para conectar você às melhores oportunidades de compra e venda de empresas.
+            Com o buscador inteligente da PME.B3, encontramos oportunidades de negócios compatíveis com a sua empresa. Digite o nome da sua empresa abaixo, selecione a correta e veja as oportunidades esperando por você.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-accent" />
-              <span>Matching por categoria, região e faturamento</span>
-            </div>
+          {/* Step indicators */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mt-4">
+            {steps.map((step, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-accent text-accent-foreground font-bold text-sm shrink-0">
+                  {i + 1}
+                </div>
+                <span className="text-sm text-muted-foreground">{step.label}</span>
+                {i < steps.length - 1 && (
+                  <span className="hidden sm:block text-muted-foreground/40 text-xl ml-2">→</span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
