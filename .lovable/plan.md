@@ -51,4 +51,3 @@ As edge functions vao ler `EXTERNAL_SUPABASE_URL` e `EXTERNAL_SUPABASE_KEY` dos 
 - `matching-engine`: valida JWT via `getClaims()`, filtra por CNAE similar + mesma regiao + faixa de capital social, ordena por relevancia
 - WhatsApp usa helper `getWhatsAppLink` existente com mensagem pre-formatada
 - A tabela externa sera referenciada como `empresas` (ajustaremos o nome real depois)
-

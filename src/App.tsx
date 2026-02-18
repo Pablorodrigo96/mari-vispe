@@ -23,6 +23,8 @@ import Terms from "./pages/Terms";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import MapView from "./pages/MapView";
 import NotFound from "./pages/NotFound";
+import Matching from "./pages/Matching";
+import MatchingResults from "./pages/MatchingResults";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -58,6 +60,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/matching" element={<Matching />} />
+            <Route path="/matching/resultados" element={<MatchingResults />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
