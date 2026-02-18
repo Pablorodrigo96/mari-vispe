@@ -1,32 +1,25 @@
 
 
-## Matching com Empresas Cadastradas (tabela listings)
+## Tornar o Matching mais explicativo e guiado
 
-Em vez de depender do banco externo, vou adaptar o matching para usar a tabela `listings` que ja existe no projeto. Assim voce pode testar tudo imediatamente com os anuncios ja cadastrados.
+### Mudancas no Hero (`src/components/matching/MatchingHero.tsx`)
 
-### O que muda
+- Trocar titulo para algo como: "Sua empresa ja esta em nosso radar"
+- Subtitulo explicativo: "Com o buscador inteligente da PME.B3, encontramos oportunidades de negocios compativeis com a sua empresa. Digite o nome da sua empresa abaixo, selecione a correta e veja as oportunidades esperando por voce."
+- Adicionar indicador visual de passos (1, 2, 3) para guiar o usuario:
+  1. "Digite o nome da sua empresa"
+  2. "Selecione a empresa correta"
+  3. "Veja as oportunidades para voce"
 
-**Edge Functions - Remover dependencia do BD externo**
+### Mudancas no Card de Busca (`src/components/matching/CompanySearchCard.tsx`)
 
-1. `supabase/functions/company-lookup/index.ts` - Passa a consultar a tabela `listings` (status = 'active') em vez do BD externo. Busca por titulo, categoria ou cidade. Retorna dados do anuncio e conta quantos listings semelhantes existem (mesma categoria/estado).
+- Adicionar titulo/label acima do campo de busca: "Busque sua empresa pelo nome"
+- Placeholder mais claro: "Digite o nome da sua empresa..."
+- Apos exibir o resultado, adicionar texto contextual antes do badge de oportunidades, como: "Encontramos oportunidades compativeis com o seu negocio!"
 
-2. `supabase/functions/matching-engine/index.ts` - Consulta `listings` ativas com mesma categoria, estado proximo ou faixa de faturamento similar. Nao precisa mais de `EXTERNAL_SUPABASE_URL`/`EXTERNAL_SUPABASE_KEY`.
+### Detalhes tecnicos
 
-**Componentes - Adaptar campos**
+- Atualizar textos em `MatchingHero.tsx`: titulo, subtitulo e adicionar secao de 3 passos com icones numerados
+- Atualizar `CompanySearchCard.tsx`: adicionar label explicativo acima do input e texto de contexto apos o resultado
+- Nenhuma mudanca em edge functions ou logica de dados
 
-3. `src/components/matching/CompanySearchCard.tsx` - Remover mascara de CNPJ (listings nao tem CNPJ obrigatoriamente). Campo de busca generico por nome/titulo do negocio. Exibir dados do listing encontrado (titulo, categoria, cidade/estado, faturamento).
-
-4. `src/components/matching/MatchCard.tsx` - Adaptar campos para dados de listings (titulo, categoria, cidade/estado, faixa de preco). Botao "Ver anuncio" alem do WhatsApp.
-
-5. `src/pages/MatchingResults.tsx` - Adaptar para receber dados de listing em vez de empresa externa.
-
-### Criterios de Matching (usando listings)
-
-- Mesma categoria (peso alto: +50)
-- Mesmo estado (peso medio: +25)
-- Mesma cidade (bonus: +15)
-- Faixa de faturamento similar (peso baixo: +10)
-
-### Vantagem
-
-Funciona imediatamente sem nenhum segredo externo. Depois, basta trocar a fonte de dados nas edge functions para o BD externo.
