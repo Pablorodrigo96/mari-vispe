@@ -50,7 +50,7 @@ export default function MatchingResults() {
           city: listing.city,
           annual_revenue: listing.annual_revenue,
           filters: {
-            estado: estadoFilter || undefined,
+            estado: estadoFilter && estadoFilter !== 'all' ? estadoFilter : undefined,
           },
         },
       });
@@ -121,7 +121,7 @@ export default function MatchingResults() {
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {ESTADOS.map((uf) => (
                 <SelectItem key={uf} value={uf}>{uf}</SelectItem>
               ))}
