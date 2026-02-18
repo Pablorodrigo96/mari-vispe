@@ -4,7 +4,6 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { MatchCard } from '@/components/matching/MatchCard';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, ArrowLeft, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +24,7 @@ export default function MatchingResults() {
   const [error, setError] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<string>('');
 
-  const company = (location.state as any)?.company;
+  const listing = (location.state as any)?.listing;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -34,9 +33,9 @@ export default function MatchingResults() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!company || !user) return;
+    if (!listing || !user) return;
     fetchMatches();
-  }, [company, user, estadoFilter]);
+  }, [listing, user, estadoFilter]);
 
   const fetchMatches = async () => {
     setLoading(true);
@@ -45,11 +44,11 @@ export default function MatchingResults() {
     try {
       const { data, error: fnError } = await supabase.functions.invoke('matching-engine', {
         body: {
-          cnpj: company.cnpj,
-          cnae_principal: company.cnae_principal,
-          estado: company.estado,
-          cidade: company.cidade,
-          capital_social: company.capital_social,
+          listingId: listing.id,
+          category: listing.category,
+          state: listing.state,
+          city: listing.city,
+          annual_revenue: listing.annual_revenue,
           filters: {
             estado: estadoFilter || undefined,
           },
@@ -79,14 +78,14 @@ export default function MatchingResults() {
     );
   }
 
-  if (!company) {
+  if (!listing) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 pt-32 pb-16 text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Nenhuma empresa selecionada</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Nenhum negócio selecionado</h1>
           <p className="text-muted-foreground mb-6">
-            Primeiro, busque sua empresa na página de matching.
+            Primeiro, busque um negócio na página de matching.
           </p>
           <Button onClick={() => navigate('/matching')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
             Ir para Matching
@@ -97,23 +96,20 @@ export default function MatchingResults() {
     );
   }
 
-  const companyName = company.nome_fantasia || company.razao_social;
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-4 pt-28 pb-16">
-        {/* Header */}
         <div className="mb-8">
           <Button variant="ghost" size="sm" onClick={() => navigate('/matching')} className="mb-4 gap-2">
             <ArrowLeft className="w-4 h-4" />
             Voltar
           </Button>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Oportunidades para <span className="text-accent">{companyName}</span>
+            Oportunidades para <span className="text-accent">{listing.title}</span>
           </h1>
           <p className="text-muted-foreground">
-            {total} empresas compatíveis encontradas no setor {company.cnae_principal}
+            {total} negócios compatíveis encontrados na categoria {listing.category}
           </p>
         </div>
 
@@ -153,7 +149,7 @@ export default function MatchingResults() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {matches.map((match, i) => (
-              <MatchCard key={match.cnpj || i} match={match} companyName={companyName} />
+              <MatchCard key={match.id || i} match={match} />
             ))}
           </div>
         )}
