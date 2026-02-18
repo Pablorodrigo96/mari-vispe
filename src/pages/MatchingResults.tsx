@@ -3,8 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { MatchCard } from '@/components/matching/MatchCard';
+import { ConsultorBanner } from '@/components/matching/ConsultorBanner';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, ArrowLeft, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +25,7 @@ export default function MatchingResults() {
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<string>('');
+  const [matchType, setMatchType] = useState<string>('horizontal');
 
   const listing = (location.state as any)?.listing;
 
@@ -35,7 +38,7 @@ export default function MatchingResults() {
   useEffect(() => {
     if (!listing || !user) return;
     fetchMatches();
-  }, [listing, user, estadoFilter]);
+  }, [listing, user, estadoFilter, matchType]);
 
   const fetchMatches = async () => {
     setLoading(true);
@@ -49,6 +52,9 @@ export default function MatchingResults() {
           state: listing.state,
           city: listing.city,
           annual_revenue: listing.annual_revenue,
+          asking_price: listing.asking_price,
+          annual_profit: listing.annual_profit,
+          matchType,
           filters: {
             estado: estadoFilter && estadoFilter !== 'all' ? estadoFilter : undefined,
           },
@@ -96,6 +102,39 @@ export default function MatchingResults() {
     );
   }
 
+  const renderResults = () => {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center gap-4 py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-accent" />
+          <p className="text-muted-foreground">Buscando matches...</p>
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="text-center py-16">
+          <p className="text-destructive mb-4">{error}</p>
+          <Button onClick={fetchMatches} variant="outline">Tentar novamente</Button>
+        </div>
+      );
+    }
+    if (matches.length === 0) {
+      return (
+        <div className="text-center py-16">
+          <p className="text-muted-foreground">Nenhum match encontrado com os filtros atuais.</p>
+        </div>
+      );
+    }
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {matches.map((match, i) => (
+          <MatchCard key={match.id || i} match={match} />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -129,30 +168,23 @@ export default function MatchingResults() {
           </Select>
         </div>
 
-        {/* Results */}
-        {loading ? (
-          <div className="flex flex-col items-center gap-4 py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-accent" />
-            <p className="text-muted-foreground">Buscando matches...</p>
-          </div>
-        ) : error ? (
-          <div className="text-center py-16">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={fetchMatches} variant="outline">
-              Tentar novamente
-            </Button>
-          </div>
-        ) : matches.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground">Nenhum match encontrado com os filtros atuais.</p>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {matches.map((match, i) => (
-              <MatchCard key={match.id || i} match={match} />
-            ))}
-          </div>
-        )}
+        {/* Consultor Banner */}
+        <ConsultorBanner />
+
+        {/* Tabs */}
+        <Tabs value={matchType} onValueChange={setMatchType} className="mb-6">
+          <TabsList>
+            <TabsTrigger value="horizontal">Horizontal</TabsTrigger>
+            <TabsTrigger value="vertical">Vertical</TabsTrigger>
+          </TabsList>
+          <p className="text-xs text-muted-foreground mt-2">
+            {matchType === 'horizontal'
+              ? 'Empresas do mesmo setor ou setores similares'
+              : 'Empresas de setores complementares na cadeia de valor'}
+          </p>
+        </Tabs>
+
+        {renderResults()}
       </div>
       <Footer />
     </div>
