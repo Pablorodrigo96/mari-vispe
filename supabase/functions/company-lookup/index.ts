@@ -12,19 +12,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const externalUrl = Deno.env.get("EXTERNAL_SUPABASE_URL");
-    const externalKey = Deno.env.get("EXTERNAL_SUPABASE_KEY");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    if (!externalUrl || !externalKey) {
-      return new Response(
-        JSON.stringify({
-          error: "Credenciais do banco externo não configuradas. Adicione EXTERNAL_SUPABASE_URL e EXTERNAL_SUPABASE_KEY nos segredos.",
-        }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { query, type } = await req.json();
+    const { query } = await req.json();
 
     if (!query || query.trim().length < 3) {
       return new Response(
@@ -33,82 +26,45 @@ Deno.serve(async (req) => {
       );
     }
 
-    const externalSupabase = createClient(externalUrl, externalKey);
+    const searchTerm = query.trim();
 
-    // Detect if query is CNPJ (only digits, 14 chars) or razao social
-    const cleanQuery = query.replace(/[.\-\/]/g, "");
-    const isCnpj = /^\d{14}$/.test(cleanQuery);
+    // Search active listings by title, category, or city
+    const { data, error } = await supabase
+      .from("listings")
+      .select("id, title, category, city, state, annual_revenue, annual_profit, asking_price, images, description")
+      .eq("status", "active")
+      .or(`title.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`)
+      .limit(5);
 
-    let companyData = null;
+    if (error) throw error;
 
-    if (isCnpj) {
-      const { data, error } = await externalSupabase
-        .from("empresas")
-        .select("cnpj, razao_social, nome_fantasia, cnae_principal, cidade, estado, porte, capital_social")
-        .eq("cnpj", cleanQuery)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      companyData = data;
-    } else {
-      const { data, error } = await externalSupabase
-        .from("empresas")
-        .select("cnpj, razao_social, nome_fantasia, cnae_principal, cidade, estado, porte, capital_social")
-        .ilike("razao_social", `%${query.trim()}%`)
-        .limit(5);
-
-      if (error) throw error;
-      companyData = data && data.length > 0 ? data[0] : null;
-
-      // Return multiple results if searching by name
-      if (data && data.length > 1) {
-        // Count opportunities for the first result
-        let opportunityCount = 0;
-        if (data[0]?.cnae_principal && data[0]?.estado) {
-          const { count } = await externalSupabase
-            .from("empresas")
-            .select("id", { count: "exact", head: true })
-            .eq("cnae_principal", data[0].cnae_principal)
-            .eq("estado", data[0].estado);
-          opportunityCount = count || 0;
-        }
-
-        return new Response(
-          JSON.stringify({
-            company: data[0],
-            suggestions: data.slice(0, 5),
-            opportunities: Math.max(Math.round((opportunityCount || 5) / 10) * 10, 10),
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    if (!companyData) {
+    if (!data || data.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Empresa não encontrada na base de dados." }),
+        JSON.stringify({ error: "Nenhum negócio encontrado com esse termo." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Count opportunities: companies with same CNAE in same state
+    const listing = data[0];
+
+    // Count opportunities: listings with same category
     let opportunityCount = 0;
-    if (companyData.cnae_principal && companyData.estado) {
-      const { count } = await externalSupabase
-        .from("empresas")
+    if (listing.category) {
+      const { count } = await supabase
+        .from("listings")
         .select("id", { count: "exact", head: true })
-        .eq("cnae_principal", companyData.cnae_principal)
-        .eq("estado", companyData.estado);
+        .eq("status", "active")
+        .eq("category", listing.category)
+        .neq("id", listing.id);
       opportunityCount = count || 0;
     }
 
-    // Round to nearest 10 for a cleaner number, minimum 10
-    const displayOpportunities = Math.max(Math.round((opportunityCount || 5) / 10) * 10, 10);
+    const displayOpportunities = Math.max(opportunityCount, 1);
 
     return new Response(
       JSON.stringify({
-        company: companyData,
+        listing: listing,
+        suggestions: data.slice(0, 5),
         opportunities: displayOpportunities,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

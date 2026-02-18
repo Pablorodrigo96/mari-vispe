@@ -27,54 +27,44 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(
         JSON.stringify({ error: "Token inválido." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Check external credentials
-    const externalUrl = Deno.env.get("EXTERNAL_SUPABASE_URL");
-    const externalKey = Deno.env.get("EXTERNAL_SUPABASE_KEY");
+    const { listingId, category, state, city, annual_revenue, filters } = await req.json();
 
-    if (!externalUrl || !externalKey) {
+    if (!category) {
       return new Response(
-        JSON.stringify({
-          error: "Credenciais do banco externo não configuradas.",
-        }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { cnpj, cnae_principal, estado, cidade, capital_social, filters } = await req.json();
-
-    if (!cnae_principal) {
-      return new Response(
-        JSON.stringify({ error: "CNAE principal é obrigatório para o matching." }),
+        JSON.stringify({ error: "Categoria é obrigatória para o matching." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const externalSupabase = createClient(externalUrl, externalKey);
+    // Use service role to read all active listings
+    const serviceSupabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    // Build query - primary: same CNAE
-    let query = externalSupabase
-      .from("empresas")
-      .select("cnpj, razao_social, nome_fantasia, cnae_principal, cidade, estado, porte, capital_social")
-      .eq("cnae_principal", cnae_principal)
+    let query = serviceSupabase
+      .from("listings")
+      .select("id, title, category, city, state, annual_revenue, annual_profit, asking_price, images, description")
+      .eq("status", "active")
+      .eq("category", category)
       .limit(50);
 
-    // Exclude the searching company itself
-    if (cnpj) {
-      query = query.neq("cnpj", cnpj.replace(/[.\-\/]/g, ""));
+    // Exclude the source listing
+    if (listingId) {
+      query = query.neq("id", listingId);
     }
 
     // Apply filters
     if (filters?.estado) {
-      query = query.eq("estado", filters.estado);
+      query = query.eq("state", filters.estado);
     }
 
     const { data: matches, error } = await query;
@@ -89,24 +79,23 @@ Deno.serve(async (req) => {
 
     // Score and rank matches
     const scored = matches.map((m: any) => {
-      let score = 50; // Base score for same CNAE
+      let score = 50; // Base score for same category
 
       // Same state bonus
-      if (estado && m.estado === estado) score += 25;
+      if (state && m.state === state) score += 25;
 
       // Same city bonus
-      if (cidade && m.cidade === cidade) score += 15;
+      if (city && m.city === city) score += 15;
 
-      // Similar capital social bonus
-      if (capital_social && m.capital_social) {
-        const ratio = Math.min(capital_social, m.capital_social) / Math.max(capital_social, m.capital_social);
+      // Similar revenue bonus
+      if (annual_revenue && m.annual_revenue) {
+        const ratio = Math.min(annual_revenue, m.annual_revenue) / Math.max(annual_revenue, m.annual_revenue);
         if (ratio > 0.5) score += 10;
       }
 
       return { ...m, score };
     });
 
-    // Sort by score descending, limit to 20
     scored.sort((a: any, b: any) => b.score - a.score);
     const topMatches = scored.slice(0, 20);
 
