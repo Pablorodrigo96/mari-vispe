@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, MapPin, Tag, Loader2, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, MapPin, Tag, Loader2, Sparkles, Brain, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +23,13 @@ interface ListingData {
   description: string | null;
 }
 
+const scanningPhrases = [
+  'Analisando setor de atuação...',
+  'Cruzando dados de mercado...',
+  'Calculando compatibilidade...',
+  'Identificando oportunidades...',
+];
+
 export function CompanySearchCard() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,8 +37,17 @@ export function CompanySearchCard() {
   const [listing, setListing] = useState<ListingData | null>(null);
   const [opportunities, setOpportunities] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [scanPhrase, setScanPhrase] = useState(0);
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (!scanning) return;
+    const interval = setInterval(() => {
+      setScanPhrase((prev) => (prev + 1) % scanningPhrases.length);
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [scanning]);
 
   const handleSearch = async () => {
     if (query.trim().length < 3) return;
@@ -40,6 +56,7 @@ export function CompanySearchCard() {
     setScanning(true);
     setError(null);
     setListing(null);
+    setScanPhrase(0);
 
     try {
       await new Promise((r) => setTimeout(r, 1200));
@@ -75,30 +92,38 @@ export function CompanySearchCard() {
   };
 
   return (
-    <section className="py-12">
-      <div className="container mx-auto px-4">
-        <Card className="max-w-2xl mx-auto border-border/50 shadow-lg">
+    <section className="py-16 gradient-navy-deep bg-grid-pattern relative overflow-hidden">
+      {/* Subtle glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-accent/[0.04] rounded-full blur-[100px]" />
+
+      <div className="container mx-auto px-4 relative z-10">
+        <Card className="max-w-2xl mx-auto glass-card border-accent/10 shadow-gold">
           <CardContent className="p-6 md:p-8">
             {/* Label */}
-            <h2 className="text-lg font-semibold text-foreground mb-1">Busque sua empresa pelo nome</h2>
-            <p className="text-sm text-muted-foreground mb-4">Digite o nome e encontraremos negócios compatíveis com o seu.</p>
+            <div className="flex items-center gap-2 mb-1">
+              <Cpu className="w-4 h-4 text-accent" />
+              <h2 className="text-lg font-semibold text-primary-foreground">Busque sua empresa pelo nome</h2>
+            </div>
+            <p className="text-sm text-primary-foreground/50 mb-5">
+              Nossa IA analisa centenas de variáveis para encontrar negócios compatíveis.
+            </p>
 
             {/* Search input */}
             <div className="flex gap-3 mb-6">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/30" />
                 <Input
                   placeholder="Digite o nome da sua empresa..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="pl-10 h-12 text-base"
+                  className="pl-10 h-12 text-base bg-primary-foreground/5 border-primary-foreground/10 text-primary-foreground placeholder:text-primary-foreground/30 focus:border-accent/50"
                 />
               </div>
               <Button
                 onClick={handleSearch}
                 disabled={loading || query.trim().length < 3}
-                className="h-12 px-6 bg-accent hover:bg-accent/90 text-accent-foreground"
+                className="h-12 px-6 gradient-gold text-navy font-semibold hover:opacity-90"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Buscar'}
               </Button>
@@ -111,15 +136,27 @@ export function CompanySearchCard() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="flex flex-col items-center gap-3 py-8"
+                  className="flex flex-col items-center gap-4 py-10"
                 >
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-full border-4 border-accent/20 border-t-accent animate-spin" />
-                    <Search className="absolute inset-0 m-auto w-6 h-6 text-accent" />
+                  {/* Radar rings */}
+                  <div className="relative w-20 h-20 flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full border-2 border-accent/20 animate-ping" style={{ animationDuration: '2s' }} />
+                    <div className="absolute inset-2 rounded-full border-2 border-accent/30 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.4s' }} />
+                    <div className="absolute inset-4 rounded-full border-2 border-accent/40 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.8s' }} />
+                    <Brain className="w-7 h-7 text-accent relative z-10" />
                   </div>
-                  <p className="text-sm text-muted-foreground animate-pulse">
-                    Buscando negócios compatíveis...
-                  </p>
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={scanPhrase}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-sm text-accent font-medium"
+                    >
+                      {scanningPhrases[scanPhrase]}
+                    </motion.p>
+                  </AnimatePresence>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -129,7 +166,7 @@ export function CompanySearchCard() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm text-center"
+                className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm text-center border border-destructive/20"
               >
                 {error}
               </motion.div>
@@ -144,21 +181,21 @@ export function CompanySearchCard() {
                   transition={{ duration: 0.4 }}
                   className="space-y-4"
                 >
-                  <div className="p-4 rounded-lg bg-muted/50 border border-border/50 space-y-3">
+                  <div className="p-4 rounded-lg glass-card border-accent/10 space-y-3">
                     <div className="flex items-start justify-between">
-                      <h3 className="font-semibold text-foreground text-lg">{listing.title}</h3>
-                      <Badge variant="secondary" className="text-xs">{listing.category}</Badge>
+                      <h3 className="font-semibold text-primary-foreground text-lg">{listing.title}</h3>
+                      <Badge variant="secondary" className="text-xs bg-accent/10 text-accent border-accent/20">{listing.category}</Badge>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       {listing.city && listing.state && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="flex items-center gap-2 text-primary-foreground/60">
                           <MapPin className="w-4 h-4" />
                           {listing.city}/{listing.state}
                         </div>
                       )}
                       {listing.annual_revenue && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="flex items-center gap-2 text-primary-foreground/60">
                           <Tag className="w-4 h-4" />
                           Faturamento: {formatCurrency(listing.annual_revenue)}
                         </div>
@@ -166,8 +203,8 @@ export function CompanySearchCard() {
                     </div>
                   </div>
 
-                  {/* Context text + Opportunities badge */}
-                  <p className="text-center text-sm text-muted-foreground font-medium">
+                  {/* Opportunities */}
+                  <p className="text-center text-sm text-primary-foreground/50 font-medium">
                     Encontramos oportunidades compatíveis com o seu negócio!
                   </p>
                   <motion.div
@@ -176,9 +213,9 @@ export function CompanySearchCard() {
                     transition={{ delay: 0.3, type: 'spring' }}
                     className="flex flex-col items-center gap-4 py-4"
                   >
-                    <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-accent/10 border border-accent/20">
+                    <div className="flex items-center gap-2 px-6 py-3 rounded-full glass-card border-accent/30 shadow-gold">
                       <Sparkles className="w-5 h-5 text-accent" />
-                      <span className="text-lg font-bold text-accent">
+                      <span className="text-lg font-bold text-gradient-gold">
                         {opportunities} {opportunities === 1 ? 'oportunidade encontrada!' : 'oportunidades encontradas!'}
                       </span>
                     </div>
@@ -186,7 +223,7 @@ export function CompanySearchCard() {
                     <Button
                       size="lg"
                       onClick={handleViewOpportunities}
-                      className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold"
+                      className="gradient-gold text-navy font-semibold shadow-gold hover:opacity-90"
                     >
                       {user ? 'Ver oportunidades' : 'Cadastre-se para ver as oportunidades'}
                     </Button>

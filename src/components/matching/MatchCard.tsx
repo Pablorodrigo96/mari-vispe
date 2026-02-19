@@ -1,11 +1,13 @@
-import { MapPin, Tag, MessageCircle, Eye } from 'lucide-react';
+import { MapPin, Tag, MessageCircle, Eye, Layers, GitBranch } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { formatCurrency } from '@/lib/formatters';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface MatchCardProps {
   match: {
@@ -20,15 +22,20 @@ interface MatchCardProps {
     score: number;
     matchType?: 'horizontal' | 'vertical';
   };
+  index?: number;
 }
 
-export function MatchCard({ match }: MatchCardProps) {
+export function MatchCard({ match, index = 0 }: MatchCardProps) {
   const navigate = useNavigate();
   const compatibilityLabel = match.score >= 80 ? 'Alta' : match.score >= 60 ? 'Média' : 'Moderada';
   const compatibilityColor =
-    match.score >= 80 ? 'bg-green-500/10 text-green-600 border-green-500/20' :
-    match.score >= 60 ? 'bg-accent/10 text-accent border-accent/20' :
-    'bg-muted text-muted-foreground border-border';
+    match.score >= 80 ? 'text-success' :
+    match.score >= 60 ? 'text-accent' :
+    'text-muted-foreground';
+  const progressColor =
+    match.score >= 80 ? '[&>div]:bg-success' :
+    match.score >= 60 ? '[&>div]:bg-accent' :
+    '[&>div]:bg-muted-foreground';
 
   const handleWhatsApp = async () => {
     const msg = `Olá, encontrei o anúncio "${match.title}" na PME.B3 e gostaria de mais informações.`;
@@ -39,68 +46,83 @@ export function MatchCard({ match }: MatchCardProps) {
   };
 
   const thumbnail = match.images?.[0];
+  const TypeIcon = match.matchType === 'vertical' ? GitBranch : Layers;
   const typeLabel = match.matchType === 'vertical' ? 'Vertical' : 'Horizontal';
-  const typeColor = match.matchType === 'vertical'
-    ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
-    : 'bg-blue-500/10 text-blue-600 border-blue-500/20';
 
   return (
-    <Card className="border-border/50 hover:border-accent/30 transition-colors overflow-hidden">
-      {thumbnail && (
-        <div className="h-32 overflow-hidden">
-          <img src={thumbnail} alt={match.title} className="w-full h-full object-cover" />
-        </div>
-      )}
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <h3 className="font-semibold text-foreground line-clamp-1">{match.title}</h3>
-            <div className="flex gap-1.5 mt-1">
-              <Badge variant="secondary" className="text-xs">{match.category}</Badge>
-              <Badge variant="outline" className={`text-xs ${typeColor}`}>{typeLabel}</Badge>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.08 }}
+    >
+      <Card className="glass-card border-accent/10 hover:border-accent/30 hover:shadow-gold transition-all duration-300 overflow-hidden group">
+        {thumbnail && (
+          <div className="h-32 overflow-hidden">
+            <img src={thumbnail} alt={match.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          </div>
+        )}
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h3 className="font-semibold text-primary-foreground line-clamp-1">{match.title}</h3>
+              <div className="flex gap-1.5 mt-1">
+                <Badge variant="secondary" className="text-xs bg-accent/10 text-accent border-accent/20">{match.category}</Badge>
+                <Badge variant="outline" className="text-xs gap-1 border-primary-foreground/10 text-primary-foreground/60">
+                  <TypeIcon className="w-3 h-3" />
+                  {typeLabel}
+                </Badge>
+              </div>
             </div>
           </div>
-          <Badge variant="outline" className={compatibilityColor}>
-            {compatibilityLabel}
-          </Badge>
-        </div>
 
-        <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-4">
-          {match.city && match.state && (
-            <div className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5" />
-              {match.city}/{match.state}
+          {/* Score bar */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-primary-foreground/40">Compatibilidade</span>
+              <span className={`text-xs font-bold ${compatibilityColor}`}>
+                {match.score}% · {compatibilityLabel}
+              </span>
             </div>
-          )}
-          {match.asking_price && (
-            <div className="flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5" />
-              {formatCurrency(match.asking_price)}
-            </div>
-          )}
-        </div>
+            <Progress value={match.score} className={`h-1.5 bg-primary-foreground/10 ${progressColor}`} />
+          </div>
 
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/listing/${match.id}`)}
-            className="flex-1 gap-2"
-          >
-            <Eye className="w-4 h-4" />
-            Ver anúncio
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleWhatsApp}
-            className="flex-1 gap-2"
-          >
-            <MessageCircle className="w-4 h-4" />
-            Consultor
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex flex-wrap gap-3 text-sm text-primary-foreground/50 mb-4">
+            {match.city && match.state && (
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5" />
+                {match.city}/{match.state}
+              </div>
+            )}
+            {match.asking_price && (
+              <div className="flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" />
+                {formatCurrency(match.asking_price)}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/listing/${match.id}`)}
+              className="flex-1 gap-2 border-primary-foreground/10 text-primary-foreground/70 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
+            >
+              <Eye className="w-4 h-4" />
+              Ver anúncio
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleWhatsApp}
+              className="flex-1 gap-2 border-primary-foreground/10 text-primary-foreground/70 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Consultor
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
