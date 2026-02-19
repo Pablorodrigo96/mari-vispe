@@ -40,7 +40,10 @@ export const categories = [
   { id: 'health', label: 'Saúde & Bem-estar', image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=300&fit=crop' },
   { id: 'education', label: 'Educação', image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop' },
   { id: 'logistics', label: 'Logística', image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&h=300&fit=crop' },
-  { id: 'telecom', label: 'Telecomunicações', image: 'https://images.unsplash.com/photo-1523494557144-e9d7037e4200?w=400&h=300&fit=crop' },
+  { id: 'telecom', label: 'Telecomunicações', image: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=400&h=300&fit=crop' },
+  { id: 'energy', label: 'Energia & Utilities', image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=400&h=300&fit=crop' },
+  { id: 'construction', label: 'Construção Civil', image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop' },
+  { id: 'agro', label: 'Agronegócio', image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400&h=300&fit=crop' },
 ];
 
 export const states = [
