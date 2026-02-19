@@ -1,85 +1,72 @@
 
-## Imagens Únicas por Setor nos Cards do Marketplace
+## Correção: Textos Invisíveis (Branco no Branco) em 3 Locais
 
-### Problema identificado
+### Diagnóstico dos 3 Problemas
 
-Todos os 13 anúncios de Telecomunicações têm a mesma imagem isométrica cadastrada. O `ListingCard` exibe `images[0]` quando existe — então mesmo trocando o fallback, esses anúncios continuam mostrando a mesma imagem repetida.
+**Problema raiz comum**: O componente `Button` com `variant="outline"` tem no seu estilo base `bg-background` — que é **branco** no tema claro. Ao ser colocado sobre fundos escuros (`gradient-navy-deep`), o botão fica branco com texto branco → completamente invisível.
 
-A solução é criar um **sistema de fallback com pool de imagens Unsplash por setor**: quando o anúncio tem imagem cadastrada usa ela, mas quando não tem (ou como enriquecimento), usar uma imagem do pool baseada no `id` do anúncio (determinístico via hash, nunca muda entre renders).
-
-Para os anúncios com imagens repetidas de telecom, a melhor abordagem sem alterar o banco é usar a imagem cadastrada mas complementar com um sistema robusto de fallback visual para os demais setores.
+**Para o Card de busca**: O componente `Card` tem `bg-card` no seu estilo base (também branco), que sobrescreve a classe `glass-card`. O texto interno usa `text-primary-foreground` (branco no sistema de cores da plataforma) → texto branco sobre fundo branco.
 
 ---
 
-### Mudanças planejadas
+### Arquivo 1 — `src/components/investors/InvestorCTA.tsx`
 
-#### 1. `src/lib/formatters.ts`
+**Problema**: Botão "Falar com Especialista" (linha 47-55) usa `variant="outline"` sem `bg-transparent`, então renderiza com fundo branco (`bg-background`) e texto branco → invisível.
 
-Adicionar ícones e labels para os novos setores que estavam faltando:
+**Fix**: Adicionar `bg-transparent` à className do botão.
 
-```typescript
-// Ícones novos
-telecom: '📡',
-energy: '⚡',
-construction: '🏗️',
-agro: '🌾',
-
-// Labels novos
-energy: 'Energia',
-construction: 'Construção Civil',
-agro: 'Agronegócio',
 ```
-
-#### 2. Criar `src/lib/categoryImages.ts` (arquivo novo)
-
-Pool de 4-6 imagens Unsplash por setor, todas verificadas e com tema correto:
-
-| Setor | Tema das imagens |
-|-------|-----------------|
-| `tech` | Escritório tech, código, servidores, startups |
-| `commerce` | Loja, varejo, shopping, vitrine |
-| `industry` | Fábrica, maquinário, produção |
-| `services` | Reunião de negócios, consultoria, escritório |
-| `food` | Restaurante, cozinha, alimentos |
-| `health` | Clínica, hospital, saúde |
-| `education` | Sala de aula, universidade, livros |
-| `logistics` | Caminhão, galpão, armazém |
-| `telecom` | Torres de antena, fibra óptica, datacenter |
-| `energy` | Energia solar, turbinas eólicas, subestação |
-| `construction` | Obra, arquitetura, engenharia civil |
-| `agro` | Campo, colheita, fazenda, grãos |
-
-A seleção da imagem para cada card usa:
-```typescript
-// Transforma o ID do listing em índice do array — sempre a mesma imagem para o mesmo anúncio
-const imageIndex = parseInt(listing.id.replace(/-/g, '').slice(-4), 16) % images.length;
-```
-
-#### 3. `src/components/marketplace/ListingCard.tsx`
-
-Substituir o fallback emoji por imagem real do pool:
-
-```typescript
 // Antes:
-const imageUrl = listing.images && listing.images.length > 0 
-  ? listing.images[0] 
-  : null;
+className="border-white/20 text-white hover:bg-white/10"
 
 // Depois:
-const imageUrl = listing.images && listing.images.length > 0 
-  ? listing.images[0] 
-  : getCategoryFallbackImage(listing.category, listing.id);
+className="border-white/20 text-white hover:bg-white/10 bg-transparent"
 ```
-
-E no JSX, remover o `{imageUrl ? <img/> : <span emoji>}` substituindo por sempre renderizar `<img>` com o fallback garantido.
 
 ---
 
-### Detalhes técnicos
+### Arquivo 2 — `src/components/investors/InvestorsHero.tsx`
 
-- **Nenhuma mudança no banco de dados** — apenas lógica no frontend
-- **Determinístico**: mesma imagem sempre para o mesmo anúncio (baseado no `id`)  
-- **Sem flash/loading extra**: URLs Unsplash com `?w=600&h=400&fit=crop&auto=format`
-- **Retrocompatível**: anúncios com imagem cadastrada continuam usando a própria imagem
-- **3 arquivos modificados**: `formatters.ts`, `ListingCard.tsx` + 1 arquivo novo `categoryImages.ts`
+**Problema**: Botão "Quero Captar Recursos" (linha 57) tem o mesmo problema — `variant="outline"` sem `bg-transparent` sobre fundo escuro.
 
+**Fix**: Adicionar `bg-transparent`.
+
+```
+// Antes:
+className="border-white/20 text-white hover:bg-white/10"
+
+// Depois:
+className="border-white/20 text-white hover:bg-white/10 bg-transparent"
+```
+
+---
+
+### Arquivo 3 — `src/components/matching/CompanySearchCard.tsx`
+
+**Problema**: O `<Card>` na linha 100 aplica `glass-card` mas o estilo base do Card usa `bg-card` (branco) que sobrescreve o glassmorphism. O texto interno usa `text-primary-foreground` (branco) → invisível sobre fundo branco.
+
+**Fix em 2 partes**:
+
+1. **Background do Card**: Substituir `glass-card` por classes que forcem fundo escuro: adicionar `bg-slate-900/70 backdrop-blur-md` em vez de depender do glass-card customizado, e remover a dependência no bg-card com `!bg-transparent` — ou mais simples, usar uma div em vez do componente Card.
+
+   Solução mais limpa: adicionar `!bg-slate-900/60` para sobrescrever `bg-card` com `!important`:
+
+   ```
+   className="max-w-2xl mx-auto !bg-slate-900/60 backdrop-blur-md border-accent/10 shadow-gold"
+   ```
+
+2. **Texto interno**: As classes `text-primary-foreground` e `text-primary-foreground/50` ficam corretas com o novo fundo escuro pois `primary-foreground` é branco — na verdade isso ESTAVA correto mas ficava invisível porque o fundo era branco. Com o fundo escuro corrigido, os textos voltam a ser visíveis.
+
+   Porém, para garantir legibilidade também no `<Input>` (linha 120), verificar se `bg-primary-foreground/5` + `text-primary-foreground` + `placeholder:text-primary-foreground/30` estão corretos — com o fundo escuro do card, esses valores funcionam bem.
+
+---
+
+### Resumo das mudanças
+
+| Arquivo | Linhas afetadas | Tipo de fix |
+|---------|----------------|-------------|
+| `InvestorCTA.tsx` | Linha 50 | Adicionar `bg-transparent` no botão outline |
+| `InvestorsHero.tsx` | Linha 57 | Adicionar `bg-transparent` no botão outline |
+| `CompanySearchCard.tsx` | Linha 100 | Trocar `glass-card` por `!bg-slate-900/60 backdrop-blur-md` no Card |
+
+**Nenhuma mudança de banco de dados necessária** — tudo é CSS/Tailwind puro.
