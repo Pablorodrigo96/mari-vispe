@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, getCategoryIcon, getCategoryLabel } from '@/lib/formatters';
+import { getCategoryFallbackImage } from '@/lib/categoryImages';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -27,24 +28,20 @@ export function ListingCard({ listing }: ListingCardProps) {
     ? (listing.annual_profit / listing.annual_revenue) > 0.2
     : false;
 
-  // Get first image or use placeholder
+  // Get first image or use deterministic fallback from category pool
   const imageUrl = listing.images && listing.images.length > 0 
     ? listing.images[0] 
-    : null;
+    : getCategoryFallbackImage(listing.category, listing.id);
 
   return (
     <Card className="group overflow-hidden transition-all duration-300 hover:shadow-soft hover:-translate-y-1">
       {/* Image / Category Placeholder */}
       <div className="relative h-48 bg-gradient-to-br from-muted to-secondary flex items-center justify-center overflow-hidden">
-        {imageUrl ? (
-          <img 
-            src={imageUrl} 
-            alt={listing.title} 
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="text-6xl opacity-50">{categoryIcon}</span>
-        )}
+        <img 
+          src={imageUrl} 
+          alt={listing.title} 
+          className="w-full h-full object-cover"
+        />
         
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">

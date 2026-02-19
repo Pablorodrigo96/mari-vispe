@@ -38,6 +38,10 @@ export const getCategoryIcon = (category: string): string => {
     health: '🏥',
     education: '📚',
     logistics: '🚚',
+    telecom: '📡',
+    energy: '⚡',
+    construction: '🏗️',
+    agro: '🌾',
   };
   return icons[category] || '📊';
 };
@@ -53,6 +57,9 @@ export const getCategoryLabel = (category: string): string => {
     education: 'Educação',
     logistics: 'Logística',
     telecom: 'Telecomunicações',
+    energy: 'Energia',
+    construction: 'Construção Civil',
+    agro: 'Agronegócio',
   };
   return labels[category] || category;
 };
