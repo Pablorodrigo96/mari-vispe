@@ -43,7 +43,7 @@ export function Header() {
   const { isAdmin } = useUserRoles();
   const scrollY = useScrollPosition();
 
-  const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/capital', '/vender', '/valuation'];
+  const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/capital', '/sell', '/valuation'];
   const hasDarkHero = darkHeroRoutes.includes(location.pathname);
   const isScrolled = scrollY > 20;
   const isTransparent = hasDarkHero && !isScrolled && !mobileMenuOpen;
