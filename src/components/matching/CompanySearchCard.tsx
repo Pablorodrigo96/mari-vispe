@@ -97,7 +97,7 @@ export function CompanySearchCard() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-accent/[0.04] rounded-full blur-[100px]" />
 
       <div className="container mx-auto px-4 relative z-10">
-        <Card className="max-w-2xl mx-auto glass-card border-accent/10 shadow-gold">
+        <Card className="max-w-2xl mx-auto !bg-slate-900/60 backdrop-blur-md border-accent/10 shadow-gold">
           <CardContent className="p-6 md:p-8">
             {/* Label */}
             <div className="flex items-center gap-2 mb-1">

@@ -54,7 +54,7 @@ export function InvestorsHero() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10">
+              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 bg-transparent">
                 <Link to="/capital">
                   Quero Captar Recursos
                 </Link>

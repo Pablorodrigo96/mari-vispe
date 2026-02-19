@@ -47,7 +47,7 @@ export function InvestorCTA() {
           <Button 
             variant="outline" 
             size="lg" 
-            className="border-white/20 text-white hover:bg-white/10"
+            className="border-white/20 text-white hover:bg-white/10 bg-transparent"
             onClick={handleWhatsAppClick}
           >
             <MessageCircle className="mr-2 h-5 w-5" />
