@@ -1,88 +1,109 @@
 
 
-## Upgrade Visual das Paginas de Matching - Identidade Tech/IA Premium
+## Upgrade Visual Global: Particulas, Animacoes Tech e Fix do Header
 
-As paginas de Matching e MatchingResults estao com visual "seco" comparado ao resto da plataforma (Index usa `gradient-navy-deep`, `bg-grid-pattern`, `glass-card`, radial glows). Vou trazer essa mesma identidade premium com foco em tecnologia e IA.
+### Problema 1: Header - Texto desaparece na barra branca
 
-### 1. MatchingHero - Hero Imersivo Dark com Particulas e Animacoes
+O Header so fica transparente na homepage (`isHome = location.pathname === '/'`). Nas demais paginas com hero dark (Matching, MatchingResults), o header ja e branco e o texto do hero some atras dele. Para paginas com hero claro (Investors, Capital, Sell, Valuation), nao ha conflito visual mas tambem nao ha imersao.
 
-| Antes | Depois |
-|-------|--------|
-| Fundo branco com blur suave | Fundo `gradient-navy-deep` + `bg-grid-pattern` com radial glows dourados |
-| Texto simples | Titulo com `text-gradient-gold`, badge pulsante "IA Embarcada" |
-| Steps estaticos | Steps com `glass-card`, icones animados com `framer-motion` (staggered fade-in) |
-| Sem elementos decorativos | Linhas de conexao animadas entre os steps, icone de rede neural decorativo |
+**Solucao**: Expandir a logica de transparencia do Header para funcionar em TODAS as paginas que tem hero dark. Criar uma lista de rotas com hero escuro onde o header deve ser transparente.
 
-Elementos visuais de tecnologia:
-- Badge com dot pulsante: "Powered by AI" 
-- Icones `Brain`, `Cpu`, `Network` do lucide
-- Animacao sequencial dos 3 steps (appear one by one com delay)
-- Particulas/dots decorativos com CSS (posicionados absolutos)
+### Problema 2: Paginas sem identidade tech
 
-### 2. CompanySearchCard - Card Glassmorphism com Scanning Avancado
+As paginas Investors, Capital, Sell e Valuation usam fundos claros genericos (`bg-gradient-to-b from-primary/5`), sem particulas, sem grid pattern, sem glass cards. Precisam do mesmo tratamento premium que o Matching recebeu.
 
-| Antes | Depois |
-|-------|--------|
-| Card branco simples | `glass-card` com borda accent/20 sobre fundo navy (a secao tera fundo escuro) |
-| Spinner basico no scanning | Animacao de "radar scan" com circulos concentricos pulsando |
-| Resultado aparece sem destaque | Resultado com glow dourado, score animado (count-up) |
+### Problema 3: Sem particulas animadas
 
-Melhorias:
-- A secao inteira tera fundo escuro (`gradient-navy-deep`) para dar continuidade ao hero
-- Input com estilo glass (fundo semi-transparente)
-- Animacao de scanning: circulos concentricos + texto que cicla entre frases ("Analisando setor...", "Cruzando dados...", "Calculando compatibilidade...")
-- Badge de oportunidades com animacao `spring` mais dramatica
+Nenhuma pagina tem efeito de particulas. Vou criar um componente reutilizavel `ParticlesBackground` com CSS puro (sem canvas para manter performance).
 
-### 3. MatchingResults - Pagina de Resultados com Header Tech
+---
 
-| Antes | Depois |
-|-------|--------|
-| Header simples com texto | Header com fundo navy, titulo com gradient gold, stats em glass-cards |
-| Tabs sem destaque | Tabs estilizadas com icones (Layers para horizontal, GitBranch para vertical) |
-| Grid simples de cards | Cards com animacao staggered (aparecem um a um com delay) |
-| Loading basico | Loading com animacao de "processando IA" |
+### Plano de implementacao
 
-Mudancas:
-- Topo da pagina com mini-hero dark (fundo navy com grid pattern)
-- Stats inline: "X matches encontrados | Categoria: Y | Score medio: Z"
-- Tabs com icones e descricao mais rica
-- Loading state com animacao de "neural network processing"
+#### 1. Componente `ParticlesBackground` (novo)
+`src/components/ui/particles-background.tsx`
 
-### 4. MatchCard - Card Premium com Score Visual
+Componente reutilizavel com particulas CSS animadas:
+- 15-20 dots de tamanhos variados (1px a 3px)
+- Posicoes absolutas aleatorias pre-definidas
+- Animacao `float` com delays variados
+- Opacidade sutil (10-40%)
+- Aceita prop `variant: 'dark' | 'light'` para adaptar cores
+- Linhas de conexao decorativas entre alguns dots (SVG lines com opacidade baixa)
 
-| Antes | Depois |
-|-------|--------|
-| Card estatico | Card com hover scale + glow sutil |
-| Badge de score simples | Barra de progresso circular ou arco mostrando o score visualmente |
-| Sem animacao | `framer-motion` fade-in com stagger index |
+#### 2. Fix do Header - Transparencia em paginas dark
+`src/components/layout/Header.tsx`
 
-Melhorias:
-- Hover: `hover:shadow-gold hover:border-accent/30 transition-all duration-300`
-- Score como mini progress bar visual (nao so texto)
-- Badge de tipo (Horizontal/Vertical) com icones
-- Animacao de entrada com `motion.div` e delay baseado no index
+Mudar a logica de `isHome` para uma lista de rotas com hero escuro:
+```
+const darkHeroRoutes = ['/', '/matching', '/matching/results'];
+const hasDarkHero = darkHeroRoutes.includes(location.pathname);
+const isTransparent = hasDarkHero && !isScrolled && !mobileMenuOpen;
+```
 
-### 5. ConsultorBanner - Banner Premium com Destaque
+#### 3. Investors - Hero Dark Imersivo
+`src/components/investors/InvestorsHero.tsx`
 
-| Antes | Depois |
-|-------|--------|
-| Banner simples com borda | Banner com fundo glass, icone animado, borda gradient |
-| Icone estatico | Icone com animacao `float` (sobe e desce suavemente) |
-| Texto corrido | Texto com bullet points de beneficios + highlight em palavras-chave |
+- Fundo: `gradient-navy-deep` + `bg-grid-pattern`
+- Particulas animadas via `ParticlesBackground`
+- Texto branco com `text-gradient-gold` no destaque
+- Badge pulsante "Oportunidades Exclusivas de M&A"
+- Card da direita com estilo `glass-card`
+- Stats com glass cards
+- Animacoes `framer-motion` staggered
+
+#### 4. Investors - Beneficios com animacao
+`src/components/investors/InvestorBenefits.tsx`
+
+- Cards com `framer-motion` fade-in staggered
+- Hover com `shadow-gold` sutil
+- Icones com animacao de scale no hover
+
+#### 5. Investors - CTA com particulas
+`src/components/investors/InvestorCTA.tsx`
+
+- Fundo `gradient-navy-deep` + `bg-grid-pattern` + particulas
+- Radial glows dourados
+
+#### 6. Capital - Hero Dark
+`src/components/capital/CapitalHero.tsx`
+
+- Fundo dark com grid pattern e particulas
+- Texto branco, destaque gold
+- Simulator card com estilo glass
+- Animacoes de entrada
+
+#### 7. Sell - Hero Dark
+`src/pages/Sell.tsx`
+
+- Hero section com `gradient-navy-deep`
+- Stats em glass-cards
+- Particulas no fundo
+- Texto branco
+
+#### 8. Valuation - Hero Dark (via ValuationTypeSelector)
+O `ValuationTypeSelector` serve como hero. Aplicar o mesmo tratamento dark.
 
 ### Arquivos modificados
 
-| Arquivo | Mudancas |
-|---------|----------|
-| `src/components/matching/MatchingHero.tsx` | Hero dark premium com grid pattern, animacoes staggered, icones tech, glass cards |
-| `src/components/matching/CompanySearchCard.tsx` | Secao dark, card glass, scanning animation avancado, textos ciclicos |
-| `src/pages/MatchingResults.tsx` | Mini-hero dark no topo, tabs com icones, loading tech, cards com stagger |
-| `src/components/matching/MatchCard.tsx` | Hover effects, score visual bar, animacao de entrada com motion |
-| `src/components/matching/ConsultorBanner.tsx` | Glass card, icone animado, texto com highlights |
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/ui/particles-background.tsx` | NOVO - Componente de particulas CSS reutilizavel |
+| `src/components/layout/Header.tsx` | Expandir transparencia para rotas com hero dark |
+| `src/components/investors/InvestorsHero.tsx` | Hero dark imersivo com particulas e animacoes |
+| `src/components/investors/InvestorBenefits.tsx` | Cards animados com framer-motion |
+| `src/components/investors/InvestorCTA.tsx` | Fundo dark com grid pattern e particulas |
+| `src/components/investors/InvestorTestimonials.tsx` | Animacoes de entrada nos cards |
+| `src/components/capital/CapitalHero.tsx` | Hero dark com particulas e glass card |
+| `src/pages/Sell.tsx` | Hero dark com particulas, stats em glass |
+| `src/pages/Investors.tsx` | Ajustar padding do main para hero dark |
+| `src/pages/Capital.tsx` | Ajustar padding para hero dark |
 
 ### Detalhes tecnicos
 
-- Todas as animacoes usam `framer-motion` (ja instalado)
-- Classes CSS existentes reutilizadas: `gradient-navy-deep`, `bg-grid-pattern`, `glass-card`, `text-gradient-gold`, `shadow-gold`, `animate-float`
-- Icones novos do lucide: `Brain`, `Cpu`, `Network`, `Layers`, `GitBranch`, `Zap`, `Sparkles`
-- Nenhuma dependencia nova necessaria
+- Particulas: CSS puro com `position: absolute`, `animate-float`, delays variados. Sem canvas, sem dependencia nova.
+- Animacoes: `framer-motion` (ja instalado) com `staggerChildren`, `whileInView`, `viewport={{ once: true }}`
+- Classes reutilizadas: `gradient-navy-deep`, `bg-grid-pattern`, `glass-card`, `text-gradient-gold`, `shadow-gold`, `animate-float`
+- Header: A lista `darkHeroRoutes` inclui `/`, `/matching`, `/matching/results`, `/investors`, `/capital`, `/vender`, `/valuation`
+- Nenhuma dependencia nova
+
