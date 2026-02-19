@@ -7,6 +7,8 @@ import { HowItWorks } from '@/components/sell/HowItWorks';
 import { PlansPreview } from '@/components/sell/PlansPreview';
 import { Testimonials } from '@/components/sell/Testimonials';
 import { FinalCTA } from '@/components/sell/FinalCTA';
+import { ParticlesBackground } from '@/components/ui/particles-background';
+import { motion } from 'framer-motion';
 
 const benefits = [
   {
@@ -43,15 +45,30 @@ const Sell = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Hero Section */}
-      <section className="pt-24 pb-16 bg-gradient-to-b from-primary/5 to-background">
-        <div className="container mx-auto px-4">
+      {/* Hero Section - Dark */}
+      <section className="relative pt-24 pb-16 overflow-hidden">
+        <div className="absolute inset-0 gradient-navy-deep" />
+        <div className="absolute inset-0 bg-grid-pattern" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,hsla(38,92%,50%,0.1),transparent_50%)]" />
+        <ParticlesBackground variant="dark" />
+
+        <motion.div 
+          className="container relative mx-auto px-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 text-accent text-sm font-medium mb-6">
+              <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+              Venda com Segurança
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
               Venda sua empresa para{' '}
-              <span className="text-gold">compradores qualificados</span>
+              <span className="text-gradient-gold">compradores qualificados</span>
             </h1>
-            <p className="text-lg text-muted-foreground mb-8">
+            <p className="text-lg text-white/60 mb-8">
               Anuncie gratuitamente e conecte-se com investidores e empresários
               interessados no seu negócio. Processo seguro e confidencial.
             </p>
@@ -60,19 +77,19 @@ const Sell = () => {
               <Button
                 asChild
                 size="lg"
-                className="bg-gold hover:bg-gold/90 text-gold-foreground text-lg px-8"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold text-lg px-8"
               >
                 <Link to="/auth/register">
                   Criar Conta Grátis
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg">
+              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10">
                 <Link to="/auth/login">Já tenho conta</Link>
               </Button>
             </div>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-white/40">
               Sem cartão de crédito • Cancele quando quiser
             </p>
           </div>
@@ -80,15 +97,21 @@ const Sell = () => {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 max-w-4xl mx-auto">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <p className="text-2xl sm:text-3xl font-bold text-gold">
+              <motion.div 
+                key={index} 
+                className="text-center glass-card rounded-xl p-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
+              >
+                <p className="text-2xl sm:text-3xl font-bold text-gradient-gold">
                   {stat.value}
                 </p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
+                <p className="text-sm text-white/50">{stat.label}</p>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* How It Works */}
@@ -97,7 +120,13 @@ const Sell = () => {
       {/* Benefits Section */}
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <motion.div 
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
               Por Que Vender Conosco?
             </h2>
@@ -105,16 +134,20 @@ const Sell = () => {
               Oferecemos as melhores condições para você vender sua empresa com
               segurança e tranquilidade.
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {benefits.map((benefit, index) => (
-              <div
+              <motion.div
                 key={index}
-                className="flex flex-col items-center text-center p-6 rounded-xl bg-card border border-border hover:border-gold/30 transition-colors"
+                className="flex flex-col items-center text-center p-6 rounded-xl bg-card border border-border hover:border-accent/30 hover:shadow-gold transition-all duration-300"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mb-4">
-                  <benefit.icon className="w-6 h-6 text-gold" />
+                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-4">
+                  <benefit.icon className="w-6 h-6 text-accent" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">
                   {benefit.title}
@@ -122,7 +155,7 @@ const Sell = () => {
                 <p className="text-sm text-muted-foreground">
                   {benefit.description}
                 </p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>

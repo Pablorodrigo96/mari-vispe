@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, MessageCircle } from 'lucide-react';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { toast } from 'sonner';
+import { ParticlesBackground } from '@/components/ui/particles-background';
+import { motion } from 'framer-motion';
 
 export function InvestorCTA() {
   const handleWhatsAppClick = async () => {
@@ -14,15 +16,24 @@ export function InvestorCTA() {
 
   return (
     <section className="py-20 relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 gradient-navy" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,hsl(var(--gold)/0.15),transparent_50%)]" />
+      {/* Dark Background */}
+      <div className="absolute inset-0 gradient-navy-deep" />
+      <div className="absolute inset-0 bg-grid-pattern" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,hsla(38,92%,50%,0.12),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,hsla(38,92%,50%,0.06),transparent_40%)]" />
+      <ParticlesBackground variant="dark" />
       
-      <div className="container relative mx-auto px-4 lg:px-8 text-center">
+      <motion.div 
+        className="container relative mx-auto px-4 lg:px-8 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+      >
         <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
           Pronto para encontrar sua próxima oportunidade?
         </h2>
-        <p className="text-lg text-white/70 max-w-2xl mx-auto mb-8">
+        <p className="text-lg text-white/60 max-w-2xl mx-auto mb-8">
           Junte-se a centenas de investidores que já descobriram negócios lucrativos através da PME.B3.
         </p>
         
@@ -36,14 +47,14 @@ export function InvestorCTA() {
           <Button 
             variant="outline" 
             size="lg" 
-            className="border-white/30 text-white hover:bg-white/10"
+            className="border-white/20 text-white hover:bg-white/10"
             onClick={handleWhatsAppClick}
           >
             <MessageCircle className="mr-2 h-5 w-5" />
             Falar com Especialista
           </Button>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

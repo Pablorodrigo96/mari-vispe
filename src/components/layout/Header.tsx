@@ -43,9 +43,10 @@ export function Header() {
   const { isAdmin } = useUserRoles();
   const scrollY = useScrollPosition();
 
-  const isHome = location.pathname === '/';
+  const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/capital', '/vender', '/valuation'];
+  const hasDarkHero = darkHeroRoutes.includes(location.pathname);
   const isScrolled = scrollY > 20;
-  const isTransparent = isHome && !isScrolled && !mobileMenuOpen;
+  const isTransparent = hasDarkHero && !isScrolled && !mobileMenuOpen;
 
   const handleSignOut = async () => {
     await signOut();

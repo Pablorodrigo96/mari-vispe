@@ -24,7 +24,7 @@ export default function Capital() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-16">
+      <main>
         <CapitalHero 
           onRequestProposal={handleOpenModal} 
           selectedAmount={selectedAmount}
