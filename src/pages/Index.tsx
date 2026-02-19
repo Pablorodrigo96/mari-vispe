@@ -1,15 +1,19 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, TrendingUp, Users, Building2, Clock } from 'lucide-react';
+import { ArrowRight, Building2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { SearchBar } from '@/components/home/SearchBar';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
+import { ParticlesBackground } from '@/components/ui/particles-background';
 import { stats, categories } from '@/data/mockData';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
+
+const ease = [0.25, 0.46, 0.45, 0.94] as const;
 
 const Index = () => {
   const { data: featuredListings, isLoading } = useQuery({
@@ -34,43 +38,68 @@ const Index = () => {
       
       {/* Hero Section */}
       <section className="relative pt-28 pb-24 md:pt-40 md:pb-36 gradient-navy-deep bg-grid-pattern overflow-hidden">
-        {/* Asymmetric radial glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_30%,_hsla(38,92%,50%,0.08)_0%,_transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,_hsla(222,47%,30%,0.15)_0%,_transparent_50%)]" />
         
+        <ParticlesBackground variant="dark" />
+        
         <div className="container mx-auto px-4 lg:px-8 relative z-10">
-          <div className="text-center max-w-4xl mx-auto mb-14 animate-fade-in">
+          <div className="text-center max-w-4xl mx-auto mb-14">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent/30 bg-accent/10 mb-8">
+            <motion.div
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent/30 bg-accent/10 mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease, delay: 0 }}
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
               <span className="text-xs font-medium tracking-widest uppercase text-accent">Plataforma #1 de M&A no Brasil</span>
-            </div>
+            </motion.div>
 
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-[1.1] tracking-tight text-balance">
+            <motion.h1
+              className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-[1.1] tracking-tight text-balance"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease, delay: 0.1 }}
+            >
               A plataforma líder em{' '}
               <span className="text-gradient-gold">negociação de empresas</span>{' '}
               do Brasil
-            </h1>
-            <p className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed">
-              Conectamos compradores, vendedores e investidores em um ambiente seguro e transparente para transações de M&A.
-            </p>
+            </motion.h1>
 
-            {/* Dual CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
+            <motion.p
+              className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease, delay: 0.2 }}
+            >
+              Conectamos compradores, vendedores e investidores em um ambiente seguro e transparente para transações de M&A.
+            </motion.p>
+
+            <motion.div
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease, delay: 0.3 }}
+            >
               <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold h-12 px-8 text-base rounded-xl">
                 <Link to="/marketplace">Explorar Marketplace</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 h-12 px-8 text-base rounded-xl bg-transparent">
                 <Link to="/valuation">Avaliar Minha Empresa</Link>
               </Button>
-            </div>
+            </motion.div>
           </div>
 
           {/* Search Bar */}
-          <div className="animate-fade-in-up">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease, delay: 0.4 }}
+          >
             <p className="text-center text-white/40 text-sm tracking-widest uppercase mb-4">Encontre o negócio ideal</p>
             <SearchBar />
-          </div>
+          </motion.div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-16 max-w-4xl mx-auto">
@@ -80,15 +109,17 @@ const Index = () => {
               { label: 'Volume Negociado', value: formatCurrency(stats.totalVolume) },
               { label: 'Dias Médio de Venda', value: `${stats.averageTime} dias` },
             ].map((stat, i) => (
-              <div
+              <motion.div
                 key={i}
-                className="glass-card rounded-xl p-5 text-center group hover:border-accent/30 transition-all duration-300 animate-count-up"
-                style={{ animationDelay: `${i * 100}ms` }}
+                className="glass-card rounded-xl p-5 text-center group hover:border-accent/30 transition-all duration-300"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease, delay: 0.5 + i * 0.08 }}
               >
                 <p className="text-2xl md:text-3xl font-bold text-white font-mono tracking-tight">{stat.value}</p>
                 <div className="w-8 h-px bg-accent/40 mx-auto my-2" />
                 <p className="text-xs text-white/50">{stat.label}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -179,8 +210,16 @@ const Index = () => {
       <section className="relative py-24 md:py-32 gradient-navy-deep bg-grid-pattern overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_hsla(38,92%,50%,0.08)_0%,_transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_hsla(222,47%,30%,0.12)_0%,_transparent_50%)]" />
-        <div className="container mx-auto px-4 lg:px-8 text-center relative z-10">
-          {/* Social proof */}
+        
+        <ParticlesBackground variant="dark" />
+
+        <motion.div
+          className="container mx-auto px-4 lg:px-8 text-center relative z-10"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease }}
+        >
           <p className="text-white/40 text-sm italic mb-6 max-w-lg mx-auto">
             "A PME.B3 nos conectou com o comprador ideal em menos de 60 dias. Processo transparente e profissional."
           </p>
@@ -193,7 +232,7 @@ const Index = () => {
           <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold px-12 h-14 text-lg rounded-xl">
             <Link to="/vender">Anunciar Grátis</Link>
           </Button>
-        </div>
+        </motion.div>
       </section>
 
       <Footer />
