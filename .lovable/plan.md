@@ -1,47 +1,85 @@
 
-## Fix: Telecomunicações + 3 Novos Setores no Grid de Categorias
+## Imagens Únicas por Setor nos Cards do Marketplace
 
-### Diagnóstico atual
+### Problema identificado
 
-O array `categories` em `src/data/mockData.ts` tem 9 itens:
-- 8 com imagens funcionando
-- 1 (`telecom`) com URL quebrada → imagem não carrega, card sozinho na 3ª linha
+Todos os 13 anúncios de Telecomunicações têm a mesma imagem isométrica cadastrada. O `ListingCard` exibe `images[0]` quando existe — então mesmo trocando o fallback, esses anúncios continuam mostrando a mesma imagem repetida.
 
-O grid usa `grid-cols-2 md:grid-cols-4`. Com 9 itens → linha incompleta. Com **12 itens** → 3 linhas perfeitas de 4 colunas no desktop e 6 linhas de 2 no mobile.
+A solução é criar um **sistema de fallback com pool de imagens Unsplash por setor**: quando o anúncio tem imagem cadastrada usa ela, mas quando não tem (ou como enriquecimento), usar uma imagem do pool baseada no `id` do anúncio (determinístico via hash, nunca muda entre renders).
+
+Para os anúncios com imagens repetidas de telecom, a melhor abordagem sem alterar o banco é usar a imagem cadastrada mas complementar com um sistema robusto de fallback visual para os demais setores.
 
 ---
 
-### Mudanças — apenas `src/data/mockData.ts`
+### Mudanças planejadas
 
-**1. Fix da imagem de Telecomunicações**
+#### 1. `src/lib/formatters.ts`
 
-Linha 43 — trocar a URL quebrada por uma válida:
+Adicionar ícones e labels para os novos setores que estavam faltando:
 
+```typescript
+// Ícones novos
+telecom: '📡',
+energy: '⚡',
+construction: '🏗️',
+agro: '🌾',
+
+// Labels novos
+energy: 'Energia',
+construction: 'Construção Civil',
+agro: 'Agronegócio',
 ```
-// URL atual (quebrada):
-photo-1523494557144-e9d7037e4200
 
-// Nova URL (antena de telecomunicações):
-photo-1614064641938-3bbee52942c7
+#### 2. Criar `src/lib/categoryImages.ts` (arquivo novo)
+
+Pool de 4-6 imagens Unsplash por setor, todas verificadas e com tema correto:
+
+| Setor | Tema das imagens |
+|-------|-----------------|
+| `tech` | Escritório tech, código, servidores, startups |
+| `commerce` | Loja, varejo, shopping, vitrine |
+| `industry` | Fábrica, maquinário, produção |
+| `services` | Reunião de negócios, consultoria, escritório |
+| `food` | Restaurante, cozinha, alimentos |
+| `health` | Clínica, hospital, saúde |
+| `education` | Sala de aula, universidade, livros |
+| `logistics` | Caminhão, galpão, armazém |
+| `telecom` | Torres de antena, fibra óptica, datacenter |
+| `energy` | Energia solar, turbinas eólicas, subestação |
+| `construction` | Obra, arquitetura, engenharia civil |
+| `agro` | Campo, colheita, fazenda, grãos |
+
+A seleção da imagem para cada card usa:
+```typescript
+// Transforma o ID do listing em índice do array — sempre a mesma imagem para o mesmo anúncio
+const imageIndex = parseInt(listing.id.replace(/-/g, '').slice(-4), 16) % images.length;
 ```
 
-**2. Adicionar 3 novos setores**
+#### 3. `src/components/marketplace/ListingCard.tsx`
 
-Após `telecom`, inserir:
+Substituir o fallback emoji por imagem real do pool:
 
-| id | Label | URL Unsplash |
-|----|-------|-------------|
-| `energy` | Energia & Utilities | `photo-1473341304170-971dccb5ac1e` (usina/energia elétrica) |
-| `construction` | Construção Civil | `photo-1504307651254-35680f356dfd` (obra/construção) |
-| `agro` | Agronegócio | `photo-1500937386664-56d1dfef3854` (campo/colheita) |
+```typescript
+// Antes:
+const imageUrl = listing.images && listing.images.length > 0 
+  ? listing.images[0] 
+  : null;
 
-**Resultado final**: 12 categorias → grid perfeito de 3 linhas × 4 colunas no desktop, sem cards orfãos, sem imagens quebradas.
+// Depois:
+const imageUrl = listing.images && listing.images.length > 0 
+  ? listing.images[0] 
+  : getCategoryFallbackImage(listing.category, listing.id);
+```
+
+E no JSX, remover o `{imageUrl ? <img/> : <span emoji>}` substituindo por sempre renderizar `<img>` com o fallback garantido.
 
 ---
 
 ### Detalhes técnicos
 
-- **Apenas 1 arquivo modificado**: `src/data/mockData.ts`
-- Nenhuma mudança no grid do `Index.tsx` — `grid-cols-2 md:grid-cols-4` já funciona perfeitamente com 12 itens
-- URLs Unsplash testadas com o padrão `?w=400&h=300&fit=crop` consistente com as demais
-- Os novos IDs (`energy`, `construction`, `agro`) podem ser usados como filtros no marketplace via `/marketplace?sector=energy`
+- **Nenhuma mudança no banco de dados** — apenas lógica no frontend
+- **Determinístico**: mesma imagem sempre para o mesmo anúncio (baseado no `id`)  
+- **Sem flash/loading extra**: URLs Unsplash com `?w=600&h=400&fit=crop&auto=format`
+- **Retrocompatível**: anúncios com imagem cadastrada continuam usando a própria imagem
+- **3 arquivos modificados**: `formatters.ts`, `ListingCard.tsx` + 1 arquivo novo `categoryImages.ts`
+
