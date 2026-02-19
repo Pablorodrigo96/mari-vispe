@@ -1,45 +1,31 @@
 
+## Particulas e Efeitos de Conexao na Tela Inicial (Index)
 
-## Fix: Header e Responsividade Mobile nas Paginas Dark
+A homepage ja tem o fundo `gradient-navy-deep` + `bg-grid-pattern` + radial glows, mas falta o componente `ParticlesBackground` que ja foi criado e esta sendo usado em outras paginas. Alem disso, vou adicionar animacoes `framer-motion` para dar mais vida ao hero.
 
-### Diagnostico
+### Mudancas no arquivo `src/pages/Index.tsx`
 
-Testei todas as paginas com hero dark no mobile (390x844):
+1. **Importar `ParticlesBackground`** e **`motion` do framer-motion**
+2. **Adicionar `<ParticlesBackground />` dentro da hero section** (logo apos os radial glows, antes do container de conteudo) - as particulas com linhas de conexao SVG darao o efeito de "rede neural" e tecnologia
+3. **Adicionar `<ParticlesBackground />` na CTA section** (secao final com fundo dark) para manter consistencia
+4. **Envolver elementos do hero com `motion.div`** para animacoes de entrada staggered:
+   - Badge: fade-in com delay 0
+   - Titulo h1: fade-in com delay 0.1s
+   - Paragrafo: fade-in com delay 0.2s
+   - Botoes CTA: fade-in com delay 0.3s
+   - SearchBar: fade-in-up com delay 0.4s
+   - Stats: fade-in com stagger por index
 
-| Pagina | Status | Observacao |
-|--------|--------|-----------|
-| `/` (Home) | OK | Hero dark, header transparente, particulas funcionando |
-| `/matching` | OK | Hero dark com badge AI, steps glass, animacoes |
-| `/investors` | OK | Hero dark, particulas, stats, scroll correto |
-| `/capital` | OK | Hero dark, slider glass, animacoes |
-| `/valuation` | OK | Hero dark, planos glass, badges |
-| `/vender` | BUG | Header transparente (texto branco) sobre pagina com fundo CLARO - texto "PME" fica invisivel |
+### Resultado visual
 
-### Problema encontrado
+- Dots flutuantes com animacao `float` no fundo do hero (brancos, baixa opacidade)
+- Linhas SVG conectando alguns dots, simulando uma rede de conexoes/tecnologia
+- Mesmas particulas na secao CTA final
+- Animacoes suaves de entrada ao carregar a pagina
 
-No array `darkHeroRoutes` do Header, a rota `/vender` esta incluida, mas essa pagina e um formulario com fundo claro (`bg-background`). Resultado: o header fica transparente com texto branco sobre fundo branco, tornando o logo e menu invisiveis.
+### Detalhes tecnicos
 
-A rota `/sell` (que tem o hero dark de landing page) nao esta no array.
-
-### Correcao
-
-**`src/components/layout/Header.tsx`** - linha do `darkHeroRoutes`:
-
-Remover `/vender` e adicionar `/sell`:
-
-```
-// De:
-const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/capital', '/vender', '/valuation'];
-
-// Para:
-const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/capital', '/sell', '/valuation'];
-```
-
-### Resumo da verificacao mobile
-
-- Particulas CSS: funcionando em todas as paginas dark
-- Header scroll: transicao transparente -> solido funciona corretamente
-- Menu hamburger: abre com fundo solido, itens visiveis e clicaveis
-- Animacoes framer-motion: stagger e fade-in ok no mobile
-- Glass cards: responsivos, sem overflow horizontal
-- Unico bug: `/vender` com header transparente incorreto (corrigido acima)
+- Componente `ParticlesBackground` ja existe em `src/components/ui/particles-background.tsx`
+- Usa CSS puro (`animate-float`) + SVG para linhas
+- `framer-motion` ja instalado
+- Nenhuma dependencia nova
