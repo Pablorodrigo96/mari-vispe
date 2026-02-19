@@ -1,7 +1,14 @@
-import { UserCheck, MessageCircle } from 'lucide-react';
+import { UserCheck, MessageCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+
+const benefits = [
+  'Oportunidades que o algoritmo não identifica',
+  'Investidores estratégicos de outros setores',
+  'Crescimento vertical e horizontal personalizado',
+];
 
 export function ConsultorBanner() {
   const handleWhatsApp = async () => {
@@ -13,22 +20,38 @@ export function ConsultorBanner() {
   };
 
   return (
-    <div className="rounded-lg border border-accent/30 bg-accent/5 p-5 mb-6">
-      <div className="flex items-start gap-4">
-        <div className="rounded-full bg-accent/10 p-2.5 shrink-0">
-          <UserCheck className="w-5 h-5 text-accent" />
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="rounded-xl glass-card border-accent/20 p-6 mb-6 relative overflow-hidden"
+    >
+      {/* Subtle glow */}
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-accent/[0.06] rounded-full blur-[60px]" />
+
+      <div className="flex items-start gap-4 relative z-10">
+        <div className="rounded-full gradient-gold p-3 shrink-0 animate-float">
+          <UserCheck className="w-5 h-5 text-navy" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-foreground mb-1">Consultoria Vispe</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            Você está vendo apenas os matches automáticos. Um consultor da Vispe consegue enxergar oportunidades que o algoritmo não vê — como um investidor estratégico de outro setor que quer crescer de forma vertical e gostaria de investir nesse tipo de empresa, mesmo não sendo exatamente o mesmo CNAE. Fale com um consultor e descubra oportunidades escondidas.
+          <h3 className="font-semibold text-primary-foreground mb-2">Consultoria Vispe</h3>
+          <p className="text-sm text-primary-foreground/50 mb-3">
+            Você está vendo apenas os matches automáticos. Um consultor descobre oportunidades <span className="text-accent font-medium">que a IA não vê</span>.
           </p>
-          <Button size="sm" onClick={handleWhatsApp} className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground">
+          <ul className="space-y-1.5 mb-4">
+            {benefits.map((b, i) => (
+              <li key={i} className="flex items-center gap-2 text-sm text-primary-foreground/60">
+                <CheckCircle className="w-3.5 h-3.5 text-accent shrink-0" />
+                {b}
+              </li>
+            ))}
+          </ul>
+          <Button size="sm" onClick={handleWhatsApp} className="gap-2 gradient-gold text-navy font-semibold hover:opacity-90">
             <MessageCircle className="w-4 h-4" />
             Falar com consultor
           </Button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
