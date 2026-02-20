@@ -120,7 +120,7 @@ export default function MatchingResults() {
       return (
         <div className="text-center py-16">
           <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={fetchMatches} variant="outline" className="border-primary-foreground/10 text-primary-foreground/70">
+          <Button onClick={fetchMatches} variant="outline" className="border-primary-foreground/10 text-primary-foreground/70 bg-transparent">
             Tentar novamente
           </Button>
         </div>

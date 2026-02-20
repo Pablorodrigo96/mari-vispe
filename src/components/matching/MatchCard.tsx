@@ -67,7 +67,7 @@ export function MatchCard({ match, index = 0 }: MatchCardProps) {
               <h3 className="font-semibold text-primary-foreground line-clamp-1">{match.title}</h3>
               <div className="flex gap-1.5 mt-1">
                 <Badge variant="secondary" className="text-xs bg-accent/10 text-accent border-accent/20">{match.category}</Badge>
-                <Badge variant="outline" className="text-xs gap-1 border-primary-foreground/10 text-primary-foreground/60">
+                <Badge variant="outline" className="text-xs gap-1 border-primary-foreground/10 text-primary-foreground/60 bg-transparent">
                   <TypeIcon className="w-3 h-3" />
                   {typeLabel}
                 </Badge>
@@ -106,7 +106,7 @@ export function MatchCard({ match, index = 0 }: MatchCardProps) {
               variant="outline"
               size="sm"
               onClick={() => navigate(`/listing/${match.id}`)}
-              className="flex-1 gap-2 border-primary-foreground/10 text-primary-foreground/70 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
+              className="flex-1 gap-2 border-primary-foreground/10 text-primary-foreground/70 hover:bg-accent/10 hover:text-accent hover:border-accent/30 bg-transparent"
             >
               <Eye className="w-4 h-4" />
               Ver anúncio
@@ -115,7 +115,7 @@ export function MatchCard({ match, index = 0 }: MatchCardProps) {
               variant="outline"
               size="sm"
               onClick={handleWhatsApp}
-              className="flex-1 gap-2 border-primary-foreground/10 text-primary-foreground/70 hover:bg-accent/10 hover:text-accent hover:border-accent/30"
+              className="flex-1 gap-2 border-primary-foreground/10 text-primary-foreground/70 hover:bg-accent/10 hover:text-accent hover:border-accent/30 bg-transparent"
             >
               <MessageCircle className="w-4 h-4" />
               Consultor
