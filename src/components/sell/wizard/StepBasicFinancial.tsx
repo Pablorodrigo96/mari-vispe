@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { categories } from '@/data/mockData';
-import { Building2, DollarSign, Eye, EyeOff } from 'lucide-react';
+import { Building2, DollarSign, Eye, EyeOff, CheckCircle2, Loader2 } from 'lucide-react';
+import { useNationalSearch } from '@/hooks/useNationalSearch';
 
 interface StepBasicFinancialProps {
   data: {
@@ -63,6 +64,10 @@ const parseCurrency = (value: string): number => {
 };
 
 const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
+  const { lookupCnpj } = useNationalSearch();
+  const [cnpjLookupStatus, setCnpjLookupStatus] = useState<'idle' | 'loading' | 'found' | 'not_found'>('idle');
+  const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const margin = useMemo(() => {
     const revenue = parseCurrency(data.annualRevenue);
     const profit = parseCurrency(data.annualProfit);
@@ -76,8 +81,36 @@ const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
   const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
 
   const handleCNPJChange = (value: string) => {
-    onChange('cnpj', formatCNPJ(value));
+    const formatted = formatCNPJ(value);
+    onChange('cnpj', formatted);
+
+    const clean = formatted.replace(/\D/g, '');
+    if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current);
+
+    if (clean.length === 14) {
+      setCnpjLookupStatus('loading');
+      lookupTimeoutRef.current = setTimeout(async () => {
+        const company = await lookupCnpj(clean);
+        if (company) {
+          setCnpjLookupStatus('found');
+          const name = company.nome_fantasia || company.razao_social;
+          if (name && !data.title) onChange('title', name);
+          if (company.city) onChange('city' as any, company.city);
+          if (company.state) onChange('state' as any, company.state);
+          if (company.category) onChange('category', company.category);
+        } else {
+          setCnpjLookupStatus('not_found');
+        }
+      }, 600);
+    } else {
+      setCnpjLookupStatus('idle');
+    }
   };
+
+  useEffect(() => {
+    return () => { if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current); };
+  }, []);
+
 
   const handleCurrencyChange = (field: string, value: string) => {
     onChange(field, formatCurrency(value));
@@ -156,15 +189,30 @@ const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="cnpj">CNPJ</Label>
-            <Input
-              id="cnpj"
-              placeholder="00.000.000/0000-00"
-              value={data.cnpj}
-              onChange={(e) => handleCNPJChange(e.target.value)}
-              className="h-12"
-              maxLength={18}
-            />
+            <div className="relative">
+              <Input
+                id="cnpj"
+                placeholder="00.000.000/0000-00"
+                value={data.cnpj}
+                onChange={(e) => handleCNPJChange(e.target.value)}
+                className="h-12 pr-10"
+                maxLength={18}
+              />
+              {cnpjLookupStatus === 'loading' && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+              )}
+              {cnpjLookupStatus === 'found' && (
+                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-accent" />
+              )}
+            </div>
+            {cnpjLookupStatus === 'found' && (
+              <p className="text-xs text-accent flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                Empresa encontrada na base nacional! Dados preenchidos automaticamente.
+              </p>
+            )}
           </div>
+
         </div>
       </div>
 
