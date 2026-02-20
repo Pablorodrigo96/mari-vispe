@@ -1,19 +1,18 @@
 
-## Correção: Textos Invisíveis (Branco no Branco) em 3 Locais
+## Varredura Completa: Botões e Textos Invisíveis em Fundos Escuros
 
-### Diagnóstico dos 3 Problemas
+### Resumo do problema
 
-**Problema raiz comum**: O componente `Button` com `variant="outline"` tem no seu estilo base `bg-background` — que é **branco** no tema claro. Ao ser colocado sobre fundos escuros (`gradient-navy-deep`), o botão fica branco com texto branco → completamente invisível.
+O componente `Button` com `variant="outline"` usa `bg-background` por padrão — que é **branco** no tema claro. Em páginas com fundo escuro (`gradient-navy-deep`), esse botão renderiza branco com texto branco: completamente invisível.
 
-**Para o Card de busca**: O componente `Card` tem `bg-card` no seu estilo base (também branco), que sobrescreve a classe `glass-card`. O texto interno usa `text-primary-foreground` (branco no sistema de cores da plataforma) → texto branco sobre fundo branco.
+Foram encontrados **4 locais com o mesmo bug** ainda não corrigidos:
 
 ---
 
-### Arquivo 1 — `src/components/investors/InvestorCTA.tsx`
+### Local 1 — `src/pages/Sell.tsx` (linha 87)
 
-**Problema**: Botão "Falar com Especialista" (linha 47-55) usa `variant="outline"` sem `bg-transparent`, então renderiza com fundo branco (`bg-background`) e texto branco → invisível.
-
-**Fix**: Adicionar `bg-transparent` à className do botão.
+**Contexto**: Hero com `gradient-navy-deep` (fundo escuro).  
+**Botão afetado**: "Já tenho conta" — `variant="outline"` sem `bg-transparent`.
 
 ```
 // Antes:
@@ -25,48 +24,73 @@ className="border-white/20 text-white hover:bg-white/10 bg-transparent"
 
 ---
 
-### Arquivo 2 — `src/components/investors/InvestorsHero.tsx`
+### Local 2 — `src/components/matching/MatchCard.tsx` (linhas 105–122)
 
-**Problema**: Botão "Quero Captar Recursos" (linha 57) tem o mesmo problema — `variant="outline"` sem `bg-transparent` sobre fundo escuro.
+**Contexto**: Cards renderizados sobre fundo `gradient-navy-deep` (página `/matching/resultados`).  
+**Botões afetados**: "Ver anúncio" e "Consultor" — ambos com `variant="outline"`.
 
-**Fix**: Adicionar `bg-transparent`.
+Esses botões já têm `border-primary-foreground/10` e `text-primary-foreground/70`, o que indica que foram projetados para fundo escuro, mas falta `bg-transparent`.
 
 ```
-// Antes:
-className="border-white/20 text-white hover:bg-white/10"
-
-// Depois:
-className="border-white/20 text-white hover:bg-white/10 bg-transparent"
+// Ambos os botões — adicionar bg-transparent:
+className="flex-1 gap-2 border-primary-foreground/10 text-primary-foreground/70 hover:bg-accent/10 hover:text-accent hover:border-accent/30 bg-transparent"
 ```
 
 ---
 
-### Arquivo 3 — `src/components/matching/CompanySearchCard.tsx`
+### Local 3 — `src/pages/MatchingResults.tsx` (linha 123)
 
-**Problema**: O `<Card>` na linha 100 aplica `glass-card` mas o estilo base do Card usa `bg-card` (branco) que sobrescreve o glassmorphism. O texto interno usa `text-primary-foreground` (branco) → invisível sobre fundo branco.
+**Contexto**: Página com fundo `gradient-navy-deep bg-grid-pattern`.  
+**Botão afetado**: "Tentar novamente" (estado de erro) — `variant="outline"` sem `bg-transparent`.
 
-**Fix em 2 partes**:
+```
+// Antes:
+className="border-primary-foreground/10 text-primary-foreground/70"
 
-1. **Background do Card**: Substituir `glass-card` por classes que forcem fundo escuro: adicionar `bg-slate-900/70 backdrop-blur-md` em vez de depender do glass-card customizado, e remover a dependência no bg-card com `!bg-transparent` — ou mais simples, usar uma div em vez do componente Card.
+// Depois:
+className="border-primary-foreground/10 text-primary-foreground/70 bg-transparent"
+```
 
-   Solução mais limpa: adicionar `!bg-slate-900/60` para sobrescrever `bg-card` com `!important`:
+---
 
-   ```
-   className="max-w-2xl mx-auto !bg-slate-900/60 backdrop-blur-md border-accent/10 shadow-gold"
-   ```
+### Local 4 — `src/components/matching/MatchCard.tsx` — Badge (linha 70)
 
-2. **Texto interno**: As classes `text-primary-foreground` e `text-primary-foreground/50` ficam corretas com o novo fundo escuro pois `primary-foreground` é branco — na verdade isso ESTAVA correto mas ficava invisível porque o fundo era branco. Com o fundo escuro corrigido, os textos voltam a ser visíveis.
+**Contexto**: Badge com `variant="outline"` sobre card com `glass-card` em fundo escuro.  
+**Badge afetado**: Badge de tipo "Horizontal"/"Vertical" — `variant="outline"` usa `bg-background` (branco) por padrão.
 
-   Porém, para garantir legibilidade também no `<Input>` (linha 120), verificar se `bg-primary-foreground/5` + `text-primary-foreground` + `placeholder:text-primary-foreground/30` estão corretos — com o fundo escuro do card, esses valores funcionam bem.
+```
+// Antes:
+className="text-xs gap-1 border-primary-foreground/10 text-primary-foreground/60"
+
+// Depois:
+className="text-xs gap-1 border-primary-foreground/10 text-primary-foreground/60 bg-transparent"
+```
+
+---
+
+### Locais SEM problema (descartados)
+
+| Componente | Por quê está OK |
+|---|---|
+| `Index.tsx` linha 88 | Já tem `bg-transparent` |
+| `Index.tsx` linhas 171/202 | Fundo claro (`bg-background`) — branco no branco é correto |
+| `ValuationSuccess.tsx` | Fundo claro — comportamento correto |
+| `MyProfile.tsx`, `PaymentSuccess.tsx` | Fundos claros |
+| `Marketplace.tsx` | Fundo claro |
+| `MapFilterSidebar.tsx` | Fundo claro |
+| `CapitalHero.tsx` | Usa `glass-card` no Card, sem botão outline problemático |
+| `InvestorCTA.tsx` / `InvestorsHero.tsx` | Já corrigidos na iteração anterior |
 
 ---
 
 ### Resumo das mudanças
 
-| Arquivo | Linhas afetadas | Tipo de fix |
-|---------|----------------|-------------|
-| `InvestorCTA.tsx` | Linha 50 | Adicionar `bg-transparent` no botão outline |
-| `InvestorsHero.tsx` | Linha 57 | Adicionar `bg-transparent` no botão outline |
-| `CompanySearchCard.tsx` | Linha 100 | Trocar `glass-card` por `!bg-slate-900/60 backdrop-blur-md` no Card |
+| Arquivo | Linha | Fix |
+|---|---|---|
+| `src/pages/Sell.tsx` | 87 | `+ bg-transparent` no botão "Já tenho conta" |
+| `src/components/matching/MatchCard.tsx` | 70 | `+ bg-transparent` no Badge outline |
+| `src/components/matching/MatchCard.tsx` | 109 | `+ bg-transparent` no botão "Ver anúncio" |
+| `src/components/matching/MatchCard.tsx` | 118 | `+ bg-transparent` no botão "Consultor" |
+| `src/pages/MatchingResults.tsx` | 123 | `+ bg-transparent` no botão "Tentar novamente" |
 
-**Nenhuma mudança de banco de dados necessária** — tudo é CSS/Tailwind puro.
+**Total: 2 arquivos modificados, 5 correções de classe Tailwind.**
