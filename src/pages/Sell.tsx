@@ -84,7 +84,7 @@ const Sell = () => {
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10">
+              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 bg-transparent">
                 <Link to="/auth/login">Já tenho conta</Link>
               </Button>
             </div>
