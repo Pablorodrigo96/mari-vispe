@@ -95,9 +95,9 @@ const MapView = () => {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-[100dvh] flex flex-col bg-background overflow-hidden">
       <Header />
-      <main className="flex-1 pt-16 relative flex">
+      <main className="flex-1 relative flex overflow-hidden" style={{ marginTop: '64px' }}>
         {/* Desktop sidebar */}
         {!isMobile && (
           <div className="w-72 shrink-0 h-full overflow-hidden">
@@ -106,14 +106,14 @@ const MapView = () => {
         )}
 
         {/* Map */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <BusinessMap listings={filteredListings} loading={loading} />
 
           {/* Mobile floating filter button */}
           {isMobile && (
             <Button
               onClick={() => setSheetOpen(true)}
-              className="absolute top-4 left-4 z-[1000] bg-card/90 backdrop-blur-sm border border-border text-foreground hover:bg-card shadow-lg"
+              className="absolute top-3 left-3 z-[1000] bg-card/90 backdrop-blur-sm border border-border text-foreground hover:bg-card shadow-lg"
               size="sm"
             >
               <Filter className="h-4 w-4 mr-1.5" />
@@ -130,7 +130,7 @@ const MapView = () => {
         {/* Mobile Sheet */}
         {isMobile && (
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetContent side="left" className="p-0 w-80">
+            <SheetContent side="left" className="p-0 w-[85vw] max-w-80">
               <SheetTitle className="sr-only">Filtros do Mapa</SheetTitle>
               {sidebarContent}
             </SheetContent>
