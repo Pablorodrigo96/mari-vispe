@@ -118,7 +118,11 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
 
     mapRef.current = map;
 
+    // Force Leaflet to recalculate size after layout settles
+    const timer = setTimeout(() => map.invalidateSize(), 200);
+
     return () => {
+      clearTimeout(timer);
       map.remove();
       mapRef.current = null;
     };
