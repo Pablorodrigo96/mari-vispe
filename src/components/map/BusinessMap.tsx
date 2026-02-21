@@ -204,21 +204,18 @@ export function BusinessMap({ listings, loading }: BusinessMapProps) {
 
       {/* Bottom Stats Bar */}
       <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-card/90 backdrop-blur-lg border-t border-border">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-center gap-8 md:gap-16 text-sm">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-accent" />
-            <span className="text-muted-foreground">Oportunidades:</span>
+        <div className="flex items-center justify-center gap-3 sm:gap-8 md:gap-16 px-3 py-2 sm:py-3 text-xs sm:text-sm">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+            <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent shrink-0" />
             <span className="font-bold text-foreground">{resolvedMarkers.length}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-accent" />
-            <span className="text-muted-foreground">Valor Total:</span>
-            <span className="font-bold text-foreground">{formatCurrency(totalValue)}</span>
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+            <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent shrink-0" />
+            <span className="font-bold text-foreground truncate">{formatCurrency(totalValue)}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Map className="w-4 h-4 text-accent" />
-            <span className="text-muted-foreground">Estados:</span>
-            <span className="font-bold text-foreground">{uniqueStates}</span>
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+            <Map className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent shrink-0" />
+            <span className="font-bold text-foreground">{uniqueStates} <span className="hidden sm:inline text-muted-foreground font-normal">estados</span></span>
           </div>
         </div>
       </div>
