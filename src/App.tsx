@@ -16,6 +16,7 @@ import MyValuations from "./pages/MyValuations";
 import Valuation from "./pages/Valuation";
 import ValuationMultiplos from "./pages/ValuationMultiplos";
 import ValuationDCF from "./pages/ValuationDCF";
+import ValuationCertifier from "./pages/ValuationCertifier";
 import Investors from "./pages/Investors";
 import Capital from "./pages/Capital";
 import Auth from "./pages/Auth";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/valuation" element={<Valuation />} />
             <Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
             <Route path="/valuation/dcf" element={<ValuationDCF />} />
+            <Route path="/valuation/certificador" element={<ValuationCertifier />} />
             <Route path="/investors" element={<Investors />} />
             <Route path="/capital" element={<Capital />} />
             <Route path="/auth" element={<Auth />} />
