@@ -26,6 +26,7 @@ import MapView from "./pages/MapView";
 import NotFound from "./pages/NotFound";
 import Matching from "./pages/Matching";
 import MatchingResults from "./pages/MatchingResults";
+import EditListing from "./pages/EditListing";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/vender" element={<Vender />} />
             <Route path="/anuncio/:id" element={<ListingDetail />} />
             <Route path="/meus-anuncios" element={<MyListings />} />
+            <Route path="/editar-anuncio/:id" element={<EditListing />} />
             <Route path="/meu-perfil" element={<MyProfile />} />
             <Route path="/meus-valuations" element={<MyValuations />} />
             <Route path="/valuation" element={<Valuation />} />
