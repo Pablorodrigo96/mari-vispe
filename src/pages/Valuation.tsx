@@ -58,7 +58,17 @@ const Valuation = () => {
   };
 
   const handleSubscribeMaster = () => {
-    toast.info('Assinatura do Plano Master em breve!');
+    setPaymentType('multiples');
+    setShowPaymentModal(true);
+  };
+
+  const handleOpenCertifier = () => {
+    if (!user) {
+      toast.info('Faça login para usar o Certificador');
+      navigate('/auth?redirect=/valuation/certificador');
+      return;
+    }
+    navigate('/valuation/certificador');
   };
 
   return (
@@ -70,6 +80,7 @@ const Valuation = () => {
         onBuyMultiples={handleBuyMultiples}
         onBuyDCF={handleBuyDCF}
         onSubscribeMaster={handleSubscribeMaster}
+        onOpenCertifier={handleOpenCertifier}
       />
       <MethodologySection />
       <TrustSection />

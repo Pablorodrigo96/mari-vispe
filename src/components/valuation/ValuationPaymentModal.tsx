@@ -177,8 +177,8 @@ export const ValuationPaymentModal = ({
             </div>
 
             <div className="mb-4">
-              <span className="text-2xl font-bold text-foreground">R$ 297</span>
-              <span className="text-muted-foreground">/mês</span>
+            <span className="text-2xl font-bold text-foreground">R$ 697</span>
+            <span className="text-muted-foreground">/mês</span>
             </div>
 
             <ul className="space-y-2 mb-4">

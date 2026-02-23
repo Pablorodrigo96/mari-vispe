@@ -1,4 +1,4 @@
-import { ArrowRight, Star, TrendingUp, Lock, Calculator, BarChart3, Crown, Check, CreditCard } from 'lucide-react';
+import { ArrowRight, Star, TrendingUp, Lock, Calculator, BarChart3, Crown, Check, CreditCard, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ParticlesBackground } from '@/components/ui/particles-background';
@@ -12,6 +12,7 @@ interface ValuationTypeSelectorProps {
   onBuyMultiples?: () => void;
   onBuyDCF?: () => void;
   onSubscribeMaster?: () => void;
+  onOpenCertifier?: () => void;
 }
 
 const formatPrice = (cents: number) => {
@@ -27,6 +28,7 @@ export const ValuationTypeSelector = ({
   onBuyMultiples,
   onBuyDCF,
   onSubscribeMaster,
+  onOpenCertifier,
 }: ValuationTypeSelectorProps) => {
   const { user } = useAuth();
   const { 
@@ -137,8 +139,7 @@ export const ValuationTypeSelector = ({
             ) : !user ? (
               <Button
                 onClick={onSelectFree}
-                variant="outline"
-                className="w-full border-white/20 text-white hover:bg-white/10"
+                className="w-full bg-white text-gray-900 hover:bg-white/90"
               >
                 Começar Grátis
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -166,7 +167,7 @@ export const ValuationTypeSelector = ({
             </div>
             
             <div className="mb-6">
-              <span className="text-3xl font-bold text-white">R$ 297</span>
+              <span className="text-3xl font-bold text-white">R$ 697</span>
               <span className="text-white/50">/mês</span>
             </div>
 
@@ -187,9 +188,8 @@ export const ValuationTypeSelector = ({
               <Button
                 onClick={onSubscribeMaster}
                 className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold"
-                disabled
               >
-                Assinar Master (em breve)
+                Assinar Master
               </Button>
             )}
           </div>
@@ -234,10 +234,9 @@ export const ValuationTypeSelector = ({
                 size="sm"
                 className="w-full border-white/20 text-white hover:bg-white/10"
                 onClick={onBuyMultiples}
-                disabled
               >
                 <CreditCard className="w-4 h-4 mr-2" />
-                Comprar (em breve)
+                Comprar Agora
               </Button>
             </div>
 
@@ -263,10 +262,9 @@ export const ValuationTypeSelector = ({
                 size="sm"
                 className="w-full border-white/20 text-white hover:bg-white/10"
                 onClick={onBuyDCF}
-                disabled
               >
                 <CreditCard className="w-4 h-4 mr-2" />
-                Comprar (em breve)
+                Comprar Agora
               </Button>
             </div>
           </div>
@@ -288,7 +286,7 @@ export const ValuationTypeSelector = ({
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             {/* Start Multiples */}
             <div className="glass-card rounded-xl p-6 border-emerald-500/20">
               <div className="flex items-center gap-3 mb-4">
@@ -338,6 +336,33 @@ export const ValuationTypeSelector = ({
               >
                 <Lock className="w-4 h-4 mr-2" />
                 Fazer Valuation DCF
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+
+            {/* Certifier */}
+            <div className="glass-card rounded-xl p-6 border-blue-500/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <ShieldCheck className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Certificador</h3>
+                  <p className="text-sm text-white/50">Valide um valuation recebido</p>
+                </div>
+              </div>
+              
+              <ul className="space-y-1 mb-4 text-sm text-white/50">
+                <li>• Compare com múltiplos de mercado</li>
+                <li>• Relatório de assertividade grátis</li>
+              </ul>
+
+              <Button
+                onClick={onOpenCertifier}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Certificar Valuation
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
