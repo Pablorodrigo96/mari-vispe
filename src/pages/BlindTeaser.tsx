@@ -61,12 +61,23 @@ const BlindTeaser = () => {
           .maybeSingle();
 
         if (!existing) {
+          // Fetch profile data to include investor info
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, company_name, phone')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
           await supabase
             .from('interest_logs' as any)
             .insert({
               listing_id: listing.id,
               user_id: user.id,
               ticker: listing.ticker,
+              investor_name: profile?.full_name || null,
+              investor_company: profile?.company_name || null,
+              investor_email: user.email || null,
+              investor_whatsapp: profile?.phone || null,
             });
           toast.success('Interesse registrado com sucesso!');
         }

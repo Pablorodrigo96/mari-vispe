@@ -43,6 +43,11 @@ import {
   MousePointerClick,
   TrendingUp,
   Crown,
+  Users,
+  Phone,
+  AtSign,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
@@ -70,6 +75,15 @@ interface ListingMetrics {
   contacts: number;
 }
 
+interface InterestLog {
+  id: string;
+  investor_name: string | null;
+  investor_company: string | null;
+  investor_email: string | null;
+  investor_whatsapp: string | null;
+  created_at: string | null;
+}
+
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   active: { label: 'Ativo', variant: 'default' },
   pending: { label: 'Pendente', variant: 'secondary' },
@@ -84,6 +98,8 @@ export default function MyListings() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<Record<string, ListingMetrics>>({});
+  const [interests, setInterests] = useState<Record<string, InterestLog[]>>({});
+  const [expandedInterests, setExpandedInterests] = useState<Record<string, boolean>>({});
   const hasMasterListing = listings.some(l => l.plan === 'master');
 
   useEffect(() => {
@@ -125,6 +141,22 @@ export default function MyListings() {
             else if (v.event_type === 'contact_click') m[v.listing_id].contacts++;
           }
           setMetrics(m);
+        }
+
+        // Fetch interests
+        const { data: interestData } = await supabase
+          .from('interest_logs' as any)
+          .select('id, investor_name, investor_company, investor_email, investor_whatsapp, created_at, listing_id')
+          .in('listing_id', listingIds)
+          .order('created_at', { ascending: false });
+
+        if (interestData) {
+          const grouped: Record<string, InterestLog[]> = {};
+          for (const interest of interestData as any[]) {
+            if (!grouped[interest.listing_id]) grouped[interest.listing_id] = [];
+            grouped[interest.listing_id].push(interest);
+          }
+          setInterests(grouped);
         }
       }
     } catch (error) {
@@ -278,6 +310,14 @@ export default function MyListings() {
                 <p className="text-sm text-muted-foreground">Contatos</p>
                 <p className="text-2xl font-bold text-accent">
                   {Object.values(metrics).reduce((sum, m) => sum + m.contacts, 0)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-border">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Interessados</p>
+                <p className="text-2xl font-bold text-accent">
+                  {Object.values(interests).reduce((sum, arr) => sum + arr.length, 0)}
                 </p>
               </CardContent>
             </Card>
@@ -491,6 +531,71 @@ export default function MyListings() {
                             <span className="text-muted-foreground text-sm">Valor não informado</span>
                           )}
                         </div>
+
+                        {/* Interests Section */}
+                        {interests[listing.id] && interests[listing.id].length > 0 && (
+                          <div className="mt-3 border-t border-border pt-3">
+                            <button
+                              onClick={() => setExpandedInterests(prev => ({ ...prev, [listing.id]: !prev[listing.id] }))}
+                              className="flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+                            >
+                              <Users className="w-4 h-4" />
+                              {interests[listing.id].length} interessado{interests[listing.id].length > 1 ? 's' : ''}
+                              {expandedInterests[listing.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </button>
+                            {expandedInterests[listing.id] && (
+                              <div className="mt-3 space-y-2">
+                                {listing.plan === 'master' ? (
+                                  interests[listing.id].map(interest => (
+                                    <div key={interest.id} className="bg-muted/50 rounded-lg p-3 text-sm">
+                                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                        <span className="font-medium text-foreground">{interest.investor_name || 'Sem nome'}</span>
+                                        {interest.investor_company && (
+                                          <span className="text-muted-foreground">{interest.investor_company}</span>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-muted-foreground">
+                                        {interest.investor_email && (
+                                          <span className="flex items-center gap-1">
+                                            <AtSign className="w-3 h-3" />
+                                            {interest.investor_email}
+                                          </span>
+                                        )}
+                                        {interest.investor_whatsapp && (
+                                          <span className="flex items-center gap-1">
+                                            <Phone className="w-3 h-3" />
+                                            {interest.investor_whatsapp}
+                                          </span>
+                                        )}
+                                        {interest.created_at && (
+                                          <span className="flex items-center gap-1">
+                                            <Calendar className="w-3 h-3" />
+                                            {formatDate(interest.created_at)}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-center">
+                                    <p className="text-muted-foreground mb-2">
+                                      Upgrade para o plano Master para ver os dados dos investidores interessados
+                                    </p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-amber-500 border-amber-500/50 hover:bg-amber-500/10"
+                                      onClick={() => navigate('/vender')}
+                                    >
+                                      <Crown className="w-3.5 h-3.5 mr-1" />
+                                      Upgrade Master
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
