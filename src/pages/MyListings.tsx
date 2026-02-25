@@ -43,7 +43,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
-import { getWhatsAppLink } from '@/lib/whatsapp';
+import { openWhatsApp } from '@/lib/whatsapp';
 
 interface Listing {
   id: string;
@@ -330,10 +330,13 @@ export default function MyListings() {
                                     <Share2 className="w-4 h-4 mr-2" />
                                     Ver Blind Teaser
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => {
+                                  <DropdownMenuItem onClick={async () => {
                                     const url = `${window.location.origin}/teaser/${listing.ticker}`;
                                     const msg = `Confira esta oportunidade de negócio: ${url}`;
-                                    window.open(getWhatsAppLink(msg), '_blank', 'noopener,noreferrer');
+                                    const opened = await openWhatsApp(msg);
+                                    if (!opened) {
+                                      toast.info('Link copiado! Cole no navegador para abrir o WhatsApp.');
+                                    }
                                   }}>
                                     <MessageCircle className="w-4 h-4 mr-2" />
                                     Compartilhar via WhatsApp
