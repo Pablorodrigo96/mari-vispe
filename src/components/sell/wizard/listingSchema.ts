@@ -18,6 +18,7 @@ export const listingFormSchema = z.object({
   
   // Step 2 - Description & Location
   description: z.string().min(100, 'Descrição deve ter pelo menos 100 caracteres'),
+  additionalInfo: z.string().optional(),
   cep: z.string().min(9, 'CEP inválido'),
   street: z.string().optional(),
   neighborhood: z.string().optional(),
@@ -62,6 +63,7 @@ export const stepValidationSchemas = {
   
   step2: z.object({
     description: z.string().min(100, 'Descrição deve ter pelo menos 100 caracteres'),
+    additionalInfo: z.string().optional(),
     cep: z.string().min(9, 'CEP inválido'),
     street: z.string().optional(),
     neighborhood: z.string().optional(),
@@ -88,6 +90,7 @@ export const initialFormData = {
   askingPrice: '',
   hidePrice: false,
   description: '',
+  additionalInfo: '',
   cep: '',
   street: '',
   neighborhood: '',

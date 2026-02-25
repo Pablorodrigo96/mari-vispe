@@ -42,6 +42,7 @@ interface FormData {
   askingPrice: string;
   hidePrice: boolean;
   description: string;
+  additionalInfo: string;
   cep: string;
   street: string;
   neighborhood: string;
@@ -88,6 +89,7 @@ const NewListingWizard = () => {
         case 2:
           stepValidationSchemas.step2.parse({
             description: formData.description,
+            additionalInfo: formData.additionalInfo,
             cep: formData.cep,
             street: formData.street,
             neighborhood: formData.neighborhood,
@@ -191,6 +193,7 @@ const NewListingWizard = () => {
           asking_price: parseCurrencyToNumber(formData.askingPrice),
           hide_price: formData.hidePrice,
           description: formData.description,
+          additional_info: formData.additionalInfo || null,
           cep: formData.cep,
           street: formData.street || null,
           neighborhood: formData.neighborhood || null,
@@ -249,6 +252,7 @@ const NewListingWizard = () => {
             <StepDescriptionLocation
               data={{
                 description: formData.description,
+                additionalInfo: formData.additionalInfo,
                 cep: formData.cep,
                 street: formData.street,
                 neighborhood: formData.neighborhood,
