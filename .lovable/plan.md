@@ -1,21 +1,19 @@
 
 
-## Plano: Usar Imagem Fallback na Página de Detalhe do Anúncio
+## Plano: Corrigir Vazamento de Texto em "Sobre o Negócio"
 
 ### Problema
-No marketplace, o `ListingCard` usa `getCategoryFallbackImage()` para exibir uma foto de referência quando o anúncio não tem fotos. Porém, na página de detalhe (`/anuncio/:id`), quando não há fotos, aparece uma tela vazia gigante com "Sem fotos disponíveis", desperdiçando todo o espaço above-the-fold e prejudicando a conversão.
+O texto na seção "Sobre o Negócio" na página de detalhe do anúncio não quebra linha quando contém palavras muito longas (sem espaços), vazando para fora do card.
 
-### Mudanças
+### Causa
+O parágrafo usa `whitespace-pre-wrap`, que preserva quebras de linha mas não força quebra de palavras longas. Falta a classe `break-words` (CSS `overflow-wrap: break-word`) para forçar a quebra.
+
+### Mudança
 
 #### `src/pages/ListingDetail.tsx`
-- Importar `getCategoryFallbackImage` de `@/lib/categoryImages`
-- Na galeria de imagens, quando `listing.images` está vazio, usar a imagem fallback da categoria em vez de mostrar o placeholder vazio
-- A imagem principal exibe o fallback; os thumbnails laterais ficam ocultos (não faz sentido mostrar 3 placeholders vazios)
-- Resultado: o usuário vê uma foto contextual ao entrar no anúncio, consistente com o que viu no marketplace
-
-### Seção Técnica
+- Adicionar `break-words` ao `<p>` da descrição do negócio, mudando de `whitespace-pre-wrap` para `whitespace-pre-wrap break-words`
 
 | Arquivo | Ação |
 |---|---|
-| `ListingDetail.tsx` | Usar `getCategoryFallbackImage(listing.category, listing.id)` como fallback na galeria quando não há imagens |
+| `ListingDetail.tsx` | Adicionar classe `break-words` no parágrafo da descrição |
 
