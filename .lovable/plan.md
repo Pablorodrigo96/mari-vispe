@@ -1,43 +1,23 @@
 
 
-## Plano: Botoes de compartilhamento do Blind Teaser em "Meus Anuncios"
+## Plano: Corrigir compartilhamento via WhatsApp em Meus Anuncios
 
-### O que sera feito
+### Problema
 
-Adicionar opcoes de compartilhamento do link do Blind Teaser (WhatsApp, email e copiar link) no dropdown de acoes de cada anuncio na pagina "Meus Anuncios".
+O codigo atual usa `window.open(url, '_blank')` que e bloqueado dentro do iframe de preview. O helper `openWhatsApp` em `src/lib/whatsapp.ts` ja trata esse caso (usa `_top` quando detecta iframe, e copia para clipboard como fallback), mas nao esta sendo utilizado.
 
-### Mudancas
+### Mudanca
 
-#### 1. Modificar `src/pages/MyListings.tsx`
+#### Modificar `src/pages/MyListings.tsx`
 
-**Adicionar `ticker` ao modelo e a query:**
-- Incluir `ticker` na interface `Listing` e na query do Supabase (`select`)
-
-**Adicionar icones:**
-- Importar `Share2`, `Copy`, `Mail`, `MessageCircle` do lucide-react
-
-**Adicionar itens no DropdownMenu de cada listing (apos "Visualizar"):**
-
-Somente exibir se o listing tiver um `ticker`:
-
-- **Ver Blind Teaser** — navega para `/teaser/:ticker`
-- **Compartilhar via WhatsApp** — usa o helper `getWhatsAppLink` existente em `src/lib/whatsapp.ts` com mensagem personalizada contendo o link do teaser e abre em nova aba
-- **Compartilhar por Email** — abre `mailto:` com subject e body contendo o link do teaser
-- **Copiar Link do Teaser** — copia a URL completa do teaser para a area de transferencia e exibe toast de confirmacao
-
-**Separador visual:**
-- Adicionar um `DropdownMenuSeparator` entre as acoes de compartilhamento e as acoes de gerenciamento (editar, pausar, excluir)
-
-**Construcao da URL do teaser:**
-- Usar `window.location.origin + '/teaser/' + listing.ticker` para gerar a URL completa
+- Importar `openWhatsApp` ao inves de `getWhatsAppLink`
+- No item "Compartilhar via WhatsApp", substituir `window.open(getWhatsAppLink(msg), '_blank', ...)` por uma chamada a `openWhatsApp(msg)` com tratamento do retorno:
+  - Se retornar `true`: WhatsApp abriu com sucesso
+  - Se retornar `false`: link foi copiado para a area de transferencia — exibir toast informando
 
 ### Secao Tecnica
 
-**Arquivos modificados:**
-
 | Arquivo | Acao |
 |---|---|
-| `src/pages/MyListings.tsx` | Adicionar ticker na query, icones e itens de compartilhamento no dropdown |
-
-**Nenhuma mudanca de banco de dados necessaria** — o campo `ticker` ja existe na tabela `listings`.
+| `src/pages/MyListings.tsx` | Trocar `getWhatsAppLink` por `openWhatsApp` e adicionar toast de fallback |
 
