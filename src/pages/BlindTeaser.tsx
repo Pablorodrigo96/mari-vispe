@@ -36,6 +36,8 @@ const BlindTeaser = () => {
   const [listing, setListing] = useState<TeaserListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [totalViews, setTotalViews] = useState(0);
+  const [uniqueViews, setUniqueViews] = useState(0);
   const interestRegistered = useRef(false);
 
   // Auto-register interest after auth redirect
@@ -124,6 +126,19 @@ const BlindTeaser = () => {
           } catch (e) {
             console.error('Error registering view:', e);
           }
+
+          // Fetch view counts
+          try {
+            const { data: viewData } = await supabase.rpc('get_teaser_view_count', {
+              p_listing_id: listingData.id,
+            });
+            if (viewData && viewData.length > 0) {
+              setTotalViews(Number(viewData[0].total_views) || 0);
+              setUniqueViews(Number(viewData[0].unique_views) || 0);
+            }
+          } catch (e) {
+            console.error('Error fetching view count:', e);
+          }
         }
       } catch (error) {
         console.error('Error fetching teaser:', error);
@@ -160,7 +175,7 @@ const BlindTeaser = () => {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      <TeaserHero ticker={listing.ticker} />
+      <TeaserHero ticker={listing.ticker} totalViews={totalViews} uniqueViews={uniqueViews} />
       <TeaserIntro
         description={listing.description}
         category={listing.category}

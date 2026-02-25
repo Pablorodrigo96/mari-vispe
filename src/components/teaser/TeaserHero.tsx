@@ -1,11 +1,13 @@
 import { motion } from 'framer-motion';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Eye } from 'lucide-react';
 
 interface TeaserHeroProps {
   ticker: string;
+  totalViews?: number;
+  uniqueViews?: number;
 }
 
-const TeaserHero = ({ ticker }: TeaserHeroProps) => {
+const TeaserHero = ({ ticker, totalViews = 0, uniqueViews = 0 }: TeaserHeroProps) => {
   return (
     <section className="relative min-h-[60vh] sm:min-h-[80vh] flex items-center justify-center overflow-hidden bg-gray-950">
       {/* Multi-layer background */}
@@ -128,6 +130,21 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
             {ticker}
           </span>
         </motion.div>
+
+        {/* View counter badge */}
+        {totalViews > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+            className="mt-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5"
+          >
+            <Eye className="w-3.5 h-3.5 text-amber-500/70" />
+            <span className="text-xs text-white/50 font-medium">
+              {totalViews} visualizações • {uniqueViews} únicos
+            </span>
+          </motion.div>
+        )}
 
         {/* Decorative line */}
         <motion.div
