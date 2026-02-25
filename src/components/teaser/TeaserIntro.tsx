@@ -52,7 +52,7 @@ const TeaserIntro = ({ description, category, foundationYear, city, state }: Tea
               </p>
             )}
             {description && (
-              <p className="text-base sm:text-lg text-white/60 leading-relaxed whitespace-pre-wrap">
+              <p className="text-base sm:text-lg text-white/60 leading-relaxed break-words overflow-hidden" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                 {description}
               </p>
             )}
@@ -60,14 +60,28 @@ const TeaserIntro = ({ description, category, foundationYear, city, state }: Tea
             {/* Category & Year badges */}
             <div className="flex flex-wrap gap-3 pt-4">
               {category && (
-                <span className="px-4 py-2 rounded-full border border-amber-500/20 bg-amber-500/5 text-sm font-semibold text-amber-400/80">
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.3 }}
+                  whileHover={{ scale: 1.08, boxShadow: '0 0 20px hsla(38, 92%, 50%, 0.3)' }}
+                  className="px-4 py-2 rounded-full border border-amber-500/20 bg-amber-500/5 text-sm font-semibold text-amber-400/80 cursor-default transition-colors duration-300"
+                >
                   {getCategoryLabel(category)}
-                </span>
+                </motion.span>
               )}
               {foundationYear && (
-                <span className="px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/60">
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.45 }}
+                  whileHover={{ scale: 1.08 }}
+                  className="px-4 py-2 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/60 cursor-default transition-colors duration-300"
+                >
                   Desde {foundationYear}
-                </span>
+                </motion.span>
               )}
             </div>
           </motion.div>

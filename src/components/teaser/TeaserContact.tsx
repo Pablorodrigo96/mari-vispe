@@ -147,14 +147,20 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
               <p className="text-white/70 text-lg">
                 Cadastre-se como comprador para receber informações detalhadas sobre este ativo.
               </p>
-              <Button
-                onClick={handleRegisterInterest}
-                disabled={isRegistering}
-                className="w-full sm:w-auto px-12 py-6 text-lg font-bold gradient-gold text-gray-900 hover:opacity-90 border-0 rounded-xl"
+              <motion.div
+                animate={{ boxShadow: ['0 0 0px hsla(38,92%,50%,0)', '0 0 25px hsla(38,92%,50%,0.4)', '0 0 0px hsla(38,92%,50%,0)'] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="inline-block rounded-xl"
               >
-                <UserPlus className="w-5 h-5 mr-2" />
-                {isRegistering ? 'Registrando...' : 'Registrar Interesse'}
-              </Button>
+                <Button
+                  onClick={handleRegisterInterest}
+                  disabled={isRegistering}
+                  className="w-full sm:w-auto px-12 py-6 text-lg font-bold gradient-gold text-gray-900 hover:opacity-90 hover:scale-105 transition-transform duration-200 border-0 rounded-xl"
+                >
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  {isRegistering ? 'Registrando...' : 'Registrar Interesse'}
+                </Button>
+              </motion.div>
             </>
           )}
 
@@ -162,7 +168,7 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
             <Button
               type="button"
               variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300"
+              className="border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 hover:scale-105 transition-all duration-200"
               onClick={handleWhatsApp}
             >
               <MessageCircle className="w-4 h-4 mr-2" />

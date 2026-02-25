@@ -17,7 +17,6 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
   const hasAnyData = annualRevenue || annualProfit || askingPrice;
   if (!hasAnyData) return null;
 
-  // Chart data: 3-year projection
   const chartData = annualRevenue
     ? [
         { name: 'Ano -2', value: annualRevenue * 0.82 },
@@ -27,44 +26,17 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
     : [];
 
   const kpis = [
-    {
-      icon: DollarSign,
-      label: 'Faturamento Anual',
-      value: annualRevenue ? formatFullCurrency(annualRevenue) : null,
-    },
-    {
-      icon: TrendingUp,
-      label: 'Lucro Anual',
-      value: annualProfit ? formatFullCurrency(annualProfit) : null,
-    },
-    {
-      icon: Percent,
-      label: 'Margem Líquida',
-      value: margin ? `${margin}%` : null,
-    },
-    {
-      icon: DollarSign,
-      label: 'Fat. Médio Mensal',
-      value: monthlyRevenue ? formatFullCurrency(monthlyRevenue) : null,
-    },
-    {
-      icon: Target,
-      label: 'Valor Pedido',
-      value: hidePrice ? 'Sob Consulta' : askingPrice ? formatFullCurrency(askingPrice) : null,
-    },
+    { icon: DollarSign, label: 'Faturamento Anual', value: annualRevenue ? formatFullCurrency(annualRevenue) : null },
+    { icon: TrendingUp, label: 'Lucro Anual', value: annualProfit ? formatFullCurrency(annualProfit) : null },
+    { icon: Percent, label: 'Margem Líquida', value: margin ? `${margin}%` : null },
+    { icon: DollarSign, label: 'Fat. Médio Mensal', value: monthlyRevenue ? formatFullCurrency(monthlyRevenue) : null },
+    { icon: Target, label: 'Valor Pedido', value: hidePrice ? 'Sob Consulta' : askingPrice ? formatFullCurrency(askingPrice) : null },
   ].filter((k) => k.value);
 
   const CustomLabel = (props: any) => {
     const { x, y, width, value } = props;
     return (
-      <text
-        x={x + width / 2}
-        y={y - 10}
-        fill="hsla(38, 92%, 60%, 0.9)"
-        textAnchor="middle"
-        fontSize={11}
-        fontWeight={700}
-      >
+      <text x={x + width / 2} y={y - 10} fill="hsla(38, 92%, 60%, 0.9)" textAnchor="middle" fontSize={11} fontWeight={700}>
         {formatFullCurrency(value)}
       </text>
     );
@@ -103,22 +75,13 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
               <div className="h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} barCategoryGap="30%">
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsla(0,0%,100%,0.5)', fontSize: 12 }}
-                    />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsla(0,0%,100%,0.5)', fontSize: 12 }} />
                     <YAxis hide />
                     <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={60}>
                       {chartData.map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={
-                            index === chartData.length - 1
-                              ? 'hsl(38, 92%, 50%)'
-                              : `hsla(38, 70%, 50%, ${0.25 + index * 0.2})`
-                          }
+                          fill={index === chartData.length - 1 ? 'hsl(38, 92%, 50%)' : `hsla(38, 70%, 50%, ${0.25 + index * 0.2})`}
                         />
                       ))}
                       <LabelList content={<CustomLabel />} />
@@ -129,16 +92,21 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
             </motion.div>
           )}
 
-          {/* KPI Cards */}
+          {/* KPI Cards with hover effects */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {kpis.map((kpi, index) => (
               <motion.div
                 key={kpi.label}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="relative overflow-hidden rounded-2xl"
+                transition={{ delay: index * 0.15, type: 'spring', stiffness: 150 }}
+                whileHover={{
+                  y: -4,
+                  boxShadow: '0 12px 30px hsla(38, 92%, 50%, 0.2)',
+                  transition: { duration: 0.25 },
+                }}
+                className="relative overflow-hidden rounded-2xl cursor-default group"
               >
                 {/* Dark header with gold label */}
                 <div className="bg-gray-800/80 px-5 py-3 flex items-center gap-2">
@@ -148,10 +116,18 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
                   </span>
                 </div>
                 {/* Value body */}
-                <div className="gradient-gold px-5 py-5">
-                  <p className="text-xl sm:text-2xl font-black text-gray-900">
+                <div className="gradient-gold px-5 py-5 relative overflow-hidden">
+                  <p className="text-xl sm:text-2xl font-black text-gray-900 relative z-10">
                     {kpi.value}
                   </p>
+                  {/* Animated bottom border */}
+                  <motion.div
+                    className="absolute bottom-0 left-0 h-[3px] bg-gradient-to-r from-amber-700 to-amber-400"
+                    initial={{ width: '0%' }}
+                    whileInView={{ width: '100%' }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.3 + index * 0.15, duration: 0.8 }}
+                  />
                 </div>
               </motion.div>
             ))}

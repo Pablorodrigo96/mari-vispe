@@ -58,29 +58,39 @@ const TeaserDetails = ({ squareMeters, rentValue, iptuValue, saleReason }: Tease
           {items.map((item, index) => (
             <motion.div
               key={item.label}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 30, scale: 0.9 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.12 }}
-              className="relative overflow-hidden rounded-2xl group hover:scale-[1.03] transition-transform duration-300"
+              transition={{ delay: index * 0.12, type: 'spring', stiffness: 150 }}
+              whileHover={{
+                scale: 1.05,
+                boxShadow: '0 0 30px hsla(38, 92%, 50%, 0.25)',
+                transition: { duration: 0.25 },
+              }}
+              className="relative overflow-hidden rounded-2xl group cursor-default"
             >
               {/* Header */}
               <div className="bg-gray-800/90 px-5 py-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg gradient-gold flex items-center justify-center">
+                <motion.div
+                  whileHover={{ rotate: 10 }}
+                  className="w-9 h-9 rounded-lg gradient-gold flex items-center justify-center"
+                >
                   <item.icon className="w-4 h-4 text-gray-900" />
-                </div>
+                </motion.div>
                 <span className="text-xs font-bold text-amber-500/80 uppercase tracking-wider">
                   {item.label}
                 </span>
               </div>
               {/* Body */}
-              <div className="bg-gray-800/50 px-5 py-6 border-t border-amber-500/10">
-                <p className="text-2xl sm:text-3xl font-black text-white">
+              <div className="bg-gray-800/50 px-5 py-6 border-t border-amber-500/10 relative overflow-hidden">
+                <p className="text-2xl sm:text-3xl font-black text-white relative z-10">
                   {item.value}
                   {item.suffix && (
                     <span className="text-base font-medium text-white/40 ml-1">{item.suffix}</span>
                   )}
                 </p>
+                {/* Glow on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-t from-amber-500/5 to-transparent" />
               </div>
             </motion.div>
           ))}
