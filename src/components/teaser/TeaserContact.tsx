@@ -1,11 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MessageCircle, Send, Shield } from 'lucide-react';
+import { MessageCircle, Shield, UserPlus, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TeaserContactProps {
   listingId: string;
@@ -13,53 +13,49 @@ interface TeaserContactProps {
 }
 
 const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: '',
-  });
-  const [isSending, setIsSending] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registered, setRegistered] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSending(true);
+  const handleRegisterInterest = async () => {
+    if (!user) {
+      navigate(`/auth?redirect=/teaser/${ticker}&tab=signup&interest=true`);
+      return;
+    }
 
+    setIsRegistering(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-message`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            listing_id: listingId,
-            sender_name: form.name.trim(),
-            sender_email: form.email.trim(),
-            sender_phone: form.phone?.trim() || undefined,
-            message: form.message.trim(),
-          }),
-        }
-      );
+      // Check if already registered
+      const { data: existing } = await supabase
+        .from('interest_logs' as any)
+        .select('id')
+        .eq('listing_id', listingId)
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (!response.ok) {
-        if (response.status === 429) {
-          toast.error('Muitas mensagens enviadas. Aguarde alguns minutos.');
-          return;
-        }
-        const data = await response.json();
-        toast.error(data.error || 'Erro ao enviar mensagem.');
+      if (existing) {
+        toast.info('Você já registrou interesse neste ativo.');
+        setRegistered(true);
         return;
       }
 
-      toast.success('Mensagem enviada com sucesso!');
-      setForm({ name: '', email: '', phone: '', message: '' });
-    } catch {
-      toast.error('Erro ao enviar mensagem. Tente novamente.');
+      const { error } = await supabase
+        .from('interest_logs' as any)
+        .insert({
+          listing_id: listingId,
+          user_id: user.id,
+          ticker,
+        });
+
+      if (error) throw error;
+      setRegistered(true);
+      toast.success('Interesse registrado com sucesso!');
+    } catch (error) {
+      console.error('Error registering interest:', error);
+      toast.error('Erro ao registrar interesse. Tente novamente.');
     } finally {
-      setIsSending(false);
+      setIsRegistering(false);
     }
   };
 
@@ -88,7 +84,7 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
           viewport={{ once: true }}
           className="text-3xl sm:text-4xl md:text-5xl font-black text-white text-center mb-4 uppercase tracking-wider"
         >
-          Contato
+          Interesse
         </motion.h2>
         <motion.p
           initial={{ opacity: 0 }}
@@ -99,81 +95,48 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
           Demonstre seu interesse neste ativo de forma confidencial
         </motion.p>
 
-        <motion.form
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          onSubmit={handleSubmit}
-          className="glass-card rounded-2xl p-6 sm:p-8 space-y-5"
+          className="glass-card rounded-2xl p-8 sm:p-10 text-center space-y-6"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="t-name" className="text-white/70">Nome *</Label>
-              <Input
-                id="t-name"
-                required
-                placeholder="Seu nome"
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
-              />
+          {registered ? (
+            <div className="space-y-4">
+              <CheckCircle className="w-16 h-16 text-green-400 mx-auto" />
+              <h3 className="text-2xl font-bold text-white">Interesse Registrado!</h3>
+              <p className="text-white/60">
+                Seu interesse foi registrado com sucesso. Entraremos em contato em breve.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="t-email" className="text-white/70">E-mail *</Label>
-              <Input
-                id="t-email"
-                type="email"
-                required
-                placeholder="seu@email.com"
-                value={form.email}
-                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="t-phone" className="text-white/70">Telefone</Label>
-            <Input
-              id="t-phone"
-              placeholder="(00) 00000-0000"
-              value={form.phone}
-              onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="t-msg" className="text-white/70">Mensagem *</Label>
-            <Textarea
-              id="t-msg"
-              required
-              rows={4}
-              placeholder="Descreva seu interesse..."
-              value={form.message}
-              onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/30 resize-none"
-            />
-          </div>
+          ) : (
+            <>
+              <p className="text-white/70 text-lg">
+                Cadastre-se como comprador para receber informações detalhadas sobre este ativo.
+              </p>
+              <Button
+                onClick={handleRegisterInterest}
+                disabled={isRegistering}
+                className="w-full sm:w-auto px-12 py-6 text-lg font-bold gradient-gold text-gray-900 hover:opacity-90 border-0 rounded-xl"
+              >
+                <UserPlus className="w-5 h-5 mr-2" />
+                {isRegistering ? 'Registrando...' : 'Registrar Interesse'}
+              </Button>
+            </>
+          )}
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              type="submit"
-              disabled={isSending}
-              className="flex-1 gradient-gold text-gray-900 font-bold hover:opacity-90 border-0"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              {isSending ? 'Enviando...' : 'Enviar Mensagem'}
-            </Button>
+          <div className="pt-4">
             <Button
               type="button"
               variant="outline"
-              className="flex-1 border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300"
+              className="border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300"
               onClick={() => window.open(whatsappUrl, '_blank')}
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               WhatsApp
             </Button>
           </div>
-        </motion.form>
+        </motion.div>
 
         {/* Disclaimer */}
         <motion.div

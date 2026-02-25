@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Building2, CreditCard, ChartBar, TrendingUp, Clock } from 'lucide-react';
+import { Users, Building2, CreditCard, ChartBar, TrendingUp, Clock, Heart } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminRoute } from '@/components/admin/AdminRoute';
 import { StatsCard } from '@/components/admin/StatsCard';
@@ -25,6 +25,14 @@ interface RecentActivity {
   createdAt: string;
 }
 
+interface InterestLog {
+  id: string;
+  ticker: string | null;
+  created_at: string;
+  user_name: string | null;
+  user_email: string | null;
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -36,6 +44,7 @@ export default function AdminDashboard() {
     totalValuations: 0,
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [interestLogs, setInterestLogs] = useState<InterestLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -94,6 +103,34 @@ export default function AdminDashboard() {
         }));
 
         setRecentActivity(activities);
+
+        // Fetch interest logs
+        const { data: interests } = await supabase
+          .from('interest_logs' as any)
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (interests) {
+          // Fetch user profiles for these interests
+          const userIds = [...new Set((interests as any[]).map((i: any) => i.user_id))];
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, phone');
+
+          const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+
+          setInterestLogs((interests as any[]).map((interest: any) => {
+            const profile = profileMap.get(interest.user_id);
+            return {
+              id: interest.id,
+              ticker: interest.ticker,
+              created_at: interest.created_at,
+              user_name: profile?.full_name || 'N/A',
+              user_email: profile?.phone || null,
+            };
+          }));
+        }
       } catch (error) {
         console.error('Error fetching stats:', error);
       } finally {
@@ -222,6 +259,47 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Interest Logs */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="h-5 w-5" />
+                Interesses Registrados
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {interestLogs.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  Nenhum interesse registrado ainda
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {interestLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="flex items-center gap-4 p-3 rounded-lg bg-muted/50"
+                    >
+                      <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                        <Heart className="h-5 w-5 text-accent" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">
+                          {log.user_name} → <span className="text-accent font-bold">{log.ticker || 'N/A'}</span>
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {log.user_email || 'Sem telefone'}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(log.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </AdminLayout>
     </AdminRoute>
