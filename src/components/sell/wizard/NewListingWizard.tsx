@@ -136,6 +136,37 @@ const NewListingWizard = () => {
     }
   };
 
+  const generateTicker = async (category: string): Promise<string> => {
+    const prefixMap: Record<string, string> = {
+      tech: 'TECH', commerce: 'COME', industry: 'INDU', services: 'SERV',
+      food: 'FOOD', health: 'HEAL', education: 'EDUC', logistics: 'LOGI',
+      telecom: 'TELE', energy: 'ENER', construction: 'CONS', agro: 'AGRO',
+    };
+    const prefix = prefixMap[category] || category.substring(0, 4).toUpperCase();
+    
+    const { count } = await supabase
+      .from('listings')
+      .select('*', { count: 'exact', head: true })
+      .like('ticker', `${prefix}%`);
+    
+    let seq = (count || 0) + 1;
+    let ticker = `${prefix}${seq.toString().padStart(2, '0')}`;
+    
+    // Check uniqueness
+    const { data: existing } = await supabase
+      .from('listings')
+      .select('ticker')
+      .eq('ticker', ticker)
+      .maybeSingle();
+    
+    if (existing) {
+      seq++;
+      ticker = `${prefix}${seq.toString().padStart(2, '0')}`;
+    }
+    
+    return ticker;
+  };
+
   const handleSelectPlan = async (plan: 'basic' | 'master') => {
     if (!user) {
       toast.error('Você precisa estar logado');
@@ -145,6 +176,8 @@ const NewListingWizard = () => {
     setIsSubmitting(true);
 
     try {
+      const ticker = await generateTicker(formData.category);
+
       const { data, error } = await supabase
         .from('listings')
         .insert({
@@ -171,6 +204,7 @@ const NewListingWizard = () => {
           images: formData.images,
           plan: plan,
           status: plan === 'basic' ? 'active' : 'pending_payment',
+          ticker: ticker,
         })
         .select()
         .single();
@@ -180,8 +214,8 @@ const NewListingWizard = () => {
       setShowPlanModal(false);
       toast.success('Anúncio criado com sucesso!');
       
-      // Navigate to listing detail page
-      navigate(`/anuncio/${data.id}`);
+      // Navigate to Blind Teaser page
+      navigate(`/teaser/${ticker}`);
     } catch (error) {
       console.error('Error creating listing:', error);
       toast.error('Erro ao criar anúncio. Tente novamente.');

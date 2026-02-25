@@ -39,6 +39,7 @@ export type Database = {
           state: string | null
           status: string | null
           street: string | null
+          ticker: string | null
           title: string
           updated_at: string | null
           user_id: string
@@ -67,6 +68,7 @@ export type Database = {
           state?: string | null
           status?: string | null
           street?: string | null
+          ticker?: string | null
           title: string
           updated_at?: string | null
           user_id: string
@@ -95,6 +97,7 @@ export type Database = {
           state?: string | null
           status?: string | null
           street?: string | null
+          ticker?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string
@@ -427,6 +430,7 @@ export type Database = {
           square_meters: number | null
           state: string | null
           status: string | null
+          ticker: string | null
           title: string | null
           updated_at: string | null
         }
@@ -450,6 +454,7 @@ export type Database = {
           square_meters?: number | null
           state?: string | null
           status?: string | null
+          ticker?: string | null
           title?: string | null
           updated_at?: string | null
         }
@@ -473,6 +478,7 @@ export type Database = {
           square_meters?: number | null
           state?: string | null
           status?: string | null
+          ticker?: string | null
           title?: string | null
           updated_at?: string | null
         }

@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import Matching from "./pages/Matching";
 import MatchingResults from "./pages/MatchingResults";
 import EditListing from "./pages/EditListing";
+import BlindTeaser from "./pages/BlindTeaser";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/matching" element={<Matching />} />
             <Route path="/matching/resultados" element={<MatchingResults />} />
+            <Route path="/teaser/:ticker" element={<BlindTeaser />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
