@@ -23,7 +23,7 @@ const TeaserIntro = ({ description, category, foundationYear, city, state, addit
   })();
 
   return (
-    <section className="relative py-24 px-4 sm:px-8 bg-gray-950 overflow-hidden">
+    <section className="relative py-12 sm:py-24 px-4 sm:px-8 bg-gray-950 overflow-hidden">
       <div className="absolute inset-0 bg-grid-pattern opacity-30" />
 
       <div className="relative z-10 max-w-6xl mx-auto">
@@ -110,7 +110,7 @@ const TeaserIntro = ({ description, category, foundationYear, city, state, addit
           </motion.div>
 
           {/* 3D Brazil Map */}
-          <div className="md:col-span-2">
+          <div className="md:col-span-2 mx-auto max-w-[220px] sm:max-w-[320px] md:max-w-none">
             <BrazilMap highlightState={state} />
           </div>
         </div>

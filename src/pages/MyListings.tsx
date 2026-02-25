@@ -74,6 +74,7 @@ export default function MyListings() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
+  const [viewCounts, setViewCounts] = useState<Record<string, { total: number; unique: number }>>({});
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -97,6 +98,33 @@ export default function MyListings() {
 
       if (error) throw error;
       setListings(data || []);
+
+      // Fetch view counts for all listings
+      if (data && data.length > 0) {
+        const listingIds = data.map(l => l.id);
+        const { data: views } = await supabase
+          .from('teaser_views' as any)
+          .select('listing_id, viewer_id')
+          .in('listing_id', listingIds);
+
+        if (views) {
+          const counts: Record<string, { total: number; unique: number }> = {};
+          for (const v of views as any[]) {
+            if (!counts[v.listing_id]) counts[v.listing_id] = { total: 0, unique: 0 };
+            counts[v.listing_id].total++;
+          }
+          // Count unique viewer_ids per listing
+          const uniqueSets: Record<string, Set<string>> = {};
+          for (const v of views as any[]) {
+            if (!uniqueSets[v.listing_id]) uniqueSets[v.listing_id] = new Set();
+            if (v.viewer_id) uniqueSets[v.listing_id].add(v.viewer_id);
+          }
+          for (const [lid, s] of Object.entries(uniqueSets)) {
+            if (counts[lid]) counts[lid].unique = s.size;
+          }
+          setViewCounts(counts);
+        }
+      }
     } catch (error) {
       console.error('Error fetching listings:', error);
       toast.error('Erro ao carregar anúncios');
@@ -204,7 +232,7 @@ export default function MyListings() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Total</p>
@@ -232,6 +260,14 @@ export default function MyListings() {
                 <p className="text-sm text-muted-foreground">Pendentes</p>
                 <p className="text-2xl font-bold text-amber-500">
                   {listings.filter(l => l.status === 'pending').length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-border">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Visualizações</p>
+                <p className="text-2xl font-bold text-blue-500">
+                  {Object.values(viewCounts).reduce((sum, v) => sum + v.total, 0)}
                 </p>
               </CardContent>
             </Card>
@@ -403,6 +439,17 @@ export default function MyListings() {
                             <span className="flex items-center gap-1">
                               <Calendar className="w-3.5 h-3.5" />
                               {formatDate(listing.created_at)}
+                            </span>
+                          )}
+                          {viewCounts[listing.id] && (
+                            <span className="flex items-center gap-1 text-blue-500">
+                              <Eye className="w-3.5 h-3.5" />
+                              {viewCounts[listing.id].total} views
+                              {viewCounts[listing.id].unique > 0 && (
+                                <span className="text-muted-foreground">
+                                  ({viewCounts[listing.id].unique} únicos)
+                                </span>
+                              )}
                             </span>
                           )}
                         </div>

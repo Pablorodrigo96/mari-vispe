@@ -43,7 +43,7 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
   };
 
   return (
-    <section className="relative py-24 px-4 sm:px-8 bg-gray-950 overflow-hidden">
+    <section className="relative py-12 sm:py-24 px-4 sm:px-8 bg-gray-950 overflow-hidden">
       <div className="absolute inset-0 bg-grid-pattern opacity-40" />
 
       <div className="relative z-10 max-w-6xl mx-auto">
@@ -51,7 +51,7 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-8 sm:mb-16"
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-wider">
             Financeiro
@@ -72,7 +72,7 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
               <h3 className="text-lg font-bold text-white/80 mb-2">Evolução do Faturamento</h3>
               <p className="text-sm text-white/40 mb-6">Últimos 3 anos (estimativa)</p>
 
-              <div className="h-[280px]">
+              <div className="h-[220px] sm:h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} barCategoryGap="30%">
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsla(0,0%,100%,0.5)', fontSize: 12 }} />
@@ -109,15 +109,15 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
                 className="relative overflow-hidden rounded-2xl cursor-default group"
               >
                 {/* Dark header with gold label */}
-                <div className="bg-gray-800/80 px-5 py-3 flex items-center gap-2">
+                <div className="bg-gray-800/80 px-4 py-2 sm:px-5 sm:py-3 flex items-center gap-2">
                   <kpi.icon className="w-4 h-4 text-amber-500/70" />
                   <span className="text-xs font-bold text-amber-500/80 uppercase tracking-wider">
                     {kpi.label}
                   </span>
                 </div>
                 {/* Value body */}
-                <div className="gradient-gold px-5 py-5 relative overflow-hidden">
-                  <p className="text-xl sm:text-2xl font-black text-gray-900 relative z-10">
+                <div className="gradient-gold px-4 py-3 sm:px-5 sm:py-5 relative overflow-hidden">
+                  <p className="text-lg sm:text-2xl font-black text-gray-900 relative z-10">
                     {kpi.value}
                   </p>
                   {/* Animated bottom border */}
