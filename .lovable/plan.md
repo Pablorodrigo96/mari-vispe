@@ -1,37 +1,29 @@
 
 
-## Plano: Corrigir Hero e Mapa do Blind Teaser no Mobile
+## Plano: Adicionar Contador de Visualizações Visível na Página do Blind Teaser
 
-### Problemas identificados nas screenshots
-
-1. **Hero (image-39)**: Os arcos SVG decorativos do lado esquerdo cruzam o centro da tela no mobile (w-[300px] num ecrã de ~390px), passando por cima do texto "Blind Teaser" e do ticker. O branding PME.B3 aparece no canto inferior mesmo com `hidden sm:flex` -- parece estar visível.
-
-2. **Mapa (image-38)**: O mapa do Brasil aparece como um pequeno quadrado dourado (apenas o estado destacado é visível). A perspectiva 3D (`rotateX(12deg) rotateY(-10deg)`) combinada com `max-w-[220px]` torna o mapa minúsculo e irreconhecível no mobile. Há muito espaço vazio abaixo do mapa e acima do label "Operação em".
+### Problema
+Atualmente, as visualizações são registradas na tabela `teaser_views` e exibidas apenas na página "Meus Anúncios". O usuário quer que cada página do Blind Teaser (`/teaser/:ticker`) também mostre um contador de quantas vezes aquele teaser específico foi visualizado.
 
 ### Mudanças
 
-#### 1. `src/components/teaser/TeaserHero.tsx`
-- Reduzir opacidade dos arcos SVG no mobile para que nao dominem o centro da tela: adicionar classes de opacidade menores (`opacity-40 sm:opacity-100` no container dos arcos)
-- Esconder o arco direito no mobile (`hidden sm:block`)
-- Reduzir quantidade de particulas no mobile (renderizar apenas 6 em vez de 12 via CSS `hidden` nas pares)
-- Reduzir titulo para `text-4xl sm:text-5xl md:text-7xl lg:text-9xl` para nao ficar apertado
+#### `src/pages/BlindTeaser.tsx`
+- Após carregar o listing, buscar a contagem de views totais e únicos da tabela `teaser_views` para aquele `listing_id`
+- Passar os valores `totalViews` e `uniqueViews` para o componente `TeaserHero`
 
-#### 2. `src/components/teaser/BrazilMap.tsx`
-- Remover a perspectiva 3D no mobile -- a rotacao `rotateX(12deg) rotateY(-10deg)` causa o mapa ficar cortado/distorcido em telas pequenas
-- Usar media query via classe: no mobile, sem rotacao; no desktop, manter o efeito 3D
-- Aumentar o `max-w` do SVG no mobile para pelo menos `max-w-[280px]` para que os estados fiquem visiveis
-- Reduzir a amplitude do float animation no mobile (`y: [-3, 3, -3]` em vez de `[-6, 6, -6]`)
+#### `src/components/teaser/TeaserHero.tsx`
+- Receber props `totalViews` e `uniqueViews`
+- Exibir um badge discreto abaixo do ticker com ícone de olho: "X visualizações • Y únicos"
+- Estilo consistente com o visual financeiro do teaser (texto branco/dourado, semi-transparente)
 
-#### 3. `src/components/teaser/TeaserIntro.tsx`
-- No mobile, colocar o mapa **acima** do texto (order reverso no grid) para que o mapa tenha largura total da coluna em vez de ficar espremido
-- Reduzir `gap-16` para `gap-8 md:gap-16`
-- Reduzir `mb-16` do titulo para `mb-8 sm:mb-16`
+### Nota sobre RLS
+A tabela `teaser_views` tem RLS que permite SELECT apenas para donos do listing e admins. Para exibir o contador publicamente, será necessário criar uma database function `get_teaser_view_count(listing_id)` com `SECURITY DEFINER` que retorna apenas a contagem (sem expor dados individuais).
 
-### Seção Tecnica
+### Seção Técnica
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---|---|
-| `TeaserHero.tsx` | Reduzir opacidade arcos no mobile, esconder arco direito, titulo menor |
-| `BrazilMap.tsx` | Remover rotacao 3D no mobile, aumentar tamanho SVG, reduzir float |
-| `TeaserIntro.tsx` | Mapa acima do texto no mobile, gaps menores |
+| Migração SQL | Criar function `get_teaser_view_count` com SECURITY DEFINER |
+| `BlindTeaser.tsx` | Buscar contagem via RPC e passar para TeaserHero |
+| `TeaserHero.tsx` | Exibir badge com total e únicos |
 
