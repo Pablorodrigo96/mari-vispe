@@ -54,6 +54,7 @@ interface FormData {
   rentValue: string;
   iptuValue: string;
   saleReason: string;
+  videoUrl: string;
 }
 
 const NewListingWizard = () => {
@@ -205,6 +206,7 @@ const NewListingWizard = () => {
           iptu_value: parseCurrencyToNumber(formData.iptuValue) || null,
           sale_reason: formData.saleReason,
           images: formData.images,
+          video_url: formData.videoUrl || null,
           plan: plan,
           status: plan === 'basic' ? 'active' : 'pending_payment',
           ticker: ticker,
@@ -267,6 +269,9 @@ const NewListingWizard = () => {
             <StepImages
               images={formData.images}
               onChange={(images) => updateFormData('images', images)}
+              maxImages={5}
+              videoUrl={formData.videoUrl}
+              onVideoUrlChange={(url) => updateFormData('videoUrl', url)}
             />
           )}
           {currentStep === 4 && (

@@ -67,6 +67,8 @@ export default function EditListing() {
     rentValue: '',
     iptuValue: '',
     saleReason: '',
+    videoUrl: '',
+    plan: 'basic',
   });
 
   useEffect(() => {
@@ -119,6 +121,8 @@ export default function EditListing() {
         rentValue: formatCurrencyValue(data.rent_value ? Number(data.rent_value) : null),
         iptuValue: formatCurrencyValue(data.iptu_value ? Number(data.iptu_value) : null),
         saleReason: data.sale_reason || '',
+        videoUrl: (data as any).video_url || '',
+        plan: data.plan || 'basic',
       });
     } catch (error) {
       console.error('Error fetching listing:', error);
@@ -165,7 +169,8 @@ export default function EditListing() {
           iptu_value: parseCurrencyToNumber(formData.iptuValue) || null,
           sale_reason: formData.saleReason,
           images: formData.images,
-        })
+          video_url: formData.videoUrl || null,
+        } as any)
         .eq('id', id!);
 
       if (error) throw error;
@@ -270,6 +275,9 @@ export default function EditListing() {
                   <StepImages
                     images={formData.images}
                     onChange={(images) => updateFormData('images', images)}
+                    maxImages={formData.plan === 'master' ? 20 : 5}
+                    videoUrl={formData.videoUrl}
+                    onVideoUrlChange={(url) => updateFormData('videoUrl', url)}
                   />
                 </AccordionContent>
               </AccordionItem>

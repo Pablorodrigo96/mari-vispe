@@ -80,7 +80,13 @@ const Marketplace = () => {
         console.error('Error fetching listings:', fetchError);
         setError('Erro ao carregar anúncios. Tente novamente.');
       } else {
-        setListings(data || []);
+        // Sort: Master plan listings always come first (stable sort)
+        const sorted = [...(data || [])].sort((a, b) => {
+          if (a.plan === 'master' && b.plan !== 'master') return -1;
+          if (a.plan !== 'master' && b.plan === 'master') return 1;
+          return 0;
+        });
+        setListings(sorted);
       }
 
       setLoading(false);

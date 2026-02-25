@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Heart, MapPin, TrendingUp, Star, Calendar } from 'lucide-react';
+import { Heart, MapPin, TrendingUp, Star, Calendar, BadgeCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,12 @@ export function ListingCard({ listing }: ListingCardProps) {
         
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+          {(listing as any).verified && (
+            <Badge className="bg-accent text-accent-foreground gap-1">
+              <BadgeCheck className="h-3 w-3" />
+              Verificado
+            </Badge>
+          )}
           {isNew && (
             <Badge variant="outline" className="bg-card gap-1">
               <Star className="h-3 w-3" />

@@ -28,6 +28,8 @@ import {
   EyeOff,
   Ruler,
   Home,
+  BadgeCheck,
+  Play,
 } from 'lucide-react';
 import { categories } from '@/data/mockData';
 import { getCategoryFallbackImage } from '@/lib/categoryImages';
@@ -238,6 +240,12 @@ const ListingDetail = () => {
                   {listing.plan === 'master' && (
                     <Badge className="bg-accent text-accent-foreground">Master</Badge>
                   )}
+                  {(listing as any).verified && (
+                    <Badge className="bg-accent text-accent-foreground gap-1">
+                      <BadgeCheck className="w-3 h-3" />
+                      Verificado
+                    </Badge>
+                  )}
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                   {listing.title}
@@ -264,6 +272,26 @@ const ListingDetail = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Video Player */}
+            {(listing as any).video_url && (
+              <div className="mb-8">
+                <div className="aspect-video rounded-xl overflow-hidden bg-muted">
+                  {(() => {
+                    const url = (listing as any).video_url as string;
+                    const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+                    if (youtubeMatch) {
+                      return <iframe src={`https://www.youtube.com/embed/${youtubeMatch[1]}`} className="w-full h-full" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />;
+                    } else if (vimeoMatch) {
+                      return <iframe src={`https://player.vimeo.com/video/${vimeoMatch[1]}`} className="w-full h-full" allowFullScreen />;
+                    } else {
+                      return <video src={url} controls className="w-full h-full" />;
+                    }
+                  })()}
+                </div>
+              </div>
+            )}
 
             {/* Image Gallery */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
