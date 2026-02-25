@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import TeaserHero from '@/components/teaser/TeaserHero';
 import TeaserIntro from '@/components/teaser/TeaserIntro';
 import TeaserFinancials from '@/components/teaser/TeaserFinancials';
 import TeaserDetails from '@/components/teaser/TeaserDetails';
 import TeaserContact from '@/components/teaser/TeaserContact';
+import { toast } from 'sonner';
 
 interface TeaserListing {
   id: string;
@@ -28,20 +30,79 @@ interface TeaserListing {
 
 const BlindTeaser = () => {
   const { ticker } = useParams<{ ticker: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
   const [listing, setListing] = useState<TeaserListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const interestRegistered = useRef(false);
+
+  // Auto-register interest after auth redirect
+  useEffect(() => {
+    const registerInterest = async () => {
+      if (
+        !user ||
+        !listing ||
+        interestRegistered.current ||
+        searchParams.get('interest') !== 'true'
+      ) return;
+
+      interestRegistered.current = true;
+
+      try {
+        const { data: existing } = await supabase
+          .from('interest_logs' as any)
+          .select('id')
+          .eq('listing_id', listing.id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase
+            .from('interest_logs' as any)
+            .insert({
+              listing_id: listing.id,
+              user_id: user.id,
+              ticker: listing.ticker,
+            });
+          toast.success('Interesse registrado com sucesso!');
+        }
+      } catch (error) {
+        console.error('Error auto-registering interest:', error);
+      }
+
+      // Clean URL param
+      searchParams.delete('interest');
+      setSearchParams(searchParams, { replace: true });
+    };
+
+    registerInterest();
+  }, [user, listing, searchParams, setSearchParams]);
 
   useEffect(() => {
     const fetchListing = async () => {
       if (!ticker) return;
 
       try {
-        const { data, error } = await supabase
+        // Try public_listings view first
+        let { data, error } = await supabase
           .from('public_listings')
           .select('*')
           .eq('ticker', ticker)
           .maybeSingle();
+
+        // Fallback: try listings table directly for active listings
+        if (!data) {
+          const result = await supabase
+            .from('listings')
+            .select('*')
+            .eq('ticker', ticker)
+            .eq('status', 'active')
+            .maybeSingle();
+          
+          data = result.data;
+          error = result.error;
+        }
 
         if (error) throw error;
         if (!data) {

@@ -32,7 +32,12 @@ export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
+  const tabParam = searchParams.get('tab');
+  const interestParam = searchParams.get('interest');
   const { user, signIn, signUp, loading } = useAuth();
+  
+  // Pre-select buyer role when coming from teaser interest flow
+  const defaultRoles: UserRole[] = interestParam === 'true' ? ['buyer'] : [];
   
   // Login state
   const [loginEmail, setLoginEmail] = useState('');
@@ -44,7 +49,7 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
-  const [signupRoles, setSignupRoles] = useState<UserRole[]>([]);
+  const [signupRoles, setSignupRoles] = useState<UserRole[]>(defaultRoles);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -187,7 +192,7 @@ export default function Auth() {
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-6 shadow-card">
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue={tabParam === 'signup' ? 'signup' : 'login'} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Entrar</TabsTrigger>
               <TabsTrigger value="signup">Criar Conta</TabsTrigger>
