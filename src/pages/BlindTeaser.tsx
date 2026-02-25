@@ -109,7 +109,9 @@ const BlindTeaser = () => {
         if (!data) {
           setNotFound(true);
         } else {
-          setListing(data as unknown as TeaserListing);
+          const listingData = data as unknown as TeaserListing;
+          setListing(listingData);
+          document.title = `Blind Teaser ${listingData.ticker} | PME.B3`;
         }
       } catch (error) {
         console.error('Error fetching teaser:', error);
