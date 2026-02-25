@@ -1,52 +1,29 @@
 
 
-## Plano: Adicionar campo "Informações Gerais" ao formulário de cadastro e Blind Teaser
+## Plano: Remover branding Lovable dos meta tags OG e personalizar para PME.B3
 
-### Objetivo
-Adicionar um campo de texto livre no formulário de cadastro de empresas para informações adicionais relevantes ao teaser (diferenciais, prêmios, certificações, estrutura, etc.), e exibi-lo no Blind Teaser.
+### Problema
+Quando o link do Blind Teaser é compartilhado no WhatsApp, aparece "Lovable" como autor e referência porque o `index.html` contém `meta name="author" content="Lovable"` e `meta name="twitter:site" content="@Lovable"`.
 
 ### Mudanças
 
-#### 1. Migração de banco de dados
-- Adicionar coluna `additional_info` (tipo `text`, nullable) à tabela `listings`
-- Atualizar a view `public_listings` para incluir o novo campo
+#### 1. `index.html` — Atualizar meta tags
+- Alterar `meta author` de "Lovable" para "PME.B3"
+- Alterar `twitter:site` de "@Lovable" para "@pmeb3" (ou remover)
+- Atualizar `og:description` e `twitter:description` para algo mais impactante: "Oportunidades exclusivas de compra e venda de empresas"
+- Manter a imagem OG e favicon existentes (já são PME.B3)
 
-#### 2. `src/components/sell/wizard/StepDescriptionLocation.tsx`
-- Adicionar um segundo `<Textarea>` após a descrição, com label "Informações Adicionais para o Teaser"
-- Placeholder orientando o usuário: "Diferenciais, prêmios, certificações, estrutura da equipe, potencial de crescimento..."
-- Campo opcional, sem validação de mínimo de caracteres
-- Contador de caracteres como o da descrição
+#### 2. `src/pages/BlindTeaser.tsx` — Meta tags dinâmicos via `document.title`
+- Atualizar `document.title` quando o listing carrega para `"Blind Teaser ${ticker} | PME.B3"`
+- Atualizar meta description dinâmicamente via JS para a categoria/estado da empresa
 
-#### 3. `src/components/sell/wizard/listingSchema.ts`
-- Adicionar `additionalInfo: z.string().optional()` nos schemas (step2 e geral)
-- Adicionar ao `initialFormData`
+### Limitação técnica
+Como é uma SPA, crawlers do WhatsApp só leem o HTML estático do `index.html`. As meta tags dinâmicas via JS não serão capturadas pelo preview do WhatsApp, mas o título e descrição estáticos já mostrarão "PME.B3" corretamente em vez de "Lovable".
 
-#### 4. `src/components/sell/wizard/NewListingWizard.tsx`
-- Adicionar `additionalInfo` ao `FormData` interface e ao estado
-- Passar para `StepDescriptionLocation`
-- Incluir no insert do Supabase como `additional_info`
-
-#### 5. `src/pages/EditListing.tsx`
-- Adicionar `additionalInfo` ao formData
-- Carregar e salvar o campo `additional_info`
-
-#### 6. `src/pages/BlindTeaser.tsx`
-- Incluir `additional_info` na interface `TeaserListing`
-- Passar para `TeaserIntro` como nova prop
-
-#### 7. `src/components/teaser/TeaserIntro.tsx`
-- Receber prop `additionalInfo`
-- Exibir abaixo da descrição em um bloco visual diferenciado (com ícone e borda dourada), apenas se preenchido
-
-### Seção Técnica
+### Arquivos modificados
 
 | Arquivo | Ação |
 |---|---|
-| Migração SQL | `ALTER TABLE listings ADD COLUMN additional_info text` + atualizar view |
-| `StepDescriptionLocation.tsx` | Novo Textarea para informações adicionais |
-| `listingSchema.ts` | Adicionar `additionalInfo` opcional |
-| `NewListingWizard.tsx` | Incluir no estado e insert |
-| `EditListing.tsx` | Carregar e salvar campo |
-| `BlindTeaser.tsx` | Passar para TeaserIntro |
-| `TeaserIntro.tsx` | Exibir bloco de informações adicionais |
+| `index.html` | Remover referências a Lovable, atualizar descrições |
+| `src/pages/BlindTeaser.tsx` | Atualizar document.title dinamicamente |
 
