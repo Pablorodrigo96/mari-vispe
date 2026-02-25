@@ -7,7 +7,7 @@ interface TeaserHeroProps {
 
 const TeaserHero = ({ ticker }: TeaserHeroProps) => {
   return (
-    <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden bg-gray-950">
+    <section className="relative min-h-[60vh] sm:min-h-[80vh] flex items-center justify-center overflow-hidden bg-gray-950">
       {/* Multi-layer background */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-grid-pattern opacity-60" />
@@ -15,7 +15,7 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
       </div>
 
       {/* Left gold decorative arcs */}
-      <div className="absolute left-0 top-0 bottom-0 w-[600px] pointer-events-none">
+      <div className="absolute left-0 top-0 bottom-0 w-[300px] sm:w-[600px] pointer-events-none">
         <svg viewBox="0 0 600 900" className="h-full w-full" preserveAspectRatio="xMinYMid slice">
           <motion.path
             d="M 450 0 Q -50 250, 150 450 Q 350 650, 450 900"
@@ -117,14 +117,14 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-6 inline-flex items-center gap-3 px-8 py-3 rounded-full border border-amber-500/30 bg-amber-500/5 relative overflow-hidden"
+          className="mt-6 inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-8 py-2 sm:py-3 rounded-full border border-amber-500/30 bg-amber-500/5 relative overflow-hidden"
         >
           <motion.div
             className="absolute inset-0 rounded-full border-2 border-amber-500/20"
             animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }}
             transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
           />
-          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-gradient-gold tracking-[0.15em] font-mono relative z-10">
+          <span className="text-2xl sm:text-3xl md:text-5xl font-black text-gradient-gold tracking-[0.15em] font-mono relative z-10">
             {ticker}
           </span>
         </motion.div>
@@ -143,7 +143,7 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.2 }}
-        className="absolute bottom-8 right-8 flex items-center gap-3"
+        className="absolute bottom-8 right-8 hidden sm:flex items-center gap-3"
       >
         <motion.div
           animate={{ rotate: [0, 5, -5, 0] }}

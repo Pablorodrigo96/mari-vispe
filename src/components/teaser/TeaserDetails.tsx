@@ -33,7 +33,7 @@ const TeaserDetails = ({ squareMeters, rentValue, iptuValue, saleReason }: Tease
   ].filter((i) => i.value);
 
   return (
-    <section className="relative py-24 px-4 sm:px-8 bg-gray-900 overflow-hidden">
+    <section className="relative py-12 sm:py-24 px-4 sm:px-8 bg-gray-900 overflow-hidden">
       {/* Subtle city skyline pattern */}
       <div className="absolute bottom-0 left-0 right-0 h-32 opacity-5">
         <svg viewBox="0 0 1200 120" className="w-full h-full" preserveAspectRatio="none">
@@ -46,7 +46,7 @@ const TeaserDetails = ({ squareMeters, rentValue, iptuValue, saleReason }: Tease
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-8 sm:mb-16"
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-wider">
             Detalhes do Ponto
@@ -70,7 +70,7 @@ const TeaserDetails = ({ squareMeters, rentValue, iptuValue, saleReason }: Tease
               className="relative overflow-hidden rounded-2xl group cursor-default"
             >
               {/* Header */}
-              <div className="bg-gray-800/90 px-5 py-4 flex items-center gap-3">
+              <div className="bg-gray-800/90 px-4 py-3 sm:px-5 sm:py-4 flex items-center gap-3">
                 <motion.div
                   whileHover={{ rotate: 10 }}
                   className="w-9 h-9 rounded-lg gradient-gold flex items-center justify-center"
@@ -82,8 +82,8 @@ const TeaserDetails = ({ squareMeters, rentValue, iptuValue, saleReason }: Tease
                 </span>
               </div>
               {/* Body */}
-              <div className="bg-gray-800/50 px-5 py-6 border-t border-amber-500/10 relative overflow-hidden">
-                <p className="text-2xl sm:text-3xl font-black text-white relative z-10">
+              <div className="bg-gray-800/50 px-4 py-4 sm:px-5 sm:py-6 border-t border-amber-500/10 relative overflow-hidden">
+                <p className="text-xl sm:text-3xl font-black text-white relative z-10">
                   {item.value}
                   {item.suffix && (
                     <span className="text-base font-medium text-white/40 ml-1">{item.suffix}</span>

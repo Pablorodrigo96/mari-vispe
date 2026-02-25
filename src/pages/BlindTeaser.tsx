@@ -112,6 +112,18 @@ const BlindTeaser = () => {
           const listingData = data as unknown as TeaserListing;
           setListing(listingData);
           document.title = `Blind Teaser ${listingData.ticker} | PME.B3`;
+
+          // Register view
+          try {
+            await supabase
+              .from('teaser_views' as any)
+              .insert({
+                listing_id: listingData.id,
+                viewer_id: user?.id || null,
+              });
+          } catch (e) {
+            console.error('Error registering view:', e);
+          }
         }
       } catch (error) {
         console.error('Error fetching teaser:', error);
