@@ -538,6 +538,13 @@ export type Database = {
     }
     Functions: {
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      get_teaser_view_count: {
+        Args: { p_listing_id: string }
+        Returns: {
+          total_views: number
+          unique_views: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
