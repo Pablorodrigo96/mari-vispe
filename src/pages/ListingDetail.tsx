@@ -365,7 +365,7 @@ const ListingDetail = () => {
                   <h2 className="text-lg font-semibold text-foreground mb-4">
                     Sobre o Negócio
                   </h2>
-                  <p className="text-muted-foreground whitespace-pre-wrap">
+                  <p className="text-muted-foreground whitespace-pre-wrap break-words">
                     {listing.description}
                   </p>
                 </Card>
