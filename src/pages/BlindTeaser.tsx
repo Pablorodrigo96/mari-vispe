@@ -26,6 +26,7 @@ interface TeaserListing {
   rent_value: number | null;
   iptu_value: number | null;
   sale_reason: string | null;
+  additional_info: string | null;
 }
 
 const BlindTeaser = () => {
@@ -152,6 +153,7 @@ const BlindTeaser = () => {
         foundationYear={listing.foundation_year}
         city={listing.city}
         state={listing.state}
+        additionalInfo={listing.additional_info}
       />
       <TeaserFinancials
         annualRevenue={listing.annual_revenue}

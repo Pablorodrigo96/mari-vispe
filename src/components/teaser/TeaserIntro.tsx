@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { getCategoryLabel } from '@/lib/formatters';
+import { Award } from 'lucide-react';
 import BrazilMap from './BrazilMap';
 
 interface TeaserIntroProps {
@@ -8,9 +9,10 @@ interface TeaserIntroProps {
   foundationYear: number | null;
   city: string | null;
   state: string | null;
+  additionalInfo?: string | null;
 }
 
-const TeaserIntro = ({ description, category, foundationYear, city, state }: TeaserIntroProps) => {
+const TeaserIntro = ({ description, category, foundationYear, city, state, additionalInfo }: TeaserIntroProps) => {
   const introText = (() => {
     const parts: string[] = [];
     if (foundationYear) parts.push(`Fundada em ${foundationYear}`);
@@ -55,6 +57,27 @@ const TeaserIntro = ({ description, category, foundationYear, city, state }: Tea
               <p className="text-base sm:text-lg text-white/60 leading-relaxed break-words overflow-hidden" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                 {description}
               </p>
+            )}
+
+            {/* Additional Info Block */}
+            {additionalInfo && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Award className="w-5 h-5 text-amber-400" />
+                  <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider">
+                    Informações Gerais
+                  </h3>
+                </div>
+                <p className="text-base text-white/70 leading-relaxed break-words" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                  {additionalInfo}
+                </p>
+              </motion.div>
             )}
 
             {/* Category & Year badges */}

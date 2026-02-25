@@ -40,6 +40,7 @@ export type Database = {
       }
       listings: {
         Row: {
+          additional_info: string | null
           annual_profit: number | null
           annual_revenue: number | null
           asking_price: number | null
@@ -69,6 +70,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          additional_info?: string | null
           annual_profit?: number | null
           annual_revenue?: number | null
           asking_price?: number | null
@@ -98,6 +100,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          additional_info?: string | null
           annual_profit?: number | null
           annual_revenue?: number | null
           asking_price?: number | null
@@ -435,6 +438,7 @@ export type Database = {
     Views: {
       public_listings: {
         Row: {
+          additional_info: string | null
           annual_profit: number | null
           annual_revenue: number | null
           asking_price: number | null
@@ -459,6 +463,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          additional_info?: string | null
           annual_profit?: number | null
           annual_revenue?: number | null
           asking_price?: number | null
@@ -483,6 +488,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          additional_info?: string | null
           annual_profit?: number | null
           annual_revenue?: number | null
           asking_price?: number | null

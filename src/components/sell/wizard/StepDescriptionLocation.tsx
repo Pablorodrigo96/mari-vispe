@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 interface StepDescriptionLocationProps {
   data: {
     description: string;
+    additionalInfo: string;
     cep: string;
     street: string;
     neighborhood: string;
@@ -103,6 +104,21 @@ const StepDescriptionLocation = ({ data, onChange }: StepDescriptionLocationProp
             <span className={data.description.length >= 100 ? 'text-emerald-500' : ''}>
               {data.description.length} caracteres
             </span>
+          </div>
+        </div>
+
+        <div className="space-y-2 mt-6">
+          <Label htmlFor="additionalInfo">Informações Adicionais para o Teaser (opcional)</Label>
+          <Textarea
+            id="additionalInfo"
+            placeholder="Diferenciais competitivos, prêmios, certificações, estrutura da equipe, potencial de crescimento, parcerias estratégicas..."
+            value={data.additionalInfo}
+            onChange={(e) => onChange('additionalInfo', e.target.value)}
+            className="min-h-[120px] resize-none"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Informações extras que aparecerão no Blind Teaser</span>
+            <span>{data.additionalInfo.length} caracteres</span>
           </div>
         </div>
       </div>

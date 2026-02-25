@@ -55,6 +55,7 @@ export default function EditListing() {
     askingPrice: '',
     hidePrice: false,
     description: '',
+    additionalInfo: '',
     cep: '',
     street: '',
     neighborhood: '',
@@ -106,6 +107,7 @@ export default function EditListing() {
         askingPrice: formatCurrencyValue(data.asking_price ? Number(data.asking_price) : null),
         hidePrice: data.hide_price || false,
         description: data.description || '',
+        additionalInfo: (data as any).additional_info || '',
         cep: data.cep || '',
         street: data.street || '',
         neighborhood: data.neighborhood || '',
@@ -151,6 +153,7 @@ export default function EditListing() {
           asking_price: parseCurrencyToNumber(formData.askingPrice),
           hide_price: formData.hidePrice,
           description: formData.description,
+          additional_info: formData.additionalInfo || null,
           cep: formData.cep,
           street: formData.street || null,
           neighborhood: formData.neighborhood || null,
@@ -243,6 +246,7 @@ export default function EditListing() {
                   <StepDescriptionLocation
                     data={{
                       description: formData.description,
+                      additionalInfo: formData.additionalInfo,
                       cep: formData.cep,
                       street: formData.street,
                       neighborhood: formData.neighborhood,
