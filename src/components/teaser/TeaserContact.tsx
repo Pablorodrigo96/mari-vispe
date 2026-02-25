@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MessageCircle, Shield, UserPlus, CheckCircle } from 'lucide-react';
+import { MessageCircle, Shield, UserPlus, CheckCircle, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { openWhatsApp } from '@/lib/whatsapp';
 
 interface TeaserContactProps {
   listingId: string;
@@ -26,7 +27,6 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
 
     setIsRegistering(true);
     try {
-      // Check if already registered
       const { data: existing } = await supabase
         .from('interest_logs' as any)
         .select('id')
@@ -59,41 +59,74 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
     }
   };
 
-  const whatsappMessage = `Olá! Tenho interesse no ativo ${ticker} divulgado na PME.B3. Gostaria de mais informações.`;
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+  const handleWhatsApp = async () => {
+    const msg = `Olá! Tenho interesse no ativo ${ticker} divulgado na PME.B3. Gostaria de mais informações.`;
+    const opened = await openWhatsApp(msg);
+    if (!opened) {
+      toast.info('Link copiado! Cole no navegador para abrir o WhatsApp.');
+    }
+  };
 
   return (
-    <section className="relative py-20 px-4 sm:px-8 bg-gray-950 overflow-hidden">
-      {/* Gold decorative arc */}
-      <div className="absolute right-0 top-0 bottom-0 w-[400px] pointer-events-none">
-        <svg viewBox="0 0 400 800" className="h-full w-full" preserveAspectRatio="xMaxYMid slice">
-          <path
-            d="M 50 0 Q 400 200, 300 400 Q 200 600, 50 800"
+    <section className="relative py-24 px-4 sm:px-8 bg-gray-950 overflow-hidden">
+      {/* Dual gold arcs */}
+      <div className="absolute right-0 top-0 bottom-0 w-[500px] pointer-events-none">
+        <svg viewBox="0 0 500 800" className="h-full w-full" preserveAspectRatio="xMaxYMid slice">
+          <motion.path
+            d="M 50 0 Q 450 200, 300 400 Q 150 600, 50 800"
             fill="none"
             stroke="hsl(38, 92%, 50%)"
             strokeWidth="2"
-            opacity="0.4"
+            initial={{ pathLength: 0 }}
+            whileInView={{ pathLength: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 2 }}
+            opacity="0.5"
+          />
+          <motion.path
+            d="M 100 0 Q 500 200, 350 400 Q 200 600, 100 800"
+            fill="none"
+            stroke="hsl(38, 92%, 45%)"
+            strokeWidth="1.5"
+            initial={{ pathLength: 0 }}
+            whileInView={{ pathLength: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 2.5, delay: 0.3 }}
+            opacity="0.3"
+          />
+        </svg>
+      </div>
+
+      <div className="absolute left-0 top-0 bottom-0 w-[300px] pointer-events-none opacity-40">
+        <svg viewBox="0 0 300 800" className="h-full w-full" preserveAspectRatio="xMinYMid slice">
+          <motion.path
+            d="M 250 0 Q -50 200, 100 400 Q 250 600, 250 800"
+            fill="none"
+            stroke="hsl(38, 92%, 50%)"
+            strokeWidth="1.5"
+            initial={{ pathLength: 0 }}
+            whileInView={{ pathLength: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 2, delay: 0.5 }}
           />
         </svg>
       </div>
 
       <div className="relative z-10 max-w-2xl mx-auto">
-        <motion.h2
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-3xl sm:text-4xl md:text-5xl font-black text-white text-center mb-4 uppercase tracking-wider"
+          className="text-center mb-12"
         >
-          Interesse
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="text-white/50 text-center mb-12"
-        >
-          Demonstre seu interesse neste ativo de forma confidencial
-        </motion.p>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-wider">
+            Interesse
+          </h2>
+          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+          <p className="text-white/50 mt-6">
+            Demonstre seu interesse neste ativo de forma confidencial
+          </p>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -130,7 +163,7 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
               type="button"
               variant="outline"
               className="border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300"
-              onClick={() => window.open(whatsappUrl, '_blank')}
+              onClick={handleWhatsApp}
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               WhatsApp
@@ -138,24 +171,31 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
           </div>
         </motion.div>
 
-        {/* Disclaimer */}
+        {/* Enhanced Disclaimer */}
         <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 0.3 }}
-          className="mt-10 text-center"
+          className="mt-12"
         >
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Shield className="w-4 h-4 text-amber-500/60" />
-            <span className="text-xs text-white/40 uppercase tracking-wider font-semibold">Confidencialidade</span>
+          <div className="glass-card rounded-xl p-6">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Lock className="w-4 h-4 text-amber-500/60" />
+              <Shield className="w-4 h-4 text-amber-500/60" />
+              <span className="text-xs text-amber-500/70 uppercase tracking-[0.2em] font-bold">
+                Confidencialidade
+              </span>
+            </div>
+            <p className="text-xs text-white/30 text-center max-w-lg mx-auto leading-relaxed">
+              Este teaser foi elaborado pela PME.B3, é de extrema confidencialidade e não poderá ser compartilhado
+              por outras fontes. A veracidade e a acurácia das informações aqui demonstradas são de responsabilidade
+              exclusiva do fornecedor. As informações contidas neste documento são de caráter meramente informativo
+              e não constituem oferta, solicitação ou recomendação de investimento.
+            </p>
           </div>
-          <p className="text-xs text-white/30 max-w-lg mx-auto leading-relaxed">
-            Este teaser foi elaborado pela PME.B3, é de extrema confidencialidade e não poderá ser compartilhado 
-            por outras fontes. A veracidade e a acurácia das informações aqui demonstradas são de responsabilidade 
-            exclusiva do fornecedor.
-          </p>
-          <p className="text-sm font-semibold text-white/50 mt-6 tracking-widest">PME.B3</p>
+
+          <p className="text-sm font-bold text-white/40 mt-6 tracking-[0.3em] text-center">PME.B3</p>
         </motion.div>
       </div>
     </section>
