@@ -53,17 +53,16 @@ const BrazilMap = ({ highlightState }: BrazilMapProps) => {
       viewport={{ once: true }}
       transition={{ duration: 0.8 }}
       className="relative"
-      style={{ perspective: '800px' }}
+      style={{ perspective: '800px' } as React.CSSProperties}
     >
       <motion.div
-        animate={{ y: [-6, 6, -6] }}
+        animate={{ y: [-3, 3, -3] }}
         transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-        className="transition-transform duration-700"
-        style={{ transform: 'rotateX(12deg) rotateY(-10deg)' }}
+        className="transition-transform duration-700 md:[transform:rotateX(12deg)_rotateY(-10deg)]"
       >
         <svg
           viewBox="80 200 370 410"
-          className="w-full h-auto max-w-[320px] mx-auto"
+          className="w-full h-auto max-w-[280px] md:max-w-[320px] mx-auto"
           style={{ filter: 'drop-shadow(0 20px 40px hsla(38, 92%, 50%, 0.15))' }}
           xmlns="http://www.w3.org/2000/svg"
         >
