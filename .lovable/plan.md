@@ -1,63 +1,52 @@
 
 
-## Plano: Ajustes visuais e animacoes do Blind Teaser
+## Plano: Adicionar campo "Informações Gerais" ao formulário de cadastro e Blind Teaser
 
-### Problemas identificados
+### Objetivo
+Adicionar um campo de texto livre no formulário de cadastro de empresas para informações adicionais relevantes ao teaser (diferenciais, prêmios, certificações, estrutura, etc.), e exibi-lo no Blind Teaser.
 
-1. **Texto de descricao extrapolando a pagina** — o `<p>` com `whitespace-pre-wrap` nao quebra palavras longas. Falta `break-words` / `overflow-wrap: break-word`.
-2. **Mapa do Brasil muito basico** — usa retangulos simples em vez de formas realistas dos estados. Comparado com a referencia (blocos 3D dourados), precisa de mais volume visual.
-3. **Poucas animacoes** — as transicoes sao simples fade/slide. Faltam efeitos de hover, stagger mais elaborado, e animacoes continuas.
+### Mudanças
 
-### Mudancas
+#### 1. Migração de banco de dados
+- Adicionar coluna `additional_info` (tipo `text`, nullable) à tabela `listings`
+- Atualizar a view `public_listings` para incluir o novo campo
 
-#### 1. `src/components/teaser/TeaserIntro.tsx` — Corrigir overflow + animacoes
+#### 2. `src/components/sell/wizard/StepDescriptionLocation.tsx`
+- Adicionar um segundo `<Textarea>` após a descrição, com label "Informações Adicionais para o Teaser"
+- Placeholder orientando o usuário: "Diferenciais, prêmios, certificações, estrutura da equipe, potencial de crescimento..."
+- Campo opcional, sem validação de mínimo de caracteres
+- Contador de caracteres como o da descrição
 
-- Adicionar `break-words overflow-hidden` no `<p>` da descricao (linha 55)
-- Remover `whitespace-pre-wrap` que forca texto sem quebra
-- Adicionar `word-break: break-word` via classe
-- Adicionar animacao stagger nos badges (category/year)
-- Adicionar hover scale sutil nos badges
+#### 3. `src/components/sell/wizard/listingSchema.ts`
+- Adicionar `additionalInfo: z.string().optional()` nos schemas (step2 e geral)
+- Adicionar ao `initialFormData`
 
-#### 2. `src/components/teaser/BrazilMap.tsx` — Visual mais sofisticado
+#### 4. `src/components/sell/wizard/NewListingWizard.tsx`
+- Adicionar `additionalInfo` ao `FormData` interface e ao estado
+- Passar para `StepDescriptionLocation`
+- Incluir no insert do Supabase como `additional_info`
 
-- Manter os paths retangulares mas adicionar efeito de "blocos 3D" com sombras e transforms escalonados por estado
-- Adicionar animacao de flutuacao continua (float) no mapa inteiro
-- Adicionar efeito de hover individual nos estados (scale sutil)
-- Pulse mais visivel no estado destacado
-- Sombra drop-shadow mais forte no conjunto
+#### 5. `src/pages/EditListing.tsx`
+- Adicionar `additionalInfo` ao formData
+- Carregar e salvar o campo `additional_info`
 
-#### 3. `src/components/teaser/TeaserHero.tsx` — Mais particulas e parallax
+#### 6. `src/pages/BlindTeaser.tsx`
+- Incluir `additional_info` na interface `TeaserListing`
+- Passar para `TeaserIntro` como nova prop
 
-- Aumentar particulas flutuantes de 6 para 12 com tamanhos variados
-- Adicionar efeito de "shimmer" no titulo (gradiente animado)
-- Animacao de pulse no ticker badge
+#### 7. `src/components/teaser/TeaserIntro.tsx`
+- Receber prop `additionalInfo`
+- Exibir abaixo da descrição em um bloco visual diferenciado (com ícone e borda dourada), apenas se preenchido
 
-#### 4. `src/components/teaser/TeaserFinancials.tsx` — Animacoes nos KPIs
+### Seção Técnica
 
-- Adicionar hover effect nos KPI cards (elevacao + brilho)
-- Stagger mais longo nas animacoes de entrada
-- Borda inferior dourada animada nos cards
-
-#### 5. `src/components/teaser/TeaserDetails.tsx` — Hover e glow
-
-- Adicionar glow effect nos cards ao hover
-- Animacao de entrada mais dramatica (scale + fade combinados)
-
-#### 6. `src/components/teaser/TeaserContact.tsx` — Botoes animados
-
-- Adicionar pulse animation no botao "Registrar Interesse"
-- Hover effect mais visivel nos botoes
-
-### Secao Tecnica
-
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---|---|
-| `src/components/teaser/TeaserIntro.tsx` | Fix overflow texto + stagger badges |
-| `src/components/teaser/BrazilMap.tsx` | Efeito 3D blocos + float + hover states |
-| `src/components/teaser/TeaserHero.tsx` | Mais particulas + shimmer titulo |
-| `src/components/teaser/TeaserFinancials.tsx` | Hover KPIs + stagger |
-| `src/components/teaser/TeaserDetails.tsx` | Glow hover + entrada dramatica |
-| `src/components/teaser/TeaserContact.tsx` | Pulse botao + hover |
-
-Nenhuma mudanca de banco de dados necessaria.
+| Migração SQL | `ALTER TABLE listings ADD COLUMN additional_info text` + atualizar view |
+| `StepDescriptionLocation.tsx` | Novo Textarea para informações adicionais |
+| `listingSchema.ts` | Adicionar `additionalInfo` opcional |
+| `NewListingWizard.tsx` | Incluir no estado e insert |
+| `EditListing.tsx` | Carregar e salvar campo |
+| `BlindTeaser.tsx` | Passar para TeaserIntro |
+| `TeaserIntro.tsx` | Exibir bloco de informações adicionais |
 
