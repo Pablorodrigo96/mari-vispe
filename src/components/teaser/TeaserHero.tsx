@@ -15,7 +15,7 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
       </div>
 
       {/* Left gold decorative arcs */}
-      <div className="absolute left-0 top-0 bottom-0 w-[300px] sm:w-[600px] pointer-events-none">
+      <div className="absolute left-0 top-0 bottom-0 w-[200px] sm:w-[600px] pointer-events-none opacity-30 sm:opacity-100">
         <svg viewBox="0 0 600 900" className="h-full w-full" preserveAspectRatio="xMinYMid slice">
           <motion.path
             d="M 450 0 Q -50 250, 150 450 Q 350 650, 450 900"
@@ -42,7 +42,7 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
       </div>
 
       {/* Right gold arc */}
-      <div className="absolute right-0 top-0 bottom-0 w-[300px] pointer-events-none opacity-30">
+      <div className="absolute right-0 top-0 bottom-0 w-[300px] pointer-events-none opacity-30 hidden sm:block">
         <svg viewBox="0 0 300 900" className="h-full w-full" preserveAspectRatio="xMaxYMid slice">
           <motion.path
             d="M 50 0 Q 350 300, 150 450 Q -50 600, 50 900"
@@ -57,7 +57,7 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
       {[...Array(12)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute rounded-full bg-amber-500/30"
+          className={`absolute rounded-full bg-amber-500/30 ${i % 2 === 0 ? '' : 'hidden sm:block'}`}
           style={{
             width: `${2 + (i % 4)}px`,
             height: `${2 + (i % 4)}px`,
@@ -99,7 +99,7 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-5xl sm:text-7xl md:text-9xl font-black text-white tracking-tight relative"
+          className="text-4xl sm:text-5xl md:text-7xl lg:text-9xl font-black text-white tracking-tight relative"
         >
           <span className="relative inline-block">
             Blind Teaser

@@ -31,7 +31,7 @@ const TeaserIntro = ({ description, category, foundationYear, city, state, addit
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-8 sm:mb-16"
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-wider">
             Introdução
@@ -39,7 +39,7 @@ const TeaserIntro = ({ description, category, foundationYear, city, state, addit
           <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-16 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-16 items-start">
           {/* Text content */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -110,7 +110,7 @@ const TeaserIntro = ({ description, category, foundationYear, city, state, addit
           </motion.div>
 
           {/* 3D Brazil Map */}
-          <div className="md:col-span-2 mx-auto max-w-[220px] sm:max-w-[320px] md:max-w-none">
+          <div className="md:col-span-2 mx-auto max-w-[280px] sm:max-w-[320px] md:max-w-none order-first md:order-last">
             <BrazilMap highlightState={state} />
           </div>
         </div>
