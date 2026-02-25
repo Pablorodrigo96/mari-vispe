@@ -39,7 +39,10 @@ import {
   Share2,
   Copy,
   Mail,
-  MessageCircle
+  MessageCircle,
+  MousePointerClick,
+  TrendingUp,
+  Crown,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
@@ -59,6 +62,12 @@ interface Listing {
   annual_revenue: number | null;
   annual_profit: number | null;
   ticker: string | null;
+  plan: string | null;
+}
+
+interface ListingMetrics {
+  views: number;
+  contacts: number;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -74,7 +83,8 @@ export default function MyListings() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
-  const [viewCounts, setViewCounts] = useState<Record<string, { total: number; unique: number }>>({});
+  const [metrics, setMetrics] = useState<Record<string, ListingMetrics>>({});
+  const hasMasterListing = listings.some(l => l.plan === 'master');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -92,37 +102,29 @@ export default function MyListings() {
     try {
       const { data, error } = await supabase
         .from('listings')
-        .select('id, title, category, city, state, asking_price, hide_price, status, images, created_at, annual_revenue, annual_profit, ticker')
+        .select('id, title, category, city, state, asking_price, hide_price, status, images, created_at, annual_revenue, annual_profit, ticker, plan')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setListings(data || []);
 
-      // Fetch view counts for all listings
+      // Fetch analytics from listing_views
       if (data && data.length > 0) {
         const listingIds = data.map(l => l.id);
         const { data: views } = await supabase
-          .from('teaser_views' as any)
-          .select('listing_id, viewer_id')
+          .from('listing_views' as any)
+          .select('listing_id, event_type')
           .in('listing_id', listingIds);
 
         if (views) {
-          const counts: Record<string, { total: number; unique: number }> = {};
+          const m: Record<string, ListingMetrics> = {};
           for (const v of views as any[]) {
-            if (!counts[v.listing_id]) counts[v.listing_id] = { total: 0, unique: 0 };
-            counts[v.listing_id].total++;
+            if (!m[v.listing_id]) m[v.listing_id] = { views: 0, contacts: 0 };
+            if (v.event_type === 'view') m[v.listing_id].views++;
+            else if (v.event_type === 'contact_click') m[v.listing_id].contacts++;
           }
-          // Count unique viewer_ids per listing
-          const uniqueSets: Record<string, Set<string>> = {};
-          for (const v of views as any[]) {
-            if (!uniqueSets[v.listing_id]) uniqueSets[v.listing_id] = new Set();
-            if (v.viewer_id) uniqueSets[v.listing_id].add(v.viewer_id);
-          }
-          for (const [lid, s] of Object.entries(uniqueSets)) {
-            if (counts[lid]) counts[lid].unique = s.size;
-          }
-          setViewCounts(counts);
+          setMetrics(m);
         }
       }
     } catch (error) {
@@ -266,8 +268,16 @@ export default function MyListings() {
             <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Visualizações</p>
-                <p className="text-2xl font-bold text-blue-500">
-                  {Object.values(viewCounts).reduce((sum, v) => sum + v.total, 0)}
+                <p className="text-2xl font-bold text-accent">
+                  {Object.values(metrics).reduce((sum, m) => sum + m.views, 0)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-border">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Contatos</p>
+                <p className="text-2xl font-bold text-accent">
+                  {Object.values(metrics).reduce((sum, m) => sum + m.contacts, 0)}
                 </p>
               </CardContent>
             </Card>
@@ -441,15 +451,30 @@ export default function MyListings() {
                               {formatDate(listing.created_at)}
                             </span>
                           )}
-                          {viewCounts[listing.id] && (
-                            <span className="flex items-center gap-1 text-blue-500">
-                              <Eye className="w-3.5 h-3.5" />
-                              {viewCounts[listing.id].total} views
-                              {viewCounts[listing.id].unique > 0 && (
-                                <span className="text-muted-foreground">
-                                  ({viewCounts[listing.id].unique} únicos)
+                          {metrics[listing.id] && (
+                            <>
+                              <span className="flex items-center gap-1 text-accent">
+                                <Eye className="w-3.5 h-3.5" />
+                                {metrics[listing.id].views} views
+                              </span>
+                              {(listing.plan === 'master' && metrics[listing.id].contacts > 0) && (
+                                <span className="flex items-center gap-1 text-accent">
+                                  <MousePointerClick className="w-3.5 h-3.5" />
+                                  {metrics[listing.id].contacts} contatos
                                 </span>
                               )}
+                              {listing.plan === 'master' && metrics[listing.id].views > 0 && (
+                                <span className="flex items-center gap-1 text-muted-foreground">
+                                  <TrendingUp className="w-3.5 h-3.5" />
+                                  {((metrics[listing.id].contacts / metrics[listing.id].views) * 100).toFixed(1)}% conversão
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {listing.plan !== 'master' && (
+                            <span className="flex items-center gap-1 text-amber-500 text-xs">
+                              <Crown className="w-3.5 h-3.5" />
+                              Upgrade para métricas detalhadas
                             </span>
                           )}
                         </div>

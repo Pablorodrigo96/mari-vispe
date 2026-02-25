@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -80,6 +81,7 @@ const formatCurrency = (value: number) => {
 
 const ListingDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -90,6 +92,27 @@ const ListingDetail = () => {
     message: '',
   });
   const [isSending, setIsSending] = useState(false);
+  const viewTracked = useRef(false);
+
+  // Track listing view
+  useEffect(() => {
+    if (!listing || viewTracked.current) return;
+    viewTracked.current = true;
+    supabase.from('listing_views' as any).insert({
+      listing_id: listing.id,
+      user_id: user?.id || null,
+      event_type: 'view',
+    }).then(() => {});
+  }, [listing, user]);
+
+  const trackContactClick = () => {
+    if (!listing) return;
+    supabase.from('listing_views' as any).insert({
+      listing_id: listing.id,
+      user_id: user?.id || null,
+      event_type: 'contact_click',
+    }).then(() => {});
+  };
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -151,6 +174,7 @@ const ListingDetail = () => {
       }
 
       toast.success('Mensagem enviada com sucesso! O anunciante será notificado.');
+      trackContactClick();
       setContactForm({ name: '', email: '', phone: '', message: '' });
     } catch (error) {
       console.error('Error:', error);
@@ -536,6 +560,7 @@ const ListingDetail = () => {
                       variant="outline"
                       className="w-full"
                       onClick={async () => {
+                        trackContactClick();
                         const opened = await openWhatsApp(`Olá! Tenho interesse no anúncio: ${listing.title}`);
                         if (!opened) {
                           toast.success('Link do WhatsApp copiado! Cole no navegador para abrir.');
