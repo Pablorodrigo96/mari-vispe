@@ -12,6 +12,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -34,10 +35,15 @@ import {
   Trash2,
   Building2,
   MapPin,
-  Calendar
+  Calendar,
+  Share2,
+  Copy,
+  Mail,
+  MessageCircle
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
+import { getWhatsAppLink } from '@/lib/whatsapp';
 
 interface Listing {
   id: string;
@@ -52,6 +58,7 @@ interface Listing {
   created_at: string | null;
   annual_revenue: number | null;
   annual_profit: number | null;
+  ticker: string | null;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -84,7 +91,7 @@ export default function MyListings() {
     try {
       const { data, error } = await supabase
         .from('listings')
-        .select('id, title, category, city, state, asking_price, hide_price, status, images, created_at, annual_revenue, annual_profit')
+        .select('id, title, category, city, state, asking_price, hide_price, status, images, created_at, annual_revenue, annual_profit, ticker')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
@@ -317,6 +324,44 @@ export default function MyListings() {
                                 <Eye className="w-4 h-4 mr-2" />
                                 Visualizar
                               </DropdownMenuItem>
+                              {listing.ticker && (
+                                <>
+                                  <DropdownMenuItem onClick={() => navigate(`/teaser/${listing.ticker}`)}>
+                                    <Share2 className="w-4 h-4 mr-2" />
+                                    Ver Blind Teaser
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    const url = `${window.location.origin}/teaser/${listing.ticker}`;
+                                    const msg = `Confira esta oportunidade de negócio: ${url}`;
+                                    window.open(getWhatsAppLink(msg), '_blank', 'noopener,noreferrer');
+                                  }}>
+                                    <MessageCircle className="w-4 h-4 mr-2" />
+                                    Compartilhar via WhatsApp
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    const url = `${window.location.origin}/teaser/${listing.ticker}`;
+                                    const subject = encodeURIComponent('Oportunidade de negócio');
+                                    const body = encodeURIComponent(`Confira esta oportunidade de negócio:\n${url}`);
+                                    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+                                  }}>
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    Compartilhar por Email
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={async () => {
+                                    const url = `${window.location.origin}/teaser/${listing.ticker}`;
+                                    try {
+                                      await navigator.clipboard.writeText(url);
+                                      toast.success('Link copiado!');
+                                    } catch {
+                                      toast.error('Erro ao copiar link');
+                                    }
+                                  }}>
+                                    <Copy className="w-4 h-4 mr-2" />
+                                    Copiar Link do Teaser
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => navigate(`/editar-anuncio/${listing.id}`)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Editar
