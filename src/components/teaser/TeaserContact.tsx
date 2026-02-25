@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MessageCircle, Shield, UserPlus, CheckCircle, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,15 +20,33 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
   const navigate = useNavigate();
   const [isRegistering, setIsRegistering] = useState(false);
   const [registered, setRegistered] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  const handleRegisterInterest = async () => {
-    if (!user) {
-      navigate(`/auth?redirect=/teaser/${ticker}&tab=signup&interest=true`);
-      return;
-    }
+  const [investorName, setInvestorName] = useState('');
+  const [investorCompany, setInvestorCompany] = useState('');
+  const [investorEmail, setInvestorEmail] = useState('');
+  const [investorWhatsapp, setInvestorWhatsapp] = useState('');
 
-    setIsRegistering(true);
-    try {
+  // Pre-fill from profile when user is logged in
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      setInvestorEmail(user.email || '');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, company_name, phone')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (profile) {
+        setInvestorName(profile.full_name || '');
+        setInvestorCompany(profile.company_name || '');
+        setInvestorWhatsapp(profile.phone || '');
+      }
+
+      // Check if already registered interest
       const { data: existing } = await supabase
         .from('interest_logs' as any)
         .select('id')
@@ -35,21 +55,48 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
         .maybeSingle();
 
       if (existing) {
-        toast.info('Você já registrou interesse neste ativo.');
         setRegistered(true);
-        return;
       }
+    };
 
+    fetchProfile();
+  }, [user, listingId]);
+
+  const handleStartInterest = () => {
+    if (!user) {
+      navigate(`/auth?redirect=/teaser/${ticker}&tab=signup&interest=true`);
+      return;
+    }
+    setShowForm(true);
+  };
+
+  const handleSubmitInterest = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!user) return;
+
+    if (!investorName.trim() || !investorEmail.trim()) {
+      toast.error('Preencha ao menos nome e e-mail.');
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
       const { error } = await supabase
         .from('interest_logs' as any)
         .insert({
           listing_id: listingId,
           user_id: user.id,
           ticker,
+          investor_name: investorName.trim(),
+          investor_company: investorCompany.trim() || null,
+          investor_email: investorEmail.trim(),
+          investor_whatsapp: investorWhatsapp.trim() || null,
         });
 
       if (error) throw error;
       setRegistered(true);
+      setShowForm(false);
       toast.success('Interesse registrado com sucesso!');
     } catch (error) {
       console.error('Error registering interest:', error);
@@ -135,13 +182,81 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
           className="glass-card rounded-2xl p-6 sm:p-10 text-center space-y-6"
         >
           {registered ? (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <CheckCircle className="w-16 h-16 text-green-400 mx-auto" />
               <h3 className="text-2xl font-bold text-white">Interesse Registrado!</h3>
               <p className="text-white/60">
-                Seu interesse foi registrado com sucesso. Entraremos em contato em breve.
+                Seu interesse foi registrado com sucesso. Se quiser acelerar o contato, fale com nosso time clicando abaixo.
               </p>
+              <Button
+                type="button"
+                className="gradient-gold text-gray-900 font-bold hover:opacity-90 px-8 py-4"
+                onClick={handleWhatsApp}
+              >
+                <MessageCircle className="w-5 h-5 mr-2" />
+                Falar com nosso time via WhatsApp
+              </Button>
             </div>
+          ) : showForm ? (
+            <form onSubmit={handleSubmitInterest} className="space-y-4 text-left">
+              <div>
+                <Label className="text-white/80">Nome completo *</Label>
+                <Input
+                  value={investorName}
+                  onChange={e => setInvestorName(e.target.value)}
+                  placeholder="Seu nome"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                  required
+                />
+              </div>
+              <div>
+                <Label className="text-white/80">Empresa</Label>
+                <Input
+                  value={investorCompany}
+                  onChange={e => setInvestorCompany(e.target.value)}
+                  placeholder="Nome da empresa"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                />
+              </div>
+              <div>
+                <Label className="text-white/80">E-mail *</Label>
+                <Input
+                  type="email"
+                  value={investorEmail}
+                  onChange={e => setInvestorEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                  required
+                />
+              </div>
+              <div>
+                <Label className="text-white/80">WhatsApp</Label>
+                <Input
+                  value={investorWhatsapp}
+                  onChange={e => setInvestorWhatsapp(e.target.value)}
+                  placeholder="(00) 00000-0000"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 border-white/20 text-white/70 hover:bg-white/10"
+                  onClick={() => setShowForm(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isRegistering}
+                  className="flex-1 gradient-gold text-gray-900 font-bold hover:opacity-90 border-0"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {isRegistering ? 'Registrando...' : 'Confirmar Interesse'}
+                </Button>
+              </div>
+            </form>
           ) : (
             <>
               <p className="text-white/70 text-lg">
@@ -153,28 +268,29 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
                 className="inline-block rounded-xl"
               >
                 <Button
-                  onClick={handleRegisterInterest}
-                  disabled={isRegistering}
+                  onClick={handleStartInterest}
                   className="w-full sm:w-auto px-8 py-4 sm:px-12 sm:py-6 text-lg font-bold gradient-gold text-gray-900 hover:opacity-90 hover:scale-105 transition-transform duration-200 border-0 rounded-xl"
                 >
                   <UserPlus className="w-5 h-5 mr-2" />
-                  {isRegistering ? 'Registrando...' : 'Registrar Interesse'}
+                  Registrar Interesse
                 </Button>
               </motion.div>
             </>
           )}
 
-          <div className="pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 hover:scale-105 transition-all duration-200"
-              onClick={handleWhatsApp}
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              WhatsApp
-            </Button>
-          </div>
+          {!registered && !showForm && (
+            <div className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 hover:scale-105 transition-all duration-200"
+                onClick={handleWhatsApp}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                WhatsApp
+              </Button>
+            </div>
+          )}
         </motion.div>
 
         {/* Enhanced Disclaimer */}

@@ -18,6 +18,10 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          investor_company: string | null
+          investor_email: string | null
+          investor_name: string | null
+          investor_whatsapp: string | null
           listing_id: string
           ticker: string | null
           user_id: string
@@ -25,6 +29,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          investor_company?: string | null
+          investor_email?: string | null
+          investor_name?: string | null
+          investor_whatsapp?: string | null
           listing_id: string
           ticker?: string | null
           user_id: string
@@ -32,6 +40,10 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          investor_company?: string | null
+          investor_email?: string | null
+          investor_name?: string | null
+          investor_whatsapp?: string | null
           listing_id?: string
           ticker?: string | null
           user_id?: string
