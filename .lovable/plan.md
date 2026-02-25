@@ -1,96 +1,131 @@
 
 
-## Plano: 4 Features do Plano Master
+## Plano: Analytics de Anúncios para Plano Master
 
-### 1. Prioridade nas Buscas do Marketplace
-
-**Problema**: Listings Master e Básico aparecem misturados, sem destaque para quem paga.
-
-**Solução**: No `Marketplace.tsx`, após aplicar o sort escolhido pelo usuário, reordenar o array `listings` para que `plan === 'master'` venha sempre primeiro, mantendo a ordem relativa dentro de cada grupo.
-
-| Arquivo | Ação |
-|---|---|
-| `Marketplace.tsx` | Após `setListings(data)`, ordenar o array colocando `master` primeiro |
+### Objetivo
+Registrar visualizações e cliques de contato em cada listing do marketplace, e exibir um painel de métricas na página "Meus Anúncios" para usuários com plano Master.
 
 ---
 
-### 2. Selo "Verificado" Funcional
+### 1. Nova Tabela: `listing_views`
 
-**Problema**: Não existe campo `verified` na tabela `listings`. O selo é apenas visual/mock.
+Tabela para registrar cada visualização de um anúncio no marketplace (página de detalhe).
 
-**Solução**:
-- Migração: adicionar coluna `verified boolean default false` na tabela `listings`
-- Admin: no dropdown de ações do `AdminListings.tsx`, adicionar opção "Marcar como Verificado" / "Remover Verificado"
-- Marketplace: no `ListingCard.tsx`, exibir badge "Verificado" com ícone de check quando `listing.verified === true`
-- Detalhe: no `ListingDetail.tsx`, exibir o mesmo badge ao lado do título
+```text
+listing_views
+├── id (uuid, PK, default gen_random_uuid())
+├── listing_id (uuid, NOT NULL)
+├── viewer_ip (text, nullable) -- para contagem de únicos quando não logado
+├── user_id (uuid, nullable) -- quando o visitante está logado
+├── event_type (text, NOT NULL, default 'view') -- 'view' ou 'contact_click'
+├── created_at (timestamptz, NOT NULL, default now())
+```
 
-| Arquivo | Ação |
-|---|---|
-| Migração SQL | `ALTER TABLE listings ADD COLUMN verified boolean DEFAULT false` |
-| `AdminListings.tsx` | Adicionar toggle de verificação no dropdown de ações |
-| `ListingCard.tsx` | Exibir badge "Verificado" quando `listing.verified` |
-| `ListingDetail.tsx` | Exibir badge "Verificado" no header |
-
----
-
-### 3. Suporte a Vídeo nos Anúncios
-
-**Problema**: Não existe campo para URL de vídeo nem player.
-
-**Solução**:
-- Migração: adicionar coluna `video_url text` na tabela `listings`
-- Wizard de criação (`NewListingWizard.tsx`): adicionar campo de URL de vídeo no step de fotos (`StepImages.tsx`)
-- Edição (`EditListing.tsx`): adicionar campo de vídeo
-- Detalhe (`ListingDetail.tsx`): se `video_url` existir, renderizar um `<iframe>` do YouTube/Vimeo ou tag `<video>` acima ou abaixo da galeria de fotos
-
-| Arquivo | Ação |
-|---|---|
-| Migração SQL | `ALTER TABLE listings ADD COLUMN video_url text` |
-| `StepImages.tsx` | Adicionar input para URL do vídeo |
-| `NewListingWizard.tsx` | Incluir `videoUrl` no formData e no insert |
-| `EditListing.tsx` | Incluir campo `videoUrl` no formulário e no update |
-| `ListingDetail.tsx` | Renderizar player de vídeo quando `video_url` presente |
-| `listingSchema.ts` | Adicionar `videoUrl` ao schema e initialFormData |
+**RLS Policies:**
+- INSERT: qualquer pessoa pode inserir (público, visitantes anônimos)
+- SELECT: dono do listing pode ver views dos seus anúncios + admins podem ver tudo
 
 ---
 
-### 4. Limite de Fotos por Plano
+### 2. Registrar Visualizações (`ListingDetail.tsx`)
 
-**Problema**: O upload permite até 10 fotos fixo, sem distinção entre planos.
+Ao carregar a página de detalhe do anúncio, inserir um registro na tabela `listing_views` com `event_type = 'view'`. Usar o `user_id` do auth se logado, senão `null`.
 
-**Solução**:
-- No wizard de criação: como o plano é selecionado só no final, usar limite de 5 (básico) como padrão durante a criação. O limite de 20 será aplicado na edição para quem tem plano Master.
-- No `ImageUpload.tsx`: o `maxImages` prop já existe e funciona. Basta passá-lo corretamente.
-- No `StepImages.tsx` do wizard: receber uma prop `maxImages` (default 5)
-- No `EditListing.tsx`: verificar o plano do listing e passar `maxImages={listing.plan === 'master' ? 20 : 5}`
-- Mensagem informativa no wizard: "Plano Básico permite até 5 fotos. Faça upgrade para o Master para até 20 fotos."
+Ao clicar em "Enviar Mensagem" (submit do formulário de contato) ou no botão WhatsApp, inserir um registro com `event_type = 'contact_click'`.
 
 | Arquivo | Ação |
 |---|---|
-| `StepImages.tsx` | Aceitar prop `maxImages`, passar para `ImageUpload` |
-| `NewListingWizard.tsx` | Passar `maxImages={5}` para StepImages |
-| `EditListing.tsx` | Passar `maxImages` baseado no plano do listing (5 ou 20) |
+| `ListingDetail.tsx` | Inserir view ao montar; inserir contact_click ao enviar mensagem/WhatsApp |
+
+---
+
+### 3. Painel de Métricas em "Meus Anúncios" (`MyListings.tsx`)
+
+Substituir a contagem atual baseada em `teaser_views` pela nova tabela `listing_views`. Para cada listing, exibir:
+
+- **Visualizações** (total de views)
+- **Contatos** (total de contact_clicks)
+
+Para usuários com plano Master: exibir um card expandido com métricas detalhadas (views, contatos, taxa de conversão contato/view). Para plano básico: exibir apenas o total de views (como já faz hoje), com um CTA para upgrade.
+
+Nos stats cards do topo da página, adicionar:
+- Card "Visualizações" (soma de todas as views)
+- Card "Contatos" (soma de todos os contact_clicks)
+
+| Arquivo | Ação |
+|---|---|
+| `MyListings.tsx` | Buscar dados de `listing_views` agrupados por listing_id e event_type; exibir métricas por listing e nos stats cards do topo |
+
+---
+
+### 4. Verificação de Plano
+
+Buscar o plano do usuário da tabela `subscriptions` ou dos próprios listings para decidir se mostra métricas detalhadas ou o CTA de upgrade.
 
 ---
 
 ### Seção Técnica
 
-**Migração SQL** (uma única migração):
+**Migração SQL:**
 ```sql
-ALTER TABLE public.listings ADD COLUMN verified boolean DEFAULT false;
-ALTER TABLE public.listings ADD COLUMN video_url text;
+CREATE TABLE public.listing_views (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  listing_id uuid NOT NULL,
+  user_id uuid,
+  event_type text NOT NULL DEFAULT 'view',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.listing_views ENABLE ROW LEVEL SECURITY;
+
+-- Qualquer pessoa pode inserir views
+CREATE POLICY "Anyone can insert listing views"
+  ON public.listing_views FOR INSERT
+  WITH CHECK (true);
+
+-- Donos dos listings podem ver views dos seus anúncios
+CREATE POLICY "Listing owners can view their listing views"
+  ON public.listing_views FOR SELECT
+  USING (listing_id IN (
+    SELECT id FROM public.listings WHERE user_id = auth.uid()
+  ));
+
+-- Admins podem ver tudo
+CREATE POLICY "Admins can view all listing views"
+  ON public.listing_views FOR SELECT
+  USING (has_role(auth.uid(), 'admin'::app_role));
+
+CREATE INDEX idx_listing_views_listing_id ON public.listing_views(listing_id);
+CREATE INDEX idx_listing_views_event_type ON public.listing_views(event_type);
 ```
 
-**Prioridade de busca** - implementada client-side com sort estável:
+**Registro de view em ListingDetail.tsx:**
 ```text
-listings.sort((a, b) => {
-  if (a.plan === 'master' && b.plan !== 'master') return -1;
-  if (a.plan !== 'master' && b.plan === 'master') return 1;
-  return 0;
-});
+useEffect → após carregar o listing com sucesso:
+  supabase.from('listing_views').insert({
+    listing_id: listing.id,
+    user_id: user?.id || null,
+    event_type: 'view'
+  })
 ```
 
-**Vídeo** - suporte a YouTube, Vimeo e URLs diretas. Detecção automática do tipo para renderizar `<iframe>` ou `<video>`.
+**Registro de contact_click:**
+- No `handleContactSubmit` (após sucesso)
+- No botão WhatsApp (ao clicar)
 
-**Arquivos modificados**: 8 arquivos + 1 migração SQL.
+**Consulta em MyListings.tsx:**
+```text
+supabase.from('listing_views')
+  .select('listing_id, event_type')
+  .in('listing_id', listingIds)
+→ agrupar client-side por listing_id e event_type
+```
+
+**Arquivos modificados:** 2 arquivos + 1 migração SQL
+
+| Arquivo | Ação |
+|---|---|
+| Migração SQL | Criar tabela `listing_views` com RLS |
+| `ListingDetail.tsx` | Registrar views e contact_clicks |
+| `MyListings.tsx` | Buscar e exibir métricas de views/contatos por listing |
 
