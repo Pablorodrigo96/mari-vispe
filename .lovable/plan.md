@@ -1,91 +1,63 @@
 
 
-## Plano: Redesign Premium do Blind Teaser
+## Plano: Ajustes visuais e animacoes do Blind Teaser
 
-Baseado nas imagens de referencia (Vispe Capital), vou elevar significativamente a qualidade visual do Blind Teaser com graficos, animacoes avancadas, mapa SVG do Brasil e layout mais sofisticado.
+### Problemas identificados
 
----
+1. **Texto de descricao extrapolando a pagina** — o `<p>` com `whitespace-pre-wrap` nao quebra palavras longas. Falta `break-words` / `overflow-wrap: break-word`.
+2. **Mapa do Brasil muito basico** — usa retangulos simples em vez de formas realistas dos estados. Comparado com a referencia (blocos 3D dourados), precisa de mais volume visual.
+3. **Poucas animacoes** — as transicoes sao simples fade/slide. Faltam efeitos de hover, stagger mais elaborado, e animacoes continuas.
 
 ### Mudancas
 
-#### 1. `src/components/teaser/TeaserHero.tsx` — Redesign completo
+#### 1. `src/components/teaser/TeaserIntro.tsx` — Corrigir overflow + animacoes
 
-- Adicionar textura de notas de dinheiro mais visivel como background (SVG pattern mais elaborado com opacity maior)
-- Melhorar o arco dourado para ficar mais proximo da referencia (maior, mais visivel, com dupla curva)
-- Adicionar efeito de parallax sutil com framer-motion
-- Branding "PME.B3" mais destacado no canto inferior direito com logo/icone
+- Adicionar `break-words overflow-hidden` no `<p>` da descricao (linha 55)
+- Remover `whitespace-pre-wrap` que forca texto sem quebra
+- Adicionar `word-break: break-word` via classe
+- Adicionar animacao stagger nos badges (category/year)
+- Adicionar hover scale sutil nos badges
 
-#### 2. `src/components/teaser/TeaserIntro.tsx` — Mapa SVG do Brasil
+#### 2. `src/components/teaser/BrazilMap.tsx` — Visual mais sofisticado
 
-- Substituir o circulo dourado com estado por um **mapa SVG do Brasil** com os 27 estados
-- Destacar o estado da empresa em dourado mais forte (cor diferente dos demais)
-- Mapa em perspectiva 3D via CSS transform (rotateX + rotateY) para simular o efeito isometrico da referencia
-- Label "Operacao em [STATE]" posicionado ao lado do mapa com linha decorativa
-- Melhorar tipografia do texto introdutorio
+- Manter os paths retangulares mas adicionar efeito de "blocos 3D" com sombras e transforms escalonados por estado
+- Adicionar animacao de flutuacao continua (float) no mapa inteiro
+- Adicionar efeito de hover individual nos estados (scale sutil)
+- Pulse mais visivel no estado destacado
+- Sombra drop-shadow mais forte no conjunto
 
-#### 3. `src/components/teaser/TeaserFinancials.tsx` — Graficos e KPIs
+#### 3. `src/components/teaser/TeaserHero.tsx` — Mais particulas e parallax
 
-- Adicionar um **grafico de barras** usando Recharts (ja instalado) mostrando faturamento anual/projecao
-- Adicionar KPIs extras em cards dourados: Faturamento Medio Mensal, Margem Liquida
-- Layout em 2 colunas: grafico a esquerda, KPI cards a direita (como na referencia)
-- Barras com gradiente dourado e labels de valor no topo
-- Animacao de entrada dos cards com stagger
+- Aumentar particulas flutuantes de 6 para 12 com tamanhos variados
+- Adicionar efeito de "shimmer" no titulo (gradiente animado)
+- Animacao de pulse no ticker badge
 
-#### 4. `src/components/teaser/TeaserDetails.tsx` — Cards estilo metricas operacionais
+#### 4. `src/components/teaser/TeaserFinancials.tsx` — Animacoes nos KPIs
 
-- Redesenhar para usar o estilo da referencia: header escuro com label dourado + body branco com valor grande
-- Grid de 3-4 colunas com cards mais impactantes
-- Adicionar background com imagem de edificios corporativos (SVG pattern ou gradient overlay)
-- Numeros em tamanho muito maior para impacto visual
+- Adicionar hover effect nos KPI cards (elevacao + brilho)
+- Stagger mais longo nas animacoes de entrada
+- Borda inferior dourada animada nos cards
 
-#### 5. `src/components/teaser/TeaserContact.tsx` — Refinamentos
+#### 5. `src/components/teaser/TeaserDetails.tsx` — Hover e glow
 
-- Arcos dourados decorativos duplos (como na referencia)
-- Disclaimer com texto mais completo e formatacao melhor
-- Manter o botao "Registrar Interesse" e WhatsApp
+- Adicionar glow effect nos cards ao hover
+- Animacao de entrada mais dramatica (scale + fade combinados)
 
-#### 6. Novo: `src/components/teaser/BrazilMap.tsx` — Componente SVG
+#### 6. `src/components/teaser/TeaserContact.tsx` — Botoes animados
 
-- SVG inline com paths dos 27 estados brasileiros
-- Props: `highlightState` para colorir o estado em destaque
-- Cores: estados normais em dourado claro, estado destacado em dourado forte
-- CSS transform para efeito 3D isometrico
-- Animacao de entrada com framer-motion
-
-#### 7. `src/index.css` — Novos utilitarios
-
-- Adicionar keyframe para animacao de "count up" dos numeros
-- Adicionar classe de perspectiva 3D para o mapa
-
----
+- Adicionar pulse animation no botao "Registrar Interesse"
+- Hover effect mais visivel nos botoes
 
 ### Secao Tecnica
 
-**Dependencias ja instaladas que serao usadas:**
-- `recharts` — grafico de barras na secao financeira
-- `framer-motion` — animacoes de entrada e parallax
-- `lucide-react` — icones
-
-**Mapa SVG do Brasil:**
-- Paths simplificados dos 27 estados (AC, AL, AM, AP, BA, CE, DF, ES, GO, MA, MG, MS, MT, PA, PB, PE, PI, PR, RJ, RN, RO, RR, RS, SC, SE, SP, TO)
-- Mapeamento de sigla para path SVG
-- Transform CSS: `perspective(800px) rotateX(15deg) rotateY(-15deg)` para efeito 3D
-
-**Grafico de barras (Recharts):**
-- Dados derivados: se tiver `annual_revenue`, mostra projecao de 3 anos (atual, -10%, -20%)
-- Barras com fill gradiente dourado
-- Labels customizados com `formatFullCurrency`
-- Sem grid/eixos para visual limpo
-
-**Arquivos modificados/criados:**
-
 | Arquivo | Acao |
 |---|---|
-| `src/components/teaser/BrazilMap.tsx` | Novo — SVG do Brasil com highlight por estado |
-| `src/components/teaser/TeaserHero.tsx` | Melhorar texturas e arcos decorativos |
-| `src/components/teaser/TeaserIntro.tsx` | Integrar BrazilMap, melhorar layout |
-| `src/components/teaser/TeaserFinancials.tsx` | Adicionar grafico Recharts + layout 2 colunas |
-| `src/components/teaser/TeaserDetails.tsx` | Redesign cards estilo metricas operacionais |
-| `src/components/teaser/TeaserContact.tsx` | Refinamentos visuais nos arcos e disclaimer |
-| `src/index.css` | Adicionar utilitarios de perspectiva 3D |
+| `src/components/teaser/TeaserIntro.tsx` | Fix overflow texto + stagger badges |
+| `src/components/teaser/BrazilMap.tsx` | Efeito 3D blocos + float + hover states |
+| `src/components/teaser/TeaserHero.tsx` | Mais particulas + shimmer titulo |
+| `src/components/teaser/TeaserFinancials.tsx` | Hover KPIs + stagger |
+| `src/components/teaser/TeaserDetails.tsx` | Glow hover + entrada dramatica |
+| `src/components/teaser/TeaserContact.tsx` | Pulse botao + hover |
+
+Nenhuma mudanca de banco de dados necessaria.
 
