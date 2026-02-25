@@ -1,137 +1,105 @@
 
 
-## Blind Teaser - Landing Page por Empresa
+## Plano: Corrigir acesso ao Blind Teaser e substituir formulario de contato por fluxo de "Registrar Interesse"
 
-### Objetivo
-Ao concluir o cadastro de uma empresa, gerar automaticamente uma landing page publica no estilo "Blind Teaser" (sem revelar o nome da empresa), com URL unica por listing. A identidade visual segue o padrao do PDF de referencia: fundo escuro, acentos dourados, tipografia bold, layout em secoes full-width.
+### Problemas identificados
+
+1. **Blind Teaser inacessivel apos criacao**: A `public_listings` view filtra por `status = 'active'`, mas o listing e criado com `status = 'active'` para plano basico. O acesso direto via URL funciona (confirmei que os dados estao la). O problema pode estar no fato de o usuario nao estar testando a URL correta, ou pode haver um bug de navegacao. Preciso investigar se ha algo bloqueando (ex: o usuario esta logado e o RLS nao permite acesso pela view). **A view `public_listings` nao tem RLS (e uma view, nao tabela)**, entao o acesso deveria funcionar. Vou garantir que funcione adicionando um fallback de busca direto na tabela `listings` com filtro publico.
+
+2. **Secao de contato deve virar "Registrar Interesse"**: Remover o formulario de contato e substituir por um botao "Registrar Interesse" que redireciona para `/auth?redirect=/teaser/:ticker&tab=signup&role=buyer`. Ao se cadastrar, o interesse e registrado automaticamente.
+
+3. **Log de interesse para o administrador**: Criar uma tabela `interest_logs` para registrar quando alguem demonstra interesse em um listing.
 
 ---
 
-### Estrutura do Blind Teaser (5 secoes inspiradas no PDF)
+### Mudancas
 
-```text
-+--------------------------------------------------+
-| SECAO 1 - HERO (fundo preto, acento dourado)      |
-| "Blind Teaser"                                    |
-| Codigo: [TICKER gerado] ex: TECH01               |
-| Logo PME.B3                                       |
-+--------------------------------------------------+
-| SECAO 2 - INTRODUCAO                              |
-| Fundada em [ano], a empresa atua no segmento de   |
-| [categoria] na regiao de [cidade], [estado].      |
-| Descricao do negocio (texto do listing).          |
-| Badge: "Operacao em [UF]"                         |
-+--------------------------------------------------+
-| SECAO 3 - FINANCEIRO                              |
-| Cards dourados com:                               |
-| - Faturamento Anual: R$ X                         |
-| - Lucro Anual: R$ X                               |
-| - Margem Liquida: X%                              |
-| - Valor Pedido: R$ X (ou "Sob Consulta")          |
-| - Faturamento Medio Mensal (calculado)            |
-+--------------------------------------------------+
-| SECAO 4 - DETALHES DO PONTO (se houver dados)    |
-| Cards brancos sobre fundo com imagem:             |
-| - Area: X m2                                      |
-| - Aluguel: R$ X/mes                               |
-| - IPTU: R$ X/mes                                  |
-| - Motivo da Venda                                 |
-+--------------------------------------------------+
-| SECAO 5 - CTA / CONTATO                          |
-| Formulario de contato (mesmo do ListingDetail)    |
-| Botao WhatsApp                                    |
-| Disclaimer de confidencialidade                   |
-| Logo PME.B3                                       |
-+--------------------------------------------------+
+#### 1. Migracao: Criar tabela `interest_logs`
+
+```sql
+CREATE TABLE public.interest_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  listing_id UUID NOT NULL,
+  user_id UUID NOT NULL,
+  ticker TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.interest_logs ENABLE ROW LEVEL SECURITY;
+
+-- Usuarios logados podem registrar interesse
+CREATE POLICY "Users can insert own interest" ON public.interest_logs
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Usuarios podem ver seus proprios interesses
+CREATE POLICY "Users can view own interests" ON public.interest_logs
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Admins podem ver todos
+CREATE POLICY "Admins can view all interests" ON public.interest_logs
+  FOR SELECT USING (has_role(auth.uid(), 'admin'::app_role));
 ```
 
-### Geracao do Ticker
-Cada listing recebe um codigo anonimo baseado na categoria + sequencial. Ex: `TECH01`, `FOOD03`, `SERV12`. Sera gerado no momento do cadastro e armazenado na tabela `listings` em um novo campo `ticker`.
+#### 2. Modificar `src/components/teaser/TeaserContact.tsx`
 
----
+Substituir o formulario completo por:
+- Um botao grande "Registrar Interesse" com estilo dourado
+- Ao clicar, se o usuario esta logado: registra o interesse na tabela `interest_logs` e mostra confirmacao
+- Se nao esta logado: redireciona para `/auth?redirect=/teaser/:ticker&tab=signup&interest=true`
+- Manter o botao WhatsApp
+- Manter o disclaimer de confidencialidade
 
-### Arquivos a criar
+#### 3. Modificar `src/pages/BlindTeaser.tsx`
 
-#### 1. `src/pages/BlindTeaser.tsx`
-Pagina publica (sem Header/Footer tradicionais) com layout full-screen em secoes:
-- Busca listing pelo `ticker` na URL (`/teaser/:ticker`)
-- Usa a view `public_listings` (nao expoe user_id/dados senseiveis)
-- Layout dark premium com gradientes, acentos dourados
-- Responsivo (mobile-first)
-- Secoes: Hero, Introducao, Financeiro, Ponto Comercial (condicional), CTA/Contato
+- Apos o usuario voltar da autenticacao (redirect), verificar se deve registrar interesse automaticamente
+- Adicionar logica para inserir na tabela `interest_logs` ao carregar a pagina se o parametro `interest=true` estiver presente e o usuario estiver logado
 
-#### 2. `src/components/teaser/TeaserHero.tsx`
-Secao hero com fundo preto, linhas douradas decorativas, titulo "Blind Teaser", ticker da empresa, logo PME.B3
+#### 4. Modificar `src/pages/Auth.tsx`
 
-#### 3. `src/components/teaser/TeaserIntro.tsx`
-Secao de introducao com descricao do negocio, badge de localizacao (estado), ano de fundacao, categoria
+- Aceitar parametro `tab=signup` na URL para abrir diretamente na aba de cadastro
+- Aceitar parametro `role=buyer` para pre-selecionar o perfil de comprador
 
-#### 4. `src/components/teaser/TeaserFinancials.tsx`
-Secao financeira com cards estilo dourado/gradiente mostrando faturamento anual, lucro, margem, valor pedido, faturamento medio mensal
+#### 5. Painel Admin: Exibir interesses
 
-#### 5. `src/components/teaser/TeaserDetails.tsx`
-Secao de detalhes do ponto comercial (condicional - so aparece se houver dados de m2, aluguel, etc.)
-
-#### 6. `src/components/teaser/TeaserContact.tsx`
-Secao de contato com formulario, botao WhatsApp, e disclaimer de confidencialidade
-
-### Arquivos a modificar
-
-#### 7. `src/App.tsx`
-- Adicionar rota `/teaser/:ticker` apontando para `BlindTeaser`
-
-#### 8. `src/components/sell/wizard/NewListingWizard.tsx`
-- Apos criar o listing com sucesso, redirecionar para a pagina do Blind Teaser em vez da pagina de detalhe (`/teaser/:ticker`)
-- Gerar o ticker automaticamente antes do insert
-
-### Migracao de banco de dados
-
-Adicionar campo `ticker` a tabela `listings`:
-- `ticker TEXT UNIQUE` — codigo anonimo unico (ex: "TECH01")
-- Atualizar a view `public_listings` para incluir o campo `ticker`
-- Gerar tickers para listings existentes via migration
+- Adicionar uma secao no `AdminDashboard` ou criar uma nova pagina para listar os `interest_logs` com ticker, data e dados do usuario
 
 ---
 
 ### Secao Tecnica
 
-**Geracao do ticker:**
+**Fluxo do "Registrar Interesse":**
+
 ```text
-1. Mapear categoria para prefixo (tech->TECH, food->FOOD, etc.)
-2. Contar listings existentes daquela categoria
-3. Gerar: PREFIXO + (count + 1).toString().padStart(2, '0')
-4. Verificar unicidade, incrementar se necessario
+Usuario no Blind Teaser (/teaser/TECH01)
+  |
+  +--> Clica "Registrar Interesse"
+  |
+  +--> Logado? 
+  |     SIM -> Insere em interest_logs -> Mostra sucesso
+  |     NAO -> Redireciona para /auth?redirect=/teaser/TECH01&tab=signup&interest=true
+  |              |
+  |              +--> Cria conta (role buyer pre-selecionado)
+  |              +--> Redirect de volta para /teaser/TECH01?interest=true
+  |              +--> BlindTeaser detecta parametro, insere em interest_logs
 ```
 
-**Dados usados do listing para o Blind Teaser:**
-- `title` — NAO exibido (e blind)
-- `category` — exibido como setor
-- `foundation_year` — exibido se disponivel
-- `state`, `city` — exibidos (cidade pode ser omitida se preferir)
-- `description` — exibido integralmente
-- `annual_revenue`, `annual_profit` — exibidos com formatacao
-- `asking_price`, `hide_price` — condicional
-- `square_meters`, `rent_value`, `iptu_value` — condicional
-- `sale_reason` — exibido
-- `images` — NAO exibidas (e blind teaser, sem identificacao visual)
+**Tabela `interest_logs`:**
 
-**Identidade visual (baseada no PDF):**
-- Background: `bg-gray-950` / `bg-black`
-- Acentos: gradiente dourado (`from-amber-500 to-yellow-600`)
-- Tipografia: bold, uppercase para titulos de secao
-- Cards financeiros: fundo gradiente dourado com texto escuro
-- Separadores e linhas decorativas douradas
-- Glassmorphism em cards secundarios
+| Campo | Tipo | Descricao |
+|---|---|---|
+| id | UUID | PK |
+| listing_id | UUID | Referencia ao listing |
+| user_id | UUID | Usuario que registrou interesse |
+| ticker | TEXT | Ticker para facilitar consulta |
+| created_at | TIMESTAMPTZ | Data/hora do registro |
+
+**Arquivos modificados:**
 
 | Arquivo | Acao |
 |---|---|
-| Migracao SQL | Adicionar campo `ticker` + atualizar view `public_listings` |
-| `src/pages/BlindTeaser.tsx` | Criar |
-| `src/components/teaser/TeaserHero.tsx` | Criar |
-| `src/components/teaser/TeaserIntro.tsx` | Criar |
-| `src/components/teaser/TeaserFinancials.tsx` | Criar |
-| `src/components/teaser/TeaserDetails.tsx` | Criar |
-| `src/components/teaser/TeaserContact.tsx` | Criar |
-| `src/App.tsx` | Adicionar rota `/teaser/:ticker` |
-| `src/components/sell/wizard/NewListingWizard.tsx` | Gerar ticker e redirecionar para teaser |
+| Migracao SQL | Criar tabela `interest_logs` |
+| `src/components/teaser/TeaserContact.tsx` | Substituir formulario por botao "Registrar Interesse" |
+| `src/pages/BlindTeaser.tsx` | Adicionar logica de registro automatico pos-login |
+| `src/pages/Auth.tsx` | Aceitar `tab` e `role` como parametros da URL |
+| `src/pages/admin/AdminDashboard.tsx` | Adicionar secao de interesses registrados |
 
