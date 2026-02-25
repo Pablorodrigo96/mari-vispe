@@ -101,4 +101,5 @@ export const initialFormData = {
   rentValue: '',
   iptuValue: '',
   saleReason: '',
+  videoUrl: '',
 };

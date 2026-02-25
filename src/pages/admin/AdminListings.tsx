@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Search, MoreHorizontal, Eye, CheckCircle, XCircle, Trash2, MapPin } from 'lucide-react';
+import { Building2, Search, MoreHorizontal, Eye, CheckCircle, XCircle, Trash2, MapPin, BadgeCheck, BadgeX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminRoute } from '@/components/admin/AdminRoute';
@@ -56,6 +56,7 @@ interface Listing {
   created_at: string | null;
   user_id: string;
   images: string[] | null;
+  verified: boolean | null;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
@@ -118,6 +119,25 @@ export default function AdminListings() {
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Erro ao atualizar status');
+    }
+  }
+
+  async function handleVerifiedToggle(listingId: string, verified: boolean) {
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({ verified } as any)
+        .eq('id', listingId);
+
+      if (error) throw error;
+
+      setListings(prev =>
+        prev.map(l => l.id === listingId ? { ...l, verified } : l)
+      );
+      toast.success(verified ? 'Anúncio marcado como verificado' : 'Verificação removida');
+    } catch (error) {
+      console.error('Error updating verified:', error);
+      toast.error('Erro ao atualizar verificação');
     }
   }
 
@@ -333,6 +353,23 @@ export default function AdminListings() {
                               <DropdownMenuItem onClick={() => handleStatusChange(listing.id, 'rejected')}>
                                 <XCircle className="h-4 w-4 mr-2 text-red-500" />
                                 Rejeitar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                Verificação
+                              </DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleVerifiedToggle(listing.id, !(listing as any).verified)}>
+                                {(listing as any).verified ? (
+                                  <>
+                                    <BadgeX className="h-4 w-4 mr-2 text-muted-foreground" />
+                                    Remover Verificado
+                                  </>
+                                ) : (
+                                  <>
+                                    <BadgeCheck className="h-4 w-4 mr-2 text-accent" />
+                                    Marcar como Verificado
+                                  </>
+                                )}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 

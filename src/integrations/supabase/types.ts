@@ -68,6 +68,8 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string
+          verified: boolean | null
+          video_url: string | null
         }
         Insert: {
           additional_info?: string | null
@@ -98,6 +100,8 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_id: string
+          verified?: boolean | null
+          video_url?: string | null
         }
         Update: {
           additional_info?: string | null
@@ -128,6 +132,8 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+          verified?: boolean | null
+          video_url?: string | null
         }
         Relationships: []
       }
