@@ -30,6 +30,7 @@ import {
   Home,
 } from 'lucide-react';
 import { categories } from '@/data/mockData';
+import { getCategoryFallbackImage } from '@/lib/categoryImages';
 
 interface Listing {
   id: string;
@@ -266,55 +267,47 @@ const ListingDetail = () => {
 
             {/* Image Gallery */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <div className="md:col-span-3 aspect-video bg-muted rounded-xl overflow-hidden">
-                {listing.images && listing.images.length > 0 ? (
+              {listing.images && listing.images.length > 0 ? (
+                <>
+                  <div className="md:col-span-3 aspect-video bg-muted rounded-xl overflow-hidden">
+                    <img
+                      src={listing.images[selectedImage]}
+                      alt={`${listing.title} - Foto ${selectedImage + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 md:grid-cols-1 gap-2">
+                    {listing.images.slice(0, 4).map((image, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImage(index)}
+                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
+                          selectedImage === index ? 'border-accent' : 'border-transparent'
+                        }`}
+                      >
+                        <img
+                          src={image}
+                          alt={`Thumbnail ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        {index === 3 && listing.images.length > 4 && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <span className="text-white font-medium">+{listing.images.length - 4}</span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="md:col-span-4 aspect-video bg-muted rounded-xl overflow-hidden">
                   <img
-                    src={listing.images[selectedImage]}
-                    alt={`${listing.title} - Foto ${selectedImage + 1}`}
+                    src={getCategoryFallbackImage(listing.category, listing.id)}
+                    alt={listing.title}
                     className="w-full h-full object-cover"
                   />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                      <Building2 className="w-16 h-16 mx-auto mb-2 opacity-50" />
-                      <p>Sem fotos disponíveis</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="grid grid-cols-3 md:grid-cols-1 gap-2">
-                {listing.images && listing.images.length > 0 ? (
-                  listing.images.slice(0, 4).map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedImage(index)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
-                        selectedImage === index ? 'border-accent' : 'border-transparent'
-                      }`}
-                    >
-                      <img
-                        src={image}
-                        alt={`Thumbnail ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                      {index === 3 && listing.images.length > 4 && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <span className="text-white font-medium">+{listing.images.length - 4}</span>
-                        </div>
-                      )}
-                    </button>
-                  ))
-                ) : (
-                  [1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="aspect-square bg-muted rounded-lg flex items-center justify-center"
-                    >
-                      <span className="text-muted-foreground text-sm opacity-50">—</span>
-                    </div>
-                  ))
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
