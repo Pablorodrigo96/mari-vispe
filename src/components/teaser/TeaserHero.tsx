@@ -10,38 +10,30 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
     <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden bg-gray-950">
       {/* Multi-layer background */}
       <div className="absolute inset-0">
-        {/* Grid pattern */}
         <div className="absolute inset-0 bg-grid-pattern opacity-60" />
-        {/* Radial glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsla(38,92%,50%,0.06)_0%,_transparent_70%)]" />
       </div>
 
-      {/* Left gold decorative arcs - more prominent */}
+      {/* Left gold decorative arcs */}
       <div className="absolute left-0 top-0 bottom-0 w-[600px] pointer-events-none">
         <svg viewBox="0 0 600 900" className="h-full w-full" preserveAspectRatio="xMinYMid slice">
           <motion.path
             d="M 450 0 Q -50 250, 150 450 Q 350 650, 450 900"
-            fill="none"
-            stroke="hsl(38, 92%, 50%)"
-            strokeWidth="2.5"
+            fill="none" stroke="hsl(38, 92%, 50%)" strokeWidth="2.5"
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ pathLength: 1, opacity: 0.7 }}
             transition={{ duration: 2, ease: 'easeInOut' }}
           />
           <motion.path
             d="M 500 0 Q 0 250, 200 450 Q 400 650, 500 900"
-            fill="none"
-            stroke="hsl(38, 92%, 45%)"
-            strokeWidth="1.5"
+            fill="none" stroke="hsl(38, 92%, 45%)" strokeWidth="1.5"
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ pathLength: 1, opacity: 0.4 }}
             transition={{ duration: 2.5, ease: 'easeInOut', delay: 0.3 }}
           />
           <motion.path
             d="M 400 0 Q -100 250, 100 450 Q 300 650, 400 900"
-            fill="none"
-            stroke="hsl(38, 92%, 55%)"
-            strokeWidth="1"
+            fill="none" stroke="hsl(38, 92%, 55%)" strokeWidth="1"
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ pathLength: 1, opacity: 0.25 }}
             transition={{ duration: 3, ease: 'easeInOut', delay: 0.6 }}
@@ -49,38 +41,40 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
         </svg>
       </div>
 
-      {/* Right gold arc - mirror */}
+      {/* Right gold arc */}
       <div className="absolute right-0 top-0 bottom-0 w-[300px] pointer-events-none opacity-30">
         <svg viewBox="0 0 300 900" className="h-full w-full" preserveAspectRatio="xMaxYMid slice">
           <motion.path
             d="M 50 0 Q 350 300, 150 450 Q -50 600, 50 900"
-            fill="none"
-            stroke="hsl(38, 92%, 50%)"
-            strokeWidth="1.5"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
+            fill="none" stroke="hsl(38, 92%, 50%)" strokeWidth="1.5"
+            initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
             transition={{ duration: 2.5, delay: 1 }}
           />
         </svg>
       </div>
 
-      {/* Floating particles */}
-      {[...Array(6)].map((_, i) => (
+      {/* Floating particles - 12 with varied sizes */}
+      {[...Array(12)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-1 h-1 rounded-full bg-amber-500/30"
+          className="absolute rounded-full bg-amber-500/30"
           style={{
-            left: `${15 + i * 15}%`,
-            top: `${20 + (i % 3) * 25}%`,
+            width: `${2 + (i % 4)}px`,
+            height: `${2 + (i % 4)}px`,
+            left: `${8 + i * 7.5}%`,
+            top: `${15 + (i % 5) * 18}%`,
           }}
           animate={{
-            y: [-10, 10, -10],
-            opacity: [0.2, 0.5, 0.2],
+            y: [-15, 15, -15],
+            x: [-(i % 3) * 3, (i % 3) * 3, -(i % 3) * 3],
+            opacity: [0.15, 0.55, 0.15],
+            scale: [0.8, 1.2, 0.8],
           }}
           transition={{
-            duration: 4 + i,
+            duration: 3.5 + i * 0.5,
             repeat: Infinity,
             ease: 'easeInOut',
+            delay: i * 0.2,
           }}
         />
       ))}
@@ -100,22 +94,37 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
           <div className="h-px w-12 bg-gradient-to-l from-transparent to-amber-500/60" />
         </motion.div>
 
+        {/* Shimmer title */}
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-5xl sm:text-7xl md:text-9xl font-black text-white tracking-tight"
+          className="text-5xl sm:text-7xl md:text-9xl font-black text-white tracking-tight relative"
         >
-          Blind Teaser
+          <span className="relative inline-block">
+            Blind Teaser
+            <motion.span
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/20 to-transparent"
+              animate={{ x: ['-100%', '200%'] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', repeatDelay: 2 }}
+              style={{ WebkitBackgroundClip: 'text', mixBlendMode: 'overlay' }}
+            />
+          </span>
         </motion.h1>
 
+        {/* Ticker badge with pulse */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-6 inline-flex items-center gap-3 px-8 py-3 rounded-full border border-amber-500/30 bg-amber-500/5"
+          className="mt-6 inline-flex items-center gap-3 px-8 py-3 rounded-full border border-amber-500/30 bg-amber-500/5 relative overflow-hidden"
         >
-          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-gradient-gold tracking-[0.15em] font-mono">
+          <motion.div
+            className="absolute inset-0 rounded-full border-2 border-amber-500/20"
+            animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-gradient-gold tracking-[0.15em] font-mono relative z-10">
             {ticker}
           </span>
         </motion.div>
@@ -136,9 +145,13 @@ const TeaserHero = ({ ticker }: TeaserHeroProps) => {
         transition={{ delay: 1.2 }}
         className="absolute bottom-8 right-8 flex items-center gap-3"
       >
-        <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: [0, 5, -5, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center"
+        >
           <TrendingUp className="w-4 h-4 text-gray-900" />
-        </div>
+        </motion.div>
         <span className="text-sm font-bold tracking-[0.2em] text-white/50">PME.B3</span>
       </motion.div>
     </section>

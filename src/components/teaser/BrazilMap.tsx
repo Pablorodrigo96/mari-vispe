@@ -4,7 +4,6 @@ interface BrazilMapProps {
   highlightState?: string | null;
 }
 
-// Simplified SVG paths for Brazilian states
 const statePaths: Record<string, string> = {
   AC: 'M95,340 L95,365 L120,365 L120,340 Z',
   AM: 'M100,260 L100,335 L200,335 L200,280 L175,260 Z',
@@ -56,13 +55,16 @@ const BrazilMap = ({ highlightState }: BrazilMapProps) => {
       className="relative"
       style={{ perspective: '800px' }}
     >
-      <div
+      <motion.div
+        animate={{ y: [-6, 6, -6] }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
         className="transition-transform duration-700"
         style={{ transform: 'rotateX(12deg) rotateY(-10deg)' }}
       >
         <svg
           viewBox="80 200 370 410"
-          className="w-full h-auto max-w-[320px] mx-auto drop-shadow-2xl"
+          className="w-full h-auto max-w-[320px] mx-auto"
+          style={{ filter: 'drop-shadow(0 20px 40px hsla(38, 92%, 50%, 0.15))' }}
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* Background glow for highlighted state */}
@@ -73,41 +75,65 @@ const BrazilMap = ({ highlightState }: BrazilMapProps) => {
               r="180"
               fill="url(#mapGlow)"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.3 }}
-              transition={{ duration: 1.5, repeat: Infinity, repeatType: 'reverse' }}
+              animate={{ opacity: [0.2, 0.5, 0.2] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
             />
           )}
 
           <defs>
             <radialGradient id="mapGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="hsl(38, 92%, 50%)" stopOpacity="0.4" />
+              <stop offset="0%" stopColor="hsl(38, 92%, 50%)" stopOpacity="0.5" />
               <stop offset="100%" stopColor="hsl(38, 92%, 50%)" stopOpacity="0" />
             </radialGradient>
             <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="hsl(38, 92%, 55%)" />
+              <stop offset="0%" stopColor="hsl(38, 92%, 60%)" />
               <stop offset="100%" stopColor="hsl(38, 92%, 45%)" />
             </linearGradient>
+            <filter id="blockShadow">
+              <feDropShadow dx="2" dy="3" stdDeviation="1.5" floodColor="hsla(0,0%,0%,0.5)" />
+            </filter>
+            <filter id="highlightGlow">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
 
-          {Object.entries(statePaths).map(([code, d]) => {
+          {Object.entries(statePaths).map(([code, d], idx) => {
             const isHighlighted = code === normalized;
             return (
               <motion.path
                 key={code}
                 d={d}
-                fill={isHighlighted ? 'url(#goldGrad)' : 'hsla(38, 70%, 50%, 0.15)'}
-                stroke={isHighlighted ? 'hsl(38, 92%, 60%)' : 'hsla(38, 70%, 50%, 0.3)'}
-                strokeWidth={isHighlighted ? 2 : 0.8}
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
+                fill={isHighlighted ? 'url(#goldGrad)' : 'hsla(38, 70%, 50%, 0.18)'}
+                stroke={isHighlighted ? 'hsl(38, 92%, 65%)' : 'hsla(38, 70%, 50%, 0.35)'}
+                strokeWidth={isHighlighted ? 2.5 : 0.8}
+                filter={isHighlighted ? 'url(#highlightGlow)' : 'url(#blockShadow)'}
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ delay: 0.02 * Object.keys(statePaths).indexOf(code), duration: 0.3 }}
-                className={isHighlighted ? 'drop-shadow-lg' : ''}
+                transition={{ delay: 0.015 * idx, duration: 0.4, type: 'spring', stiffness: 200 }}
+                whileHover={{ scale: 1.12, fill: 'hsla(38, 80%, 55%, 0.5)' }}
+                style={{ transformOrigin: 'center', cursor: 'pointer' }}
+                {...(isHighlighted && {
+                  animate: {
+                    opacity: [0.85, 1, 0.85],
+                    strokeWidth: [2.5, 3.5, 2.5],
+                  },
+                  transition: {
+                    delay: 0.015 * idx,
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  },
+                })}
               />
             );
           })}
         </svg>
-      </div>
+      </motion.div>
 
       {/* State label */}
       {normalized && (
@@ -119,7 +145,11 @@ const BrazilMap = ({ highlightState }: BrazilMapProps) => {
           className="text-center mt-6"
         >
           <div className="inline-flex items-center gap-3">
-            <div className="h-px w-8 bg-gradient-to-r from-transparent to-amber-500/60" />
+            <motion.div
+              animate={{ scaleX: [0.5, 1, 0.5] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              className="h-px w-8 bg-gradient-to-r from-transparent to-amber-500/60"
+            />
             <div>
               <p className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">
                 Operação em
@@ -128,7 +158,11 @@ const BrazilMap = ({ highlightState }: BrazilMapProps) => {
                 {stateNames[normalized] || normalized}
               </p>
             </div>
-            <div className="h-px w-8 bg-gradient-to-l from-transparent to-amber-500/60" />
+            <motion.div
+              animate={{ scaleX: [0.5, 1, 0.5] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
+              className="h-px w-8 bg-gradient-to-l from-transparent to-amber-500/60"
+            />
           </div>
         </motion.div>
       )}
