@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
+import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminRoute } from '@/components/admin/AdminRoute';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,10 +56,21 @@ const roleConfig: Record<AppRole, { label: string; icon: typeof Shield; variant:
   seller: { label: 'Vendedor', icon: Briefcase, variant: 'default' },
   buyer: { label: 'Comprador', icon: ShoppingBag, variant: 'secondary' },
   advisor: { label: 'Assessor', icon: UserCog, variant: 'outline' },
+  franchisee: { label: 'Franqueado', icon: Store, variant: 'default' },
 };
+
+interface FranchiseeRequest {
+  id: string;
+  user_id: string;
+  status: string;
+  created_at: string;
+  full_name?: string;
+  phone?: string;
+}
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [franchiseeRequests, setFranchiseeRequests] = useState<FranchiseeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
@@ -69,6 +80,7 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers();
+    fetchFranchiseeRequests();
   }, []);
 
   async function fetchUsers() {
@@ -160,6 +172,104 @@ export default function AdminUsers() {
     }
   }
 
+  async function fetchFranchiseeRequests() {
+    try {
+      const { data: requests, error } = await supabase
+        .from('franchisee_requests' as any)
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Enrich with profile data
+      const enriched: FranchiseeRequest[] = [];
+      for (const req of (requests || []) as any[]) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, phone')
+          .eq('user_id', req.user_id)
+          .single();
+        enriched.push({
+          ...req,
+          full_name: profile?.full_name || 'Sem nome',
+          phone: profile?.phone || 'Sem telefone',
+        });
+      }
+      setFranchiseeRequests(enriched);
+    } catch (error) {
+      console.error('Error fetching franchisee requests:', error);
+    }
+  }
+
+  async function handleApproveFranchisee(request: FranchiseeRequest) {
+    try {
+      // 1. Update request status
+      await supabase
+        .from('franchisee_requests' as any)
+        .update({ status: 'approved', reviewed_at: new Date().toISOString() } as any)
+        .eq('id', request.id);
+
+      // 2. Create Master subscription
+      await supabase.from('subscriptions').upsert({
+        user_id: request.user_id,
+        plan: 'master',
+        status: 'active',
+        multiples_limit: 999,
+        dcf_limit: 999,
+        multiples_used: 0,
+        dcf_used: 0,
+      }, { onConflict: 'user_id' } as any);
+
+      // 3. Notify franchisee
+      await supabase.from('notifications').insert({
+        user_id: request.user_id,
+        type: 'system',
+        title: 'Franqueado aprovado!',
+        content: 'Parabéns! Sua conta de franqueado foi aprovada. Você agora tem acesso ao Plano Master.',
+      } as any);
+
+      toast.success('Franqueado aprovado com sucesso!');
+      fetchFranchiseeRequests();
+      fetchUsers();
+    } catch (error) {
+      console.error('Error approving franchisee:', error);
+      toast.error('Erro ao aprovar franqueado');
+    }
+  }
+
+  async function handleRejectFranchisee(request: FranchiseeRequest) {
+    try {
+      // 1. Update request status
+      await supabase
+        .from('franchisee_requests' as any)
+        .update({ status: 'rejected', reviewed_at: new Date().toISOString() } as any)
+        .eq('id', request.id);
+
+      // 2. Remove franchisee role
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', request.user_id)
+        .eq('role', 'franchisee');
+
+      // 3. Notify user
+      await supabase.from('notifications').insert({
+        user_id: request.user_id,
+        type: 'system',
+        title: 'Solicitação de franqueado',
+        content: 'Sua solicitação de franqueado não foi aprovada.',
+      } as any);
+
+      toast.success('Franqueado rejeitado');
+      fetchFranchiseeRequests();
+      fetchUsers();
+    } catch (error) {
+      console.error('Error rejecting franchisee:', error);
+      toast.error('Erro ao rejeitar franqueado');
+    }
+  }
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       (user.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -206,13 +316,67 @@ export default function AdminUsers() {
                     <SelectItem value="seller">Vendedor</SelectItem>
                     <SelectItem value="buyer">Comprador</SelectItem>
                     <SelectItem value="advisor">Assessor</SelectItem>
+                    <SelectItem value="franchisee">Franqueado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </CardContent>
           </Card>
 
-          {/* Users Table */}
+          {/* Franchisee Requests */}
+          {franchiseeRequests.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-amber-500" />
+                  Franqueados Pendentes ({franchiseeRequests.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {franchiseeRequests.map((req) => (
+                      <TableRow key={req.id}>
+                        <TableCell className="font-medium">{req.full_name}</TableCell>
+                        <TableCell>{req.phone}</TableCell>
+                        <TableCell>{new Date(req.created_at).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleApproveFranchisee(req)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Aprovar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleRejectFranchisee(req)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Rejeitar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
