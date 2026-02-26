@@ -1,137 +1,139 @@
 
 
-## Plano: Fluxo Completo de Registro de Interesse
+## Plano: Cadastro de Franqueado com Aprovação Admin
 
-### Problema Atual
-1. O registro de interesse salva apenas `user_id`, `listing_id` e `ticker` -- sem capturar dados de contato do investidor
-2. Nenhuma notificação é enviada ao dono do anúncio nem ao admin
-3. O painel "Meus Anúncios" não exibe os interesses recebidos
-4. A tela de sucesso não oferece CTA para acelerar o contato
-5. O dono do listing não tem RLS para ver interesses nos seus anúncios
+### Contexto
+O sistema atual tem 3 roles no cadastro (seller, buyer, advisor) + admin. Precisamos adicionar o role "franchisee" (Franqueado) ao enum do banco, ao formulário de cadastro, e criar um fluxo de aprovação onde o admin autoriza o franqueado, que então recebe acesso ao Plano Master automaticamente sem pagar.
 
 ---
 
-### 1. Migração: Expandir `interest_logs` + RLS
+### 1. Migração: Adicionar `franchisee` ao enum + tabela de aprovação
 
-Adicionar colunas para capturar dados do investidor e permitir que donos dos listings vejam os interesses recebidos.
+Adicionar o valor `franchisee` ao enum `app_role` e criar uma tabela `franchisee_requests` para controlar o fluxo de aprovação.
 
 ```sql
-ALTER TABLE public.interest_logs
-  ADD COLUMN investor_name text,
-  ADD COLUMN investor_company text,
-  ADD COLUMN investor_email text,
-  ADD COLUMN investor_whatsapp text;
+ALTER TYPE public.app_role ADD VALUE 'franchisee';
 
--- Donos dos listings podem ver interesses nos seus anúncios
-CREATE POLICY "Listing owners can view interests"
-  ON public.interest_logs FOR SELECT
-  USING (listing_id IN (
-    SELECT id FROM public.listings WHERE user_id = auth.uid()
-  ));
+CREATE TABLE public.franchisee_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  status text NOT NULL DEFAULT 'pending', -- pending, approved, rejected
+  reviewed_by uuid,
+  reviewed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.franchisee_requests ENABLE ROW LEVEL SECURITY;
+
+-- User can view own requests
+CREATE POLICY "Users can view own franchisee requests"
+  ON public.franchisee_requests FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can insert own requests
+CREATE POLICY "Users can insert own franchisee requests"
+  ON public.franchisee_requests FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Admins can view all
+CREATE POLICY "Admins can view all franchisee requests"
+  ON public.franchisee_requests FOR SELECT
+  USING (has_role(auth.uid(), 'admin'::app_role));
+
+-- Admins can update
+CREATE POLICY "Admins can update franchisee requests"
+  ON public.franchisee_requests FOR UPDATE
+  USING (has_role(auth.uid(), 'admin'::app_role));
 ```
 
 ---
 
-### 2. Formulário de Interesse (`TeaserContact.tsx`)
+### 2. Formulário de Cadastro (`Auth.tsx`)
 
-Substituir o botão direto por um formulário que coleta:
-- **Nome completo** (pré-preenchido do perfil se logado)
-- **Nome da empresa** (pré-preenchido do perfil)
-- **E-mail** (pré-preenchido do auth)
-- **WhatsApp** (pré-preenchido do perfil)
+Adicionar a opção "Franqueado" na lista de perfis:
 
-Fluxo:
-1. Se não logado: redireciona para cadastro (como já faz)
-2. Se logado: exibe formulário com campos pré-preenchidos
-3. Ao submeter: salva no `interest_logs` com os dados de contato
+| ID | Label | Descrição |
+|---|---|---|
+| `franchisee` | Franqueado | Sou franqueado da rede |
 
-Tela de sucesso após registro:
-- Selo "Interesse Registrado!"
-- Mensagem: "Se quiser acelerar, entre em contato com nosso time"
-- Botão WhatsApp do time PME.B3
+Quando o usuário seleciona "Franqueado" e cria a conta:
+- O role `franchisee` é inserido em `user_roles`
+- Um registro é criado em `franchisee_requests` com `status = 'pending'`
+- Notificação é enviada aos admins: "Novo franqueado pendente de aprovação: [Nome]"
+- Toast de sucesso informa: "Conta criada! Sua aprovação como franqueado está em análise."
 
 | Arquivo | Acao |
 |---|---|
-| `TeaserContact.tsx` | Substituir botão por formulário com 4 campos + tela de sucesso com CTA |
+| `Auth.tsx` | Adicionar opção Franqueado na lista de roles + criar request ao cadastrar |
+| `AuthContext.tsx` | Adicionar `franchisee` ao tipo `UserRole` |
 
 ---
 
-### 3. Notificações Automáticas
+### 3. Painel Admin: Aprovação de Franqueados (`AdminUsers.tsx`)
 
-Após inserir o interesse, criar notificações via insert direto no client:
-
-**Para o dono do listing:**
-```
-Título: "Novo interesse registrado!"
-Conteúdo: "[Nome do investidor] demonstrou interesse no seu ativo [TICKER]"
-```
-
-**Para admins:**
-```
-Título: "Novo interesse registrado!"
-Conteúdo: "[Nome] - [Email] interessado em [TICKER]"
-```
-
-Para encontrar o dono do listing, buscar `listings.user_id` pelo `listing_id`. Para admins, buscar da `user_roles`.
+Adicionar seção/aba no painel de usuários para gerenciar solicitações de franqueados:
+- Lista de solicitações pendentes com nome, telefone, data
+- Botões "Aprovar" e "Rejeitar"
+- Ao aprovar:
+  1. Atualiza `franchisee_requests.status = 'approved'`
+  2. Cria uma assinatura Master gratuita na tabela `subscriptions` (plan = 'master', status = 'active', sem stripe_subscription_id)
+  3. Envia notificação ao franqueado: "Parabéns! Sua conta de franqueado foi aprovada. Você agora tem acesso ao Plano Master."
+- Ao rejeitar:
+  1. Atualiza `franchisee_requests.status = 'rejected'`
+  2. Remove o role `franchisee` do `user_roles`
+  3. Envia notificação ao franqueado: "Sua solicitação de franqueado não foi aprovada."
 
 | Arquivo | Acao |
 |---|---|
-| `TeaserContact.tsx` | Após insert do interesse, inserir notificações para owner e admins |
+| `AdminUsers.tsx` | Adicionar seção de franqueados pendentes com ações de aprovação/rejeição |
 
 ---
 
-### 4. Seção de Interesses em "Meus Anúncios" (`MyListings.tsx`)
+### 4. Hook `useUserRoles.ts`
 
-Para cada listing, buscar interesses da tabela `interest_logs` e exibir:
-- Badge com contagem de interesses (ex: "3 interessados")
-- Ao expandir/clicar: lista com nome, empresa, email, whatsapp de cada investidor
-- Apenas para plano Master (básico vê contagem + CTA upgrade)
+Adicionar `franchisee` ao tipo e expor `isFranchisee`.
 
 | Arquivo | Acao |
 |---|---|
-| `MyListings.tsx` | Buscar `interest_logs` por listing, exibir contagem + lista de investidores interessados |
+| `useUserRoles.ts` | Adicionar `franchisee` ao tipo AppRole e expor `isFranchisee` |
 
 ---
 
-### 5. Auto-registro após redirect (`BlindTeaser.tsx`)
+### 5. Config do Admin (`AdminUsers.tsx` + `roleConfig`)
 
-Atualizar o auto-registro para também salvar os dados do perfil do investidor (buscando da tabela `profiles`).
-
-| Arquivo | Acao |
-|---|---|
-| `BlindTeaser.tsx` | No auto-registro, buscar perfil do user e incluir dados de contato no insert |
+Adicionar `franchisee` ao `roleConfig` com label "Franqueado", ícone e cor, e ao filtro de roles.
 
 ---
 
 ### Seção Tecnica
 
 **Migração SQL:**
-- 4 novas colunas em `interest_logs`: `investor_name`, `investor_company`, `investor_email`, `investor_whatsapp`
-- 1 nova RLS policy para listing owners
+- `ALTER TYPE app_role ADD VALUE 'franchisee'`
+- Nova tabela `franchisee_requests` com RLS
+- Notificação via trigger ou client-side
 
-**Formulario em TeaserContact.tsx:**
-- 4 inputs: nome, empresa, email, whatsapp
-- `useEffect` para buscar perfil e pre-preencher
-- Insert inclui os 4 campos + gera notificações
-- Tela de sucesso com CTA WhatsApp
+**Fluxo de aprovação:**
+```text
+Cadastro → role 'franchisee' + request 'pending' + notificação admin
+    ↓
+Admin aprova → request 'approved' + subscription Master criada + notificação user
+Admin rejeita → request 'rejected' + role removido + notificação user
+```
 
-**Notificações:**
-- Buscar `user_id` do listing para notificar owner
-- Buscar admins via `user_roles` para notificar admins
-- Insert na tabela `notifications` com type `'system'`
+**Assinatura Master para franqueado aprovado:**
+```text
+INSERT INTO subscriptions (user_id, plan, status, multiples_limit, dcf_limit)
+VALUES (user_id, 'master', 'active', 999, 999)
+```
+Sem `stripe_subscription_id` e sem `expires_at` (acesso permanente enquanto ativo).
 
-**MyListings.tsx:**
-- Fetch `interest_logs` com `listing_id IN (ids dos listings do user)`
-- Estado `interests: Record<string, InterestLog[]>`
-- Exibir badge de contagem + accordion/dialog com detalhes dos investidores
-- Stats card "Interessados" no topo
-
-**Arquivos modificados:** 3 arquivos + 1 migração SQL
+**Arquivos modificados:** 4 arquivos + 1 migração SQL
 
 | Arquivo | Acao |
 |---|---|
-| Migração SQL | Expandir `interest_logs` + RLS para owners |
-| `TeaserContact.tsx` | Formulário com dados do investidor + notificações + CTA sucesso |
-| `BlindTeaser.tsx` | Auto-registro com dados do perfil |
-| `MyListings.tsx` | Seção de interesses recebidos por listing |
+| Migração SQL | Adicionar franchisee ao enum + criar tabela franchisee_requests |
+| `AuthContext.tsx` | Adicionar franchisee ao tipo UserRole |
+| `Auth.tsx` | Adicionar opção Franqueado + criar request + notificar admins |
+| `useUserRoles.ts` | Adicionar isFranchisee |
+| `AdminUsers.tsx` | Seção de aprovação de franqueados com ações |
 
