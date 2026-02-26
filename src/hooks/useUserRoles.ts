@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
-type AppRole = 'seller' | 'buyer' | 'advisor' | 'admin';
+type AppRole = 'seller' | 'buyer' | 'advisor' | 'admin' | 'franchisee';
 
 export function useUserRoles() {
   const { user } = useAuth();
@@ -31,6 +31,7 @@ export function useUserRoles() {
   const isSeller = roles.includes('seller');
   const isBuyer = roles.includes('buyer');
   const isAdvisor = roles.includes('advisor');
+  const isFranchisee = roles.includes('franchisee');
 
   return {
     roles,
@@ -39,5 +40,6 @@ export function useUserRoles() {
     isSeller,
     isBuyer,
     isAdvisor,
+    isFranchisee,
   };
 }

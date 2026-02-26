@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      franchisee_requests: {
+        Row: {
+          created_at: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       interest_logs: {
         Row: {
           created_at: string | null
@@ -596,7 +623,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "seller" | "buyer" | "advisor" | "admin"
+      app_role: "seller" | "buyer" | "advisor" | "admin" | "franchisee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -724,7 +751,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["seller", "buyer", "advisor", "admin"],
+      app_role: ["seller", "buyer", "advisor", "admin", "franchisee"],
     },
   },
 } as const

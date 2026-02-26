@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Mail, Lock, ArrowLeft, User, Phone, Check } from 'lucide-react';
+import { Building2, Mail, Lock, ArrowLeft, User, Phone, Check, Store } from 'lucide-react';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
@@ -26,6 +27,7 @@ const roleOptions: { id: UserRole; label: string; description: string }[] = [
   { id: 'seller', label: 'Vendedor', description: 'Quero vender minha empresa' },
   { id: 'buyer', label: 'Comprador/Investidor', description: 'Quero comprar ou investir' },
   { id: 'advisor', label: 'Assessor/Representante', description: 'Represento empresas' },
+  { id: 'franchisee', label: 'Franqueado', description: 'Sou franqueado da rede' },
 ];
 
 export default function Auth() {
@@ -162,7 +164,40 @@ export default function Auth() {
         toast.error('Erro ao criar conta. Tente novamente.');
       }
     } else {
-      toast.success('Conta criada com sucesso!');
+      // If franchisee role selected, create franchisee request and notify admins
+      if (signupRoles.includes('franchisee')) {
+        try {
+          const { data: { user: newUser } } = await supabase.auth.getUser();
+          if (newUser) {
+            // Create franchisee request
+            await supabase.from('franchisee_requests' as any).insert({
+              user_id: newUser.id,
+              status: 'pending',
+            });
+
+            // Notify admins
+            const { data: admins } = await supabase
+              .from('user_roles')
+              .select('user_id')
+              .eq('role', 'admin');
+
+            if (admins && admins.length > 0) {
+              const notifications = admins.map(admin => ({
+                user_id: admin.user_id,
+                type: 'system',
+                title: 'Novo franqueado pendente de aprovação',
+                content: `${signupFullName} solicitou aprovação como franqueado.`,
+              }));
+              await supabase.from('notifications').insert(notifications as any);
+            }
+          }
+        } catch (err) {
+          console.error('Error creating franchisee request:', err);
+        }
+        toast.success('Conta criada! Sua aprovação como franqueado está em análise.');
+      } else {
+        toast.success('Conta criada com sucesso!');
+      }
       navigate(redirectTo);
     }
   };
