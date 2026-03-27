@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import { Building2, DollarSign, Map, UserSearch } from 'lucide-react';
+import { getWhatsAppLink } from '@/lib/whatsapp';
 import { formatCurrency, getCategoryLabel } from '@/lib/formatters';
 import { getCoordinates, resolveAllCoordinates } from '@/lib/brazilCoordinates';
 import type { Tables } from '@/integrations/supabase/types';
@@ -69,7 +70,8 @@ interface BusinessMapProps {
 
 export function BusinessMap({ listings, buyers = [], loading, showSellers = true, showBuyers = true }: BusinessMapProps) {
   const mapRef = useRef<L.Map | null>(null);
-  const clusterRef = useRef<any>(null);
+  const sellerClusterRef = useRef<any>(null);
+  const buyerClusterRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [resolvedListings, setResolvedListings] = useState<ListingWithCoords[]>([]);
   const [resolvedBuyers, setResolvedBuyers] = useState<BuyerWithCoords[]>([]);
@@ -166,9 +168,10 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (clusterRef.current) { map.removeLayer(clusterRef.current); clusterRef.current = null; }
+    if (sellerClusterRef.current) { map.removeLayer(sellerClusterRef.current); sellerClusterRef.current = null; }
+    if (buyerClusterRef.current) { map.removeLayer(buyerClusterRef.current); buyerClusterRef.current = null; }
 
-    const clusterGroup = (L as any).markerClusterGroup({
+    const createCluster = (bg: string, border: string, textColor: string) => (L as any).markerClusterGroup({
       maxClusterRadius: 60,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
@@ -176,12 +179,19 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       animate: true,
       iconCreateFunction: (cluster: any) => {
         const count = cluster.getChildCount();
-        let size = 'small'; let px = 52;
-        if (count >= 100) { size = 'large'; px = 76; }
-        else if (count >= 10) { size = 'medium'; px = 64; }
-        return L.divIcon({ html: `<div>${count}</div>`, className: `marker-cluster marker-cluster-${size}`, iconSize: L.point(px, px) });
+        let px = 52;
+        if (count >= 100) px = 76;
+        else if (count >= 10) px = 64;
+        return L.divIcon({
+          html: `<div style="background:${bg};color:${textColor};width:${px}px;height:${px}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${px > 60 ? 16 : 14}px;border:3px solid ${border};box-shadow:0 2px 12px rgba(0,0,0,0.4)">${count}</div>`,
+          className: '',
+          iconSize: L.point(px, px),
+        });
       },
     });
+
+    const sellerCluster = createCluster('hsl(45,93%,47%)', 'hsl(45,93%,60%)', 'hsl(0,0%,10%)');
+    const buyerCluster = createCluster('hsl(210,80%,50%)', 'hsl(210,80%,65%)', 'white');
 
     // Seller markers
     visibleListings.forEach(m => {
@@ -198,39 +208,39 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
           <a href="/anuncio/${m.listing.id}" style="display:block;margin-top:12px;text-align:center;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;background:hsl(45,93%,47%);color:hsl(0,0%,10%);text-decoration:none">Ver Detalhes</a>
         </div>
       `, { minWidth: 240, maxWidth: 300 });
-      clusterGroup.addLayer(marker);
+      sellerCluster.addLayer(marker);
     });
 
-    // Buyer markers
-    visibleBuyers.forEach(m => {
+    // Buyer markers (anonymized)
+    visibleBuyers.forEach((m, idx) => {
       const marker = L.marker([m.lat, m.lng], { icon: buyerIcon });
       const cityState = [m.buyer.city, m.buyer.state].filter(Boolean).join(', ');
       const cats = m.buyer.categories.map(c => getCategoryLabel(c)).join(', ');
       const budgetHtml = (m.buyer.min_budget || m.buyer.max_budget)
         ? `<p style="font-weight:700;font-size:13px;margin-top:8px;color:hsl(210,80%,60%)">Cheque: ${m.buyer.min_budget ? formatCurrency(Number(m.buyer.min_budget)) : '—'} a ${m.buyer.max_budget ? formatCurrency(Number(m.buyer.max_budget)) : '—'}</p>` : '';
-      const contactHtml = m.buyer.whatsapp
-        ? `<a href="https://wa.me/${m.buyer.whatsapp.replace(/\D/g, '')}" target="_blank" style="display:block;margin-top:12px;text-align:center;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;background:hsl(210,80%,50%);color:white;text-decoration:none">Entrar em Contato</a>`
-        : '';
+      const code = `CPR-${String(idx + 1).padStart(3, '0')}`;
+      const whatsMsg = `Olá! Tenho interesse em vender minha empresa para o comprador ${code} na região de ${cityState}. Gostaria de mais informações.`;
+      const whatsUrl = getWhatsAppLink(whatsMsg);
       marker.bindPopup(`
         <div style="padding:4px">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
             <div style="background:hsl(210,80%,50%);width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
-            <span style="font-size:10px;color:hsl(210,80%,60%);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Comprador</span>
+            <span style="font-size:10px;color:hsl(210,80%,60%);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Comprador Ativo — ${code}</span>
           </div>
-          <h3 style="font-weight:700;font-size:13px;margin-bottom:4px;color:hsl(0,0%,95%)">${m.buyer.buyer_name}</h3>
-          ${m.buyer.company_name ? `<p style="font-size:11px;color:hsl(0,0%,70%);margin-bottom:4px">${m.buyer.company_name}</p>` : ''}
           <p style="font-size:11px;color:hsl(210,80%,60%);margin-bottom:6px">${cats || 'Diversos setores'}</p>
           <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:hsl(0,0%,70%)"><span>📍</span> ${cityState}</div>
           ${budgetHtml}
           ${m.buyer.description ? `<p style="font-size:11px;color:hsl(0,0%,60%);margin-top:6px;font-style:italic">"${m.buyer.description}"</p>` : ''}
-          ${contactHtml}
+          <a href="${whatsUrl}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:12px;text-align:center;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;background:hsl(210,80%,50%);color:white;text-decoration:none">Tenho uma empresa para este comprador</a>
         </div>
       `, { minWidth: 240, maxWidth: 300 });
-      clusterGroup.addLayer(marker);
+      buyerCluster.addLayer(marker);
     });
 
-    map.addLayer(clusterGroup);
-    clusterRef.current = clusterGroup;
+    map.addLayer(sellerCluster);
+    map.addLayer(buyerCluster);
+    sellerClusterRef.current = sellerCluster;
+    buyerClusterRef.current = buyerCluster;
 
     const allCoords = [
       ...visibleListings.map(m => [m.lat, m.lng] as [number, number]),
