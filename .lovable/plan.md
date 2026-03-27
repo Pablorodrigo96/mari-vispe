@@ -1,25 +1,52 @@
 
-
-## Plano: Corrigir Sobreposição de Marcadores no Mapa
+## Plano: Fazer o Cluster Azul Ficar Visível no Mapa
 
 ### Problema
-O marcador azul do comprador está sobrepondo o cluster dourado dos vendedores quando estão na mesma região. Isso acontece porque ambos ocupam a mesma camada z-index e o jitter aleatório das coordenadas é pequeno (`±0.02`), fazendo os ícones se empilharem.
+Hoje o azul some porque os compradores estão sendo desenhados praticamente no mesmo ponto dos vendedores e ainda com prioridade visual menor. Na prática, o cluster amarelo cobre o azul.
 
 ### Solução
+Ajustar o mapa para que **compradores e vendedores da mesma região não fiquem empilhados no mesmo centro**.
+
+### Mudanças
 
 #### `src/components/map/BusinessMap.tsx`
 
-1. **Reduzir o tamanho do marcador individual do comprador** de 32px para 26px para diferenciá-lo visualmente dos clusters maiores
-2. **Aumentar o jitter** dos compradores para `±0.05` (espalha mais os pontos na mesma cidade)
-3. **Definir `zIndexOffset`** nos marcadores de compradores para ficar abaixo dos sellers (`zIndexOffset: -1000`), evitando que fiquem por cima dos clusters dourados
-4. **Reduzir `maxClusterRadius`** do cluster de compradores para 40 (vs 60 dos sellers), fazendo com que compradores na mesma área se agrupem menos agressivamente e não se misturem visualmente com clusters de sellers
+1. **Remover a estratégia de “esconder atrás”**
+   - Tirar o `zIndexOffset: -1000` dos compradores
+   - Não usar a camada azul como subordinada à amarela
 
-### Seção Técnica
+2. **Criar um deslocamento fixo por tipo**
+   - Aplicar um pequeno offset consistente nas coordenadas:
+     - vendedores ficam no ponto base
+     - compradores ficam levemente deslocados na diagonal
+   - Isso vale tanto para marcador individual quanto para cluster, então os dois grupos aparecem lado a lado quando estiverem na mesma cidade/região
 
-| Mudança | Detalhe |
+3. **Manter um jitter menor só para desempilhar itens do mesmo tipo**
+   - Continuar espalhando levemente markers da mesma categoria
+   - Mas separar primeiro por tipo, para o azul nunca nascer exatamente em cima do amarelo
+
+4. **Preservar o visual atual**
+   - Continuar com clusters separados:
+     - amarelo = vendedores
+     - azul = compradores
+   - Manter popup sigiloso dos compradores e CTA de contato
+
+### Resultado esperado
+Em cidades com vendedores e compradores ao mesmo tempo:
+- aparecem **dois agrupamentos visíveis**
+- o azul não fica escondido
+- o mapa continua indicando a mesma região, mas com leitura visual clara
+
+### Seção técnica
+| Arquivo | Ação |
 |---|---|
-| `buyerIcon` | Reduzir de 32px para 26px (iconSize, iconAnchor, popupAnchor ajustados) |
-| Jitter compradores | `Math.random() * 0.05` em vez de `0.02` |
-| Marker options | Adicionar `zIndexOffset: -1000` nos markers de buyer |
-| Buyer cluster | `maxClusterRadius: 40` para separar melhor dos seller clusters |
+| `BusinessMap.tsx` | Remover `zIndexOffset` negativo, aplicar offset geográfico fixo por tipo, manter jitter apenas para desempilhar itens do mesmo tipo |
 
+**Estratégia técnica**
+```text
+coords base da cidade
+→ seller: base + jitter pequeno
+→ buyer: base + offset fixo + jitter pequeno
+```
+
+Assim o problema é resolvido na origem (coordenada), e não apenas na ordem de renderização.
