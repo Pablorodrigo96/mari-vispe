@@ -120,7 +120,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       for (const buyer of buyers) {
         const coords = getCoordinates(buyer.city, buyer.state);
         if (coords) {
-          syncMarkers.push({ buyer, lat: coords.lat + (Math.random() - 0.5) * 0.05, lng: coords.lng + (Math.random() - 0.5) * 0.05 });
+          syncMarkers.push({ buyer, lat: coords.lat + 0.04 + (Math.random() - 0.5) * 0.01, lng: coords.lng + 0.04 + (Math.random() - 0.5) * 0.01 });
         } else if (buyer.city || buyer.state) {
           needsAsync.push(buyer);
         }
