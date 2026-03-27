@@ -1,16 +1,25 @@
 
 
-## Plano: Trocar Ícone do Comprador de Lupa para Cifrão
+## Plano: Corrigir Sobreposição de Marcadores no Mapa
 
-### Mudança
+### Problema
+O marcador azul do comprador está sobrepondo o cluster dourado dos vendedores quando estão na mesma região. Isso acontece porque ambos ocupam a mesma camada z-index e o jitter aleatório das coordenadas é pequeno (`±0.02`), fazendo os ícones se empilharem.
 
-#### `src/components/map/BusinessMap.tsx` (linha 44)
-Substituir o SVG da lupa (circle + line) pelo SVG de cifrão ($) no `buyerIcon`:
+### Solução
 
-```text
-Atual: <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-Novo:  <line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-```
+#### `src/components/map/BusinessMap.tsx`
 
-Este é o path do ícone `DollarSign` do Lucide. Apenas 1 linha alterada.
+1. **Reduzir o tamanho do marcador individual do comprador** de 32px para 26px para diferenciá-lo visualmente dos clusters maiores
+2. **Aumentar o jitter** dos compradores para `±0.05` (espalha mais os pontos na mesma cidade)
+3. **Definir `zIndexOffset`** nos marcadores de compradores para ficar abaixo dos sellers (`zIndexOffset: -1000`), evitando que fiquem por cima dos clusters dourados
+4. **Reduzir `maxClusterRadius`** do cluster de compradores para 40 (vs 60 dos sellers), fazendo com que compradores na mesma área se agrupem menos agressivamente e não se misturem visualmente com clusters de sellers
+
+### Seção Técnica
+
+| Mudança | Detalhe |
+|---|---|
+| `buyerIcon` | Reduzir de 32px para 26px (iconSize, iconAnchor, popupAnchor ajustados) |
+| Jitter compradores | `Math.random() * 0.05` em vez de `0.02` |
+| Marker options | Adicionar `zIndexOffset: -1000` nos markers de buyer |
+| Buyer cluster | `maxClusterRadius: 40` para separar melhor dos seller clusters |
 
