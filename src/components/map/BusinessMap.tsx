@@ -86,7 +86,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       for (const listing of listings) {
         const coords = getCoordinates(listing.city, listing.state);
         if (coords) {
-          syncMarkers.push({ listing, lat: coords.lat + (Math.random() - 0.5) * 0.02, lng: coords.lng + (Math.random() - 0.5) * 0.02 });
+          syncMarkers.push({ listing, lat: coords.lat + (Math.random() - 0.5) * 0.01, lng: coords.lng + (Math.random() - 0.5) * 0.01 });
         } else if (listing.city || listing.state) {
           needsAsync.push(listing);
         }
