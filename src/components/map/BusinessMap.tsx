@@ -86,7 +86,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       for (const listing of listings) {
         const coords = getCoordinates(listing.city, listing.state);
         if (coords) {
-          syncMarkers.push({ listing, lat: coords.lat + (Math.random() - 0.5) * 0.02, lng: coords.lng + (Math.random() - 0.5) * 0.02 });
+          syncMarkers.push({ listing, lat: coords.lat + (Math.random() - 0.5) * 0.01, lng: coords.lng + (Math.random() - 0.5) * 0.01 });
         } else if (listing.city || listing.state) {
           needsAsync.push(listing);
         }
@@ -101,7 +101,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       for (const listing of needsAsync) {
         const coords = asyncCoords.get(listing.id);
         if (coords) {
-          asyncMarkers.push({ listing, lat: coords.lat + (Math.random() - 0.5) * 0.02, lng: coords.lng + (Math.random() - 0.5) * 0.02 });
+          asyncMarkers.push({ listing, lat: coords.lat + (Math.random() - 0.5) * 0.01, lng: coords.lng + (Math.random() - 0.5) * 0.01 });
         }
       }
       setResolvedListings(prev => [...prev, ...asyncMarkers]);
@@ -120,7 +120,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       for (const buyer of buyers) {
         const coords = getCoordinates(buyer.city, buyer.state);
         if (coords) {
-          syncMarkers.push({ buyer, lat: coords.lat + (Math.random() - 0.5) * 0.05, lng: coords.lng + (Math.random() - 0.5) * 0.05 });
+          syncMarkers.push({ buyer, lat: coords.lat + 0.04 + (Math.random() - 0.5) * 0.01, lng: coords.lng + 0.04 + (Math.random() - 0.5) * 0.01 });
         } else if (buyer.city || buyer.state) {
           needsAsync.push(buyer);
         }
@@ -134,7 +134,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       for (const buyer of needsAsync) {
         const coords = asyncCoords.get(buyer.id);
         if (coords) {
-          asyncMarkers.push({ buyer, lat: coords.lat + (Math.random() - 0.5) * 0.05, lng: coords.lng + (Math.random() - 0.5) * 0.05 });
+          asyncMarkers.push({ buyer, lat: coords.lat + 0.04 + (Math.random() - 0.5) * 0.01, lng: coords.lng + 0.04 + (Math.random() - 0.5) * 0.01 });
         }
       }
       setResolvedBuyers(prev => [...prev, ...asyncMarkers]);
@@ -213,7 +213,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
 
     // Buyer markers (anonymized)
     visibleBuyers.forEach((m, idx) => {
-      const marker = L.marker([m.lat, m.lng], { icon: buyerIcon, zIndexOffset: -1000 });
+      const marker = L.marker([m.lat, m.lng], { icon: buyerIcon });
       const cityState = [m.buyer.city, m.buyer.state].filter(Boolean).join(', ');
       const cats = m.buyer.categories.map(c => getCategoryLabel(c)).join(', ');
       const budgetHtml = (m.buyer.min_budget || m.buyer.max_budget)
