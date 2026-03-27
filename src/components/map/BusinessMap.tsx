@@ -101,7 +101,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       for (const listing of needsAsync) {
         const coords = asyncCoords.get(listing.id);
         if (coords) {
-          asyncMarkers.push({ listing, lat: coords.lat + (Math.random() - 0.5) * 0.02, lng: coords.lng + (Math.random() - 0.5) * 0.02 });
+          asyncMarkers.push({ listing, lat: coords.lat + (Math.random() - 0.5) * 0.01, lng: coords.lng + (Math.random() - 0.5) * 0.01 });
         }
       }
       setResolvedListings(prev => [...prev, ...asyncMarkers]);
