@@ -28,6 +28,7 @@ import Matching from "./pages/Matching";
 import MatchingResults from "./pages/MatchingResults";
 import EditListing from "./pages/EditListing";
 import BlindTeaser from "./pages/BlindTeaser";
+import RegisterBuyer from "./pages/RegisterBuyer";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
