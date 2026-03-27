@@ -70,7 +70,8 @@ interface BusinessMapProps {
 
 export function BusinessMap({ listings, buyers = [], loading, showSellers = true, showBuyers = true }: BusinessMapProps) {
   const mapRef = useRef<L.Map | null>(null);
-  const clusterRef = useRef<any>(null);
+  const sellerClusterRef = useRef<any>(null);
+  const buyerClusterRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [resolvedListings, setResolvedListings] = useState<ListingWithCoords[]>([]);
   const [resolvedBuyers, setResolvedBuyers] = useState<BuyerWithCoords[]>([]);
