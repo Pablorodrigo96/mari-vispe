@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import { Building2, DollarSign, Map, UserSearch } from 'lucide-react';
+import { getWhatsAppLink } from '@/lib/whatsapp';
 import { formatCurrency, getCategoryLabel } from '@/lib/formatters';
 import { getCoordinates, resolveAllCoordinates } from '@/lib/brazilCoordinates';
 import type { Tables } from '@/integrations/supabase/types';
