@@ -256,13 +256,22 @@ export default function MyListings() {
                 Gerencie seus anúncios de empresas à venda
               </p>
             </div>
-            <Button 
-              onClick={() => navigate('/vender')}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Anúncio
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline"
+                onClick={() => navigate('/cadastrar-comprador')}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Cadastrar Comprador
+              </Button>
+              <Button 
+                onClick={() => navigate('/vender')}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Anúncio
+              </Button>
+            </div>
           </div>
 
           {/* Stats */}
