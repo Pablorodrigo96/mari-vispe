@@ -41,11 +41,11 @@ const sellerIcon = new L.DivIcon({
 });
 
 const buyerIcon = new L.DivIcon({
-  html: `<div style="background: hsl(210, 80%, 50%); width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid hsl(210, 80%, 65%); box-shadow: 0 2px 8px rgba(0,0,0,0.4);"><div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div>`,
+  html: `<div style="background: hsl(210, 80%, 50%); width: 26px; height: 26px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid hsl(210, 80%, 65%); box-shadow: 0 2px 8px rgba(0,0,0,0.4);"><div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div>`,
   className: '',
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32],
+  iconSize: [26, 26],
+  iconAnchor: [13, 26],
+  popupAnchor: [0, -26],
 });
 
 interface ListingWithCoords {
@@ -120,7 +120,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       for (const buyer of buyers) {
         const coords = getCoordinates(buyer.city, buyer.state);
         if (coords) {
-          syncMarkers.push({ buyer, lat: coords.lat + (Math.random() - 0.5) * 0.02, lng: coords.lng + (Math.random() - 0.5) * 0.02 });
+          syncMarkers.push({ buyer, lat: coords.lat + (Math.random() - 0.5) * 0.05, lng: coords.lng + (Math.random() - 0.5) * 0.05 });
         } else if (buyer.city || buyer.state) {
           needsAsync.push(buyer);
         }
@@ -134,7 +134,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       for (const buyer of needsAsync) {
         const coords = asyncCoords.get(buyer.id);
         if (coords) {
-          asyncMarkers.push({ buyer, lat: coords.lat + (Math.random() - 0.5) * 0.02, lng: coords.lng + (Math.random() - 0.5) * 0.02 });
+          asyncMarkers.push({ buyer, lat: coords.lat + (Math.random() - 0.5) * 0.05, lng: coords.lng + (Math.random() - 0.5) * 0.05 });
         }
       }
       setResolvedBuyers(prev => [...prev, ...asyncMarkers]);
@@ -171,8 +171,8 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
     if (sellerClusterRef.current) { map.removeLayer(sellerClusterRef.current); sellerClusterRef.current = null; }
     if (buyerClusterRef.current) { map.removeLayer(buyerClusterRef.current); buyerClusterRef.current = null; }
 
-    const createCluster = (bg: string, border: string, textColor: string) => (L as any).markerClusterGroup({
-      maxClusterRadius: 60,
+    const createCluster = (bg: string, border: string, textColor: string, radius = 60) => (L as any).markerClusterGroup({
+      maxClusterRadius: radius,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
@@ -191,7 +191,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
     });
 
     const sellerCluster = createCluster('hsl(45,93%,47%)', 'hsl(45,93%,60%)', 'hsl(0,0%,10%)');
-    const buyerCluster = createCluster('hsl(210,80%,50%)', 'hsl(210,80%,65%)', 'white');
+    const buyerCluster = createCluster('hsl(210,80%,50%)', 'hsl(210,80%,65%)', 'white', 40);
 
     // Seller markers
     visibleListings.forEach(m => {
@@ -213,7 +213,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
 
     // Buyer markers (anonymized)
     visibleBuyers.forEach((m, idx) => {
-      const marker = L.marker([m.lat, m.lng], { icon: buyerIcon });
+      const marker = L.marker([m.lat, m.lng], { icon: buyerIcon, zIndexOffset: -1000 });
       const cityState = [m.buyer.city, m.buyer.state].filter(Boolean).join(', ');
       const cats = m.buyer.categories.map(c => getCategoryLabel(c)).join(', ');
       const budgetHtml = (m.buyer.min_budget || m.buyer.max_budget)
