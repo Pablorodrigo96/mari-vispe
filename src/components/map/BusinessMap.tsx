@@ -213,7 +213,7 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
 
     // Buyer markers (anonymized)
     visibleBuyers.forEach((m, idx) => {
-      const marker = L.marker([m.lat, m.lng], { icon: buyerIcon, zIndexOffset: -1000 });
+      const marker = L.marker([m.lat, m.lng], { icon: buyerIcon });
       const cityState = [m.buyer.city, m.buyer.state].filter(Boolean).join(', ');
       const cats = m.buyer.categories.map(c => getCategoryLabel(c)).join(', ');
       const budgetHtml = (m.buyer.min_budget || m.buyer.max_budget)
