@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      buyer_profiles: {
+        Row: {
+          buyer_name: string
+          categories: string[]
+          city: string | null
+          company_name: string | null
+          created_at: string
+          description: string | null
+          email: string | null
+          id: string
+          max_budget: number | null
+          min_budget: number | null
+          state: string | null
+          status: string
+          user_id: string
+          whatsapp: string | null
+        }
+        Insert: {
+          buyer_name: string
+          categories?: string[]
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          max_budget?: number | null
+          min_budget?: number | null
+          state?: string | null
+          status?: string
+          user_id: string
+          whatsapp?: string | null
+        }
+        Update: {
+          buyer_name?: string
+          categories?: string[]
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          max_budget?: number | null
+          min_budget?: number | null
+          state?: string | null
+          status?: string
+          user_id?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       franchisee_requests: {
         Row: {
           created_at: string
