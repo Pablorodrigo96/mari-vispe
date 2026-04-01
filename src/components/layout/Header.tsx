@@ -147,8 +147,8 @@ export function Header() {
               </Button>
             )}
             
-            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold">
-              Anunciar Grátis
+            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold" asChild>
+              <Link to="/vender">Anunciar Grátis</Link>
             </Button>
           </div>
 
