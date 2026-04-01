@@ -219,8 +219,8 @@ export function Header() {
                     <Link to="/auth">Entrar</Link>
                   </Button>
                 )}
-                <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground">
-                  Anunciar Grátis
+                <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+                  <Link to="/vender">Anunciar Grátis</Link>
                 </Button>
               </div>
             </div>
