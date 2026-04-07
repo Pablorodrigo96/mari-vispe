@@ -15,8 +15,7 @@ const VALID_REASONS = ['retirement', 'relocation', 'new_venture', 'health', 'par
 const TEMPLATE_HEADERS = [
   'titulo', 'categoria', 'descricao', 'faturamento_anual', 'lucro_anual',
   'valor_pedido', 'cidade', 'estado', 'motivo_venda', 'cep', 'bairro',
-  'rua', 'ano_fundacao', 'cnpj', 'metros_quadrados', 'valor_aluguel',
-  'valor_iptu', 'ocultar_preco', 'info_adicional', 'video_url'
+  'rua', 'ano_fundacao', 'cnpj', 'ocultar_preco', 'info_adicional'
 ];
 
 const TEMPLATE_EXAMPLE = [
@@ -24,7 +23,7 @@ const TEMPLATE_EXAMPLE = [
   'Padaria com 15 anos de mercado, localizada em região nobre de São Paulo. Carteira fiel de clientes, faturamento recorrente e marca consolidada no bairro. Oportunidade única para quem deseja investir no setor alimentício.',
   1200000, 240000, 800000, 'São Paulo', 'SP', 'retirement',
   '01310-100', 'Bela Vista', 'Rua Augusta', 2010, '12.345.678/0001-90',
-  150, 5000, 800, 'nao', '', ''
+  'nao', ''
 ];
 
 interface ParsedRow {
@@ -131,12 +130,8 @@ export function BulkUploadDialog({ open, onOpenChange, onSuccess }: BulkUploadDi
           street: d.rua ? String(d.rua).trim() : null,
           foundation_year: d.ano_fundacao ? Number(d.ano_fundacao) : null,
           cnpj: d.cnpj ? String(d.cnpj).trim() : null,
-          square_meters: d.metros_quadrados ? Number(d.metros_quadrados) : null,
-          rent_value: d.valor_aluguel ? Number(d.valor_aluguel) : null,
-          iptu_value: d.valor_iptu ? Number(d.valor_iptu) : null,
           hide_price: ocultar === 'sim' || ocultar === 'true' || ocultar === '1',
           additional_info: d.info_adicional ? String(d.info_adicional).trim() : null,
-          video_url: d.video_url ? String(d.video_url).trim() : null,
           status: 'pending',
           plan: 'basic',
         };
