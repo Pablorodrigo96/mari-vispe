@@ -648,6 +648,12 @@ export default function MyListings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BulkUploadDialog
+        open={bulkUploadOpen}
+        onOpenChange={setBulkUploadOpen}
+        onSuccess={fetchListings}
+      />
     </div>
   );
 }
