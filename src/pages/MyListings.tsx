@@ -52,6 +52,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { openWhatsApp } from '@/lib/whatsapp';
+import { BulkUploadDialog, downloadTemplate } from '@/components/sell/BulkUploadDialog';
 
 interface Listing {
   id: string;
@@ -100,6 +101,7 @@ export default function MyListings() {
   const [metrics, setMetrics] = useState<Record<string, ListingMetrics>>({});
   const [interests, setInterests] = useState<Record<string, InterestLog[]>>({});
   const [expandedInterests, setExpandedInterests] = useState<Record<string, boolean>>({});
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const hasMasterListing = listings.some(l => l.plan === 'master');
 
   useEffect(() => {
@@ -256,13 +258,21 @@ export default function MyListings() {
                 Gerencie seus anúncios de empresas à venda
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Button 
                 variant="outline"
                 onClick={() => navigate('/cadastrar-comprador')}
               >
                 <Users className="w-4 h-4 mr-2" />
                 Cadastrar Comprador
+              </Button>
+              <Button variant="outline" onClick={downloadTemplate}>
+                <Download className="w-4 h-4 mr-2" />
+                Baixar Modelo
+              </Button>
+              <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload em Lote
               </Button>
               <Button 
                 onClick={() => navigate('/vender')}
