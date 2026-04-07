@@ -48,6 +48,8 @@ import {
   AtSign,
   ChevronDown,
   ChevronUp,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
