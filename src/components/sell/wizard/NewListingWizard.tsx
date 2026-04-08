@@ -220,6 +220,37 @@ const NewListingWizard = () => {
 
       if (error) throw error;
 
+      // Upload pending financial doc if partner accountant
+      if (pendingFinancialFile && data?.id) {
+        try {
+          const fileType = pendingFinancialFile.name.endsWith('.pdf') ? 'pdf' 
+            : pendingFinancialFile.name.match(/\.xlsx?$/i) ? 'xlsx' : 'csv';
+          const path = `${user.id}/${data.id}/${Date.now()}_${pendingFinancialFile.name}`;
+          
+          await supabase.storage.from('financial-docs').upload(path, pendingFinancialFile);
+          
+          const { data: { publicUrl } } = supabase.storage.from('financial-docs').getPublicUrl(path);
+
+          // Trigger AI analysis
+          supabase.functions.invoke('analyze-financial-doc', {
+            body: {
+              listing_id: data.id,
+              file_url: publicUrl,
+              file_name: pendingFinancialFile.name,
+              file_type: fileType,
+              user_id: user.id,
+            },
+          }).then(() => {
+            console.log('Financial doc analysis triggered');
+          }).catch((err) => {
+            console.error('Financial doc analysis error:', err);
+          });
+        } catch (docErr) {
+          console.error('Financial doc upload error:', docErr);
+          // Don't block listing creation
+        }
+      }
+
       setShowPlanModal(false);
       toast.success('Anúncio criado com sucesso!');
       
