@@ -12,6 +12,8 @@ import StepDescriptionLocation from './StepDescriptionLocation';
 import StepCommercialSpace from './StepCommercialSpace';
 import StepImages from './StepImages';
 import PlanSelectionModal from './PlanSelectionModal';
+import FinancialDocUpload from './FinancialDocUpload';
+import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { stepValidationSchemas, initialFormData } from './listingSchema';
 
 const steps = [
@@ -60,6 +62,7 @@ interface FormData {
 const NewListingWizard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isPartnerAccountant } = usePartnerAccountant();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     ...initialFormData,
@@ -67,6 +70,7 @@ const NewListingWizard = () => {
   });
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingFinancialFile, setPendingFinancialFile] = useState<File | null>(null);
 
   const updateFormData = (field: string, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
