@@ -199,12 +199,15 @@ export function BusinessMap({ listings, buyers = [], loading, showSellers = true
       const cityState = [m.listing.city, m.listing.state].filter(Boolean).join(', ');
       const priceHtml = m.listing.asking_price && !m.listing.hide_price
         ? `<p style="font-weight:700;font-size:14px;margin-top:8px;color:hsl(45,93%,47%)">${formatCurrency(Number(m.listing.asking_price))}</p>` : '';
+      const equityHtml = (m.listing as any).equity_score
+        ? `<p style="font-size:11px;margin-top:6px;color:hsl(45,93%,60%)">⭐ Equity Score: ${(m.listing as any).equity_score}/100</p>` : '';
       marker.bindPopup(`
         <div style="padding:4px">
           <h3 style="font-weight:700;font-size:13px;margin-bottom:4px;color:hsl(0,0%,95%)">${m.listing.title}</h3>
           <p style="font-size:12px;margin-bottom:8px;color:hsl(45,93%,47%)">${getCategoryLabel(m.listing.category)}</p>
           <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:hsl(0,0%,70%)"><span>📍</span> ${cityState}</div>
           ${priceHtml}
+          ${equityHtml}
           <a href="/anuncio/${m.listing.id}" style="display:block;margin-top:12px;text-align:center;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;background:hsl(45,93%,47%);color:hsl(0,0%,10%);text-decoration:none">Ver Detalhes</a>
         </div>
       `, { minWidth: 240, maxWidth: 300 });

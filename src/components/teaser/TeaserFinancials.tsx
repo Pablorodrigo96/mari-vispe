@@ -8,9 +8,10 @@ interface TeaserFinancialsProps {
   annualProfit: number | null;
   askingPrice: number | null;
   hidePrice: boolean | null;
+  equityScore?: number | null;
 }
 
-const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice }: TeaserFinancialsProps) => {
+const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice, equityScore }: TeaserFinancialsProps) => {
   const margin = annualRevenue && annualProfit ? ((annualProfit / annualRevenue) * 100).toFixed(1) : null;
   const monthlyRevenue = annualRevenue ? annualRevenue / 12 : null;
 
@@ -133,6 +134,29 @@ const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice 
             ))}
           </div>
         </div>
+
+        {/* Equity Score - AI Audited */}
+        {equityScore != null && equityScore > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-12 text-center"
+          >
+            <div className="inline-flex items-center gap-4 px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/20 to-amber-500/10 border border-amber-500/30">
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-bold text-amber-500/80 uppercase tracking-wider mb-1">
+                  Auditado por IA
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-black text-amber-400">{equityScore}</span>
+                  <span className="text-lg text-amber-500/60">/100</span>
+                </div>
+                <span className="text-xs text-amber-500/50 mt-1">Equity Score</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
     </section>
   );

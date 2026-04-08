@@ -128,6 +128,45 @@ export type Database = {
         }
         Relationships: []
       }
+      listing_financial_docs: {
+        Row: {
+          ai_extracted_data: Json | null
+          created_at: string
+          equity_score: Json | null
+          file_name: string | null
+          file_type: string | null
+          file_url: string
+          id: string
+          listing_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          ai_extracted_data?: Json | null
+          created_at?: string
+          equity_score?: Json | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          listing_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          ai_extracted_data?: Json | null
+          created_at?: string
+          equity_score?: Json | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          listing_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       listing_views: {
         Row: {
           created_at: string
@@ -164,6 +203,7 @@ export type Database = {
           cnpj: string | null
           created_at: string | null
           description: string | null
+          equity_score: number | null
           foundation_year: number | null
           hide_price: boolean | null
           id: string
@@ -196,6 +236,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           description?: string | null
+          equity_score?: number | null
           foundation_year?: number | null
           hide_price?: boolean | null
           id?: string
@@ -228,6 +269,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           description?: string | null
+          equity_score?: number | null
           foundation_year?: number | null
           hide_price?: boolean | null
           id?: string
@@ -353,6 +395,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_partner_accountant: boolean
           neighborhood: string | null
           phone: string | null
           state: string | null
@@ -368,6 +411,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_partner_accountant?: boolean
           neighborhood?: string | null
           phone?: string | null
           state?: string | null
@@ -383,6 +427,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_partner_accountant?: boolean
           neighborhood?: string | null
           phone?: string | null
           state?: string | null
@@ -587,6 +632,7 @@ export type Database = {
           city: string | null
           created_at: string | null
           description: string | null
+          equity_score: number | null
           foundation_year: number | null
           hide_price: boolean | null
           id: string | null
@@ -612,6 +658,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           description?: string | null
+          equity_score?: number | null
           foundation_year?: number | null
           hide_price?: boolean | null
           id?: string | null
@@ -637,6 +684,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           description?: string | null
+          equity_score?: number | null
           foundation_year?: number | null
           hide_price?: boolean | null
           id?: string | null

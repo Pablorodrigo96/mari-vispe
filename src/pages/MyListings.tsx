@@ -71,6 +71,7 @@ interface Listing {
   annual_profit: number | null;
   ticker: string | null;
   plan: string | null;
+  equity_score: number | null;
 }
 
 interface ListingMetrics {
@@ -122,7 +123,7 @@ export default function MyListings() {
     try {
       const { data, error } = await supabase
         .from('listings')
-        .select('id, title, category, city, state, asking_price, hide_price, status, images, created_at, annual_revenue, annual_profit, ticker, plan')
+        .select('id, title, category, city, state, asking_price, hide_price, status, images, created_at, annual_revenue, annual_profit, ticker, plan, equity_score')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
@@ -413,6 +414,11 @@ export default function MyListings() {
                               <Badge variant={statusConfig[listing.status || 'pending']?.variant || 'secondary'}>
                                 {statusConfig[listing.status || 'pending']?.label || 'Pendente'}
                               </Badge>
+                              {listing.equity_score != null && listing.equity_score > 0 && (
+                                <Badge variant="outline" className="border-accent text-accent">
+                                  Equity Score: {listing.equity_score}/100
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
                               {listing.category}

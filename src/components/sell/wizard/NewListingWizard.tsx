@@ -12,6 +12,8 @@ import StepDescriptionLocation from './StepDescriptionLocation';
 import StepCommercialSpace from './StepCommercialSpace';
 import StepImages from './StepImages';
 import PlanSelectionModal from './PlanSelectionModal';
+import FinancialDocUpload from './FinancialDocUpload';
+import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { stepValidationSchemas, initialFormData } from './listingSchema';
 
 const steps = [
@@ -60,6 +62,7 @@ interface FormData {
 const NewListingWizard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isPartnerAccountant } = usePartnerAccountant();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     ...initialFormData,
@@ -67,6 +70,7 @@ const NewListingWizard = () => {
   });
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingFinancialFile, setPendingFinancialFile] = useState<File | null>(null);
 
   const updateFormData = (field: string, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -216,6 +220,37 @@ const NewListingWizard = () => {
 
       if (error) throw error;
 
+      // Upload pending financial doc if partner accountant
+      if (pendingFinancialFile && data?.id) {
+        try {
+          const fileType = pendingFinancialFile.name.endsWith('.pdf') ? 'pdf' 
+            : pendingFinancialFile.name.match(/\.xlsx?$/i) ? 'xlsx' : 'csv';
+          const path = `${user.id}/${data.id}/${Date.now()}_${pendingFinancialFile.name}`;
+          
+          await supabase.storage.from('financial-docs').upload(path, pendingFinancialFile);
+          
+          const { data: { publicUrl } } = supabase.storage.from('financial-docs').getPublicUrl(path);
+
+          // Trigger AI analysis
+          supabase.functions.invoke('analyze-financial-doc', {
+            body: {
+              listing_id: data.id,
+              file_url: publicUrl,
+              file_name: pendingFinancialFile.name,
+              file_type: fileType,
+              user_id: user.id,
+            },
+          }).then(() => {
+            console.log('Financial doc analysis triggered');
+          }).catch((err) => {
+            console.error('Financial doc analysis error:', err);
+          });
+        } catch (docErr) {
+          console.error('Financial doc upload error:', docErr);
+          // Don't block listing creation
+        }
+      }
+
       setShowPlanModal(false);
       toast.success('Anúncio criado com sucesso!');
       
@@ -284,6 +319,16 @@ const NewListingWizard = () => {
               }}
               onChange={updateFormData}
             />
+          )}
+
+          {/* Financial Doc Upload - only for Partner Accountants */}
+          {isPartnerAccountant && currentStep === 1 && (
+            <div className="mt-6">
+              <FinancialDocUpload
+                pendingFile={pendingFinancialFile}
+                onPendingFileChange={setPendingFinancialFile}
+              />
+            </div>
           )}
         </div>
 
