@@ -15,8 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle } from 'lucide-react';
-import { ValuationResult } from '@/lib/valuationCalculator';
+import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle, ArrowUpRight } from 'lucide-react';
+import { ValuationResult, calculateEquityGap } from '@/lib/valuationCalculator';
 import { formatFullCurrency } from '@/lib/formatters';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { toast } from 'sonner';
@@ -36,6 +36,7 @@ export const ValuationReportDialog = ({
   result,
 }: ValuationReportDialogProps) => {
   const reportRef = useRef<HTMLDivElement>(null);
+  const equityGap = calculateEquityGap(result, 5);
 
   const formatMultiple = (value: number) => `${value.toFixed(1)}x`;
 
@@ -232,6 +233,38 @@ export const ValuationReportDialog = ({
     doc.text(splitText, margin, yPos);
 
     yPos += splitText.length * 5 + 15;
+
+    // Gap de Equity Section
+    addText('GAP DE EQUITY', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
+    yPos += 8;
+    doc.line(margin, yPos, margin + 35, yPos);
+    yPos += 10;
+
+    const halfWidth = (pageWidth - 2 * margin - 10) / 2;
+
+    // Current Value box
+    doc.setFillColor(229, 231, 235);
+    doc.roundedRect(margin, yPos - 3, halfWidth, 25, 2, 2, 'F');
+    addText('Valor Atual', margin + 5, yPos + 3, { fontSize: 9, fontStyle: 'bold', color: [100, 100, 100] });
+    addText(formatFullCurrency(equityGap.currentValue), margin + 5, yPos + 14, { fontSize: 14, fontStyle: 'bold', color: [50, 50, 50] });
+
+    // Potential Value box
+    doc.setFillColor(16, 185, 129);
+    doc.roundedRect(margin + halfWidth + 10, yPos - 3, halfWidth, 25, 2, 2, 'F');
+    addText('Valor Vispe (Potencial)', margin + halfWidth + 15, yPos + 3, { fontSize: 9, fontStyle: 'bold', color: [255, 255, 255] });
+    addText(formatFullCurrency(equityGap.potentialValue), margin + halfWidth + 15, yPos + 14, { fontSize: 14, fontStyle: 'bold', color: [255, 255, 255] });
+
+    yPos += 30;
+
+    addText(`Gap: ${formatFullCurrency(equityGap.gapValue)} (+${equityGap.gapPercent.toFixed(1)}%)`, margin, yPos, { fontSize: 11, fontStyle: 'bold', color: [16, 185, 129] });
+    yPos += 8;
+    const gapExplanation = `Se sua empresa melhorar a margem EBITDA em 5pp (de ${equityGap.currentMargin.toFixed(1)}% para ${equityGap.boostedMargin.toFixed(1)}%), o valor estimado sobe de ${formatFullCurrency(equityGap.currentValue)} para ${formatFullCurrency(equityGap.potentialValue)}.`;
+    const splitGap = doc.splitTextToSize(gapExplanation, pageWidth - 2 * margin);
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text(splitGap, margin, yPos);
+
+    yPos += splitGap.length * 5 + 15;
 
     // Disclaimer
     doc.setFillColor(255, 250, 230);
@@ -432,6 +465,65 @@ export const ValuationReportDialog = ({
                 <p className="font-semibold text-lg text-emerald-400">{formatMultiple(result.impliedMultiples.impliedProfitMultiple)}</p>
               </div>
             </div>
+          </div>
+
+          {/* Gap de Equity */}
+          <div className="bg-card border-2 border-emerald-500/30 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+              </div>
+              <h3 className="font-semibold text-foreground">Gap de Equity</h3>
+              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs">
+                +{equityGap.gapPercent.toFixed(1)}%
+              </Badge>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4 mb-4">
+              <div className="bg-muted/50 rounded-lg p-4 text-center">
+                <p className="text-muted-foreground text-xs mb-1">Valor Atual</p>
+                <p className="text-2xl font-bold text-foreground">{formatFullCurrency(equityGap.currentValue)}</p>
+                <p className="text-muted-foreground text-xs mt-1">Margem EBITDA: {equityGap.currentMargin.toFixed(1)}%</p>
+              </div>
+              <div className="bg-emerald-500/10 rounded-lg p-4 text-center border border-emerald-500/20">
+                <p className="text-emerald-600 text-xs mb-1">Valor Vispe (Potencial)</p>
+                <p className="text-2xl font-bold text-emerald-600">{formatFullCurrency(equityGap.potentialValue)}</p>
+                <p className="text-emerald-600/70 text-xs mt-1">Margem EBITDA: {equityGap.boostedMargin.toFixed(1)}%</p>
+              </div>
+            </div>
+
+            {/* Visual bar */}
+            <div className="relative h-6 bg-muted rounded-full overflow-hidden mb-3">
+              <div
+                className="absolute inset-y-0 left-0 bg-muted-foreground/30 rounded-full"
+                style={{ width: `${Math.min((equityGap.currentValue / equityGap.potentialValue) * 100, 100)}%` }}
+              />
+              <div
+                className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full"
+                style={{ width: '100%', opacity: 0.3 }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-foreground">
+                Gap: {formatFullCurrency(equityGap.gapValue)}
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              Se sua empresa melhorar a margem EBITDA em 5pp (de {equityGap.currentMargin.toFixed(1)}% para {equityGap.boostedMargin.toFixed(1)}%), 
+              o valor estimado sobe de {formatFullCurrency(equityGap.currentValue)} para {formatFullCurrency(equityGap.potentialValue)}.
+            </p>
+
+            <Button
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+              onClick={async () => {
+                const opened = await openWhatsApp(`Olá! Vi meu Gap de Equity de ${formatFullCurrency(equityGap.gapValue)} e gostaria de falar com um franqueado Vispe na minha região.`);
+                if (!opened) {
+                  toast.success('Link do WhatsApp copiado! Cole no navegador para abrir.');
+                }
+              }}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Falar com Franqueado Regional
+            </Button>
           </div>
 
           {/* Methodology */}
