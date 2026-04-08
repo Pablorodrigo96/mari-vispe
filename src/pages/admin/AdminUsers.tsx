@@ -171,6 +171,7 @@ export default function AdminUsers() {
     } catch (error) {
       console.error('Error removing role:', error);
       toast.error('Erro ao remover role');
+    }
   }
 
   async function handleTogglePartnerAccountant(userId: string, currentValue: boolean) {
@@ -187,7 +188,6 @@ export default function AdminUsers() {
       console.error('Error toggling partner accountant:', error);
       toast.error('Erro ao alterar status de Contador Parceiro');
     }
-  }
   }
 
   async function fetchFranchiseeRequests() {
