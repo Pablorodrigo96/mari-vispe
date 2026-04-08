@@ -203,6 +203,42 @@ const MyProfile = () => {
     return numbers.replace(/(\d{5})(\d{0,3})/, '$1-$2').trim();
   };
 
+  const handleSaveRegion = async () => {
+    if (!user) return;
+    setIsSavingRegion(true);
+    try {
+      if (regionId) {
+        const { error } = await supabase.from('franchisee_regions').update({
+          states: regionStates,
+          categories: regionCategories,
+        }).eq('id', regionId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('franchisee_regions').insert({
+          user_id: user.id,
+          states: regionStates,
+          categories: regionCategories,
+        }).select('id').single();
+        if (error) throw error;
+        if (data) setRegionId(data.id);
+      }
+      toast.success('Região de atuação salva!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao salvar região');
+    } finally {
+      setIsSavingRegion(false);
+    }
+  };
+
+  const toggleState = (st: string) => {
+    setRegionStates(prev => prev.includes(st) ? prev.filter(s => s !== st) : [...prev, st]);
+  };
+
+  const toggleCategory = (cat: string) => {
+    setRegionCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  };
+
   const currentPlan = subscription?.plan || 'free';
   const isBasicPlan = currentPlan === 'free' || currentPlan === 'basic';
 
