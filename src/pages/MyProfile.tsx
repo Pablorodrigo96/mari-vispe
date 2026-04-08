@@ -561,6 +561,61 @@ const MyProfile = () => {
                 </CardContent>
               </Card>
 
+              {/* Região de Atuação — Franqueados */}
+              {isFranchisee && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5" />
+                      Região de Atuação
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Defina os estados e categorias para receber notificações relevantes
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium mb-2">Estados</p>
+                      <div className="flex flex-wrap gap-2">
+                        {estados.map((st) => (
+                          <label key={st} className="flex items-center gap-1.5 cursor-pointer">
+                            <Checkbox
+                              checked={regionStates.includes(st)}
+                              onCheckedChange={() => toggleState(st)}
+                            />
+                            <span className="text-sm">{st}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {regionStates.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">Nenhum selecionado = todas as regiões</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium mb-2">Categorias</p>
+                      <div className="flex flex-wrap gap-3">
+                        {CATEGORIES.map((cat) => (
+                          <label key={cat.value} className="flex items-center gap-1.5 cursor-pointer">
+                            <Checkbox
+                              checked={regionCategories.includes(cat.value)}
+                              onCheckedChange={() => toggleCategory(cat.value)}
+                            />
+                            <span className="text-sm">{cat.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {regionCategories.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">Nenhuma selecionada = todas as categorias</p>
+                      )}
+                    </div>
+                    <Button type="button" variant="outline" onClick={handleSaveRegion} disabled={isSavingRegion}>
+                      {isSavingRegion ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                      Salvar Região
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               <Button type="submit" className="w-full" disabled={isSaving}>
                 {isSaving ? (
                   <>
