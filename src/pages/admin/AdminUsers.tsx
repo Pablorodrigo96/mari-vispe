@@ -470,6 +470,17 @@ export default function AdminUsers() {
                                 <Plus className="h-4 w-4 mr-2" />
                                 Adicionar Role
                               </DropdownMenuItem>
+                              {user.roles.includes('advisor') && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleTogglePartnerAccountant(user.user_id, !!user.is_partner_accountant)}
+                                  >
+                                    <UserCog className="h-4 w-4 mr-2" />
+                                    {user.is_partner_accountant ? 'Desativar Contador Parceiro' : 'Ativar Contador Parceiro'}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuLabel className="text-xs text-muted-foreground">
                                 Remover Role
