@@ -1,107 +1,136 @@
 
 
-## Plano Fase 1: Contador Parceiro + Upload DRE + Equity Score via IA
+## Plano: Fases 4, 5 e 6
 
-Este é o primeiro módulo do roadmap. Os demais (Home Broker de Leads, Gap de Equity, Matching Real-Time, Geofencing de Notificações, Painel Head de Parcerias) serão implementados em fases subsequentes.
-
----
-
-### Contexto
-Hoje o `advisor` é genérico. Precisamos criar um sub-perfil "Contador Parceiro" que funciona como Hub de Originação: ele pode fazer upload privado de Balancete/DRE ao cadastrar um listing, e a IA lê o documento automaticamente para gerar um "Equity Score".
+Sobre a **Fase 3 (Gap de Equity)**: Sim, vai usar a funcionalidade de valuation existente (`calculateValuation` + `ValuationReportDialog`). Após o cálculo por múltiplos, o sistema adicionará uma seção no PDF comparando "Valor Atual" vs "Valor Vispe" (simulando +X% na margem EBITDA). Será implementada em seguida.
 
 ---
 
-### 1. Migração SQL
+### Fase 4 — Matching Real-Time (Seller ↔ Buyer)
 
-**a) Flag `is_partner_accountant` na tabela `profiles`**
-- Adicionar coluna `is_partner_accountant BOOLEAN DEFAULT false` em `profiles`
-- Admin ativa essa flag no painel de usuários
+**Objetivo**: Quando um seller cadastrar um listing, o sistema varre a tabela `buyer_profiles` e notifica o seller sobre compradores compatíveis.
 
-**b) Tabela `listing_financial_docs`**
-Armazena os documentos financeiros privados vinculados a listings:
+#### 4.1 Edge Function: `matching-engine` (já existe — ajustar)
+- Após insert de listing, buscar `buyer_profiles` ativos com:
+  - Categoria do listing dentro de `categories[]` do buyer
+  - Mesma `state` (ou nacional)
+  - `max_budget >= asking_price` (se disponível)
+- Calcular score de compatibilidade (0-100)
+- Criar notificação para o seller: "Existem N compradores ativos buscando empresas como a sua"
+- Gatilho: trigger SQL `AFTER INSERT ON listings` que chama a edge function via `pg_net`
 
-| Coluna | Tipo | Descrição |
-|---|---|---|
-| id | uuid PK | |
-| listing_id | uuid NOT NULL | Referência ao listing |
-| user_id | uuid NOT NULL | Quem fez upload |
-| file_url | text NOT NULL | URL no storage |
-| file_name | text | Nome original |
-| file_type | text | pdf, xlsx, csv |
-| equity_score | jsonb | Resultado da análise IA |
-| ai_extracted_data | jsonb | Dados financeiros extraídos (faturamento, EBITDA, lucro líquido, etc) |
-| status | text DEFAULT 'pending' | pending, processing, completed, error |
-| created_at | timestamptz DEFAULT now() | |
+#### 4.2 Trigger SQL
+```sql
+-- Trigger que dispara matching após novo listing
+CREATE TRIGGER on_new_listing_match
+AFTER INSERT ON listings
+FOR EACH ROW
+EXECUTE FUNCTION notify_matching_buyers();
+```
+- A function `notify_matching_buyers()` faz um count de buyers compatíveis e insere uma notificação diretamente
 
-RLS:
-- Owner do listing pode SELECT
-- Quem fez upload (user_id = auth.uid()) pode INSERT e SELECT
-- Admin pode SELECT all
+#### 4.3 Monetização (Upgrade Master)
+- Na notificação, o seller vê "X compradores interessados" mas os nomes/detalhes ficam ocultos
+- Botão "Ver compradores" redireciona para `/valuation` com CTA de upgrade Master
+- Sellers Master podem ver os detalhes dos buyers compatíveis
 
-**c) Storage bucket `financial-docs`**
-- Bucket **privado** (is_public = false)
-- RLS: upload por authenticated, download pelo owner do listing ou admin
-
-**d) Coluna `equity_score` na tabela `listings`**
-- `equity_score NUMERIC` — score consolidado (0-100) para exibição no mapa/marketplace
+#### 4.4 UI
+- Nova página `/matching-compradores/:listingId` com lista de buyers compatíveis (anonimizados para free, revelados para Master)
+- Link na notificação aponta para essa página
 
 ---
 
-### 2. Edge Function: `analyze-financial-doc`
+### Fase 5 — Geofencing de Notificações
 
-Recebe o `listing_id` e `file_url`, baixa o arquivo do storage, envia o conteúdo para a Lovable AI (Gemini) com um prompt de extração estruturada:
+**Objetivo**: Franchisees só recebem notificações da sua região. Admins recebem digest agrupado.
 
-**Prompt da IA**: "Analise este documento financeiro (Balancete/DRE). Extraia: Receita Bruta Anual, Custos, Lucro Bruto, EBITDA, Lucro Líquido, Margem EBITDA %, Margem Líquida %. Calcule um Equity Score de 0-100 baseado em: margem EBITDA (peso 40%), crescimento de receita (peso 30%), consistência de resultados (peso 30%)."
+#### 5.1 Migração SQL
+- Tabela `franchisee_regions`:
 
-- Usa tool calling para structured output
-- Atualiza `listing_financial_docs.equity_score` e `ai_extracted_data`
-- Atualiza `listings.equity_score` com o score consolidado
-- Atualiza `listing_financial_docs.status` para 'completed'
-
----
-
-### 3. Upload no Wizard de Cadastro (NewListingWizard)
-
-**Condição**: Só aparece se o usuário logado tem role `advisor` E `profiles.is_partner_accountant = true`
-
-**Novo step ou seção no Step 1**: "Documentos Financeiros (privado)"
-- File input aceitando `.pdf`, `.xlsx`, `.csv`
-- Máximo 10MB
-- Upload vai para bucket `financial-docs`
-- Após salvar o listing, chama a edge function `analyze-financial-doc`
-- Badge "IA analisando..." enquanto processa
-- Quando completo, exibe o Equity Score no card do listing
-
----
-
-### 4. Painel Admin: Toggle Contador Parceiro
-
-No `AdminUsers.tsx`, adicionar no dropdown de ações do usuário:
-- "Ativar Contador Parceiro" / "Desativar Contador Parceiro"
-- Só aparece se o usuário tem role `advisor`
-- Faz update em `profiles.is_partner_accountant`
-
----
-
-### 5. Exibição do Equity Score
-
-- **Meus Anúncios**: Badge com score (ex: "Equity Score: 78/100") nos cards que possuem
-- **Mapa**: Tooltip do marcador exibe o score quando disponível
-- **BlindTeaser**: Seção "Auditado por IA" com o score e dados extraídos (sem mostrar o documento)
-
----
-
-### Seção Técnica
-
-| Arquivo | Ação |
+| Coluna | Tipo |
 |---|---|
-| Migração SQL | `is_partner_accountant` em profiles + tabela `listing_financial_docs` + bucket `financial-docs` + `equity_score` em listings |
-| `supabase/functions/analyze-financial-doc/index.ts` | Edge function que usa Lovable AI para extrair dados e gerar score |
-| `src/hooks/usePartnerAccountant.ts` | Hook que verifica se o user logado é advisor + partner |
-| `src/components/sell/wizard/FinancialDocUpload.tsx` | Componente de upload de DRE/Balancete |
-| `src/components/sell/wizard/NewListingWizard.tsx` | Adicionar step/seção de upload condicional |
-| `src/pages/admin/AdminUsers.tsx` | Toggle "Contador Parceiro" no dropdown |
-| `src/pages/MyListings.tsx` | Badge Equity Score nos cards |
-| `src/components/map/BusinessMap.tsx` | Equity Score no tooltip do marcador |
-| `src/components/teaser/TeaserFinancials.tsx` | Seção "Auditado por IA" |
+| id | uuid PK |
+| user_id | uuid (franchisee) |
+| states | text[] |
+| cities | text[] |
+| categories | text[] |
+| created_at | timestamptz |
+
+- RLS: franchisee pode ver/editar as próprias regiões, admin vê todas
+
+#### 5.2 Ajuste nos triggers de notificação
+- `create_interest_notification()`: ao notificar franchisees, verificar se o listing está na região do franchisee (comparar `listings.state` com `franchisee_regions.states`)
+- Só notificar franchisees que cobrem aquela região/categoria
+
+#### 5.3 Admin Daily Digest
+- Nova coluna `notification_preference` em `profiles`: 'realtime' | 'daily_digest'
+- Para admins com 'daily_digest', as notificações são criadas normalmente mas marcadas com flag `is_digest = true`
+- Edge function `send-daily-digest` (cron diário) agrupa notificações não lidas e envia email resumo
+
+#### 5.4 UI: Config de Região (Franqueado)
+- Nova seção em `/meu-perfil` para franchisees: "Minha Região de Atuação"
+- Multi-select de estados + categorias de interesse
+
+---
+
+### Fase 6 — Painel Head de Parcerias
+
+**Objetivo**: Dashboard para o Head de Parcerias monitorar a performance dos contadores parceiros.
+
+#### 6.1 Nova rota `/admin/parcerias`
+- Acessível por admins (ou role específica futura)
+- Adicionada ao `AdminSidebar`
+
+#### 6.2 KPIs do Dashboard
+
+| KPI | Fonte de Dados |
+|---|---|
+| Nº de parceiros novos | `profiles WHERE is_partner_accountant = true` (por período) |
+| Parceiros engajados | Parceiros com listings criados nos últimos 30 dias |
+| Leads cadastrados por parceiro | `listings GROUP BY user_id` (onde user é partner) |
+| Reuniões geradas vs realizadas | Nova tabela `partner_activities` |
+| Receita por parceiro vs Estimativa | `valuation_purchases` + `subscriptions` vinculados |
+| Leads dentro do ICP Vispe | Listings com equity_score >= 60 |
+| Escritórios inativos | Partners sem listings nos últimos 60 dias |
+| Ranking top performers | Ordenação por leads cadastrados + equity score médio |
+| Pipeline por parceiro | Listings por status (pending, active, sold) |
+
+#### 6.3 Migração SQL
+- Tabela `partner_activities`:
+
+| Coluna | Tipo |
+|---|---|
+| id | uuid PK |
+| partner_user_id | uuid |
+| activity_type | text (evento, reuniao_agendada, reuniao_realizada, followup) |
+| notes | text |
+| scheduled_at | timestamptz |
+| completed_at | timestamptz |
+| created_by | uuid |
+| created_at | timestamptz |
+
+- RLS: admin pode CRUD, partner pode ver as próprias
+
+#### 6.4 UI do Painel
+- **Cards de resumo**: Parceiros ativos, Leads totais, Equity médio, Parceiros inativos
+- **Tabela de parceiros**: Nome, Leads cadastrados, Equity Score médio, Última atividade, Status (ativo/inativo)
+- **Ranking**: Top 10 parceiros por performance
+- **Filtros**: Período, status do parceiro
+- **Ações**: Registrar reunião, agendar follow-up, marcar como inativo
+
+---
+
+### Seção Técnica — Resumo de Arquivos
+
+| Fase | Arquivo | Ação |
+|---|---|---|
+| 4 | Migração SQL | Trigger `on_new_listing_match` + function `notify_matching_buyers()` |
+| 4 | `src/pages/MatchingBuyers.tsx` | Nova página de buyers compatíveis (anonimizado/revelado) |
+| 4 | `src/App.tsx` | Rota `/matching-compradores/:listingId` |
+| 5 | Migração SQL | Tabela `franchisee_regions` + coluna `notification_preference` em profiles |
+| 5 | `src/pages/MyProfile.tsx` | Seção "Região de Atuação" para franchisees |
+| 5 | Triggers existentes | Filtrar notificações por região do franchisee |
+| 6 | Migração SQL | Tabela `partner_activities` |
+| 6 | `src/pages/admin/AdminPartnerships.tsx` | Novo dashboard Head de Parcerias |
+| 6 | `src/components/admin/AdminSidebar.tsx` | Adicionar link "Parcerias" |
 
