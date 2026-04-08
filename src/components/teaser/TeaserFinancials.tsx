@@ -8,9 +8,10 @@ interface TeaserFinancialsProps {
   annualProfit: number | null;
   askingPrice: number | null;
   hidePrice: boolean | null;
+  equityScore?: number | null;
 }
 
-const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice }: TeaserFinancialsProps) => {
+const TeaserFinancials = ({ annualRevenue, annualProfit, askingPrice, hidePrice, equityScore }: TeaserFinancialsProps) => {
   const margin = annualRevenue && annualProfit ? ((annualProfit / annualRevenue) * 100).toFixed(1) : null;
   const monthlyRevenue = annualRevenue ? annualRevenue / 12 : null;
 
