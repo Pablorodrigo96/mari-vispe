@@ -414,6 +414,11 @@ export default function MyListings() {
                               <Badge variant={statusConfig[listing.status || 'pending']?.variant || 'secondary'}>
                                 {statusConfig[listing.status || 'pending']?.label || 'Pendente'}
                               </Badge>
+                              {listing.equity_score != null && listing.equity_score > 0 && (
+                                <Badge variant="outline" className="border-accent text-accent">
+                                  Equity Score: {listing.equity_score}/100
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
                               {listing.category}
