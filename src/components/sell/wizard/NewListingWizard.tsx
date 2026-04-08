@@ -320,6 +320,16 @@ const NewListingWizard = () => {
               onChange={updateFormData}
             />
           )}
+
+          {/* Financial Doc Upload - only for Partner Accountants */}
+          {isPartnerAccountant && currentStep === 1 && (
+            <div className="mt-6">
+              <FinancialDocUpload
+                pendingFile={pendingFinancialFile}
+                onPendingFileChange={setPendingFinancialFile}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between mt-8 pt-6 border-t">

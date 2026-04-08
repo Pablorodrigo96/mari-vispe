@@ -49,6 +49,7 @@ interface UserWithRoles {
   phone: string | null;
   created_at: string;
   roles: AppRole[];
+  is_partner_accountant?: boolean;
 }
 
 const roleConfig: Record<AppRole, { label: string; icon: typeof Shield; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
