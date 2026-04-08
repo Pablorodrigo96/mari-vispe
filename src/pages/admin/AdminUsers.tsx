@@ -446,6 +446,11 @@ export default function AdminUsers() {
                                 );
                               })
                             )}
+                            {user.is_partner_accountant && (
+                              <Badge variant="outline" className="border-accent text-accent">
+                                Contador Parceiro
+                              </Badge>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
