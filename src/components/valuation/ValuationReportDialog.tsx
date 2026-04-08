@@ -36,6 +36,7 @@ export const ValuationReportDialog = ({
   result,
 }: ValuationReportDialogProps) => {
   const reportRef = useRef<HTMLDivElement>(null);
+  const equityGap = calculateEquityGap(result, 5);
 
   const formatMultiple = (value: number) => `${value.toFixed(1)}x`;
 
@@ -232,6 +233,38 @@ export const ValuationReportDialog = ({
     doc.text(splitText, margin, yPos);
 
     yPos += splitText.length * 5 + 15;
+
+    // Gap de Equity Section
+    addText('GAP DE EQUITY', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
+    yPos += 8;
+    doc.line(margin, yPos, margin + 35, yPos);
+    yPos += 10;
+
+    const halfWidth = (pageWidth - 2 * margin - 10) / 2;
+
+    // Current Value box
+    doc.setFillColor(229, 231, 235);
+    doc.roundedRect(margin, yPos - 3, halfWidth, 25, 2, 2, 'F');
+    addText('Valor Atual', margin + 5, yPos + 3, { fontSize: 9, fontStyle: 'bold', color: [100, 100, 100] });
+    addText(formatFullCurrency(equityGap.currentValue), margin + 5, yPos + 14, { fontSize: 14, fontStyle: 'bold', color: [50, 50, 50] });
+
+    // Potential Value box
+    doc.setFillColor(16, 185, 129);
+    doc.roundedRect(margin + halfWidth + 10, yPos - 3, halfWidth, 25, 2, 2, 'F');
+    addText('Valor Vispe (Potencial)', margin + halfWidth + 15, yPos + 3, { fontSize: 9, fontStyle: 'bold', color: [255, 255, 255] });
+    addText(formatFullCurrency(equityGap.potentialValue), margin + halfWidth + 15, yPos + 14, { fontSize: 14, fontStyle: 'bold', color: [255, 255, 255] });
+
+    yPos += 30;
+
+    addText(`Gap: ${formatFullCurrency(equityGap.gapValue)} (+${equityGap.gapPercent.toFixed(1)}%)`, margin, yPos, { fontSize: 11, fontStyle: 'bold', color: [16, 185, 129] });
+    yPos += 8;
+    const gapExplanation = `Se sua empresa melhorar a margem EBITDA em 5pp (de ${equityGap.currentMargin.toFixed(1)}% para ${equityGap.boostedMargin.toFixed(1)}%), o valor estimado sobe de ${formatFullCurrency(equityGap.currentValue)} para ${formatFullCurrency(equityGap.potentialValue)}.`;
+    const splitGap = doc.splitTextToSize(gapExplanation, pageWidth - 2 * margin);
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text(splitGap, margin, yPos);
+
+    yPos += splitGap.length * 5 + 15;
 
     // Disclaimer
     doc.setFillColor(255, 250, 230);
