@@ -60,6 +60,12 @@ const MyProfile = () => {
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
 
+  const { isFranchisee } = useUserRoles();
+  const [regionStates, setRegionStates] = useState<string[]>([]);
+  const [regionCategories, setRegionCategories] = useState<string[]>([]);
+  const [regionId, setRegionId] = useState<string | null>(null);
+  const [isSavingRegion, setIsSavingRegion] = useState(false);
+
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
