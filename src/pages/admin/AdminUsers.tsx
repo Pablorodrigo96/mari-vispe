@@ -89,7 +89,7 @@ export default function AdminUsers() {
       // Fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, full_name, phone, created_at')
+        .select('user_id, full_name, phone, created_at, is_partner_accountant')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -115,11 +115,12 @@ export default function AdminUsers() {
       // Combine data
       const usersData: UserWithRoles[] = (profiles || []).map(profile => ({
         user_id: profile.user_id,
-        email: '', // Would need edge function to get this
+        email: '',
         full_name: profile.full_name,
         phone: profile.phone,
         created_at: profile.created_at,
         roles: rolesByUser[profile.user_id] || [],
+        is_partner_accountant: (profile as any).is_partner_accountant ?? false,
       }));
 
       setUsers(usersData);
