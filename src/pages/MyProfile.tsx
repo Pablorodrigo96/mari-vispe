@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, MapPin, CreditCard, Crown, Check, Loader2, ExternalLink } from 'lucide-react';
+import { User, MapPin, CreditCard, Crown, Check, Loader2, ExternalLink, Globe } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useUserRoles } from '@/hooks/useUserRoles';
+import { Checkbox } from '@/components/ui/checkbox';
+
+const CATEGORIES = [
+  { value: 'food', label: 'Alimentos' },
+  { value: 'health', label: 'Saúde' },
+  { value: 'tech', label: 'Tecnologia' },
+  { value: 'commerce', label: 'Comércio' },
+  { value: 'industry', label: 'Indústria' },
+  { value: 'education', label: 'Educação' },
+  { value: 'logistics', label: 'Logística' },
+  { value: 'services', label: 'Serviços' },
+  { value: 'telecom', label: 'Telecom' },
+];
 
 const estados = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
