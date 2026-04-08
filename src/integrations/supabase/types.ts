@@ -65,6 +65,33 @@ export type Database = {
         }
         Relationships: []
       }
+      franchisee_regions: {
+        Row: {
+          categories: string[] | null
+          cities: string[] | null
+          created_at: string
+          id: string
+          states: string[] | null
+          user_id: string
+        }
+        Insert: {
+          categories?: string[] | null
+          cities?: string[] | null
+          created_at?: string
+          id?: string
+          states?: string[] | null
+          user_id: string
+        }
+        Update: {
+          categories?: string[] | null
+          cities?: string[] | null
+          created_at?: string
+          id?: string
+          states?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       franchisee_requests: {
         Row: {
           created_at: string
@@ -343,6 +370,7 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          is_digest: boolean | null
           is_read: boolean | null
           listing_id: string | null
           title: string
@@ -353,6 +381,7 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          is_digest?: boolean | null
           is_read?: boolean | null
           listing_id?: string | null
           title: string
@@ -363,6 +392,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          is_digest?: boolean | null
           is_read?: boolean | null
           listing_id?: string | null
           title?: string
@@ -386,6 +416,39 @@ export type Database = {
           },
         ]
       }
+      partner_activities: {
+        Row: {
+          activity_type: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          partner_user_id: string
+          scheduled_at: string | null
+        }
+        Insert: {
+          activity_type: string
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          partner_user_id: string
+          scheduled_at?: string | null
+        }
+        Update: {
+          activity_type?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          partner_user_id?: string
+          scheduled_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cep: string | null
@@ -397,6 +460,7 @@ export type Database = {
           id: string
           is_partner_accountant: boolean
           neighborhood: string | null
+          notification_preference: string | null
           phone: string | null
           state: string | null
           stripe_customer_id: string | null
@@ -413,6 +477,7 @@ export type Database = {
           id?: string
           is_partner_accountant?: boolean
           neighborhood?: string | null
+          notification_preference?: string | null
           phone?: string | null
           state?: string | null
           stripe_customer_id?: string | null
@@ -429,6 +494,7 @@ export type Database = {
           id?: string
           is_partner_accountant?: boolean
           neighborhood?: string | null
+          notification_preference?: string | null
           phone?: string | null
           state?: string | null
           stripe_customer_id?: string | null
