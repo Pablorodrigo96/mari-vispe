@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle, ArrowUpRight } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Tooltip as RechartsTooltip, Cell } from 'recharts';
 import { ValuationResult, calculateEquityGap } from '@/lib/valuationCalculator';
 import { formatFullCurrency } from '@/lib/formatters';
 import { openWhatsApp } from '@/lib/whatsapp';
@@ -467,64 +468,156 @@ export const ValuationReportDialog = ({
             </div>
           </div>
 
-          {/* Gap de Equity */}
-          <div className="bg-card border-2 border-emerald-500/30 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <ArrowUpRight className="w-4 h-4 text-emerald-500" />
-              </div>
-              <h3 className="font-semibold text-foreground">Gap de Equity</h3>
-              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs">
-                +{equityGap.gapPercent.toFixed(1)}%
-              </Badge>
-            </div>
+          {/* Gap de Equity - Enhanced */}
+          {(() => {
+            const boostedResult = {
+              revenueValuation: result.metrics.revenue * result.multiplesUsed.rev,
+              ebitdaValuation: result.metrics.revenue * (equityGap.boostedMargin / 100) * result.multiplesUsed.ebitda,
+              profitValuation: result.profitValuation,
+            };
 
-            <div className="grid sm:grid-cols-2 gap-4 mb-4">
-              <div className="bg-muted/50 rounded-lg p-4 text-center">
-                <p className="text-muted-foreground text-xs mb-1">Valor Atual</p>
-                <p className="text-2xl font-bold text-foreground">{formatFullCurrency(equityGap.currentValue)}</p>
-                <p className="text-muted-foreground text-xs mt-1">Margem EBITDA: {equityGap.currentMargin.toFixed(1)}%</p>
-              </div>
-              <div className="bg-emerald-500/10 rounded-lg p-4 text-center border border-emerald-500/20">
-                <p className="text-emerald-600 text-xs mb-1">Valor Vispe (Potencial)</p>
-                <p className="text-2xl font-bold text-emerald-600">{formatFullCurrency(equityGap.potentialValue)}</p>
-                <p className="text-emerald-600/70 text-xs mt-1">Margem EBITDA: {equityGap.boostedMargin.toFixed(1)}%</p>
-              </div>
-            </div>
+            const chartData = [
+              {
+                name: 'EV/Receita',
+                atual: result.revenueValuation,
+                potencial: boostedResult.revenueValuation,
+              },
+              {
+                name: 'EV/EBITDA',
+                atual: result.ebitdaValuation,
+                potencial: boostedResult.ebitdaValuation,
+              },
+              {
+                name: 'P/Lucro',
+                atual: result.profitValuation,
+                potencial: boostedResult.profitValuation,
+              },
+              {
+                name: 'Mashup',
+                atual: equityGap.currentValue,
+                potencial: equityGap.potentialValue,
+              },
+            ];
 
-            {/* Visual bar */}
-            <div className="relative h-6 bg-muted rounded-full overflow-hidden mb-3">
-              <div
-                className="absolute inset-y-0 left-0 bg-muted-foreground/30 rounded-full"
-                style={{ width: `${Math.min((equityGap.currentValue / equityGap.potentialValue) * 100, 100)}%` }}
-              />
-              <div
-                className="absolute inset-y-0 left-0 bg-emerald-500 rounded-full"
-                style={{ width: '100%', opacity: 0.3 }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-foreground">
-                Gap: {formatFullCurrency(equityGap.gapValue)}
+            const formatCompact = (value: number) => {
+              if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1)}M`;
+              if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(0)}K`;
+              return `R$ ${value.toFixed(0)}`;
+            };
+
+            const renderLabel = (props: any) => {
+              const { x, y, width, value } = props;
+              if (!value || value === 0) return null;
+              return (
+                <text x={x + width / 2} y={y - 6} fill="hsl(var(--foreground))" textAnchor="middle" fontSize={10} fontWeight={600}>
+                  {formatCompact(value)}
+                </text>
+              );
+            };
+
+            return (
+              <div className="bg-card border-2 border-emerald-500/30 rounded-xl p-5 animate-fade-in">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <h3 className="font-semibold text-foreground">Gap de Equity</h3>
+                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs animate-pulse">
+                    +{equityGap.gapPercent.toFixed(1)}%
+                  </Badge>
+                </div>
+
+                {/* Summary cards */}
+                <div className="grid sm:grid-cols-3 gap-3 mb-5">
+                  <div className="bg-muted/50 rounded-lg p-3 text-center">
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Valor Atual</p>
+                    <p className="text-xl font-bold text-foreground">{formatFullCurrency(equityGap.currentValue)}</p>
+                    <p className="text-muted-foreground text-xs mt-1">EBITDA: {equityGap.currentMargin.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-emerald-500/10 rounded-lg p-3 text-center border border-emerald-500/20">
+                    <p className="text-emerald-600 text-[10px] uppercase tracking-wider mb-1">Valor Vispe</p>
+                    <p className="text-xl font-bold text-emerald-600">{formatFullCurrency(equityGap.potentialValue)}</p>
+                    <p className="text-emerald-600/70 text-xs mt-1">EBITDA: {equityGap.boostedMargin.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-accent/10 rounded-lg p-3 text-center border border-accent/20">
+                    <p className="text-accent text-[10px] uppercase tracking-wider mb-1">Gap</p>
+                    <p className="text-xl font-bold text-accent">{formatFullCurrency(equityGap.gapValue)}</p>
+                    <p className="text-accent/70 text-xs mt-1">+{equityGap.gapPercent.toFixed(1)}% de upside</p>
+                  </div>
+                </div>
+
+                {/* Recharts bar chart */}
+                <div className="bg-muted/30 rounded-lg p-3 mb-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-2 text-center">Comparativo por Método</p>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={chartData} barGap={2} barCategoryGap="20%">
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+                      <YAxis hide />
+                      <RechartsTooltip
+                        formatter={(value: number, name: string) => [formatFullCurrency(value), name === 'atual' ? 'Valor Atual' : 'Valor Vispe']}
+                        contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                      />
+                      <Bar dataKey="atual" fill="#94a3b8" radius={[4, 4, 0, 0]} animationDuration={800} animationBegin={200}>
+                        <LabelList dataKey="atual" content={renderLabel} />
+                      </Bar>
+                      <Bar dataKey="potencial" fill="#10b981" radius={[4, 4, 0, 0]} animationDuration={800} animationBegin={500}>
+                        <LabelList dataKey="potencial" content={renderLabel} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="flex items-center justify-center gap-4 mt-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#94a3b8' }} />
+                      <span className="text-[10px] text-muted-foreground">Atual</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#10b981' }} />
+                      <span className="text-[10px] text-muted-foreground">Vispe (Potencial)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Animated progress bar */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>Valor Atual</span>
+                    <span>Valor Vispe</span>
+                  </div>
+                  <div className="relative h-5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-slate-400 to-emerald-500 rounded-full transition-all duration-1000 ease-out"
+                      style={{ width: `${Math.min((equityGap.currentValue / equityGap.potentialValue) * 100, 100)}%` }}
+                    />
+                    <div
+                      className="absolute inset-y-0 left-0 bg-emerald-500/20 rounded-full"
+                      style={{ width: '100%' }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-foreground">
+                      Gap: {formatFullCurrency(equityGap.gapValue)}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-4">
+                  Se sua empresa melhorar a margem EBITDA em 5pp (de {equityGap.currentMargin.toFixed(1)}% para {equityGap.boostedMargin.toFixed(1)}%), 
+                  o valor estimado sobe de {formatFullCurrency(equityGap.currentValue)} para {formatFullCurrency(equityGap.potentialValue)}.
+                </p>
+
+                <Button
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                  onClick={async () => {
+                    const opened = await openWhatsApp(`Olá! Vi meu Gap de Equity de ${formatFullCurrency(equityGap.gapValue)} e gostaria de falar com um franqueado Vispe na minha região.`);
+                    if (!opened) {
+                      toast.success('Link do WhatsApp copiado! Cole no navegador para abrir.');
+                    }
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Falar com Franqueado Regional
+                </Button>
               </div>
-            </div>
-
-            <p className="text-sm text-muted-foreground mb-4">
-              Se sua empresa melhorar a margem EBITDA em 5pp (de {equityGap.currentMargin.toFixed(1)}% para {equityGap.boostedMargin.toFixed(1)}%), 
-              o valor estimado sobe de {formatFullCurrency(equityGap.currentValue)} para {formatFullCurrency(equityGap.potentialValue)}.
-            </p>
-
-            <Button
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
-              onClick={async () => {
-                const opened = await openWhatsApp(`Olá! Vi meu Gap de Equity de ${formatFullCurrency(equityGap.gapValue)} e gostaria de falar com um franqueado Vispe na minha região.`);
-                if (!opened) {
-                  toast.success('Link do WhatsApp copiado! Cole no navegador para abrir.');
-                }
-              }}
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Falar com Franqueado Regional
-            </Button>
-          </div>
+            );
+          })()}
 
           {/* Methodology */}
           <div className="bg-muted/30 rounded-xl p-5">
