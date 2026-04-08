@@ -200,6 +200,7 @@ const BlindTeaser = () => {
         annualProfit={listing.annual_profit}
         askingPrice={listing.asking_price}
         hidePrice={listing.hide_price}
+        equityScore={(listing as any).equity_score}
       />
       <TeaserDetails
         squareMeters={listing.square_meters}
