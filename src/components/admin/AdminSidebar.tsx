@@ -15,6 +15,7 @@ const menuItems = [
   { name: 'Anúncios', href: '/admin/listings', icon: Building2 },
   { name: 'Assinaturas', href: '/admin/subscriptions', icon: CreditCard },
   { name: 'Valuations', href: '/admin/valuations', icon: ChartBar },
+  { name: 'Parcerias', href: '/admin/parcerias', icon: Users },
 ];
 
 export function AdminSidebar() {
