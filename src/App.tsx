@@ -36,6 +36,8 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminListings from "./pages/admin/AdminListings";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminValuations from "./pages/admin/AdminValuations";
+import AdminPartnerships from "./pages/admin/AdminPartnerships";
+import MatchingBuyers from "./pages/MatchingBuyers";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +79,8 @@ const App = () => (
             <Route path="/admin/listings" element={<AdminListings />} />
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
             <Route path="/admin/valuations" element={<AdminValuations />} />
+            <Route path="/admin/parcerias" element={<AdminPartnerships />} />
+            <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

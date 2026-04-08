@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, MapPin, CreditCard, Crown, Check, Loader2, ExternalLink } from 'lucide-react';
+import { User, MapPin, CreditCard, Crown, Check, Loader2, ExternalLink, Globe } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useUserRoles } from '@/hooks/useUserRoles';
+import { Checkbox } from '@/components/ui/checkbox';
+
+const CATEGORIES = [
+  { value: 'food', label: 'Alimentos' },
+  { value: 'health', label: 'Saúde' },
+  { value: 'tech', label: 'Tecnologia' },
+  { value: 'commerce', label: 'Comércio' },
+  { value: 'industry', label: 'Indústria' },
+  { value: 'education', label: 'Educação' },
+  { value: 'logistics', label: 'Logística' },
+  { value: 'services', label: 'Serviços' },
+  { value: 'telecom', label: 'Telecom' },
+];
 
 const estados = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -45,6 +59,12 @@ const MyProfile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+
+  const { isFranchisee } = useUserRoles();
+  const [regionStates, setRegionStates] = useState<string[]>([]);
+  const [regionCategories, setRegionCategories] = useState<string[]>([]);
+  const [regionId, setRegionId] = useState<string | null>(null);
+  const [isSavingRegion, setIsSavingRegion] = useState(false);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -106,6 +126,19 @@ const MyProfile = () => {
         }
 
         setSubscription(sub);
+
+        // Fetch franchisee region if applicable
+        const { data: region } = await supabase
+          .from('franchisee_regions')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (region) {
+          setRegionId(region.id);
+          setRegionStates(region.states || []);
+          setRegionCategories(region.categories || []);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error('Erro ao carregar dados do perfil');
@@ -168,6 +201,42 @@ const MyProfile = () => {
   const formatCep = (value: string) => {
     const numbers = value.replace(/\D/g, '');
     return numbers.replace(/(\d{5})(\d{0,3})/, '$1-$2').trim();
+  };
+
+  const handleSaveRegion = async () => {
+    if (!user) return;
+    setIsSavingRegion(true);
+    try {
+      if (regionId) {
+        const { error } = await supabase.from('franchisee_regions').update({
+          states: regionStates,
+          categories: regionCategories,
+        }).eq('id', regionId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('franchisee_regions').insert({
+          user_id: user.id,
+          states: regionStates,
+          categories: regionCategories,
+        }).select('id').single();
+        if (error) throw error;
+        if (data) setRegionId(data.id);
+      }
+      toast.success('Região de atuação salva!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao salvar região');
+    } finally {
+      setIsSavingRegion(false);
+    }
+  };
+
+  const toggleState = (st: string) => {
+    setRegionStates(prev => prev.includes(st) ? prev.filter(s => s !== st) : [...prev, st]);
+  };
+
+  const toggleCategory = (cat: string) => {
+    setRegionCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
   };
 
   const currentPlan = subscription?.plan || 'free';
@@ -491,6 +560,61 @@ const MyProfile = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Região de Atuação — Franqueados */}
+              {isFranchisee && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5" />
+                      Região de Atuação
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Defina os estados e categorias para receber notificações relevantes
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium mb-2">Estados</p>
+                      <div className="flex flex-wrap gap-2">
+                        {estados.map((st) => (
+                          <label key={st} className="flex items-center gap-1.5 cursor-pointer">
+                            <Checkbox
+                              checked={regionStates.includes(st)}
+                              onCheckedChange={() => toggleState(st)}
+                            />
+                            <span className="text-sm">{st}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {regionStates.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">Nenhum selecionado = todas as regiões</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium mb-2">Categorias</p>
+                      <div className="flex flex-wrap gap-3">
+                        {CATEGORIES.map((cat) => (
+                          <label key={cat.value} className="flex items-center gap-1.5 cursor-pointer">
+                            <Checkbox
+                              checked={regionCategories.includes(cat.value)}
+                              onCheckedChange={() => toggleCategory(cat.value)}
+                            />
+                            <span className="text-sm">{cat.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {regionCategories.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">Nenhuma selecionada = todas as categorias</p>
+                      )}
+                    </div>
+                    <Button type="button" variant="outline" onClick={handleSaveRegion} disabled={isSavingRegion}>
+                      {isSavingRegion ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                      Salvar Região
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
 
               <Button type="submit" className="w-full" disabled={isSaving}>
                 {isSaving ? (
