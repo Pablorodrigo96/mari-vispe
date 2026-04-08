@@ -171,7 +171,23 @@ export default function AdminUsers() {
     } catch (error) {
       console.error('Error removing role:', error);
       toast.error('Erro ao remover role');
+  }
+
+  async function handleTogglePartnerAccountant(userId: string, currentValue: boolean) {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_partner_accountant: !currentValue } as any)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      toast.success(!currentValue ? 'Contador Parceiro ativado!' : 'Contador Parceiro desativado!');
+      fetchUsers();
+    } catch (error) {
+      console.error('Error toggling partner accountant:', error);
+      toast.error('Erro ao alterar status de Contador Parceiro');
     }
+  }
   }
 
   async function fetchFranchiseeRequests() {
