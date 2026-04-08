@@ -126,6 +126,19 @@ const MyProfile = () => {
         }
 
         setSubscription(sub);
+
+        // Fetch franchisee region if applicable
+        const { data: region } = await supabase
+          .from('franchisee_regions')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (region) {
+          setRegionId(region.id);
+          setRegionStates(region.states || []);
+          setRegionCategories(region.categories || []);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error('Erro ao carregar dados do perfil');
