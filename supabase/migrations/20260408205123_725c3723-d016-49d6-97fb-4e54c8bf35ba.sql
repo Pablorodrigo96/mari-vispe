@@ -1,0 +1,27 @@
+CREATE OR REPLACE VIEW public.public_listings AS
+SELECT id,
+    title,
+    category,
+    description,
+    additional_info,
+    foundation_year,
+    annual_revenue,
+    annual_profit,
+    asking_price,
+    hide_price,
+    city,
+    state,
+    neighborhood,
+    square_meters,
+    rent_value,
+    iptu_value,
+    sale_reason,
+    images,
+    plan,
+    status,
+    ticker,
+    created_at,
+    updated_at,
+    equity_score
+   FROM listings
+  WHERE (status = 'active'::text);

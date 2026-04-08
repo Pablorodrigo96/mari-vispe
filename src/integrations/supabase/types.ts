@@ -632,6 +632,7 @@ export type Database = {
           city: string | null
           created_at: string | null
           description: string | null
+          equity_score: number | null
           foundation_year: number | null
           hide_price: boolean | null
           id: string | null
@@ -657,6 +658,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           description?: string | null
+          equity_score?: number | null
           foundation_year?: number | null
           hide_price?: boolean | null
           id?: string | null
@@ -682,6 +684,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           description?: string | null
+          equity_score?: number | null
           foundation_year?: number | null
           hide_price?: boolean | null
           id?: string | null
