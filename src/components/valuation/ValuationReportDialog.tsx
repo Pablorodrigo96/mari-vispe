@@ -15,8 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle } from 'lucide-react';
-import { ValuationResult } from '@/lib/valuationCalculator';
+import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle, ArrowUpRight } from 'lucide-react';
+import { ValuationResult, calculateEquityGap } from '@/lib/valuationCalculator';
 import { formatFullCurrency } from '@/lib/formatters';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { toast } from 'sonner';

@@ -145,6 +145,41 @@ export function calculateValuation(inputs: ValuationInputs): ValuationResult {
   };
 }
 
+// Gap de Equity - Simulação de melhoria na margem EBITDA
+export interface EquityGapResult {
+  currentValue: number;
+  potentialValue: number;
+  gapValue: number;
+  gapPercent: number;
+  currentMargin: number;
+  boostedMargin: number;
+}
+
+export function calculateEquityGap(result: ValuationResult, ebitdaBoostPP: number = 5): EquityGapResult {
+  const currentValue = result.mashupValue;
+  const currentMargin = result.metrics.ebitdaMargin;
+  const boostedMargin = currentMargin + ebitdaBoostPP;
+
+  // Recalcular com margem melhorada
+  const boostedResult = calculateValuation({
+    ...result.inputs,
+    ebitdaMargin: boostedMargin,
+  });
+
+  const potentialValue = boostedResult.mashupValue;
+  const gapValue = potentialValue - currentValue;
+  const gapPercent = currentValue > 0 ? (gapValue / currentValue) * 100 : 0;
+
+  return {
+    currentValue,
+    potentialValue,
+    gapValue,
+    gapPercent,
+    currentMargin,
+    boostedMargin,
+  };
+}
+
 // Helper para converter string de moeda para número
 export function parseCurrency(value: string): number {
   if (!value) return 0;
