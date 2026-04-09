@@ -29,6 +29,7 @@ import MatchingResults from "./pages/MatchingResults";
 import EditListing from "./pages/EditListing";
 import BlindTeaser from "./pages/BlindTeaser";
 import RegisterBuyer from "./pages/RegisterBuyer";
+import MyCapitalRequests from "./pages/MyCapitalRequests";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/matching/resultados" element={<MatchingResults />} />
             <Route path="/teaser/:ticker" element={<BlindTeaser />} />
             <Route path="/cadastrar-comprador" element={<RegisterBuyer />} />
+            <Route path="/minhas-captacoes" element={<MyCapitalRequests />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
