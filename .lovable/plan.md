@@ -1,35 +1,77 @@
 
 
-## Plano: Melhorar Visual do Gap de Equity com Recharts e Animações
+## Plano: Captação de Capital com Criação de Conta + Página "Minhas Solicitações"
 
-### Mudança
+### Objetivo
+Quando um lead preencher o formulário de captação de capital, o sistema deve:
+1. Criar automaticamente uma conta de usuário (ou usar a existente se já logado)
+2. Salvar a solicitação no banco de dados
+3. Adicionar campo "Tipo de Captação" (Dívida ou Equity) ao formulário
+4. Redirecionar para uma página "Minhas Solicitações" onde o lead acompanha status, visualizações e propostas
 
-Substituir a seção "Gap de Equity" (linhas 470-527) no `ValuationReportDialog.tsx` por uma versão aprimorada com:
+---
 
-1. **Gráfico de barras Recharts** comparando "Valor Atual" vs "Valor Vispe" lado a lado, com cores distintas (cinza vs emerald) e labels de valor no topo
-2. **Animação CSS** de entrada (fade-in + scale) no card inteiro
-3. **Badge animada** com o percentual do gap pulsando sutilmente
-4. **Barra de progresso animada** com transição CSS (width de 0% → valor real) ao entrar em view
-5. **Breakdown visual** por método (EV/Receita, EV/EBITDA, P/Lucro) em mini-barras mostrando atual vs potencial para cada um
+### Mudanças
 
-### Estrutura do gráfico Recharts
+#### 1. Migração SQL — Tabela `capital_requests`
 
-```text
-|  ████████  ██████████████  |
-|  Atual     Valor Vispe     |
-|  R$ X      R$ Y            |
-```
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| id | uuid PK | |
+| user_id | uuid | Usuário criado/existente |
+| company_name | text | Nome da empresa |
+| requested_amount | numeric | Valor solicitado |
+| capital_type | text | 'divida' ou 'equity' |
+| objective | text | giro, expansao, etc. |
+| monthly_revenue | text | Faixa de faturamento |
+| net_profit | text | Lucro líquido |
+| status | text | 'pending', 'in_review', 'proposal_sent', 'closed' |
+| views_count | int default 0 | Visualizações por analistas |
+| created_at | timestamptz | |
 
-- `BarChart` com 2 barras agrupadas por método (Receita, EBITDA, Lucro) + barra total Mashup
-- Cores: `#94a3b8` (atual), `#10b981` (potencial)
-- `LabelList` no topo com valor formatado
-- `ChartTooltip` com detalhes
+RLS: usuário vê as próprias, admin vê todas, admin pode atualizar todas.
 
-### Arquivo alterado
+#### 2. `src/components/capital/CapitalLeadModal.tsx`
+- Adicionar campo **"Tipo de Captação"** com 2 opções: "Dívida (Crédito/Financiamento)" e "Equity (Venda de Participação)"
+- Adicionar campo **senha** para criação de conta
+- No `onSubmit`:
+  - Se usuário **não logado**: criar conta via `supabase.auth.signUp` com email + senha + nome
+  - Se usuário **já logado**: usar user existente
+  - Inserir registro na tabela `capital_requests`
+- Na tela de sucesso: botão "Acompanhar Solicitação" → `/minhas-captacoes`
+
+#### 3. Nova página `src/pages/MyCapitalRequests.tsx`
+- Rota: `/minhas-captacoes` (protegida por auth)
+- Lista as solicitações do usuário com:
+  - Valor solicitado, tipo (Dívida/Equity), objetivo
+  - Status com badge colorido (Pendente, Em Análise, Proposta Enviada, Fechado)
+  - Contador de visualizações
+  - Data de criação
+- Cards responsivos com layout limpo
+
+#### 4. `src/App.tsx`
+- Adicionar rota `/minhas-captacoes` → `MyCapitalRequests`
+
+#### 5. `src/components/layout/Header.tsx`
+- Adicionar link "Minhas Captações" no menu do usuário logado (dropdown)
+
+---
+
+### Seção Técnica
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/valuation/ValuationReportDialog.tsx` | Substituir seção Gap de Equity (linhas 470-527) por versão com Recharts BarChart + animações CSS |
+| Migração SQL | Criar tabela `capital_requests` com RLS |
+| `CapitalLeadModal.tsx` | Adicionar campo capital_type (dívida/equity) + senha + signup automático + insert na tabela |
+| `MyCapitalRequests.tsx` | Nova página listando solicitações do usuário |
+| `App.tsx` | Nova rota `/minhas-captacoes` |
+| `Header.tsx` | Link no menu do usuário |
 
-Imports adicionais: `BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList, Tooltip` de `recharts` (já instalado no projeto).
+**Fluxo do lead:**
+```text
+Formulário Capital → Preenche dados + escolhe Dívida/Equity + cria senha
+→ Conta criada automaticamente + solicitação salva
+→ Tela sucesso com botão "Acompanhar"
+→ /minhas-captacoes (lista com status e views)
+```
 
