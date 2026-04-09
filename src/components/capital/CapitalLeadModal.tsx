@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, X } from 'lucide-react';
+import { CheckCircle2, Eye, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { formatFullCurrency } from '@/lib/formatters';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import type { CapitalObjective } from '@/pages/Capital';
 
 const formSchema = z.object({
@@ -34,9 +38,11 @@ const formSchema = z.object({
   companyName: z.string().min(2, 'Nome da empresa é obrigatório').max(100),
   email: z.string().email('Email inválido').max(255),
   phone: z.string().min(10, 'Telefone inválido').max(20),
+  password: z.string().min(8, 'Senha deve ter pelo menos 8 caracteres').max(72).optional(),
   monthlyRevenue: z.string().min(1, 'Selecione o faturamento'),
   netProfit: z.string().min(1, 'Informe o lucro líquido'),
   objective: z.string().min(1, 'Selecione o objetivo'),
+  capitalType: z.string().min(1, 'Selecione o tipo de captação'),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -62,8 +68,16 @@ const objectiveOptions = [
   { value: 'socio', label: 'Busca de Sócio' },
 ];
 
+const capitalTypeOptions = [
+  { value: 'divida', label: 'Dívida (Crédito / Financiamento)' },
+  { value: 'equity', label: 'Equity (Venda de Participação)' },
+];
+
 export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObjective }: CapitalLeadModalProps) {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -72,16 +86,76 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
       companyName: '',
       email: '',
       phone: '',
+      password: '',
       monthlyRevenue: '',
       netProfit: '',
       objective: initialObjective,
+      capitalType: '',
     },
   });
 
-  const onSubmit = (data: FormData) => {
-    // In production, this would send data to backend
-    console.log('Lead captured:', { ...data, requestedAmount: initialAmount });
-    setIsSubmitted(true);
+  const onSubmit = async (data: FormData) => {
+    setIsLoading(true);
+    try {
+      let userId = user?.id;
+
+      // If not logged in, create account
+      if (!userId) {
+        if (!data.password || data.password.length < 8) {
+          toast({ title: 'Erro', description: 'Crie uma senha para acompanhar sua solicitação.', variant: 'destructive' });
+          setIsLoading(false);
+          return;
+        }
+
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+          options: {
+            data: { full_name: data.fullName },
+            emailRedirectTo: window.location.origin,
+          },
+        });
+
+        if (signUpError) {
+          toast({ title: 'Erro ao criar conta', description: signUpError.message, variant: 'destructive' });
+          setIsLoading(false);
+          return;
+        }
+
+        userId = signUpData.user?.id;
+        if (!userId) {
+          toast({ title: 'Erro', description: 'Não foi possível criar a conta.', variant: 'destructive' });
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Insert capital request
+      const { error: insertError } = await supabase.from('capital_requests').insert({
+        user_id: userId,
+        full_name: data.fullName,
+        company_name: data.companyName,
+        email: data.email,
+        phone: data.phone,
+        requested_amount: initialAmount,
+        capital_type: data.capitalType,
+        objective: data.objective,
+        monthly_revenue: data.monthlyRevenue,
+        net_profit: data.netProfit,
+      });
+
+      if (insertError) {
+        toast({ title: 'Erro ao salvar solicitação', description: insertError.message, variant: 'destructive' });
+        setIsLoading(false);
+        return;
+      }
+
+      setIsSubmitted(true);
+    } catch (err) {
+      toast({ title: 'Erro inesperado', description: 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -109,6 +183,32 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
             
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+                {/* Capital Type */}
+                <FormField
+                  control={form.control}
+                  name="capitalType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label>Tipo de Captação *</Label>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Como deseja captar?" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {capitalTypeOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="fullName"
@@ -166,6 +266,29 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
                     )}
                   />
                 </div>
+
+                {/* Password field - only for non-logged users */}
+                {!user && (
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label htmlFor="password" className="flex items-center gap-1">
+                          <Lock className="w-3 h-3" />
+                          Crie uma senha para acompanhar *
+                        </Label>
+                        <FormControl>
+                          <Input id="password" type="password" placeholder="Mínimo 8 caracteres" {...field} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Uma conta será criada para você acompanhar sua solicitação.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 
                 <FormField
                   control={form.control}
@@ -237,9 +360,10 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
                 
                 <Button 
                   type="submit" 
+                  disabled={isLoading}
                   className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold mt-6"
                 >
-                  Receber contato de especialista
+                  {isLoading ? 'Enviando...' : 'Receber contato de especialista'}
                 </Button>
                 
                 <p className="text-xs text-center text-muted-foreground">
@@ -260,11 +384,21 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
             
             <p className="text-muted-foreground mb-8">
               Um especialista entrará em contato para agendar uma reunião.
+              {!user && ' Verifique seu email para confirmar a conta.'}
             </p>
             
-            <Button onClick={handleClose} variant="outline">
-              Voltar ao início
-            </Button>
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={() => { handleClose(); navigate('/minhas-captacoes'); }}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Acompanhar Solicitação
+              </Button>
+              <Button onClick={handleClose} variant="outline">
+                Voltar ao início
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
