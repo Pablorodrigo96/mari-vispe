@@ -77,7 +77,7 @@ export function CapitalSimulator({ onResult }: CapitalSimulatorProps) {
     const inputs: SimulatorInputs = { amount, monthlyRevenue, sector, companyAge, objective };
     const scoring = calculateCapitalScore(inputs);
     setResult(scoring);
-    onResult(inputs, scoring);
+    onResult?.(inputs, scoring);
   };
 
   const scoreColor = (score: number) => {

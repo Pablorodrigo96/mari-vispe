@@ -76,9 +76,9 @@ export default function CapitalCase() {
       <Header />
       <main className="flex-1">
         {/* Hero */}
-        <section className="bg-gradient-to-br from-emerald-900 to-emerald-700 text-primary-foreground py-16">
+        <section className="bg-gradient-to-br from-primary/20 to-primary/5 py-16">
           <div className="container max-w-4xl">
-            <Link to="/capital" className="inline-flex items-center gap-1 text-sm opacity-80 hover:opacity-100 mb-6">
+            <Link to="/capital" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
               <ArrowLeft className="h-4 w-4" /> Voltar
             </Link>
             <Badge className="bg-primary-foreground/20 text-primary-foreground mb-4">{caseData.sector}</Badge>
