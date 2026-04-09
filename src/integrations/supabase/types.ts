@@ -67,7 +67,9 @@ export type Database = {
       }
       capital_requests: {
         Row: {
+          approval_score: number | null
           capital_type: string
+          company_age: string | null
           company_name: string
           created_at: string
           email: string | null
@@ -78,13 +80,16 @@ export type Database = {
           objective: string
           phone: string | null
           requested_amount: number
+          sector: string | null
           status: string
           updated_at: string
           user_id: string
           views_count: number
         }
         Insert: {
+          approval_score?: number | null
           capital_type?: string
+          company_age?: string | null
           company_name: string
           created_at?: string
           email?: string | null
@@ -95,13 +100,16 @@ export type Database = {
           objective: string
           phone?: string | null
           requested_amount: number
+          sector?: string | null
           status?: string
           updated_at?: string
           user_id: string
           views_count?: number
         }
         Update: {
+          approval_score?: number | null
           capital_type?: string
+          company_age?: string | null
           company_name?: string
           created_at?: string
           email?: string | null
@@ -112,6 +120,7 @@ export type Database = {
           objective?: string
           phone?: string | null
           requested_amount?: number
+          sector?: string | null
           status?: string
           updated_at?: string
           user_id?: string
