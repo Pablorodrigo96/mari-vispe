@@ -49,7 +49,7 @@ const objectiveOptions = [
 ];
 
 interface CapitalSimulatorProps {
-  onResult: (inputs: SimulatorInputs, result: ScoringResult) => void;
+  onResult?: (inputs: SimulatorInputs, result: ScoringResult) => void;
 }
 
 export function CapitalSimulator({ onResult }: CapitalSimulatorProps) {

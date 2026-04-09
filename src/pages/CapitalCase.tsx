@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, TrendingUp, Clock, DollarSign, Quote } from 'lucide-react';
-import { Helmet } from 'react-helmet';
+
 
 const cases: Record<string, {
   title: string; sector: string; amount: string; timeline: string;
