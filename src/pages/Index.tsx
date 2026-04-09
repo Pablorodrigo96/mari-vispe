@@ -20,7 +20,7 @@ const Index = () => {
     queryKey: ['featured-listings-master'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('listings')
+        .from('public_listings')
         .select('*')
         .eq('plan', 'master')
         .eq('status', 'active')

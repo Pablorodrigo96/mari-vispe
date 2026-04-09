@@ -120,7 +120,7 @@ const ListingDetail = () => {
 
       try {
         const { data, error } = await supabase
-          .from('listings')
+          .from('public_listings')
           .select('*')
           .eq('id', id)
           .maybeSingle();
