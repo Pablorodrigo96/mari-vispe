@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Building2, LogOut, ClipboardList, User, Shield, UserSearch, DollarSign } from 'lucide-react';
+import { Menu, X, Building2, LogOut, ClipboardList, User, Shield, UserSearch, DollarSign, BarChart3 } from 'lucide-react';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const navigation = [
@@ -40,7 +41,8 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, isAdvisor } = useUserRoles();
+  const { isPartnerAccountant } = usePartnerAccountant();
   const scrollY = useScrollPosition();
 
   const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/capital', '/sell', '/valuation'];

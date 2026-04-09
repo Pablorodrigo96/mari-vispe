@@ -45,6 +45,7 @@ import MatchingBuyers from "./pages/MatchingBuyers";
 import CapitalCase from "./pages/CapitalCase";
 import CapitalBySegment from "./pages/CapitalBySegment";
 import CapitalByCity from "./pages/CapitalByCity";
+import PortfolioPotential from "./pages/PortfolioPotential";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +93,8 @@ const App = () => (
             <Route path="/admin/capital" element={<AdminCapital />} />
             <Route path="/admin/capital/providers" element={<AdminCapitalProviders />} />
             <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />
+            
+            <Route path="/potencial-carteira" element={<PortfolioPotential />} />
             
             {/* Capital SEO Pages */}
             <Route path="/capital/case/:slug" element={<CapitalCase />} />
