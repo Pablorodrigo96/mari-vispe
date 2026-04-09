@@ -65,6 +65,60 @@ export type Database = {
         }
         Relationships: []
       }
+      capital_requests: {
+        Row: {
+          capital_type: string
+          company_name: string
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          monthly_revenue: string | null
+          net_profit: string | null
+          objective: string
+          phone: string | null
+          requested_amount: number
+          status: string
+          updated_at: string
+          user_id: string
+          views_count: number
+        }
+        Insert: {
+          capital_type?: string
+          company_name: string
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          monthly_revenue?: string | null
+          net_profit?: string | null
+          objective: string
+          phone?: string | null
+          requested_amount: number
+          status?: string
+          updated_at?: string
+          user_id: string
+          views_count?: number
+        }
+        Update: {
+          capital_type?: string
+          company_name?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          monthly_revenue?: string | null
+          net_profit?: string | null
+          objective?: string
+          phone?: string | null
+          requested_amount?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+          views_count?: number
+        }
+        Relationships: []
+      }
       franchisee_regions: {
         Row: {
           categories: string[] | null
