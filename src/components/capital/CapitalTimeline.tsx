@@ -21,7 +21,7 @@ const stepOrder = PIPELINE_STEPS.map(s => s.key);
 
 interface Props {
   requestId: string;
-  currentStatus: string;
+  currentStatus?: string;
 }
 
 export function CapitalTimeline({ requestId, currentStatus }: Props) {

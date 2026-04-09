@@ -39,7 +39,12 @@ import AdminListings from "./pages/admin/AdminListings";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminValuations from "./pages/admin/AdminValuations";
 import AdminPartnerships from "./pages/admin/AdminPartnerships";
+import AdminCapital from "./pages/admin/AdminCapital";
+import AdminCapitalProviders from "./pages/admin/AdminCapitalProviders";
 import MatchingBuyers from "./pages/MatchingBuyers";
+import CapitalCase from "./pages/CapitalCase";
+import CapitalBySegment from "./pages/CapitalBySegment";
+import CapitalByCity from "./pages/CapitalByCity";
 
 const queryClient = new QueryClient();
 
@@ -84,7 +89,14 @@ const App = () => (
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
             <Route path="/admin/valuations" element={<AdminValuations />} />
             <Route path="/admin/parcerias" element={<AdminPartnerships />} />
+            <Route path="/admin/capital" element={<AdminCapital />} />
+            <Route path="/admin/capital/providers" element={<AdminCapitalProviders />} />
             <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />
+            
+            {/* Capital SEO Pages */}
+            <Route path="/capital/case/:slug" element={<CapitalCase />} />
+            <Route path="/capital/setor/:slug" element={<CapitalBySegment />} />
+            <Route path="/capital/cidade/:slug" element={<CapitalByCity />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
