@@ -182,7 +182,9 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
             </DialogHeader>
             
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+              <form onSubmit={form.handleSubmit(onSubmit, () => {
+                toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos marcados com *.', variant: 'destructive' });
+              })} className="space-y-4 mt-4">
                 {/* Capital Type */}
                 <FormField
                   control={form.control}
@@ -363,7 +365,7 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
                   disabled={isLoading}
                   className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold mt-6"
                 >
-                  {isLoading ? 'Enviando...' : 'Receber contato de especialista'}
+                  {isLoading ? 'Enviando...' : 'Cadastrar Proposta'}
                 </Button>
                 
                 <p className="text-xs text-center text-muted-foreground">
@@ -379,11 +381,11 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
             </div>
             
             <h3 className="text-2xl font-bold text-foreground mb-2">
-              Recebemos seus dados!
+              Proposta cadastrada com sucesso!
             </h3>
             
             <p className="text-muted-foreground mb-8">
-              Um especialista entrará em contato para agendar uma reunião.
+              Sua solicitação foi registrada. Acompanhe o status e propostas recebidas.
               {!user && ' Verifique seu email para confirmar a conta.'}
             </p>
             
