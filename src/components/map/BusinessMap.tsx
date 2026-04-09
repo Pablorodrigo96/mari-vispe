@@ -9,7 +9,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 
-type Listing = Tables<'listings'>;
+type Listing = Tables<'public_listings'>;
 
 export interface BuyerProfile {
   id: string;

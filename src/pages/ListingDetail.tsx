@@ -476,7 +476,7 @@ const ListingDetail = () => {
                     <div className="text-center text-muted-foreground">
                       <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       <p className="font-medium">{listing.city}, {listing.state}</p>
-                      {listing.show_address && listing.neighborhood && (
+                      {listing.neighborhood && (
                         <p className="text-sm">{listing.neighborhood}</p>
                       )}
                     </div>
