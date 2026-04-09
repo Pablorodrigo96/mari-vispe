@@ -1089,6 +1089,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_capital_view: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "seller" | "buyer" | "advisor" | "admin" | "franchisee"
