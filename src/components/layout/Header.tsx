@@ -45,7 +45,7 @@ export function Header() {
   const { isPartnerAccountant } = usePartnerAccountant();
   const scrollY = useScrollPosition();
 
-  const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/capital', '/sell', '/valuation'];
+  const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/sell', '/valuation'];
   const hasDarkHero = darkHeroRoutes.includes(location.pathname);
   const isScrolled = scrollY > 20;
   const isTransparent = hasDarkHero && !isScrolled && !mobileMenuOpen;
