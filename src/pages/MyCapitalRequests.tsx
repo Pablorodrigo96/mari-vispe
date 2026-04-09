@@ -8,8 +8,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Eye, DollarSign, TrendingUp, Clock, ArrowLeft } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { DollarSign, TrendingUp, Users, ArrowLeft, ChevronRight } from 'lucide-react';
 import { formatFullCurrency } from '@/lib/formatters';
+import { CapitalScoreCard } from '@/components/capital/CapitalScoreCard';
 
 interface CapitalRequest {
   id: string;
@@ -20,25 +22,29 @@ interface CapitalRequest {
   status: string;
   views_count: number;
   created_at: string;
+  lead_score: number | null;
+  matched_providers_count: number | null;
 }
 
-const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending: { label: 'Pendente', variant: 'secondary' },
-  in_review: { label: 'Em Análise', variant: 'default' },
-  proposal_sent: { label: 'Proposta Enviada', variant: 'outline' },
-  closed: { label: 'Fechado', variant: 'destructive' },
+const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string }> = {
+  pending: { label: 'Pendente', variant: 'secondary', color: 'bg-amber-500' },
+  in_review: { label: 'Em Análise', variant: 'default', color: 'bg-blue-500' },
+  matched: { label: 'Matched', variant: 'outline', color: 'bg-purple-500' },
+  proposal_sent: { label: 'Proposta Enviada', variant: 'default', color: 'bg-emerald-500' },
+  closed: { label: 'Fechado', variant: 'destructive', color: 'bg-muted-foreground' },
 };
 
-const capitalTypeLabels: Record<string, string> = {
-  divida: 'Dívida',
-  equity: 'Equity',
-};
-
+const capitalTypeLabels: Record<string, string> = { divida: 'Dívida', equity: 'Equity' };
 const objectiveLabels: Record<string, string> = {
-  giro: 'Capital de Giro',
-  expansao: 'Expansão',
-  refinanciamento: 'Refinanciamento',
-  socio: 'Busca de Sócio',
+  giro: 'Capital de Giro', expansao: 'Expansão', refinanciamento: 'Refinanciamento', socio: 'Busca de Sócio',
+};
+
+const nextActionText: Record<string, string> = {
+  pending: 'Enviar documentos',
+  in_review: 'Aguardar análise',
+  matched: 'Revisar provedores',
+  proposal_sent: 'Analisar proposta',
+  closed: 'Captação finalizada',
 };
 
 export default function MyCapitalRequests() {
@@ -48,23 +54,22 @@ export default function MyCapitalRequests() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
+    if (!user) { navigate('/auth'); return; }
     fetchRequests();
   }, [user]);
 
   const fetchRequests = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('capital_requests')
-      .select('id, company_name, requested_amount, capital_type, objective, status, views_count, created_at')
+      .select('id, company_name, requested_amount, capital_type, objective, status, views_count, created_at, lead_score, matched_providers_count')
       .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setRequests(data);
-    }
+    if (data) setRequests(data);
     setLoading(false);
+  };
+
+  const getProgress = (status: string) => {
+    const steps = ['pending', 'in_review', 'matched', 'proposal_sent', 'closed'];
+    return ((steps.indexOf(status) + 1) / steps.length) * 100;
   };
 
   return (
@@ -83,8 +88,8 @@ export default function MyCapitalRequests() {
 
         {loading ? (
           <div className="grid gap-4 md:grid-cols-2">
-            {[1, 2].map((i) => (
-              <Card key={i}><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+            {[1, 2].map(i => (
+              <Card key={i}><CardContent className="p-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
             ))}
           </div>
         ) : requests.length === 0 ? (
@@ -100,45 +105,48 @@ export default function MyCapitalRequests() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {requests.map((req) => {
-              const status = statusConfig[req.status] || statusConfig.pending;
+            {requests.map(req => {
+              const st = statusConfig[req.status] || statusConfig.pending;
               return (
-                <Card key={req.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={req.id}
+                  className="hover:shadow-md transition-shadow cursor-pointer group"
+                  onClick={() => navigate(`/minhas-captacoes/${req.id}`)}
+                >
                   <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
                         <h3 className="font-semibold text-foreground text-lg">{req.company_name}</h3>
                         <p className="text-sm text-muted-foreground">
                           {capitalTypeLabels[req.capital_type] || req.capital_type} · {objectiveLabels[req.objective] || req.objective}
                         </p>
                       </div>
-                      <Badge variant={status.variant}>{status.label}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={st.variant}>{st.label}</Badge>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 mt-4">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-accent" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Valor</p>
-                          <p className="text-sm font-semibold text-foreground">{formatFullCurrency(req.requested_amount)}</p>
+                    <div className="flex items-center gap-4 mb-4">
+                      <CapitalScoreCard score={req.lead_score} size="sm" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-accent" />
+                          <span className="text-sm font-semibold text-foreground">{formatFullCurrency(req.requested_amount)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">{req.matched_providers_count || 0} provedores</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Visualizações</p>
-                          <p className="text-sm font-semibold text-foreground">{req.views_count}</p>
-                        </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{nextActionText[req.status] || 'Aguardar'}</span>
+                        <span>{Math.round(getProgress(req.status))}%</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Criado em</p>
-                          <p className="text-sm font-semibold text-foreground">
-                            {new Date(req.created_at).toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                      </div>
+                      <Progress value={getProgress(req.status)} className="h-1.5" />
                     </div>
                   </CardContent>
                 </Card>
