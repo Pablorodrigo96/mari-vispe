@@ -65,68 +65,308 @@ export type Database = {
         }
         Relationships: []
       }
+      capital_documents: {
+        Row: {
+          doc_type: string
+          file_url: string
+          id: string
+          request_id: string
+          status: string | null
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          doc_type: string
+          file_url: string
+          id?: string
+          request_id: string
+          status?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          doc_type?: string
+          file_url?: string
+          id?: string
+          request_id?: string
+          status?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capital_documents_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "capital_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      capital_matches: {
+        Row: {
+          created_at: string | null
+          id: string
+          match_score: number | null
+          notified_at: string | null
+          provider_id: string
+          request_id: string
+          responded_at: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          match_score?: number | null
+          notified_at?: string | null
+          provider_id: string
+          request_id: string
+          responded_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          match_score?: number | null
+          notified_at?: string | null
+          provider_id?: string
+          request_id?: string
+          responded_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capital_matches_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "capital_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "capital_matches_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "capital_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      capital_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          read_at: string | null
+          request_id: string
+          sender_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          read_at?: string | null
+          request_id: string
+          sender_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          read_at?: string | null
+          request_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capital_messages_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "capital_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      capital_providers: {
+        Row: {
+          active: boolean | null
+          contact_email: string | null
+          created_at: string | null
+          id: string
+          instruments: string[] | null
+          name: string
+          regions: string[] | null
+          sectors: string[] | null
+          ticket_max: number | null
+          ticket_min: number | null
+          type: string
+          webhook_url: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          contact_email?: string | null
+          created_at?: string | null
+          id?: string
+          instruments?: string[] | null
+          name: string
+          regions?: string[] | null
+          sectors?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          type: string
+          webhook_url?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          contact_email?: string | null
+          created_at?: string | null
+          id?: string
+          instruments?: string[] | null
+          name?: string
+          regions?: string[] | null
+          sectors?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          type?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       capital_requests: {
         Row: {
           approval_score: number | null
+          assigned_admin_id: string | null
           capital_type: string
           company_age: string | null
+          company_age_months: number | null
           company_name: string
           created_at: string
           email: string | null
+          estimated_approval: number | null
+          estimated_rate_max: number | null
+          estimated_rate_min: number | null
           full_name: string | null
           id: string
+          lead_score: number | null
+          matched_providers_count: number | null
           monthly_revenue: string | null
           net_profit: string | null
           objective: string
           phone: string | null
           requested_amount: number
           sector: string | null
+          sla_deadline: string | null
+          source: string | null
           status: string
+          success_fee_pct: number | null
           updated_at: string
           user_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
           views_count: number
         }
         Insert: {
           approval_score?: number | null
+          assigned_admin_id?: string | null
           capital_type?: string
           company_age?: string | null
+          company_age_months?: number | null
           company_name: string
           created_at?: string
           email?: string | null
+          estimated_approval?: number | null
+          estimated_rate_max?: number | null
+          estimated_rate_min?: number | null
           full_name?: string | null
           id?: string
+          lead_score?: number | null
+          matched_providers_count?: number | null
           monthly_revenue?: string | null
           net_profit?: string | null
           objective: string
           phone?: string | null
           requested_amount: number
           sector?: string | null
+          sla_deadline?: string | null
+          source?: string | null
           status?: string
+          success_fee_pct?: number | null
           updated_at?: string
           user_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
           views_count?: number
         }
         Update: {
           approval_score?: number | null
+          assigned_admin_id?: string | null
           capital_type?: string
           company_age?: string | null
+          company_age_months?: number | null
           company_name?: string
           created_at?: string
           email?: string | null
+          estimated_approval?: number | null
+          estimated_rate_max?: number | null
+          estimated_rate_min?: number | null
           full_name?: string | null
           id?: string
+          lead_score?: number | null
+          matched_providers_count?: number | null
           monthly_revenue?: string | null
           net_profit?: string | null
           objective?: string
           phone?: string | null
           requested_amount?: number
           sector?: string | null
+          sla_deadline?: string | null
+          source?: string | null
           status?: string
+          success_fee_pct?: number | null
           updated_at?: string
           user_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
           views_count?: number
         }
         Relationships: []
+      }
+      capital_timeline: {
+        Row: {
+          actor_id: string | null
+          created_at: string | null
+          description: string | null
+          event_type: string
+          id: string
+          request_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          event_type: string
+          id?: string
+          request_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          event_type?: string
+          id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capital_timeline_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "capital_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       franchisee_regions: {
         Row: {
