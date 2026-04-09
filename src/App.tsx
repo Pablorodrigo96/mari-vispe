@@ -30,6 +30,7 @@ import EditListing from "./pages/EditListing";
 import BlindTeaser from "./pages/BlindTeaser";
 import RegisterBuyer from "./pages/RegisterBuyer";
 import MyCapitalRequests from "./pages/MyCapitalRequests";
+import CapitalRequestDetail from "./pages/CapitalRequestDetail";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
