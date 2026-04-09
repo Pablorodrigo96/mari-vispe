@@ -140,6 +140,12 @@ export function Header() {
                     <DollarSign className="w-4 h-4 mr-2" />
                     Minhas Captações
                   </DropdownMenuItem>
+                  {(isAdvisor || isAdmin || isPartnerAccountant) && (
+                    <DropdownMenuItem onClick={() => navigate('/potencial-carteira')}>
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      Potencial da Carteira
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="w-4 h-4 mr-2" />
@@ -223,6 +229,16 @@ export function Header() {
                       <DollarSign className="w-4 h-4 mr-2" />
                       Minhas Captações
                     </Button>
+                    {(isAdvisor || isAdmin || isPartnerAccountant) && (
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start" 
+                        onClick={() => { navigate('/potencial-carteira'); setMobileMenuOpen(false); }}
+                      >
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        Potencial da Carteira
+                      </Button>
+                    )}
                     <Button variant="outline" className="w-full justify-center" onClick={handleSignOut}>
                       <LogOut className="w-4 h-4 mr-2" />
                       Sair
