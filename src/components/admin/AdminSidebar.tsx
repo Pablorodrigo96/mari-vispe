@@ -5,6 +5,7 @@ import {
   Building2, 
   CreditCard, 
   ChartBar,
+  Banknote,
   ArrowLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,8 @@ const menuItems = [
   { name: 'Anúncios', href: '/admin/listings', icon: Building2 },
   { name: 'Assinaturas', href: '/admin/subscriptions', icon: CreditCard },
   { name: 'Valuations', href: '/admin/valuations', icon: ChartBar },
+  { name: 'Captações', href: '/admin/capital', icon: Banknote },
+  { name: 'Provedores', href: '/admin/capital/providers', icon: Building2 },
   { name: 'Parcerias', href: '/admin/parcerias', icon: Users },
 ];
 

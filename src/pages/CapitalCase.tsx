@@ -98,7 +98,7 @@ export default function CapitalCase() {
             {caseData.metrics.map((m) => (
               <Card key={m.label}>
                 <CardContent className="p-6 text-center">
-                  <p className="text-3xl font-bold text-emerald-600">{m.value}</p>
+                  <p className="text-3xl font-bold text-primary">{m.value}</p>
                   <p className="text-sm text-muted-foreground mt-1">{m.label}</p>
                 </CardContent>
               </Card>
@@ -107,7 +107,7 @@ export default function CapitalCase() {
 
           <Card className="bg-muted/30">
             <CardContent className="p-8">
-              <Quote className="h-8 w-8 text-emerald-600 mb-4" />
+              <Quote className="h-8 w-8 text-primary mb-4" />
               <p className="text-lg italic leading-relaxed">{caseData.testimonial}</p>
               <p className="text-sm text-muted-foreground mt-4">— Empreendedor(a), {caseData.title}</p>
             </CardContent>
