@@ -1,84 +1,115 @@
 
 
-## Plano: Fases 3 e 4 — Triggers/Funções + Dashboard do Captador
+## Plano: Fases 5 e 6 — Painel Admin Capital + Nutrição e Integrações
 
 ---
 
-### Fase 3 — Triggers e Funções (Migração SQL)
+### Fase 5 — Painel Admin `/admin/capital`
 
-Uma única migração SQL criando 4 triggers e 1 função:
+#### 5a. Sidebar e Rota
 
-#### 1. `calculate_lead_score()` — Trigger BEFORE INSERT OR UPDATE em `capital_requests`
+- **`AdminSidebar.tsx`**: Adicionar item "Captações" com ícone `Banknote` apontando para `/admin/capital`
+- **`App.tsx`**: Adicionar rota `/admin/capital` e `/admin/capital/providers`
 
-Calcula `lead_score` baseado em:
-- Faturamento mensal (30%): mapeia `monthly_revenue` text → valor numérico, normaliza 0-30
-- Lucro líquido (25%): mapeia `net_profit` quando disponível, normaliza 0-25
-- Razão valor/faturamento (20%): `annual_revenue / requested_amount`, quanto maior melhor, normaliza 0-20
-- Completude do cadastro (15%): conta campos preenchidos (email, phone, sector, company_age, etc.), normaliza 0-15
-- Tempo de empresa (10%): mapeia `company_age` text → score 0-10
+#### 5b. Dashboard de Métricas (topo da página)
 
-Seta `NEW.lead_score` e `NEW.estimated_approval` com o valor calculado.
+Cards no topo com:
+- Total de leads (count capital_requests)
+- Leads com SLA estourado (where sla_deadline < now() AND status NOT IN ('closed'))
+- Ticket médio (avg requested_amount)
+- Receita projetada (sum requested_amount * success_fee_pct / 100 WHERE status = 'closed')
+- Conversão por etapa (funil: pending → in_review → matched → proposal → closed, com percentuais)
+- Tempo médio de fechamento (avg days entre created_at e updated_at WHERE status = 'closed')
 
-#### 2. `auto_match_providers()` — Trigger AFTER INSERT em `capital_requests`
+#### 5c. Visão Kanban
 
-- Busca `capital_providers` ativos onde:
-  - `ticket_min <= requested_amount <= ticket_max`
-  - `sector = ANY(sectors)` OU `sectors = '{}'`
-  - Instrumentos compatíveis baseado no `capital_type`
-- Insere em `capital_matches` com `match_score` calculado por compatibilidade
-- Atualiza `matched_providers_count` no request
+5 colunas: Pendente | Em Análise | Matched | Proposta Enviada | Fechado.
 
-#### 3. `notify_on_capital_request()` — Trigger AFTER INSERT em `capital_requests`
+Cards com: nome empresa, valor, score badge, SLA (vermelho se estourado), advisor atribuído.
 
-- Insere notificação para todos os admins
-- Insere notificação para franchisees cuja região (`franchisee_regions`) inclua o estado/categoria
-- Insere evento em `capital_timeline` com `event_type = 'created'`
+**Drag-and-drop**: Usar a lib `@hello-pangea/dnd` (fork do react-beautiful-dnd, compatível com React 18). Ao soltar o card numa coluna diferente, faz UPDATE em `capital_requests.status` e insere evento em `capital_timeline`.
 
-#### 4. `sla_deadline_setter()` — Trigger BEFORE INSERT em `capital_requests`
+#### 5d. Filtros
 
-- Se `lead_score > 70`: `sla_deadline = now() + interval '72 hours'`
-- Caso contrário: `sla_deadline = now() + interval '7 days'`
-- Nota: roda AFTER `calculate_lead_score` (order via trigger naming)
+Barra de filtros acima do Kanban:
+- Score (slider min-max)
+- Valor (select com faixas)
+- Tipo (dívida/equity)
+- SLA Estourado (toggle)
+- Advisor (select com admins atribuídos)
+- Busca textual (empresa)
 
-#### 5. Função `increment_capital_view(p_request_id uuid)`
+#### 5e. Detalhe do Lead (modal ou drawer)
 
-- `UPDATE capital_requests SET views_count = views_count + 1 WHERE id = p_request_id`
-- SECURITY DEFINER para funcionar sem RLS de UPDATE para o viewer
+Ao clicar num card do Kanban, abre Dialog/Sheet com:
+- Todos os dados da solicitação
+- Timeline de eventos
+- Documentos enviados
+- Chat (mesmo componente CapitalChat)
+- Botão **"Atribuir a mim"** → atualiza `assigned_admin_id`
+- Botão **"Enviar Proposta"** → abre textarea com template pré-preenchido, insere em `capital_timeline` e muda status para `proposal_sent`
+- Botão **"Escalar"** → insere notificação para todos admins + evento na timeline
+
+#### 5f. Gestão de Providers (`/admin/capital/providers`)
+
+CRUD completo de `capital_providers`:
+- Tabela com colunas: nome, tipo, ticket min/max, setores, instrumentos, status ativo
+- Botão "Novo Provider" → Dialog com formulário
+- Editar/Desativar inline
+- Filtros por tipo e setor
+
+#### 5g. Export CSV/Excel
+
+Botão "Exportar" no topo do Kanban que gera CSV com todos os leads filtrados (usando Blob + download link client-side).
 
 ---
 
-### Fase 4 — Dashboard do Captador
+### Fase 6 — Nutrição e Integrações
 
-#### 4a. Lista `/minhas-captacoes` — Reescrever `MyCapitalRequests.tsx`
+#### 6a. Migração SQL
 
-Cards expandidos com:
-- Status colorido (badge com cores por status: pending=amarelo, in_review=azul, matched=roxo, proposal_sent=verde, closed=cinza)
-- Score de aprovação (circular progress)
-- Valor solicitado formatado
-- `matched_providers_count` (ícone + número)
-- Barra de progresso (0-100%) baseada em: docs enviados + etapas concluídas do pipeline
-- Próxima ação pendente (texto dinâmico baseado no status)
-- Click → navega para `/minhas-captacoes/:id`
+Nova tabela `integrations_config`:
+- `id` uuid PK
+- `key` text UNIQUE NOT NULL (ex: 'webhook_low_score')
+- `value` text NOT NULL (URL do webhook)
+- `active` bool default true
+- `created_at` timestamptz default now()
 
-#### 4b. Detalhe `/minhas-captacoes/:id` — Nova página `CapitalRequestDetail.tsx`
+RLS: somente admin.
 
-Layout 2 colunas (lg:grid-cols-3 → 2 esquerda + 1 direita):
+#### 6b. Trigger de Webhook para Score Baixo
 
-**Coluna Esquerda (2/3)**:
-1. **Timeline vertical visual**: Steps fixos (Pendente → Em Análise → Matched → Proposta → Fechado) + eventos de `capital_timeline` com datas e descrições
-2. **Checklist de documentos**: Lista de doc_types esperados (Contrato Social, Balancete, DRE, Comprovante Faturamento), status de cada um, botão upload drag-drop para Supabase Storage `financial-docs` bucket, insere em `capital_documents`
-3. **Chat com analista**: Realtime via Supabase channel em `capital_messages`, input + lista de mensagens, indicador de lido
-4. **Botão "Baixar relatório PDF"**: Placeholder (gera window.print() por enquanto)
+Nova trigger function `fire_low_score_webhook()` AFTER INSERT em `capital_requests`:
+- Se `lead_score < 40`, busca URL em `integrations_config` WHERE key = 'webhook_low_score' AND active = true
+- Usa `pg_net` (extensão do Supabase) para fazer HTTP POST com os dados do lead para a URL configurada
+- Isso permite integrar com n8n/Make para sequência de email marketing
 
-**Coluna Direita (1/3)**:
-1. **Resumo do pedido**: empresa, valor, tipo, objetivo, data
-2. **Score card**: Score circular animado + label (Excelente/Bom/Moderado/Inicial)
-3. **Providers matched**: Lista anônima ("Banco A", "Fundo B", "Fintech C") com score de compatibilidade em barra, status do match
-4. **Próximos passos sugeridos**: Lista dinâmica baseada no status atual
+Alternativa: edge function `fire-webhook` invocada via trigger `pg_net`, para evitar dependência de extensão. Decisão: usar edge function para maior flexibilidade.
 
-#### 4c. Rota no `App.tsx`
+#### 6c. Gestão de Webhooks no Admin
 
-Adicionar: `<Route path="/minhas-captacoes/:id" element={<CapitalRequestDetail />} />`
+Seção dentro de `/admin/capital` ou tab separada para gerenciar `integrations_config`:
+- Lista de webhooks configurados
+- Botão para adicionar/editar URL
+- Toggle ativo/inativo
+
+#### 6d. Página Pública `/capital/case/:slug`
+
+Componente com layout SEO-friendly:
+- Hero com foto, nome da empresa (anonimizado), valor captado, prazo
+- Depoimento do empreendedor
+- Métricas de resultado
+- CTA para simulador
+
+Por enquanto, dados mockados (3-5 cases) armazenados localmente. Futuro: migrar para tabela `capital_cases`.
+
+#### 6e. Páginas Programáticas `/capital/setor/:slug` e `/capital/cidade/:slug`
+
+Páginas dinâmicas com:
+- Conteúdo gerado por setor/cidade (título, descrição, stats do setor)
+- Dados mockados por setor (tech, telecom, saude, etc.) e por cidade (São Paulo, Rio, BH, etc.)
+- Formulário de captação embedado no final (reusa CapitalSimulator)
+- Meta tags dinâmicas para SEO
 
 ---
 
@@ -86,12 +117,14 @@ Adicionar: `<Route path="/minhas-captacoes/:id" element={<CapitalRequestDetail /
 
 | Artefato | Ação |
 |---|---|
-| Migração SQL | 4 trigger functions + 1 function + triggers + ordering |
-| `src/pages/MyCapitalRequests.tsx` | Reescrever com cards expandidos, score, progress bar, click to detail |
-| `src/pages/CapitalRequestDetail.tsx` | **Novo**: página de detalhe 2 colunas com timeline, docs, chat, matches |
-| `src/components/capital/CapitalTimeline.tsx` | **Novo**: timeline vertical visual com steps + eventos |
-| `src/components/capital/CapitalDocChecklist.tsx` | **Novo**: checklist de documentos com upload |
-| `src/components/capital/CapitalChat.tsx` | **Novo**: chat realtime lead ↔ analista |
-| `src/components/capital/CapitalScoreCard.tsx` | **Novo**: score circular animado |
-| `src/App.tsx` | Adicionar rota `/minhas-captacoes/:id` |
+| `package.json` | Adicionar `@hello-pangea/dnd` para drag-drop |
+| Migração SQL | Tabela `integrations_config` + RLS |
+| `src/pages/admin/AdminCapital.tsx` | **Novo**: Kanban + métricas + filtros + detalhe modal |
+| `src/pages/admin/AdminCapitalProviders.tsx` | **Novo**: CRUD de capital_providers |
+| `src/components/admin/AdminSidebar.tsx` | Adicionar link "Captações" |
+| `src/App.tsx` | Rotas: `/admin/capital`, `/admin/capital/providers`, `/capital/case/:slug`, `/capital/setor/:slug`, `/capital/cidade/:slug` |
+| `supabase/functions/fire-webhook/index.ts` | **Novo**: Edge function para disparar webhook |
+| `src/pages/CapitalCase.tsx` | **Novo**: Página de case de sucesso |
+| `src/pages/CapitalBySegment.tsx` | **Novo**: Página programática por setor |
+| `src/pages/CapitalByCity.tsx` | **Novo**: Página programática por cidade |
 
