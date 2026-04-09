@@ -75,6 +75,7 @@ const App = () => (
             <Route path="/teaser/:ticker" element={<BlindTeaser />} />
             <Route path="/cadastrar-comprador" element={<RegisterBuyer />} />
             <Route path="/minhas-captacoes" element={<MyCapitalRequests />} />
+            <Route path="/minhas-captacoes/:id" element={<CapitalRequestDetail />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
