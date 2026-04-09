@@ -422,6 +422,30 @@ export type Database = {
         }
         Relationships: []
       }
+      integrations_config: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          key: string
+          value: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          key: string
+          value: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
       interest_logs: {
         Row: {
           created_at: string | null
