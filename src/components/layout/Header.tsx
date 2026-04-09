@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Building2, LogOut, ClipboardList, User, Shield, UserSearch } from 'lucide-react';
+import { Menu, X, Building2, LogOut, ClipboardList, User, Shield, UserSearch, DollarSign } from 'lucide-react';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -134,6 +134,10 @@ export function Header() {
                     <UserSearch className="w-4 h-4 mr-2" />
                     Cadastrar Comprador
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/minhas-captacoes')}>
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Minhas Captações
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="w-4 h-4 mr-2" />
@@ -208,6 +212,14 @@ export function Header() {
                     >
                       <UserSearch className="w-4 h-4 mr-2" />
                       Cadastrar Comprador
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start" 
+                      onClick={() => { navigate('/minhas-captacoes'); setMobileMenuOpen(false); }}
+                    >
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      Minhas Captações
                     </Button>
                     <Button variant="outline" className="w-full justify-center" onClick={handleSignOut}>
                       <LogOut className="w-4 h-4 mr-2" />
