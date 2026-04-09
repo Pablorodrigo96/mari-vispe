@@ -9,9 +9,10 @@ import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Listing = Tables<'listings'>;
+type PublicListing = Tables<'public_listings'>;
 
 interface ListingCardProps {
-  listing: Listing;
+  listing: Listing | PublicListing;
 }
 
 export function ListingCard({ listing }: ListingCardProps) {

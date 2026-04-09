@@ -36,27 +36,30 @@ import { categories } from '@/data/mockData';
 import { getCategoryFallbackImage } from '@/lib/categoryImages';
 
 interface Listing {
-  id: string;
-  title: string;
-  category: string;
+  id: string | null;
+  title: string | null;
+  category: string | null;
   foundation_year: number | null;
-  annual_revenue: number;
-  annual_profit: number;
-  asking_price: number;
-  hide_price: boolean;
-  description: string;
-  city: string;
-  state: string;
-  street: string | null;
+  annual_revenue: number | null;
+  annual_profit: number | null;
+  asking_price: number | null;
+  hide_price: boolean | null;
+  description: string | null;
+  city: string | null;
+  state: string | null;
   neighborhood: string | null;
-  show_address: boolean;
   square_meters: number | null;
   rent_value: number | null;
-  sale_reason: string;
-  images: string[];
-  plan: string;
-  status: string;
-  created_at: string;
+  sale_reason: string | null;
+  images: string[] | null;
+  plan: string | null;
+  status: string | null;
+  created_at: string | null;
+  additional_info: string | null;
+  equity_score: number | null;
+  iptu_value: number | null;
+  ticker: string | null;
+  updated_at: string | null;
 }
 
 const saleReasonLabels: Record<string, string> = {
@@ -120,7 +123,7 @@ const ListingDetail = () => {
 
       try {
         const { data, error } = await supabase
-          .from('listings')
+          .from('public_listings')
           .select('*')
           .eq('id', id)
           .maybeSingle();
@@ -473,7 +476,7 @@ const ListingDetail = () => {
                     <div className="text-center text-muted-foreground">
                       <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       <p className="font-medium">{listing.city}, {listing.state}</p>
-                      {listing.show_address && listing.neighborhood && (
+                      {listing.neighborhood && (
                         <p className="text-sm">{listing.neighborhood}</p>
                       )}
                     </div>

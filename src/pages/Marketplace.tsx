@@ -11,7 +11,7 @@ import { FilterSidebar, FilterState, defaultFilters } from '@/components/marketp
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
-type Listing = Tables<'listings'>;
+type Listing = Tables<'public_listings'>;
 
 const Marketplace = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -27,7 +27,7 @@ const Marketplace = () => {
       setError(null);
 
       let query = supabase
-        .from('listings')
+        .from('public_listings')
         .select('*')
         .eq('status', 'active');
 

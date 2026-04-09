@@ -12,7 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
-type Listing = Tables<'listings'>;
+type Listing = Tables<'public_listings'>;
 
 const MapView = () => {
   const [listings, setListings] = useState<Listing[]>([]);
@@ -26,7 +26,7 @@ const MapView = () => {
     async function fetchData() {
       setLoading(true);
       const [listingsRes, buyersRes] = await Promise.all([
-        supabase.from('listings').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+        supabase.from('public_listings').select('*').eq('status', 'active').order('created_at', { ascending: false }),
         supabase.from('buyer_profiles').select('*').eq('status', 'active'),
       ]);
       if (!listingsRes.error && listingsRes.data) setListings(listingsRes.data);
