@@ -143,6 +143,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "capital_matches_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "public_capital_providers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "capital_matches_request_id_fkey"
             columns: ["request_id"]
             isOneToOne: false
@@ -1015,6 +1022,90 @@ export type Database = {
       }
     }
     Views: {
+      public_buyer_profiles: {
+        Row: {
+          buyer_name: string | null
+          categories: string[] | null
+          city: string | null
+          company_name: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          max_budget: number | null
+          min_budget: number | null
+          state: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          buyer_name?: string | null
+          categories?: string[] | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          max_budget?: number | null
+          min_budget?: number | null
+          state?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          buyer_name?: string | null
+          categories?: string[] | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          max_budget?: number | null
+          min_budget?: number | null
+          state?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      public_capital_providers: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string | null
+          instruments: string[] | null
+          name: string | null
+          regions: string[] | null
+          sectors: string[] | null
+          ticket_max: number | null
+          ticket_min: number | null
+          type: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string | null
+          instruments?: string[] | null
+          name?: string | null
+          regions?: string[] | null
+          sectors?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          type?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string | null
+          instruments?: string[] | null
+          name?: string | null
+          regions?: string[] | null
+          sectors?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          type?: string | null
+        }
+        Relationships: []
+      }
       public_listings: {
         Row: {
           additional_info: string | null
