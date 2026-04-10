@@ -51,36 +51,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (data: SignUpData) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    // 1. Create user in auth
+    // Pass roles via user_metadata — the handle_new_user trigger
+    // will insert them securely (excluding 'admin')
+    const safeRoles = data.roles.filter(r => (r as string) !== 'admin');
+    
     const { data: authData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: { full_name: data.fullName }
+        data: {
+          full_name: data.fullName,
+          roles: safeRoles,
+        }
       }
     });
     
     if (error) return { error };
 
-    // 2. Update profile with phone (trigger already creates profile)
+    // Update profile with phone (trigger already creates profile + roles)
     if (authData.user) {
-      // Wait a bit for the trigger to create the profile
       await new Promise(resolve => setTimeout(resolve, 500));
       
       await supabase.from('profiles').update({
         full_name: data.fullName,
         phone: data.phone,
       }).eq('user_id', authData.user.id);
-
-      // 3. Insert selected roles
-      if (data.roles.length > 0) {
-        const rolesToInsert = data.roles.map(role => ({
-          user_id: authData.user!.id,
-          role,
-        }));
-        await supabase.from('user_roles').insert(rolesToInsert);
-      }
     }
 
     return { error: null };
