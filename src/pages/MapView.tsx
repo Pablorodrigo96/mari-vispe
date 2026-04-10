@@ -27,7 +27,7 @@ const MapView = () => {
       setLoading(true);
       const [listingsRes, buyersRes] = await Promise.all([
         supabase.from('public_listings').select('*').eq('status', 'active').order('created_at', { ascending: false }),
-        supabase.from('buyer_profiles').select('*').eq('status', 'active'),
+        supabase.from('public_buyer_profiles').select('*').eq('status', 'active'),
       ]);
       if (!listingsRes.error && listingsRes.data) setListings(listingsRes.data);
       if (!buyersRes.error && buyersRes.data) {
@@ -35,8 +35,8 @@ const MapView = () => {
           id: b.id,
           buyer_name: b.buyer_name,
           company_name: b.company_name,
-          email: b.email,
-          whatsapp: b.whatsapp,
+          email: null,
+          whatsapp: null,
           categories: b.categories || [],
           min_budget: b.min_budget ? Number(b.min_budget) : null,
           max_budget: b.max_budget ? Number(b.max_budget) : null,

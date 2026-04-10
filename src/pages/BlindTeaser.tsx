@@ -105,18 +105,7 @@ const BlindTeaser = () => {
           .eq('ticker', ticker)
           .maybeSingle();
 
-        // Fallback: try listings table directly for active listings
-        if (!data) {
-          const result = await supabase
-            .from('listings')
-            .select('*')
-            .eq('ticker', ticker)
-            .eq('status', 'active')
-            .maybeSingle();
-          
-          data = result.data;
-          error = result.error;
-        }
+        // No fallback needed — public_listings view is the safe public access path
 
         if (error) throw error;
         if (!data) {
