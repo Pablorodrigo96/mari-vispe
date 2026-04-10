@@ -1,16 +1,20 @@
 
 
-## Plano: Corrigir Header Invisível na Página /capital
+## Plano: Corrigir Validação do Campo Senha no Modal de Captação
 
 ### Problema
-A rota `/capital` está na lista `darkHeroRoutes` do Header, que aplica texto branco e logo clara no topo. Porém o fundo da página é claro (gradiente branco/cinza), tornando tudo invisível.
+O campo `password` tem `defaultValues: ''` e validação `z.string().min(8).optional()`. Quando o usuário está logado, o campo fica oculto, mas o valor `""` (string vazia) não é `undefined` — o zod aplica `min(8)` na string vazia e falha silenciosamente, bloqueando o submit.
 
 ### Solução
-Remover `'/capital'` da lista `darkHeroRoutes` na linha 48 de `src/components/layout/Header.tsx`. Isso fará o header usar o estilo sólido (fundo branco, texto escuro) desde o início, como já funciona em `/vender`.
+Alterar a validação do campo `password` no schema zod para aceitar string vazia:
+
+```typescript
+password: z.string().min(8, '...').max(72).optional().or(z.literal('')),
+```
 
 ### Arquivo alterado
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/layout/Header.tsx` | Remover `'/capital'` do array `darkHeroRoutes` (linha 48) |
+| `src/components/capital/CapitalLeadModal.tsx` | Linha 30: adicionar `.or(z.literal(''))` ao campo `password` no schema |
 
