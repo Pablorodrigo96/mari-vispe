@@ -28,24 +28,24 @@ const premiumSectors = ['tech', 'telecom', 'health', 'energy'];
 
 export function calculateCapitalScore(inputs: SimulatorInputs): ScoringResult {
   const isEquity = inputs.objective === 'socio';
-  let score = 50;
+  let score = 60; // Base otimista (era 50)
 
-  // Revenue vs Amount ratio
+  // Revenue vs Amount ratio — thresholds mais generosos
   const revenue = revenueToNumber[inputs.monthlyRevenue] || 50000;
   const annualRevenue = revenue * 12;
   const ratio = annualRevenue / inputs.amount;
   if (ratio > 3) score += 20;
-  else if (ratio > 2) score += 10;
-  else if (ratio > 1) score += 5;
-  else score -= 10;
+  else if (ratio > 2) score += 15;
+  else if (ratio > 1) score += 10;
+  else score -= 5;
 
   // Company age
   switch (inputs.companyAge) {
     case '10+': score += 15; break;
-    case '5-10': score += 10; break;
-    case '3-5': score += 5; break;
-    case '1-3': break;
-    case '<1': score -= 10; break;
+    case '5-10': score += 12; break;
+    case '3-5': score += 8; break;
+    case '1-3': score += 3; break;
+    case '<1': score -= 5; break;
   }
 
   // Sector bonus
@@ -56,7 +56,7 @@ export function calculateCapitalScore(inputs: SimulatorInputs): ScoringResult {
   else if (inputs.objective === 'refinanciamento') score += 2;
 
   // Clamp
-  score = Math.max(5, Math.min(100, score));
+  score = Math.max(10, Math.min(100, score));
 
   // Rate & instruments based on score
   let rateRange: string;
@@ -93,14 +93,12 @@ export function calculateCapitalScore(inputs: SimulatorInputs): ScoringResult {
 }
 
 export function estimateBankCost(amount: number, months: number): number {
-  // ~3.5% a.m. average bank rate for PMEs
   const monthlyRate = 0.035;
   const totalPaid = amount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1) * months;
   return totalPaid;
 }
 
 export function estimateVispeCost(amount: number, months: number, score: number): number {
-  // Lower rate based on score
   const baseRate = score > 80 ? 0.015 : score > 60 ? 0.023 : 0.033;
   const totalPaid = amount * (baseRate * Math.pow(1 + baseRate, months)) / (Math.pow(1 + baseRate, months) - 1) * months;
   return totalPaid;

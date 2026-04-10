@@ -49,7 +49,6 @@ export default function CapitalRequestDetail() {
     if (!user) { navigate('/auth'); return; }
     if (!id) return;
     fetchData();
-    // Increment view
     supabase.rpc('increment_capital_view', { p_request_id: id });
   }, [user, id]);
 
@@ -94,18 +93,72 @@ export default function CapitalRequestDetail() {
 
   const providerNames = ['Banco A', 'Fundo B', 'Fintech C', 'Family Office D', 'Angel E'];
   const nextSteps: Record<string, string[]> = {
-    pending: ['Envie os documentos solicitados', 'Aguarde análise da equipe Vispe'],
-    in_review: ['Seus documentos estão sendo analisados', 'Fique atento ao chat para dúvidas'],
-    matched: ['Provedores foram identificados', 'Aguarde proposta formal'],
-    proposal_sent: ['Revise a proposta recebida', 'Entre em contato para negociar'],
-    closed: ['Captação finalizada!'],
+    pending: [
+      'Envie os documentos solicitados para agilizar a análise',
+      'Quanto mais documentos, maior a chance de aprovação',
+      'Enviaremos seu perfil a fundos, investidores, bancos e cooperativas parceiros após análise',
+    ],
+    in_review: [
+      'Seus documentos estão sendo analisados por nossa equipe',
+      'Estamos identificando fundos, bancos, investidores e cooperativas com fit para seu perfil',
+      'Fique atento ao WhatsApp para dúvidas da equipe',
+    ],
+    matched: [
+      'Fundos, investidores, bancos e cooperativas com fit para sua captação já foram identificados',
+      'Aguarde proposta formal dos provedores selecionados',
+      'Entre em contato via WhatsApp para acompanhar',
+    ],
+    proposal_sent: [
+      'Revise a proposta recebida com atenção',
+      'Entre em contato via WhatsApp para negociar condições',
+      'Sua proposta foi enviada para fundos, investidores, bancos e cooperativas com fit',
+    ],
+    closed: ['Captação finalizada! Obrigado por confiar na Vispe.'],
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container mx-auto px-4 pt-24 pb-16">
-        <div className="flex items-center gap-3 mb-6">
+      {/* Print-only header */}
+      <div className="hidden print:block print:mb-6">
+        <div className="border-b-2 border-foreground pb-4 mb-4">
+          <h1 className="text-2xl font-bold">Relatório de Captação — Vispe</h1>
+          <p className="text-sm text-muted-foreground">Gerado em {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p><strong>Empresa:</strong> {request.company_name}</p>
+            <p><strong>Tipo:</strong> {capitalTypeLabels[request.capital_type] || request.capital_type}</p>
+            <p><strong>Objetivo:</strong> {objectiveLabels[request.objective] || request.objective}</p>
+          </div>
+          <div>
+            <p><strong>Valor Solicitado:</strong> {formatFullCurrency(request.requested_amount)}</p>
+            <p><strong>Score:</strong> {request.lead_score || 'N/A'}/100</p>
+            <p><strong>Status:</strong> {status.label}</p>
+          </div>
+        </div>
+        {request.sector && <p className="text-sm mt-2"><strong>Setor:</strong> {request.sector}</p>}
+        {request.monthly_revenue && <p className="text-sm"><strong>Faturamento:</strong> {request.monthly_revenue}</p>}
+        <div className="mt-4 border-t pt-3">
+          <p className="text-sm font-semibold">Provedores identificados: {matches.length}</p>
+          <p className="text-sm">Documentos enviados: {docsCount}</p>
+        </div>
+        <div className="mt-4 border-t pt-3">
+          <p className="text-sm font-semibold mb-1">Próximos Passos:</p>
+          <ul className="text-sm list-disc pl-5">
+            {(nextSteps[request.status] || nextSteps.pending).map((step, i) => (
+              <li key={i}>{step}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <main className="container mx-auto px-4 pt-24 pb-16 print:pt-0 no-print-header">
+        <div className="flex items-center gap-3 mb-6 print:hidden">
           <Button variant="ghost" size="icon" onClick={() => navigate('/minhas-captacoes')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -118,7 +171,7 @@ export default function CapitalRequestDetail() {
           <Badge variant={status.variant} className="text-sm px-3 py-1">{status.label}</Badge>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 print:hidden">
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
             <span>Progresso geral</span>
             <span>{Math.round(progressPercent)}%</span>
@@ -141,20 +194,25 @@ export default function CapitalRequestDetail() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="print:hidden">
               <CardContent className="p-6">
-                <CapitalChat requestId={id!} />
+                <CapitalChat
+                  requestId={id!}
+                  companyName={request.company_name}
+                  amount={request.requested_amount}
+                  capitalType={request.capital_type}
+                  objective={request.objective}
+                />
               </CardContent>
             </Card>
 
-            <Button variant="outline" onClick={() => window.print()} className="w-full">
+            <Button variant="outline" onClick={handlePrint} className="w-full print:hidden">
               <Printer className="h-4 w-4 mr-2" /> Baixar Relatório PDF
             </Button>
           </div>
 
           {/* Right column */}
           <div className="space-y-6">
-            {/* Summary */}
             <Card>
               <CardContent className="p-6 space-y-4">
                 <h3 className="font-semibold text-foreground">Resumo</h3>
@@ -179,7 +237,6 @@ export default function CapitalRequestDetail() {
               </CardContent>
             </Card>
 
-            {/* Score */}
             <Card>
               <CardContent className="p-6">
                 <h3 className="font-semibold text-foreground mb-3">Score de Aprovação</h3>
@@ -187,7 +244,6 @@ export default function CapitalRequestDetail() {
               </CardContent>
             </Card>
 
-            {/* Providers matched */}
             <Card>
               <CardContent className="p-6 space-y-3">
                 <h3 className="font-semibold text-foreground">Provedores ({matches.length})</h3>
@@ -214,7 +270,6 @@ export default function CapitalRequestDetail() {
               </CardContent>
             </Card>
 
-            {/* Next steps */}
             <Card>
               <CardContent className="p-6 space-y-3">
                 <h3 className="font-semibold text-foreground">Próximos Passos</h3>
@@ -232,6 +287,14 @@ export default function CapitalRequestDetail() {
         </div>
       </main>
       <Footer />
+
+      <style>{`
+        @media print {
+          header, footer, .print\\:hidden { display: none !important; }
+          .no-print-header { padding-top: 0 !important; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+      `}</style>
     </div>
   );
 }
