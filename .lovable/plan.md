@@ -1,49 +1,40 @@
 
 
-## Plano: Corrigir 4 Vulnerabilidades de Segurança
+## Plano: Corrigir 3 Vulnerabilidades de Segurança Restantes
 
-### 1. Privilege Escalation — Qualquer usuário pode se tornar admin (CRÍTICO)
+A migração anterior aplicou apenas os fixes de realtime e view. Os fixes de privilege escalation e capital_providers foram perdidos, e há um novo finding sobre buyer_profiles.
 
-**Problema:** A policy "Users can insert own roles" permite que qualquer usuário autenticado insira uma row com `role = 'admin'` na tabela `user_roles`, ganhando acesso total ao sistema.
+### 1. Privilege Escalation — user_roles (CRITICO)
+
+**Problema:** A policy "Users can insert own roles" ainda está ativa. Qualquer usuário pode se tornar admin.
 
 **Solução (Migração SQL):**
 - Dropar a policy "Users can insert own roles"
-- Mover a inserção de roles do signup para o trigger `handle_new_user` (SECURITY DEFINER), que já roda com privilégios elevados
-- O trigger inserirá os roles passados via `raw_user_meta_data` (excluindo 'admin')
+- Atualizar o trigger `handle_new_user` para inserir roles a partir de `raw_user_meta_data`, filtrando 'admin'
 
-**Arquivo `src/contexts/AuthContext.tsx`:**
-- Passar os roles selecionados via `options.data.roles` no `signUp`
-- Remover o insert direto na tabela `user_roles` após o signup
+O `AuthContext.tsx` já está correto (passa roles via metadata).
 
-### 2. Capital Providers — Webhook URLs e emails expostos publicamente
+### 2. Capital Providers — dados sensíveis expostos
 
-**Problema:** A policy "Anyone can view active providers" (role: public) expõe `webhook_url` e `contact_email`.
+**Problema:** A view `public_capital_providers` nunca foi criada. A policy pública de SELECT ainda expõe `webhook_url` e `contact_email`.
 
 **Solução (Migração SQL):**
-- Dropar a policy pública de SELECT
-- Criar uma view `public.public_capital_providers` (WITH security_invoker=on) que exclui `webhook_url` e `contact_email`
-- Adicionar policy de SELECT na view para public
-- Manter a policy ALL para admins na tabela base
+- Dropar a policy "Anyone can view active providers"
+- Criar view `public_capital_providers` com `security_invoker=on`, excluindo campos sensíveis
+- Conceder SELECT na view para public
 
-### 3. Realtime — Qualquer usuário pode ouvir canais de outros
+### 3. Buyer Profiles — email e WhatsApp expostos
 
-**Problema:** As tabelas `notifications`, `capital_messages` e `capital_timeline` estão no Realtime sem restrição de canal.
-
-**Solução (Migração SQL):**
-- Remover `notifications`, `capital_messages` e `capital_timeline` da publication `supabase_realtime`
-- O app já faz polling via React Query, então a funcionalidade não será afetada
-
-### 4. Security Definer View — `public_listings`
-
-**Problema:** A view `public_listings` usa SECURITY DEFINER (padrão quando não especificado), executando com as permissões do criador.
+**Problema:** A policy "Authenticated can view active buyers" expõe email e WhatsApp de todos os compradores ativos para qualquer usuário autenticado.
 
 **Solução (Migração SQL):**
-- Recriar a view com `WITH (security_invoker=on)`
+- Dropar a policy atual de SELECT
+- Criar view `public_buyer_profiles` com `security_invoker=on` que exclui `email` e `whatsapp`
+- Criar policies: owners e admins podem ver tudo na tabela base; authenticated vê apenas a view (sem dados de contato)
 
 ### Arquivos Alterados
 
 | Arquivo | Mudança |
 |---|---|
-| Migração SQL | Corrigir as 4 vulnerabilidades (roles, providers, realtime, view) |
-| `src/contexts/AuthContext.tsx` | Passar roles via user_metadata e remover insert direto em user_roles |
+| Migração SQL | Dropar policy de roles, atualizar trigger, criar views seguras para providers e buyers |
 
