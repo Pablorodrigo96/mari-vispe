@@ -171,8 +171,18 @@ export function Footer() {
           </div>
         </div>
 
+        {/* Vispe Badge */}
+        <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col items-center gap-3">
+          <a href="https://vispe.com.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 opacity-70 hover:opacity-100 transition-opacity">
+            <img src={vispeLogo} alt="Grupo Vispe" className="h-7" />
+          </a>
+          <p className="text-sm text-primary-foreground/50 text-center">
+            PME.B3 é a camada de tecnologia e marketplace do Grupo Vispe.
+          </p>
+        </div>
+
         {/* Bottom */}
-        <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="mt-8 pt-6 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/50">
             © 2025 PME.B3. Todos os direitos reservados.
           </p>
