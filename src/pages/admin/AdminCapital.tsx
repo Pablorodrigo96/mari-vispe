@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CapitalChat } from '@/components/capital/CapitalChat';
 import { CapitalTimeline } from '@/components/capital/CapitalTimeline';
+import { CapitalDocChecklist } from '@/components/capital/CapitalDocChecklist';
 import { CapitalScoreCard } from '@/components/capital/CapitalScoreCard';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
@@ -546,6 +547,12 @@ export default function AdminCapital() {
                         </div>
                       </div>
                     )}
+
+                    {/* Documentos */}
+                    <div>
+                      <h3 className="font-semibold mb-2">Documentos</h3>
+                      <CapitalDocChecklist requestId={selectedLead.id} />
+                    </div>
 
                     {/* Timeline */}
                     <div>
