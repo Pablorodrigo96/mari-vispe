@@ -126,16 +126,17 @@ export function CapitalDocChecklist({ requestId }: Props) {
 
   const renderDocRow = (dt: { key: string; label: string }, isOptional = false) => {
     const status = getDocStatus(dt.key);
+    const canReupload = !status || status === 'pending' || status === 'rejected';
     return (
       <div key={dt.key} className="flex items-center justify-between p-3 rounded-lg border bg-card">
         <div className="flex items-center gap-3">
-          {status ? statusIcon(status) : <div className="w-4 h-4 rounded-full border-2 border-muted-foreground" />}
+          {status && status !== 'pending' ? statusIcon(status) : <div className="w-4 h-4 rounded-full border-2 border-muted-foreground" />}
           <span className="text-sm font-medium text-foreground">
             {dt.label}
             {isOptional && <span className="text-xs text-muted-foreground ml-1">(opcional)</span>}
           </span>
         </div>
-        {status ? (
+        {status && !canReupload ? (
           <Badge variant={statusVariant(status)}>
             {statusLabel[status] || status}
           </Badge>
