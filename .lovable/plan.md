@@ -1,60 +1,64 @@
 
 
-## Plano: 7 Melhorias na Página de Detalhe da Captação
+## Plano: Corrigir Score, Progresso e Visibilidade Admin dos Documentos
 
-### 1. Score 20% Mais Otimista
-**Arquivo:** `src/lib/capitalScoring.ts`
-- Adicionar bônus de +10 pontos base (de 50 para 60) e ajustar thresholds para serem mais generosos
-- Ratio > 2 passa a dar +15 (era +10), ratio > 1 dá +10 (era +5)
+### Problemas Identificados
 
-### 2. Seção de Documentos Mais Convidativa
+1. **Score sempre baixo (13/100)**: O trigger SQL `calculate_lead_score` espera valores como `'above_1m'`, `'500k_1m'`, `'below_50k'` para `monthly_revenue` e `'above_10'`, `'5_10'` para `company_age`. Mas o frontend envia valores diferentes: `'ate-50k'`, `'50k-200k'`, `'acima-1m'`, `'10+'`, `'5-10'`, etc. Resultado: todos os CASE dão 0, sobrando apenas o score de completude (~13 pontos).
+
+2. **Progresso não atualiza**: O `CapitalRequestDetail` busca `docsCount` uma única vez no mount. O `CapitalDocChecklist` não notifica o parent quando um documento é enviado.
+
+3. **Admin não vê documentos**: O modal do admin (`AdminCapital.tsx`) mostra Timeline e Chat, mas não mostra o `CapitalDocChecklist` — o gestor não consegue ver os documentos enviados.
+
+### Solução
+
+#### 1. Alinhar valores do frontend com o trigger SQL
+**Arquivo:** `src/components/capital/CapitalLeadModal.tsx` e `src/components/capital/CapitalSimulator.tsx`
+
+Mapear os valores do simulador para os valores esperados pelo trigger antes do insert:
+
+```text
+Frontend → DB
+'ate-50k'    → 'below_50k'
+'50k-200k'   → '50k_100k' (ou criar '50k_200k' no trigger)
+'200k-500k'  → '100k_500k'
+'500k-1m'    → '500k_1m'
+'acima-1m'   → 'above_1m'
+
+'<1'   → 'below_1'
+'1-3'  → '1_2'
+'3-5'  → '2_5'
+'5-10' → '5_10'
+'10+'  → 'above_10'
+```
+
+Abordagem: atualizar o trigger SQL para aceitar AMBOS os formatos (antigos e novos), garantindo retrocompatibilidade.
+
+#### 2. Recalcular lead_score quando documentos são enviados
+**Migração SQL:** Criar trigger `on INSERT capital_documents` que incrementa o `lead_score` do request correspondente (bônus de +2 por documento, até +16 máximo).
+
+#### 3. Progresso atualiza em tempo real
 **Arquivo:** `src/components/capital/CapitalDocChecklist.tsx`
-- Adicionar header motivacional: "Quanto mais documentos, maior sua chance de aprovação!"
-- Mostrar barra de progresso visual dos docs enviados
-- Adicionar seção de documentos opcionais extras: IRPJ, Certidão Negativa, Extratos Bancários, Relatório de Vendas
-- Mensagem de incentivo quando < 100% docs enviados
+- Adicionar prop `onDocsChange?: (count: number) => void`
+- Chamar após cada upload bem-sucedido
 
-### 3. Corrigir Upload de Documentos
-**Arquivo:** `src/components/capital/CapitalDocChecklist.tsx`
-- Sanitizar nome do arquivo removendo espaços e caracteres especiais (ç, º, ã, etc.) antes do upload
-- Expandir `input.accept` para: `.pdf,.jpg,.jpeg,.png,.xlsx,.xls,.csv,.doc,.docx,.zip,.rar,.txt,.xml`
-- O bucket é privado, trocar `getPublicUrl` por `createSignedUrl` ou montar a URL via path relativo
-
-### 4. Status "Enviado" ao invés de "Pendente"
-**Arquivo:** `src/components/capital/CapitalDocChecklist.tsx`
-- Trocar `status: 'pending'` no insert para `status: 'uploaded'` (que mapeia para "Enviado")
-
-### 5. Melhorar Relatório PDF
 **Arquivo:** `src/pages/CapitalRequestDetail.tsx`
-- Substituir `window.print()` por um componente de relatório estilizado com `@media print`
-- Incluir seções: dados da empresa, valor solicitado, score, tipo de captação, objetivo, status atual, documentos enviados, próximos passos
-- Adicionar logo e cabeçalho "Relatório de Captação — Vispe" no print
-- Esconder header/footer/sidebar no print com CSS `@media print { .no-print { display: none } }`
+- Passar callback `onDocsChange` para atualizar `docsCount` no state
 
-### 6. Chat → Redirecionamento WhatsApp
-**Arquivo:** `src/components/capital/CapitalChat.tsx`
-- Remover o chat em tempo real (Supabase realtime)
-- Substituir por um CTA bonito: "Fale com nosso Analista via WhatsApp"
-- Usar `openWhatsApp()` com mensagem contextualizada:
-  ```
-  Olá! Sou da empresa {company_name}, tenho uma proposta de captação de {formatFullCurrency(amount)} ({capital_type} - {objective}). ID: {requestId}. Gostaria de falar com um analista.
-  ```
-- Props: receber `companyName`, `amount`, `capitalType`, `objective` além de `requestId`
+#### 4. Admin vê documentos no modal
+**Arquivo:** `src/pages/admin/AdminCapital.tsx`
+- Adicionar `CapitalDocChecklist` no modal de detalhe do lead, entre Timeline e Chat
+- Adicionar seção "Documentos" com header
 
-### 7. Próximos Passos — Mencionar Fundos/Investidores
-**Arquivo:** `src/pages/CapitalRequestDetail.tsx`
-- Atualizar `nextSteps` para incluir em todos os status relevantes:
-  - "Sua proposta será enviada para fundos, investidores, bancos e cooperativas com fit para sua estrutura de captação"
-  - pending: adicionar "Enviaremos seu perfil a fundos e investidores parceiros após análise"
-  - in_review: adicionar "Estamos identificando fundos, bancos e cooperativas com fit para seu perfil"
-  - matched: alterar para "Fundos, investidores e cooperativas com fit já foram identificados"
+#### 5. Corrigir registro existente
+**Migração SQL:** Atualizar o `lead_score` do registro existente recalculando com base nos dados atuais e documentos enviados.
 
 ### Arquivos Alterados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/lib/capitalScoring.ts` | Score base +20% mais otimista |
-| `src/components/capital/CapitalDocChecklist.tsx` | UI convidativa, fix upload (sanitização + accept + status), docs opcionais |
-| `src/components/capital/CapitalChat.tsx` | Substituir chat por CTA WhatsApp contextualizado |
-| `src/pages/CapitalRequestDetail.tsx` | Relatório PDF estilizado, próximos passos com fundos/investidores, passar props ao Chat |
+| Migração SQL | Atualizar trigger `calculate_lead_score` para aceitar ambos formatos de valores; criar trigger de bônus por documento; corrigir registro existente |
+| `src/components/capital/CapitalDocChecklist.tsx` | Adicionar prop `onDocsChange` callback |
+| `src/pages/CapitalRequestDetail.tsx` | Conectar `onDocsChange` ao state `docsCount` |
+| `src/pages/admin/AdminCapital.tsx` | Adicionar `CapitalDocChecklist` no modal do lead |
 
