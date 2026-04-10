@@ -42,9 +42,10 @@ interface Doc {
 
 interface Props {
   requestId: string;
+  onDocsChange?: (count: number) => void;
 }
 
-export function CapitalDocChecklist({ requestId }: Props) {
+export function CapitalDocChecklist({ requestId, onDocsChange }: Props) {
   const { user } = useAuth();
   const [docs, setDocs] = useState<Doc[]>([]);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -79,7 +80,9 @@ export function CapitalDocChecklist({ requestId }: Props) {
     });
     toast({ title: 'Documento enviado com sucesso!' });
     setUploading(null);
-    fetchDocs();
+    await fetchDocs();
+    const { count } = await supabase.from('capital_documents').select('id', { count: 'exact', head: true }).eq('request_id', requestId);
+    onDocsChange?.(count ?? 0);
   };
 
   const triggerUpload = (docType: string) => {

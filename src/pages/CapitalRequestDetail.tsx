@@ -190,7 +190,7 @@ export default function CapitalRequestDetail() {
 
             <Card>
               <CardContent className="p-6">
-                <CapitalDocChecklist requestId={id!} />
+                <CapitalDocChecklist requestId={id!} onDocsChange={(c) => setDocsCount(c)} />
               </CardContent>
             </Card>
 
