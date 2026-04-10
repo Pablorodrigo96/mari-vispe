@@ -72,15 +72,16 @@ export function useSubscription() {
     return Math.max(0, subscription.multiples_limit - subscription.multiples_used);
   };
 
+  // Credit consumption now happens via edge function in useValuationAccess
+  // These methods are kept for backward compatibility but should not be used directly
   const incrementDCFUsage = async () => {
     if (!subscription || !user) return false;
     
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({ dcf_used: subscription.dcf_used + 1 })
-      .eq('id', subscription.id);
+    const { data, error } = await supabase.functions.invoke('use-valuation-credit', {
+      body: { type: 'dcf' },
+    });
 
-    if (error) {
+    if (error || !data?.success) {
       console.error('Error incrementing DCF usage:', error);
       return false;
     }
@@ -92,12 +93,11 @@ export function useSubscription() {
   const incrementMultiplesUsage = async () => {
     if (!subscription || !user) return false;
     
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({ multiples_used: subscription.multiples_used + 1 })
-      .eq('id', subscription.id);
+    const { data, error } = await supabase.functions.invoke('use-valuation-credit', {
+      body: { type: 'multiples' },
+    });
 
-    if (error) {
+    if (error || !data?.success) {
       console.error('Error incrementing multiples usage:', error);
       return false;
     }

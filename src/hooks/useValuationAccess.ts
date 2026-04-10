@@ -2,7 +2,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
 export interface ValuationPurchase {
   id: string;
   user_id: string;
@@ -23,6 +24,8 @@ export function useValuationAccess() {
   const { user } = useAuth();
   const { subscription, loading: subscriptionLoading } = useSubscription();
   const { isAdmin, loading: rolesLoading } = useUserRoles();
+  const queryClient = useQueryClient();
+
   // Fetch available purchases (paid but not used)
   const { data: purchases = [], isLoading: purchasesLoading } = useQuery({
     queryKey: ['valuation-purchases', user?.id],
@@ -48,17 +51,14 @@ export function useValuationAccess() {
 
   const loading = subscriptionLoading || purchasesLoading || rolesLoading;
 
-  // Check if user has Master plan
   const isMasterPlan = subscription?.plan === 'master';
   const planName = isMasterPlan ? 'Master' : 'Básico';
 
-  // Get remaining credits from subscription
   const remainingMultiplesFromPlan = () => {
     if (!subscription) return 0;
     if (isMasterPlan) {
       return Math.max(0, (subscription.multiples_limit || 5) - (subscription.multiples_used || 0));
     }
-    // Free plan: 1 multiple
     return Math.max(0, (subscription.multiples_limit || 1) - (subscription.multiples_used || 0));
   };
 
@@ -67,11 +67,9 @@ export function useValuationAccess() {
     if (isMasterPlan) {
       return Math.max(0, (subscription.dcf_limit || 3) - (subscription.dcf_used || 0));
     }
-    // Free plan: no DCF
     return 0;
   };
 
-  // Check for available purchases
   const hasAvailableMultiplesPurchase = () => {
     return purchases.some(p => p.type === 'multiples' && !p.used_at);
   };
@@ -80,7 +78,6 @@ export function useValuationAccess() {
     return purchases.some(p => p.type === 'dcf' && !p.used_at);
   };
 
-  // Total remaining (plan + purchases)
   const remainingMultiples = () => {
     const fromPlan = remainingMultiplesFromPlan();
     const fromPurchases = purchases.filter(p => p.type === 'multiples' && !p.used_at).length;
@@ -93,41 +90,26 @@ export function useValuationAccess() {
     return fromPlan + fromPurchases;
   };
 
-  // Can use valuation? (Admin tem acesso ilimitado)
   const canUseMultiples = () => isAdmin || remainingMultiples() > 0;
   const canUseDCF = () => isAdmin || remainingDCF() > 0;
 
-  // Consume access (prefer plan credits first, then purchases)
-  // Admin não consome créditos
+  // Consume access via edge function (server-side)
   const consumeMultiplesAccess = async (): Promise<boolean> => {
-    if (isAdmin) return true; // Admin bypass
-    if (!user || !subscription) return false;
-    // First try to use plan credits
-    if (remainingMultiplesFromPlan() > 0) {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ multiples_used: (subscription.multiples_used || 0) + 1 })
-        .eq('id', subscription.id);
+    if (isAdmin) return true;
+    if (!user) return false;
 
-      if (error) {
-        console.error('Error incrementing multiples usage:', error);
-        return false;
-      }
-      return true;
+    const { data, error } = await supabase.functions.invoke('use-valuation-credit', {
+      body: { type: 'multiples' },
+    });
+
+    if (error) {
+      console.error('Error consuming multiples credit:', error);
+      return false;
     }
 
-    // Then try to use a purchase
-    const availablePurchase = purchases.find(p => p.type === 'multiples' && !p.used_at);
-    if (availablePurchase) {
-      const { error } = await supabase
-        .from('valuation_purchases')
-        .update({ used_at: new Date().toISOString() })
-        .eq('id', availablePurchase.id);
-
-      if (error) {
-        console.error('Error marking purchase as used:', error);
-        return false;
-      }
+    if (data?.success) {
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['valuation-purchases', user.id] });
       return true;
     }
 
@@ -135,34 +117,20 @@ export function useValuationAccess() {
   };
 
   const consumeDCFAccess = async (): Promise<boolean> => {
-    if (isAdmin) return true; // Admin bypass
-    if (!user || !subscription) return false;
-    // First try to use plan credits
-    if (remainingDCFFromPlan() > 0) {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ dcf_used: (subscription.dcf_used || 0) + 1 })
-        .eq('id', subscription.id);
+    if (isAdmin) return true;
+    if (!user) return false;
 
-      if (error) {
-        console.error('Error incrementing DCF usage:', error);
-        return false;
-      }
-      return true;
+    const { data, error } = await supabase.functions.invoke('use-valuation-credit', {
+      body: { type: 'dcf' },
+    });
+
+    if (error) {
+      console.error('Error consuming DCF credit:', error);
+      return false;
     }
 
-    // Then try to use a purchase
-    const availablePurchase = purchases.find(p => p.type === 'dcf' && !p.used_at);
-    if (availablePurchase) {
-      const { error } = await supabase
-        .from('valuation_purchases')
-        .update({ used_at: new Date().toISOString() })
-        .eq('id', availablePurchase.id);
-
-      if (error) {
-        console.error('Error marking purchase as used:', error);
-        return false;
-      }
+    if (data?.success) {
+      queryClient.invalidateQueries({ queryKey: ['valuation-purchases', user.id] });
       return true;
     }
 
@@ -171,28 +139,21 @@ export function useValuationAccess() {
 
   return {
     loading,
-    // Admin status
     isAdmin,
-    // Plan info
     planName,
     isMasterPlan,
     subscription,
-    // Access checks
     canUseMultiples,
     canUseDCF,
-    // Remaining counts
     remainingMultiples,
     remainingDCF,
     remainingMultiplesFromPlan,
     remainingDCFFromPlan,
-    // Purchase checks
     hasAvailableMultiplesPurchase,
     hasAvailableDCFPurchase,
     purchases,
-    // Consume access
     consumeMultiplesAccess,
     consumeDCFAccess,
-    // Prices
     prices: VALUATION_PRICES,
   };
 }
