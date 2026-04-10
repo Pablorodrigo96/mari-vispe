@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Building2, Linkedin, Instagram, Youtube } from 'lucide-react';
+import vispeLogo from '@/assets/vispe-logo-branco.png';
 
 const SpotifyIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
