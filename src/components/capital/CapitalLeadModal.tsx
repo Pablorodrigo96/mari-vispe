@@ -27,7 +27,7 @@ const formSchema = z.object({
   companyName: z.string().min(2, 'Nome da empresa é obrigatório').max(100),
   email: z.string().email('Email inválido').max(255),
   phone: z.string().min(10, 'Telefone inválido').max(20),
-  password: z.string().min(8, 'Senha deve ter pelo menos 8 caracteres').max(72).optional(),
+  password: z.string().min(8, 'Senha deve ter pelo menos 8 caracteres').max(72).optional().or(z.literal('')),
   objective: z.string().min(1, 'Selecione o objetivo'),
   capitalType: z.string().min(1, 'Selecione o tipo de captação'),
 });
