@@ -556,7 +556,7 @@ export default function AdminCapital() {
                     {/* Chat */}
                     <div>
                       <h3 className="font-semibold mb-2">Chat</h3>
-                      <CapitalChat requestId={selectedLead.id} />
+                      <CapitalChat requestId={selectedLead.id} companyName={selectedLead.company_name} amount={selectedLead.requested_amount} capitalType={selectedLead.capital_type} objective={selectedLead.objective} />
                     </div>
                   </div>
 
