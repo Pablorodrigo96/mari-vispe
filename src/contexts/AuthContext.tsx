@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Pass roles via user_metadata — the handle_new_user trigger
     // will insert them securely (excluding 'admin')
-    const safeRoles = data.roles.filter(r => r !== 'admin');
+    const safeRoles = data.roles.filter(r => (r as string) !== 'admin');
     
     const { data: authData, error } = await supabase.auth.signUp({
       email: data.email,
