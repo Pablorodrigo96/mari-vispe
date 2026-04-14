@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ValuationResult, calculateLossMetrics, LossMetrics } from '@/lib/valuationCalculator';
+import { ValuationResult } from '@/lib/valuationCalculator';
+import {
+  DiagnosticAnswers,
+  DegradationResult,
+  calculateTrueValue,
+  calculateTrueValueLossMetrics,
+  TrueValueLossMetrics,
+  diagnosticItems,
+  categoryLabels,
+  categoryIcons,
+} from '@/lib/diagnosticCalculator';
 import { formatCurrency, formatFullCurrency } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,22 +21,18 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   TrendingDown,
   AlertTriangle,
-  BarChart3,
-  Search,
   Clock,
   MessageCircle,
   Flame,
   ArrowRight,
-  ShieldAlert,
-  Target,
-  Building2,
-  User,
-  Activity,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 
 interface ValuationNarrativeReportProps {
   result: ValuationResult;
   valuationId?: string;
+  diagnosticAnswers: DiagnosticAnswers;
 }
 
 const blockVariants = {
@@ -45,11 +51,7 @@ function AnimatedCounter({ target, duration = 2000, prefix = 'R$ ' }: { target: 
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started) {
-          setStarted(true);
-        }
-      },
+      ([entry]) => { if (entry.isIntersecting && !started) setStarted(true); },
       { threshold: 0.3 }
     );
     if (ref.current) observer.observe(ref.current);
@@ -69,21 +71,22 @@ function AnimatedCounter({ target, duration = 2000, prefix = 'R$ ' }: { target: 
     requestAnimationFrame(tick);
   }, [started, target, duration]);
 
-  return (
-    <span ref={ref}>
-      {prefix}{count.toLocaleString('pt-BR')}
-    </span>
-  );
+  return <span ref={ref}>{prefix}{count.toLocaleString('pt-BR')}</span>;
 }
 
-export const ValuationNarrativeReport = ({ result, valuationId }: ValuationNarrativeReportProps) => {
+export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswers }: ValuationNarrativeReportProps) => {
   const [loading, setLoading] = useState(false);
-  const lossMetrics = calculateLossMetrics(result);
+
+  const degradation: DegradationResult = calculateTrueValue(result, diagnosticAnswers);
+  const lossMetrics: TrueValueLossMetrics = calculateTrueValueLossMetrics(result, degradation);
   const segment = result.multiplesUsed.segment;
 
-  const progressPercent = lossMetrics.potentialValue > 0
-    ? (lossMetrics.currentValue / lossMetrics.potentialValue) * 100
+  const progressPercent = degradation.potentialValue > 0
+    ? (degradation.trueValue / degradation.potentialValue) * 100
     : 0;
+
+  // Group breakdown by category
+  const categories = ['fiscal', 'financial', 'governance', 'operational'] as const;
 
   const saveMetrics = useCallback(async () => {
     if (!valuationId) return;
@@ -95,25 +98,27 @@ export const ValuationNarrativeReport = ({ result, valuationId }: ValuationNarra
             monthlyLoss: lossMetrics.monthlyLoss,
             annualLoss: lossMetrics.annualLoss,
             recoverTimeMonths: lossMetrics.recoverTimeMonths,
-            gapValue: lossMetrics.gapValue,
+            gap: lossMetrics.gap,
+            trueValue: degradation.trueValue,
+            potentialValue: degradation.potentialValue,
+            totalDegradation: degradation.totalDegradation,
             calculatedAt: new Date().toISOString(),
           },
+          diagnosticAnswers,
           leadScore: lossMetrics.leadScore,
           leadScoreReason: lossMetrics.leadScoreReason,
         },
       });
     } catch {
-      // silent fail - non-critical
+      // silent fail
     }
-  }, [valuationId, lossMetrics]);
+  }, [valuationId, lossMetrics, degradation, diagnosticAnswers]);
 
-  useEffect(() => {
-    saveMetrics();
-  }, [saveMetrics]);
+  useEffect(() => { saveMetrics(); }, [saveMetrics]);
 
   const handleDiagnostic = async () => {
     setLoading(true);
-    const msg = `Olá! Fiz o valuation da minha empresa (${result.inputs.companyName}) e identifiquei um gap de ${formatCurrency(lossMetrics.gapValue)}. Gostaria de fazer o Diagnóstico Estratégico para mapear onde estou perdendo valor.`;
+    const msg = `Olá! Fiz o valuation da minha empresa (${result.inputs.companyName}) e identifiquei um gap de ${formatCurrency(lossMetrics.gap)} entre o Valor Verdadeiro e o Potencial. Gostaria de iniciar o processo consultivo.`;
     const opened = await openWhatsApp(msg);
     if (!opened) toast.success('Link copiado! Cole no navegador para abrir o WhatsApp.');
     setLoading(false);
@@ -121,7 +126,7 @@ export const ValuationNarrativeReport = ({ result, valuationId }: ValuationNarra
 
   const handleSpecialist = async () => {
     setLoading(true);
-    const msg = `Olá! Fiz o valuation da minha empresa e gostaria de falar com um especialista sobre meu resultado.`;
+    const msg = `Olá! Fiz o diagnóstico de valor da minha empresa e gostaria de falar com um especialista sobre meu resultado.`;
     const opened = await openWhatsApp(msg);
     if (!opened) toast.success('Link copiado! Cole no navegador para abrir o WhatsApp.');
     setLoading(false);
@@ -129,87 +134,143 @@ export const ValuationNarrativeReport = ({ result, valuationId }: ValuationNarra
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto px-4 py-6">
-      {/* BLOCO 1 — O SONHO */}
-      <motion.div
-        custom={0}
-        variants={blockVariants}
-        initial="hidden"
-        animate="visible"
+      {/* BLOCO 1 — VALOR POTENCIAL (Sonho) */}
+      <motion.div custom={0} variants={blockVariants} initial="hidden" animate="visible"
         className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-6"
       >
         <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 mb-3">
-          POTENCIAL DE MERCADO
+          VALOR POTENCIAL
         </Badge>
-        <p className="text-muted-foreground text-sm mb-2">Se estruturada, sua empresa poderia valer:</p>
+        <p className="text-muted-foreground text-sm mb-2">Após consultoria Vispe, sua empresa poderia valer:</p>
         <p className="text-4xl md:text-5xl font-bold text-emerald-600 dark:text-emerald-400">
-          {formatFullCurrency(lossMetrics.potentialValue)}
+          {formatFullCurrency(degradation.potentialValue)}
         </p>
         <p className="text-muted-foreground text-sm mt-2">
-          Com margem EBITDA otimizada em +5 pontos percentuais
+          Média de <strong>+78% de valorização</strong> em clientes atendidos pela Vispe
         </p>
       </motion.div>
 
-      {/* BLOCO 2 — O CHOQUE */}
-      <motion.div
-        custom={1}
-        variants={blockVariants}
-        initial="hidden"
-        animate="visible"
-        className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-6"
+      {/* BLOCO 2 — VALOR ESTIMADO */}
+      <motion.div custom={1} variants={blockVariants} initial="hidden" animate="visible"
+        className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-6"
+      >
+        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-300 dark:border-blue-700 mb-3">
+          ESTIMATIVA DE MERCADO
+        </Badge>
+        <p className="text-muted-foreground text-sm mb-2">Pelos múltiplos do setor <strong>{segment}</strong>:</p>
+        <p className="text-3xl md:text-4xl font-bold text-blue-600 dark:text-blue-400">
+          {formatFullCurrency(degradation.estimatedValue)}
+        </p>
+        <p className="text-muted-foreground text-sm mt-2">
+          Mashup Value — média de {result.validMethods} métodos
+        </p>
+      </motion.div>
+
+      {/* BLOCO 3 — DIAGNÓSTICO (Breakdown) */}
+      <motion.div custom={2} variants={blockVariants} initial="hidden" animate="visible"
+        className="bg-card border border-border rounded-xl p-6"
       >
         <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700 mb-3">
-          AVALIAÇÃO ATUAL
+          RESULTADO DO DIAGNÓSTICO
         </Badge>
-        <p className="text-muted-foreground text-sm mb-2">Mas hoje, o mercado provavelmente pagaria:</p>
-        <p className="text-4xl md:text-5xl font-bold text-amber-600 dark:text-amber-400">
-          {formatFullCurrency(lossMetrics.currentValue)}
+        <p className="text-muted-foreground text-sm mb-4">
+          Cada item negativo reduz o valor que o mercado pagaria pela sua empresa hoje:
+        </p>
+        <div className="space-y-4">
+          {categories.map((cat) => {
+            const items = degradation.itemBreakdown.filter((b) => b.item.category === cat);
+            if (items.length === 0) return null;
+            return (
+              <div key={cat}>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  {categoryIcons[cat]} {categoryLabels[cat]}
+                </p>
+                <div className="space-y-1.5">
+                  {items.map((b) => (
+                    <div key={b.item.key} className="flex items-center justify-between text-sm gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {b.answer ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                        )}
+                        <span className={`truncate ${b.answer ? 'text-foreground' : 'text-red-600 dark:text-red-400 font-medium'}`}>
+                          {b.item.label}
+                        </span>
+                      </div>
+                      {!b.answer && (
+                        <span className="text-red-500 text-xs font-semibold flex-shrink-0">
+                          -{formatCurrency(b.impact)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {degradation.totalDegradation > 0 && (
+          <div className="mt-4 pt-4 border-t border-border flex justify-between items-center">
+            <span className="text-sm font-semibold text-foreground">Degradação total</span>
+            <Badge variant="destructive" className="text-sm">
+              -{(degradation.totalDegradation * 100).toFixed(0)}% do valor estimado
+            </Badge>
+          </div>
+        )}
+      </motion.div>
+
+      {/* BLOCO 4 — VALOR VERDADEIRO (True Value) */}
+      <motion.div custom={3} variants={blockVariants} initial="hidden" animate="visible"
+        className="bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-800 rounded-xl p-6 text-center"
+      >
+        <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border-red-300 dark:border-red-700 mb-3">
+          <AlertTriangle className="w-3 h-3 mr-1" />
+          VALOR VERDADEIRO
+        </Badge>
+        <p className="text-muted-foreground text-sm mb-2">
+          Considerando as lacunas identificadas, o valor real da sua empresa hoje é:
+        </p>
+        <p className="text-4xl md:text-5xl font-bold text-red-600 dark:text-red-400">
+          {formatFullCurrency(degradation.trueValue)}
         </p>
         <p className="text-muted-foreground text-sm mt-2">
-          Baseado nos múltiplos do setor <strong>{segment}</strong> e seus dados financeiros atuais
+          {(degradation.totalDegradation * 100).toFixed(0)}% abaixo da estimativa de mercado
         </p>
       </motion.div>
 
-      {/* BLOCO 3 — O GAP */}
-      <motion.div
-        custom={2}
-        variants={blockVariants}
-        initial="hidden"
-        animate="visible"
+      {/* BLOCO 5 — O GAP */}
+      <motion.div custom={4} variants={blockVariants} initial="hidden" animate="visible"
         className="bg-orange-50 dark:bg-orange-950/30 border border-orange-300 dark:border-orange-800 rounded-xl p-6"
       >
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent mb-5" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
           <div>
-            <p className="text-muted-foreground text-sm mb-1">Você está deixando na mesa:</p>
+            <p className="text-muted-foreground text-sm mb-1">Gap entre True Value e Potencial:</p>
             <p className="text-3xl md:text-4xl font-bold text-orange-600 dark:text-orange-400">
-              {formatFullCurrency(lossMetrics.gapValue)}
+              {formatFullCurrency(lossMetrics.gap)}
             </p>
           </div>
           <div className="flex items-center sm:justify-end">
             <Badge variant="destructive" className="text-lg px-4 py-1.5 bg-orange-500 hover:bg-orange-600">
-              {lossMetrics.gapPercent.toFixed(1)}% abaixo do potencial
+              {lossMetrics.gapPercent.toFixed(0)}% de upside
             </Badge>
           </div>
         </div>
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Valor Atual</span>
+            <span>Valor Verdadeiro</span>
             <span>Valor Potencial</span>
           </div>
           <Progress value={progressPercent} className="h-3" />
           <div className="flex justify-between text-xs font-medium">
-            <span>{formatCurrency(lossMetrics.currentValue)}</span>
-            <span className="text-emerald-600">{formatCurrency(lossMetrics.potentialValue)}</span>
+            <span className="text-red-600">{formatCurrency(degradation.trueValue)}</span>
+            <span className="text-emerald-600">{formatCurrency(degradation.potentialValue)}</span>
           </div>
         </div>
       </motion.div>
 
-      {/* BLOCO 4 — A VIRADA */}
-      <motion.div
-        custom={3}
-        variants={blockVariants}
-        initial="hidden"
-        animate="visible"
+      {/* BLOCO 6 — A VIRADA */}
+      <motion.div custom={5} variants={blockVariants} initial="hidden" animate="visible"
         className="text-center py-8 space-y-3"
       >
         <div className="flex items-center justify-center gap-3">
@@ -225,12 +286,8 @@ export const ValuationNarrativeReport = ({ result, valuationId }: ValuationNarra
         </p>
       </motion.div>
 
-      {/* BLOCO 5 — PERDA REAL 🔥 */}
-      <motion.div
-        custom={4}
-        variants={blockVariants}
-        initial="hidden"
-        animate="visible"
+      {/* BLOCO 7 — PERDA REAL 🔥 */}
+      <motion.div custom={6} variants={blockVariants} initial="hidden" animate="visible"
         className="bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-800 rounded-xl p-6"
       >
         <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border-red-300 dark:border-red-700 mb-3">
@@ -256,93 +313,11 @@ export const ValuationNarrativeReport = ({ result, valuationId }: ValuationNarra
         <p className="text-center font-semibold text-foreground">
           Você não perde esse dinheiro na venda — você perde todo mês.
         </p>
-        <p className="text-center text-muted-foreground text-xs mt-2">
-          Estimativa baseada em índices de ineficiência operacional para empresas do segmento <strong>{segment}</strong> com faturamento similar
-        </p>
-      </motion.div>
-
-      {/* BLOCO 6 — CONSEQUÊNCIAS */}
-      <motion.div
-        custom={5}
-        variants={blockVariants}
-        initial="hidden"
-        animate="visible"
-        className="bg-muted/50 border border-border rounded-xl p-6"
-      >
-        <h3 className="font-semibold text-foreground mb-4">Se esse gap não for corrigido:</h3>
-        <div className="space-y-4">
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">Crescimento travado</p>
-              <p className="text-sm text-muted-foreground">Empresas com esse gap crescem mais devagar, ou crescem e quebram por margem insuficiente</p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <ShieldAlert className="w-4 h-4 text-amber-600" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">Capital mais caro</p>
-              <p className="text-sm text-muted-foreground">Captações externas ficam mais difíceis e caras quando a estrutura financeira não é sólida</p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <TrendingDown className="w-4 h-4 text-red-600" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">Empresa não vendável</p>
-              <p className="text-sm text-muted-foreground">No momento da venda, o desconto é brutal. Você não vende empresa — vende problema</p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* BLOCO 7 — A CAUSA */}
-      <motion.div
-        custom={6}
-        variants={blockVariants}
-        initial="hidden"
-        animate="visible"
-        className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-6"
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <Search className="w-5 h-5 text-blue-600" />
-          <h3 className="font-semibold text-foreground">Por que esse gap existe?</h3>
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          A maioria das empresas nesse estágio não tem problema de produto ou mercado — tem problema de estrutura financeira. 
-          Falta controle de margem, previsibilidade de caixa e governança básica. Isso comprime o valuation e limita o crescimento.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 gap-1">
-            <BarChart3 className="w-3 h-3" /> Margem
-          </Badge>
-          <Badge variant="outline" className="border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 gap-1">
-            <Activity className="w-3 h-3" /> Previsibilidade
-          </Badge>
-          <Badge variant="outline" className="border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 gap-1">
-            <Target className="w-3 h-3" /> Controle
-          </Badge>
-          <Badge variant="outline" className="border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 gap-1">
-            <Building2 className="w-3 h-3" /> Governança
-          </Badge>
-          <Badge variant="outline" className="border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 gap-1">
-            <User className="w-3 h-3" /> Dependência do dono
-          </Badge>
-        </div>
       </motion.div>
 
       {/* BLOCO 8 — URGÊNCIA */}
-      <motion.div
-        custom={7}
-        variants={blockVariants}
-        initial="hidden"
-        animate="visible"
-        className="bg-[hsl(var(--navy-deep,222_47%_11%))] text-white rounded-xl p-6 text-center"
+      <motion.div custom={7} variants={blockVariants} initial="hidden" animate="visible"
+        className="rounded-xl p-6 text-center text-white"
         style={{ background: 'hsl(222, 47%, 11%)' }}
       >
         <Clock className="w-8 h-8 mx-auto mb-3 text-amber-400" />
@@ -354,49 +329,32 @@ export const ValuationNarrativeReport = ({ result, valuationId }: ValuationNarra
         <p className="text-lg font-medium text-white">
           Não decidir também é uma decisão — e ela custa dinheiro.
         </p>
-        <p className="text-white/50 text-sm mt-2">
-          Empresas não perdem valor de uma vez — perdem todo mês, silenciosamente.
-        </p>
       </motion.div>
 
       {/* BLOCO 9 — CTA FINAL */}
-      <motion.div
-        custom={8}
-        variants={blockVariants}
-        initial="hidden"
-        animate="visible"
+      <motion.div custom={8} variants={blockVariants} initial="hidden" animate="visible"
         className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-center text-white"
       >
         <h3 className="text-xl md:text-2xl font-bold mb-2">
-          Quer ver exatamente onde está esse dinheiro na sua empresa?
+          Quer fechar esse gap e capturar o valor potencial?
         </h3>
         <p className="text-emerald-100 text-sm mb-6 max-w-lg mx-auto">
-          Nosso diagnóstico estratégico mapeia os 5 pilares do seu gap de valuation e mostra o caminho para recuperar esse valor.
+          A Vispe já gerou em média +78% de valorização nos clientes atendidos. Comece agora.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button
-            size="lg"
-            onClick={handleDiagnostic}
-            disabled={loading}
+          <Button size="lg" onClick={handleDiagnostic} disabled={loading}
             className="bg-white text-emerald-700 hover:bg-emerald-50 font-semibold"
           >
             <ArrowRight className="w-4 h-4 mr-2" />
-            Fazer Diagnóstico Estratégico
+            Iniciar Processo Consultivo
           </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            onClick={handleSpecialist}
-            disabled={loading}
+          <Button size="lg" variant="outline" onClick={handleSpecialist} disabled={loading}
             className="border-white/40 text-white hover:bg-white/10"
           >
             <MessageCircle className="w-4 h-4 mr-2" />
             Falar com um especialista
           </Button>
         </div>
-        <p className="text-emerald-200 text-xs mt-4">
-          Empresas que corrigem isso capturam o valor que hoje está sendo perdido todo mês
-        </p>
       </motion.div>
     </div>
   );

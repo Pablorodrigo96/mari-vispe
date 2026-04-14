@@ -11,7 +11,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
@@ -24,7 +23,6 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Create client with user's JWT to get user id
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -37,7 +35,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { valuationId, lossMetrics, leadScore, leadScoreReason } = body;
+    const { valuationId, lossMetrics, leadScore, leadScoreReason, diagnosticAnswers } = body;
 
     if (!valuationId || !lossMetrics) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -46,7 +44,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate lead score
     if (leadScore && !["hot", "warm", "cold"].includes(leadScore)) {
       return new Response(JSON.stringify({ error: "Invalid leadScore" }), {
         status: 400,
@@ -54,10 +51,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service role to read and update
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify ownership
     const { data: valuation, error: fetchError } = await adminClient
       .from("valuation_history")
       .select("id, user_id, result")
@@ -78,11 +73,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Merge lossMetrics into existing result JSONB
     const existingResult = (valuation.result as Record<string, unknown>) || {};
     const updatedResult = {
       ...existingResult,
       lossMetrics,
+      diagnosticAnswers: diagnosticAnswers || null,
       leadScore: leadScore || null,
       leadScoreReason: leadScoreReason || null,
     };
