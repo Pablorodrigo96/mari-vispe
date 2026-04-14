@@ -704,5 +704,15 @@ export const ValuationReportDialog = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    <Drawer open={narrativeOpen} onOpenChange={setNarrativeOpen}>
+      <DrawerContent className="max-h-[92vh] overflow-y-auto">
+        <DrawerHeader>
+          <DrawerTitle>Análise de Impacto Financeiro</DrawerTitle>
+        </DrawerHeader>
+        <ValuationNarrativeReport result={result} valuationId={valuationId} />
+      </DrawerContent>
+    </Drawer>
+    </>
   );
 };
