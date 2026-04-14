@@ -171,7 +171,7 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
       const result = calculateValuation(inputs);
       
       // Salvar no histórico (bloqueado)
-      await supabase.from('valuation_history').insert([{
+      const { data: insertedValuation } = await supabase.from('valuation_history').insert([{
         user_id: user.id,
         valuation_type: 'multiples',
         segment: formData.segment,
@@ -179,7 +179,9 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
         result: result as unknown as Json,
         status: 'completed',
         locked_at: new Date().toISOString(),
-      }]);
+      }]).select('id').single();
+
+      setLastValuationId(insertedValuation?.id || null);
 
       // Consumir crédito
       await consumeMultiplesAccess();
