@@ -317,6 +317,7 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
           onClose={handleCloseReport}
           onBackToStart={handleBackToStart}
           result={valuationResult}
+          valuationId={lastValuationId || undefined}
         />
       )}
 
