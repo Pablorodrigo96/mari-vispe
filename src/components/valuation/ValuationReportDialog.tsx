@@ -293,6 +293,7 @@ export const ValuationReportDialog = ({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="bg-[#0F172A] text-white -m-6 mb-0 p-6 rounded-t-lg">
