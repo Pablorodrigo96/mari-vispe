@@ -38,7 +38,9 @@ export const ValuationReportDialog = ({
   onClose,
   onBackToStart,
   result,
+  valuationId,
 }: ValuationReportDialogProps) => {
+  const [narrativeOpen, setNarrativeOpen] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const equityGap = calculateEquityGap(result, 5);
 
