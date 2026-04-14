@@ -180,6 +180,78 @@ export function calculateEquityGap(result: ValuationResult, ebitdaBoostPP: numbe
   };
 }
 
+// Loss Metrics & Lead Scoring
+export type LeadScore = 'hot' | 'warm' | 'cold';
+
+export interface LossMetrics {
+  monthlyLoss: number;
+  annualLoss: number;
+  recoverTimeMonths: number;
+  gapValue: number;
+  gapPercent: number;
+  currentValue: number;
+  potentialValue: number;
+  inefficiencyRate: number;
+  leadScore: LeadScore;
+  leadScoreReason: string;
+}
+
+export function calculateLossMetrics(result: ValuationResult): LossMetrics {
+  const monthlyRevenue = result.metrics.revenue / 12;
+  const gapData = calculateEquityGap(result);
+
+  // Método 1: percentual de ineficiência sobre receita mensal
+  const inefficiencyRate = 0.03;
+  const monthlyLossFromRevenue = monthlyRevenue * inefficiencyRate;
+
+  // Método 2: gap diluído em 36 meses
+  const monthlyLossFromGap = gapData.gapValue / 36;
+
+  // Média dos dois métodos
+  const monthlyLoss = (monthlyLossFromRevenue + monthlyLossFromGap) / 2;
+  const annualLoss = monthlyLoss * 12;
+  const recoverTimeMonths = monthlyLoss > 0 ? Math.round(gapData.gapValue / monthlyLoss) : 0;
+
+  // Lead scoring
+  let leadScore: LeadScore;
+  let leadScoreReason: string;
+
+  if (gapData.gapValue > 1_000_000 || monthlyRevenue > 500_000) {
+    leadScore = 'hot';
+    leadScoreReason = gapData.gapValue > 1_000_000
+      ? `Gap de equity acima de R$ 1M (${formatCompact(gapData.gapValue)})`
+      : `Faturamento mensal acima de R$ 500k (${formatCompact(monthlyRevenue)})`;
+  } else if (gapData.gapValue > 300_000 || monthlyRevenue > 150_000) {
+    leadScore = 'warm';
+    leadScoreReason = gapData.gapValue > 300_000
+      ? `Gap de equity acima de R$ 300k (${formatCompact(gapData.gapValue)})`
+      : `Faturamento mensal acima de R$ 150k (${formatCompact(monthlyRevenue)})`;
+  } else {
+    leadScore = 'cold';
+    leadScoreReason = 'Gap e faturamento abaixo dos limiares de qualificação';
+  }
+
+  return {
+    monthlyLoss,
+    annualLoss,
+    recoverTimeMonths,
+    gapValue: gapData.gapValue,
+    gapPercent: gapData.gapPercent,
+    currentValue: gapData.currentValue,
+    potentialValue: gapData.potentialValue,
+    inefficiencyRate,
+    leadScore,
+    leadScoreReason,
+  };
+}
+
+// Helper para formatar valores compactos
+function formatCompact(value: number): string {
+  if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1).replace('.', ',')} mi`;
+  if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(0)} mil`;
+  return `R$ ${value.toLocaleString('pt-BR')}`;
+}
+
 // Helper para converter string de moeda para número
 export function parseCurrency(value: string): number {
   if (!value) return 0;
