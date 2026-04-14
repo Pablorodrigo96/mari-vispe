@@ -60,6 +60,7 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
   const [valuationResult, setValuationResult] = useState<ValuationResult | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastValuationId, setLastValuationId] = useState<string | null>(null);
 
   const totalSteps = 3;
 
@@ -170,7 +171,7 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
       const result = calculateValuation(inputs);
       
       // Salvar no histórico (bloqueado)
-      await supabase.from('valuation_history').insert([{
+      const { data: insertedValuation } = await supabase.from('valuation_history').insert([{
         user_id: user.id,
         valuation_type: 'multiples',
         segment: formData.segment,
@@ -178,7 +179,9 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
         result: result as unknown as Json,
         status: 'completed',
         locked_at: new Date().toISOString(),
-      }]);
+      }]).select('id').single();
+
+      setLastValuationId(insertedValuation?.id || null);
 
       // Consumir crédito
       await consumeMultiplesAccess();
@@ -314,6 +317,7 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
           onClose={handleCloseReport}
           onBackToStart={handleBackToStart}
           result={valuationResult}
+          valuationId={lastValuationId || undefined}
         />
       )}
 

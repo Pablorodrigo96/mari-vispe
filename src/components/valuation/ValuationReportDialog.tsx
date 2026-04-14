@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,19 +15,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle, ArrowUpRight } from 'lucide-react';
+import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle, ArrowUpRight, BarChart2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Tooltip as RechartsTooltip, Cell } from 'recharts';
 import { ValuationResult, calculateEquityGap } from '@/lib/valuationCalculator';
 import { formatFullCurrency } from '@/lib/formatters';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { ValuationNarrativeReport } from './ValuationNarrativeReport';
 
 interface ValuationReportDialogProps {
   open: boolean;
   onClose: () => void;
   onBackToStart: () => void;
   result: ValuationResult;
+  valuationId?: string;
 }
 
 export const ValuationReportDialog = ({
@@ -35,7 +38,9 @@ export const ValuationReportDialog = ({
   onClose,
   onBackToStart,
   result,
+  valuationId,
 }: ValuationReportDialogProps) => {
+  const [narrativeOpen, setNarrativeOpen] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const equityGap = calculateEquityGap(result, 5);
 
@@ -288,6 +293,7 @@ export const ValuationReportDialog = ({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="bg-[#0F172A] text-white -m-6 mb-0 p-6 rounded-t-lg">
@@ -639,6 +645,23 @@ export const ValuationReportDialog = ({
             </p>
           </div>
 
+          {/* Análise de Impacto */}
+          <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-300/30 dark:border-red-800/30 rounded-xl p-5 text-center">
+            <h3 className="font-semibold text-foreground mb-2">
+              📊 Análise de Impacto Financeiro
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Descubra quanto sua empresa está perdendo por mês e como fechar o gap de valuation.
+            </p>
+            <Button
+              onClick={() => setNarrativeOpen(true)}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              <BarChart2 className="w-4 h-4 mr-2" />
+              Ver Análise Completa de Impacto
+            </Button>
+          </div>
+
           {/* CTA WhatsApp */}
           <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border border-emerald-500/30 rounded-xl p-5 text-center">
             <h3 className="font-semibold text-foreground mb-2">
@@ -682,5 +705,15 @@ export const ValuationReportDialog = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    <Drawer open={narrativeOpen} onOpenChange={setNarrativeOpen}>
+      <DrawerContent className="max-h-[92vh] overflow-y-auto">
+        <DrawerHeader>
+          <DrawerTitle>Análise de Impacto Financeiro</DrawerTitle>
+        </DrawerHeader>
+        <ValuationNarrativeReport result={result} valuationId={valuationId} />
+      </DrawerContent>
+    </Drawer>
+    </>
   );
 };
