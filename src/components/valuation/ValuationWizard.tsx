@@ -60,6 +60,7 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
   const [valuationResult, setValuationResult] = useState<ValuationResult | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastValuationId, setLastValuationId] = useState<string | null>(null);
 
   const totalSteps = 3;
 
