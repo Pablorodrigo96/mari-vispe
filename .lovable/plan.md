@@ -1,106 +1,56 @@
 
 
-## Plano: Diagnóstico de Degradação + Valor Verdadeiro vs Valor Potencial
+## Plano: Corrigir Drawer cortando conteúdo + Melhorar perguntas do diagnóstico
 
-### Conceito Revisado
+### Problema 1: Diagnóstico cortado
 
-Três valores distintos no fluxo:
-1. **Valor Estimado** = MASHUP VALUE (cálculo atual, não muda)
-2. **Valor Potencial** = MASHUP VALUE × 1.78 (média de valorização Vispe)
-3. **Valor Verdadeiro (True Value)** = MASHUP VALUE degradado por respostas do diagnóstico
+O componente `Drawer` (vaul) renderiza conteúdo ancorado na parte inferior da tela. Com 12 perguntas + header + summary, o conteúdo excede o espaço disponível e fica cortado. O `max-h-[92vh]` no DrawerContent não resolve porque o Drawer tem comportamento de "puxar para cima" que limita a altura visível.
 
-O **GAP** passa a ser entre True Value e Potencial. O diagnóstico é um questionário de ~12 perguntas sim/não que degrada o valor estimado, revelando o True Value.
+**Solução**: Substituir os dois `Drawer` (diagnóstico e narrativa) por `Dialog` fullscreen com scroll interno. Isso garante que todo o conteúdo seja acessível.
 
----
+### Problema 2: Perguntas genéricas
 
-### Arquivos a Criar
+As perguntas atuais são títulos curtos ("Controle de EBITDA", "Balanço auditado") sem contexto suficiente. O empresário não entende o impacto real de cada item.
 
-**1. `src/components/valuation/ValuationDiagnostic.tsx` — Questionário de Diagnóstico**
-- Componente com ~12 perguntas sim/não, agrupadas por categoria:
-  - **Fiscal/Tributário**: Ganho de capital otimizado, planejamento tributário (reforma)
-  - **Financeiro**: Controle de EBITDA, endividamento controlado, plano de contas, balanço auditado
-  - **Governança**: Área de controladoria, monitoramento contínuo de indicadores, organograma atualizado
-  - **Operacional**: Processos documentados, máquina de vendas estruturada, ativo imobilizado registrado
-- Cada "não" aplica um fator de degradação (ex: -3% a -8% cada, configurável)
-- UI: cards com toggle/switch para cada item, visual clean com ícones por categoria
-- Ao final: calcula `degradationFactor` (soma dos penalizadores) e `trueValue = mashupValue * (1 - degradationFactor)`
-- Botão "Revelar Valor Verdadeiro" que dispara a narrativa
-
-**2. Atualizar `src/lib/valuationCalculator.ts` — Novos cálculos**
-- Nova interface `DiagnosticAnswers` com os ~12 campos booleanos
-- Nova interface `DegradationResult` com `trueValue`, `potentialValue`, `totalDegradation`, `itemBreakdown`
-- Nova função `calculateTrueValue(result, diagnosticAnswers)`:
-  - `potentialValue = mashupValue * 1.78`
-  - Cada resposta negativa aplica penalidade configurável
-  - `trueValue = mashupValue * (1 - sumOfPenalties)`
-  - `gap = potentialValue - trueValue`
-- Atualizar `calculateLossMetrics()` para usar trueValue vs potentialValue em vez do antigo equityGap
+**Solução**: Reescrever cada uma das 12 perguntas com:
+- Título como pergunta direta e contextualizada (ex: "Sua empresa apura e monitora o EBITDA mensalmente, com análise de margem operacional recorrente?")
+- Descrição expandida explicando o impacto no valuation quando a resposta é "Não"
+- Remover `truncate` da descrição para garantir visibilidade total
 
 ---
 
-### Arquivos a Modificar
+### Arquivos a modificar
 
-**3. `src/components/valuation/ValuationNarrativeReport.tsx` — Redesign completo**
-- Recebe `diagnosticAnswers` além de `result`
-- Bloco 1 (Sonho): Valor Potencial = MASHUP × 1.78, com texto "Média de valorização dos clientes Vispe"
-- Bloco 2 (Estimado): MASHUP VALUE como "estimativa de mercado"
-- Bloco 3 (Diagnóstico): resumo visual das respostas, mostrando cada item que degrada (vermelho = não, verde = sim)
-- Bloco 4 (True Value): valor real degradado, com breakdown da degradação
-- Bloco 5 (GAP): entre True Value e Potencial, com barra de progresso
-- Blocos 6-9: Perda real (recalculada), consequências, urgência e CTA (mantidos mas com valores corretos)
+**1. `src/components/valuation/ValuationReportDialog.tsx`**
+- Substituir os dois `Drawer` por `Dialog` com `DialogContent` fullscreen (`max-w-4xl max-h-[90vh] overflow-y-auto`)
+- Manter a mesma lógica de fluxo: diagnóstico → narrativa
 
-**4. `src/components/valuation/ValuationReportDialog.tsx`**
-- O botão "Ver Análise Completa de Impacto" agora abre o Diagnóstico primeiro
-- Fluxo: Relatório → clica botão → Diagnóstico (responde perguntas) → Narrativa com True Value
+**2. `src/lib/diagnosticCalculator.ts`**
+- Reescrever `label` e `description` de cada item para perguntas contextualizadas:
+  - `capitalGainOptimized`: "Existe planejamento para minimizar o imposto sobre ganho de capital na venda da participação societária?" / "Sem otimização, até 34% do ganho pode ser tributado, reduzindo drasticamente o valor líquido recebido pelo vendedor."
+  - `taxPlanning`: "A empresa possui planejamento tributário atualizado considerando a reforma tributária?" / "Estruturas tributárias desatualizadas geram pagamento excessivo de impostos e reduzem a atratividade para compradores."
+  - `ebitdaControl`: "Sua empresa apura o EBITDA mensalmente com análise de margem operacional recorrente?" / "Sem controle de EBITDA, o comprador aplica desconto por falta de visibilidade sobre a real geração de caixa."
+  - `debtControlled`: "A relação dívida/EBITDA está abaixo de 3x e a estrutura de capital é equilibrada?" / "Endividamento alto reduz o Equity Value e afasta investidores que buscam empresas com balanço saudável."
+  - `chartOfAccounts`: "Existe plano de contas gerencial separado do contábil, com centros de custo?" / "Sem gerencial separado, o comprador não consegue analisar rentabilidade por unidade de negócio."
+  - `auditedBalance`: "As demonstrações financeiras dos últimos 3 anos foram auditadas por firma independente?" / "Balanço não auditado gera desconfiança e justifica pedidos de desconto de 15-30% na negociação."
+  - `controllerArea`: "Existe equipe ou responsável dedicado ao controle financeiro e reporting gerencial?" / "Sem controladoria, os números dependem do dono — isso é um risco crítico para qualquer comprador."
+  - `continuousMonitoring`: "Indicadores financeiros (KPIs) são acompanhados semanalmente via dashboards?" / "Falta de monitoramento indica gestão reativa — compradores penalizam empresas sem previsibilidade."
+  - `orgChartUpdated`: "A empresa possui organograma atualizado com papéis e responsabilidades definidos?" / "Organograma indefinido sinaliza dependência do fundador, reduzindo o valor de transação."
+  - `salesMachine`: "O processo comercial é documentado com funil de vendas e métricas de conversão?" / "Sem máquina de vendas, a receita depende de esforço individual — isso reduz a previsibilidade e o múltiplo aplicado."
+  - `documentedProcesses`: "Os processos críticos da operação estão documentados (SOPs, fluxogramas)?" / "Processos na cabeça das pessoas = risco operacional alto e desconto no valuation."
+  - `fixedAssetsRegistered`: "Existe inventário e controle patrimonial de máquinas, equipamentos e imóveis?" / "Ativos não registrados não podem ser considerados no cálculo de valor da empresa."
 
-**5. Edge function `update-valuation-metrics`**
-- Atualizar para salvar também `diagnosticAnswers` e `trueValue` no JSONB `result`
-
----
-
-### Tabela de Degradação (valores iniciais configuráveis)
-
-```text
-Item                                    | Penalidade se "Não"
-----------------------------------------|--------------------
-Ganho de capital otimizado              | -5%
-Endividamento controlado                | -8%
-Controle de EBITDA                      | -7%
-Área de controladoria                   | -5%
-Monitoramento contínuo de indicadores   | -4%
-Plano de contas estruturado             | -4%
-Balanço auditado                        | -6%
-Planejamento tributário (reforma)       | -5%
-Máquina de vendas estruturada           | -5%
-Organograma atualizado                  | -3%
-Processos documentados                  | -4%
-Ativo imobilizado registrado            | -3%
-```
-
-Total máximo de degradação: ~59% (True Value mínimo ~41% do MASHUP)
+**3. `src/components/valuation/ValuationDiagnostic.tsx`**
+- Remover `truncate` da descrição do `DiagnosticRow`
+- Ajustar padding/layout para acomodar descrições maiores
 
 ---
 
-### Fluxo do Usuário
-
-```text
-Valuation Wizard (3 steps)
-  → Relatório (MASHUP VALUE)
-    → Botão "Diagnóstico de Valor"
-      → Questionário (12 perguntas sim/não)
-        → Narrativa com True Value revelado
-          → CTA: Consultoria Vispe
-```
-
----
-
-### Resumo de Entregas
+### Resumo
 
 | Arquivo | Ação |
 |---|---|
-| `src/lib/valuationCalculator.ts` | Adicionar `DiagnosticAnswers`, `calculateTrueValue()`, potentialValue = mashup × 1.78 |
-| `src/components/valuation/ValuationDiagnostic.tsx` | Criar questionário de 12 itens com degradação |
-| `src/components/valuation/ValuationNarrativeReport.tsx` | Redesign: 3 valores, breakdown de degradação, gap correto |
-| `src/components/valuation/ValuationReportDialog.tsx` | Fluxo: relatório → diagnóstico → narrativa |
-| `supabase/functions/update-valuation-metrics/index.ts` | Salvar diagnosticAnswers + trueValue |
+| `ValuationReportDialog.tsx` | Trocar Drawer por Dialog fullscreen para diagnóstico e narrativa |
+| `diagnosticCalculator.ts` | Reescrever 12 perguntas com contexto e impacto |
+| `ValuationDiagnostic.tsx` | Remover truncate, ajustar layout para textos maiores |
 
