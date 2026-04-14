@@ -131,7 +131,7 @@ function DiagnosticRow({ item, value, onToggle }: { item: DiagnosticItem; value:
     >
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm text-foreground">{item.label}</p>
-        <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+        <p className="text-xs text-muted-foreground">{item.description}</p>
       </div>
       <div className="flex items-center gap-3 flex-shrink-0">
         {!value && (
