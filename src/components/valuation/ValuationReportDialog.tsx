@@ -22,7 +22,7 @@ import { formatFullCurrency } from '@/lib/formatters';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ValuationNarrativeReport } from './ValuationNarrativeReport';
 import { ValuationDiagnostic } from './ValuationDiagnostic';
 import { DiagnosticAnswers } from '@/lib/diagnosticCalculator';
