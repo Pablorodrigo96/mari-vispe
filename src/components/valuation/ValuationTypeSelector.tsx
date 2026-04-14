@@ -232,7 +232,7 @@ export const ValuationTypeSelector = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full border-white/20 text-white hover:bg-white/10"
+                className="w-full border-white/20 text-white bg-primary hover:bg-primary/90"
                 onClick={onBuyMultiples}
               >
                 <CreditCard className="w-4 h-4 mr-2" />
