@@ -22,7 +22,7 @@ import { formatFullCurrency } from '@/lib/formatters';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ValuationNarrativeReport } from './ValuationNarrativeReport';
 import { ValuationDiagnostic } from './ValuationDiagnostic';
 import { DiagnosticAnswers } from '@/lib/diagnosticCalculator';
@@ -710,30 +710,34 @@ export const ValuationReportDialog = ({
       </DialogContent>
     </Dialog>
 
-    {/* Diagnostic Drawer */}
-    <Drawer open={diagnosticOpen} onOpenChange={setDiagnosticOpen}>
-      <DrawerContent className="max-h-[92vh] overflow-y-auto">
-        <DrawerHeader>
-          <DrawerTitle>Diagnóstico de Valor</DrawerTitle>
-        </DrawerHeader>
-        <ValuationDiagnostic onComplete={(answers) => {
-          setDiagnosticAnswers(answers);
-          setDiagnosticOpen(false);
-          setNarrativeOpen(true);
-        }} />
-      </DrawerContent>
-    </Drawer>
+    {/* Diagnostic Dialog */}
+    <Dialog open={diagnosticOpen} onOpenChange={setDiagnosticOpen}>
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Diagnóstico de Valor</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="max-h-[90vh]">
+          <ValuationDiagnostic onComplete={(answers) => {
+            setDiagnosticAnswers(answers);
+            setDiagnosticOpen(false);
+            setNarrativeOpen(true);
+          }} />
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
 
-    {/* Narrative Report Drawer */}
+    {/* Narrative Report Dialog */}
     {diagnosticAnswers && (
-      <Drawer open={narrativeOpen} onOpenChange={setNarrativeOpen}>
-        <DrawerContent className="max-h-[92vh] overflow-y-auto">
-          <DrawerHeader>
-            <DrawerTitle>Análise de Impacto Financeiro</DrawerTitle>
-          </DrawerHeader>
-          <ValuationNarrativeReport result={result} valuationId={valuationId} diagnosticAnswers={diagnosticAnswers} />
-        </DrawerContent>
-      </Drawer>
+      <Dialog open={narrativeOpen} onOpenChange={setNarrativeOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Análise de Impacto Financeiro</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[90vh]">
+            <ValuationNarrativeReport result={result} valuationId={valuationId} diagnosticAnswers={diagnosticAnswers} />
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     )}
     </>
   );

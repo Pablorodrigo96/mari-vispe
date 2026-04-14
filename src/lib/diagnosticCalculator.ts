@@ -25,21 +25,21 @@ export interface DiagnosticItem {
 
 export const diagnosticItems: DiagnosticItem[] = [
   // Fiscal/Tributário
-  { key: 'capitalGainOptimized', label: 'Ganho de capital otimizado', description: 'Planejamento tributário sobre ganho de capital na venda de participação societária', penalty: 0.05, category: 'fiscal' },
-  { key: 'taxPlanning', label: 'Planejamento tributário atualizado', description: 'Considerando a reforma tributária e estrutura ideal de tributação', penalty: 0.05, category: 'fiscal' },
+  { key: 'capitalGainOptimized', label: 'Existe planejamento para minimizar o imposto sobre ganho de capital na venda da participação societária?', description: 'Sem otimização, até 34% do ganho pode ser tributado, reduzindo drasticamente o valor líquido recebido pelo vendedor.', penalty: 0.05, category: 'fiscal' },
+  { key: 'taxPlanning', label: 'A empresa possui planejamento tributário atualizado considerando a reforma tributária?', description: 'Estruturas tributárias desatualizadas geram pagamento excessivo de impostos e reduzem a atratividade para compradores.', penalty: 0.05, category: 'fiscal' },
   // Financeiro
-  { key: 'ebitdaControl', label: 'Controle de EBITDA', description: 'Apuração mensal e análise de margem operacional recorrente', penalty: 0.07, category: 'financial' },
-  { key: 'debtControlled', label: 'Endividamento controlado', description: 'Relação dívida/EBITDA saudável e estrutura de capital equilibrada', penalty: 0.08, category: 'financial' },
-  { key: 'chartOfAccounts', label: 'Plano de contas estruturado', description: 'Plano de contas gerencial separado do contábil, com centros de custo', penalty: 0.04, category: 'financial' },
-  { key: 'auditedBalance', label: 'Balanço auditado', description: 'Demonstrações financeiras auditadas por firma independente', penalty: 0.06, category: 'financial' },
+  { key: 'ebitdaControl', label: 'Sua empresa apura o EBITDA mensalmente com análise de margem operacional recorrente?', description: 'Sem controle de EBITDA, o comprador aplica desconto por falta de visibilidade sobre a real geração de caixa.', penalty: 0.07, category: 'financial' },
+  { key: 'debtControlled', label: 'A relação dívida/EBITDA está abaixo de 3x e a estrutura de capital é equilibrada?', description: 'Endividamento alto reduz o Equity Value e afasta investidores que buscam empresas com balanço saudável.', penalty: 0.08, category: 'financial' },
+  { key: 'chartOfAccounts', label: 'Existe plano de contas gerencial separado do contábil, com centros de custo?', description: 'Sem gerencial separado, o comprador não consegue analisar rentabilidade por unidade de negócio.', penalty: 0.04, category: 'financial' },
+  { key: 'auditedBalance', label: 'As demonstrações financeiras dos últimos 3 anos foram auditadas por firma independente?', description: 'Balanço não auditado gera desconfiança e justifica pedidos de desconto de 15-30% na negociação.', penalty: 0.06, category: 'financial' },
   // Governança
-  { key: 'controllerArea', label: 'Área de controladoria', description: 'Equipe ou responsável dedicado ao controle financeiro e reporting', penalty: 0.05, category: 'governance' },
-  { key: 'continuousMonitoring', label: 'Monitoramento contínuo de indicadores', description: 'Dashboards e KPIs acompanhados semanalmente/mensalmente', penalty: 0.04, category: 'governance' },
-  { key: 'orgChartUpdated', label: 'Organograma atualizado', description: 'Estrutura hierárquica clara e atualizada, com papéis definidos', penalty: 0.03, category: 'governance' },
+  { key: 'controllerArea', label: 'Existe equipe ou responsável dedicado ao controle financeiro e reporting gerencial?', description: 'Sem controladoria, os números dependem do dono — isso é um risco crítico para qualquer comprador.', penalty: 0.05, category: 'governance' },
+  { key: 'continuousMonitoring', label: 'Indicadores financeiros (KPIs) são acompanhados semanalmente via dashboards?', description: 'Falta de monitoramento indica gestão reativa — compradores penalizam empresas sem previsibilidade.', penalty: 0.04, category: 'governance' },
+  { key: 'orgChartUpdated', label: 'A empresa possui organograma atualizado com papéis e responsabilidades definidos?', description: 'Organograma indefinido sinaliza dependência do fundador, reduzindo o valor de transação.', penalty: 0.03, category: 'governance' },
   // Operacional
-  { key: 'salesMachine', label: 'Máquina de vendas estruturada', description: 'Processo comercial documentado, funil de vendas e métricas de conversão', penalty: 0.05, category: 'operational' },
-  { key: 'documentedProcesses', label: 'Processos documentados', description: 'SOPs e fluxogramas dos processos críticos da operação', penalty: 0.04, category: 'operational' },
-  { key: 'fixedAssetsRegistered', label: 'Ativo imobilizado registrado', description: 'Inventário e controle patrimonial de máquinas, equipamentos e imóveis', penalty: 0.03, category: 'operational' },
+  { key: 'salesMachine', label: 'O processo comercial é documentado com funil de vendas e métricas de conversão?', description: 'Sem máquina de vendas, a receita depende de esforço individual — isso reduz a previsibilidade e o múltiplo aplicado.', penalty: 0.05, category: 'operational' },
+  { key: 'documentedProcesses', label: 'Os processos críticos da operação estão documentados (SOPs, fluxogramas)?', description: 'Processos na cabeça das pessoas = risco operacional alto e desconto no valuation.', penalty: 0.04, category: 'operational' },
+  { key: 'fixedAssetsRegistered', label: 'Existe inventário e controle patrimonial de máquinas, equipamentos e imóveis?', description: 'Ativos não registrados não podem ser considerados no cálculo de valor da empresa.', penalty: 0.03, category: 'operational' },
 ];
 
 export const VISPE_APPRECIATION_FACTOR = 1.78;
