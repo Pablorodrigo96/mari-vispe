@@ -24,6 +24,8 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { ValuationNarrativeReport } from './ValuationNarrativeReport';
+import { ValuationDiagnostic } from './ValuationDiagnostic';
+import { DiagnosticAnswers } from '@/lib/diagnosticCalculator';
 
 interface ValuationReportDialogProps {
   open: boolean;
@@ -40,7 +42,9 @@ export const ValuationReportDialog = ({
   result,
   valuationId,
 }: ValuationReportDialogProps) => {
+  const [diagnosticOpen, setDiagnosticOpen] = useState(false);
   const [narrativeOpen, setNarrativeOpen] = useState(false);
+  const [diagnosticAnswers, setDiagnosticAnswers] = useState<DiagnosticAnswers | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const equityGap = calculateEquityGap(result, 5);
 
@@ -654,11 +658,11 @@ export const ValuationReportDialog = ({
               Descubra quanto sua empresa está perdendo por mês e como fechar o gap de valuation.
             </p>
             <Button
-              onClick={() => setNarrativeOpen(true)}
+              onClick={() => setDiagnosticOpen(true)}
               className="bg-red-500 hover:bg-red-600 text-white"
             >
               <BarChart2 className="w-4 h-4 mr-2" />
-              Ver Análise Completa de Impacto
+              Diagnóstico de Valor
             </Button>
           </div>
 
@@ -706,14 +710,31 @@ export const ValuationReportDialog = ({
       </DialogContent>
     </Dialog>
 
-    <Drawer open={narrativeOpen} onOpenChange={setNarrativeOpen}>
+    {/* Diagnostic Drawer */}
+    <Drawer open={diagnosticOpen} onOpenChange={setDiagnosticOpen}>
       <DrawerContent className="max-h-[92vh] overflow-y-auto">
         <DrawerHeader>
-          <DrawerTitle>Análise de Impacto Financeiro</DrawerTitle>
+          <DrawerTitle>Diagnóstico de Valor</DrawerTitle>
         </DrawerHeader>
-        <ValuationNarrativeReport result={result} valuationId={valuationId} />
+        <ValuationDiagnostic onComplete={(answers) => {
+          setDiagnosticAnswers(answers);
+          setDiagnosticOpen(false);
+          setNarrativeOpen(true);
+        }} />
       </DrawerContent>
     </Drawer>
+
+    {/* Narrative Report Drawer */}
+    {diagnosticAnswers && (
+      <Drawer open={narrativeOpen} onOpenChange={setNarrativeOpen}>
+        <DrawerContent className="max-h-[92vh] overflow-y-auto">
+          <DrawerHeader>
+            <DrawerTitle>Análise de Impacto Financeiro</DrawerTitle>
+          </DrawerHeader>
+          <ValuationNarrativeReport result={result} valuationId={valuationId} diagnosticAnswers={diagnosticAnswers} />
+        </DrawerContent>
+      </Drawer>
+    )}
     </>
   );
 };
