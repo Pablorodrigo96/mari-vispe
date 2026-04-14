@@ -1,49 +1,69 @@
 
 
-## Plano: Corrigir 3 Vulnerabilidades de Segurança (Scan Abril 2026)
+## Plano: Relatório Narrativo de Impacto Financeiro (Máquina de Conversão)
 
-O scan encontrou **3 erros** e **2 avisos** ativos. Os 2 avisos (capital_providers admin-only e integrations_config admin-only) são informacionais e serão marcados como reconhecidos. Os 3 erros precisam de correção via migração SQL.
-
----
-
-### 1. CNPJ e endereço expostos na tabela `listings` (ERROR)
-
-**Problema:** A policy "Public can view active listings" permite consultar diretamente a tabela `listings`, retornando `cnpj`, `cep`, `street` — mesmo que o `public_listings` view omita esses campos. Qualquer cliente pode consultar a tabela base.
-
-**Solução:** Remover a policy "Public can view active listings" da tabela base. O acesso público já funciona via `public_listings` view. Toda a aplicação já usa a view para consultas públicas.
+Construir um componente narrativo de 9 blocos que transforma o resultado do valuation em uma jornada emocional de conversão: sonho, choque, gap, perda real, urgência e CTA.
 
 ---
 
-### 2. Subscriptions — auto-inserção permite plano grátis (ERROR)
+### Arquivos a Criar
 
-**Problema:** A policy "Users can insert their own subscription" permite que um usuário insira uma row com `plan: 'master'`, `dcf_limit: 999` etc. sem pagamento.
+**1. `src/lib/valuationCalculator.ts` — Adicionar `calculateLossMetrics()`**
+- Calcula perda mensal e anual usando dois métodos (ineficiência 3% + gap/36 meses)
+- Retorna `monthlyLoss`, `annualLoss`, `recoverTimeMonths`, `gapValue`, `gapPercent`, etc.
+- Adiciona interface `LossMetrics` e tipo `LeadScore`
+- Adiciona lógica de lead scoring: hot/warm/cold baseado em gapValue e faturamento mensal
 
-**Solução:** Remover a policy de INSERT para usuários. Subscriptions devem ser criadas apenas pelo service_role (edge functions e triggers). O edge function `verify-payment` e o admin `AdminUsers.tsx` já usam service_role. Nenhum código client-side faz INSERT nesta tabela.
+**2. `src/components/valuation/ValuationNarrativeReport.tsx` — Componente principal (novo)**
+- 9 blocos sequenciais com staggered fade-in via framer-motion (já instalado)
+- Bloco 1 (Sonho): card verde com potentialValue em destaque
+- Bloco 2 (Choque): card âmbar com currentValue
+- Bloco 3 (Gap): card laranja com barra de progresso visual
+- Bloco 4 (Virada): texto centralizado dramático, sem card
+- Bloco 5 (Perda Real): card vermelho com monthlyLoss e annualLoss em destaque enorme
+- Bloco 6 (Consequências): card cinza com 3 itens de alerta
+- Bloco 7 (Causa): card azul com 5 pills dos pilares do gap
+- Bloco 8 (Urgência): card escuro com contador animado (IntersectionObserver + useEffect incrementando de 0 até monthlyLoss)
+- Bloco 9 (CTA): card verde com dois botões — "Fazer Diagnóstico" e "Falar com especialista" (WhatsApp)
+- Responsivo mobile-first, valores monetários com destaque visual claro
 
-Também remover a policy "Users can update their own subscription" — as atualizações (incrementar `dcf_used`/`multiples_used`) devem passar por edge function. **Atenção:** O frontend em `useValuationAccess.ts` e `useSubscription.ts` atualiza diretamente a tabela. Precisaremos criar uma edge function `use-valuation-credit` para substituir esses updates client-side.
+**3. `src/lib/formatters.ts` — Helper `formatCurrencyCompact()`**
+- Já existe `formatCurrency` no projeto; usar a existente que já faz "R$ X mi" / "R$ X mil"
+- Confirmar que atende os requisitos; se necessário, ajustar
 
 ---
 
-### 3. Valuation Purchases — auto-update permite fraude (ERROR)
+### Arquivos a Modificar
 
-**Problema:** A policy "Users can update own purchases" permite que um usuário mude `status` de `pending` para `paid` sem pagamento real.
+**4. `src/components/valuation/ValuationReportDialog.tsx`**
+- Após a seção "Disclaimer" e antes do CTA WhatsApp final, adicionar um botão:
+  "Ver Análise Completa de Impacto"
+- Esse botão abre um novo Dialog/Drawer full-width com o `ValuationNarrativeReport`
+- Ao abrir, calcular e salvar `lossMetrics` e `leadScore` no JSONB `result` do `valuation_history` via update (usar edge function ou RPC, pois a tabela não permite UPDATE direto pelo cliente)
 
-**Solução:** Remover a policy de UPDATE para usuários. O `verify-payment` edge function já usa service_role para inserir purchases com status correto. O frontend em `useValuationAccess.ts` faz `.update({ used_at })` — precisaremos mover isso para a edge function `use-valuation-credit`.
+**5. Migração SQL — Permitir UPDATE do campo `result` na `valuation_history`**
+- Adicionar RLS policy para UPDATE permitindo que o owner atualize apenas o campo `result` do seu próprio registro
+- Alternativamente, criar uma edge function `update-valuation-result` que recebe o valuation_id e os lossMetrics, valida ownership via JWT, e faz o update com service_role
 
 ---
 
-### Arquivos Alterados
+### Decisão Técnica: Update do valuation_history
 
-| Arquivo | Mudança |
+Como a tabela `valuation_history` atualmente não permite UPDATE pelo cliente, vou criar uma **edge function** `update-valuation-metrics` que:
+- Recebe `{ valuationId, lossMetrics, leadScore, leadScoreReason }`
+- Valida JWT e ownership (user_id matches)
+- Faz merge no campo JSONB `result` com as novas métricas
+- Usa service_role para o update
+
+---
+
+### Resumo de Entregas
+
+| Arquivo | Ação |
 |---|---|
-| Migração SQL | Remover policies inseguras de listings, subscriptions e valuation_purchases |
-| Edge function `use-valuation-credit/index.ts` | Nova edge function para consumir créditos (atualizar subscription counters e marcar purchases como used) |
-| `src/hooks/useValuationAccess.ts` | Substituir updates diretos por chamadas à edge function |
-| `src/hooks/useSubscription.ts` | Substituir updates diretos por chamadas à edge function |
-
-### Avisos (ignorar com justificativa)
-
-- **capital_providers**: Apenas admin tem acesso — correto.
-- **integrations_config**: Apenas admin — correto. Sem funções SECURITY DEFINER que exponham.
-- **user_roles_self_insert_missing_check**: Informacional — o trigger `handle_new_user` é SECURITY DEFINER e filtra admin, sem outro path de insert.
+| `src/lib/valuationCalculator.ts` | Adicionar `calculateLossMetrics()` + `LeadScore` type |
+| `src/components/valuation/ValuationNarrativeReport.tsx` | Criar componente com 9 blocos narrativos |
+| `src/components/valuation/ValuationReportDialog.tsx` | Adicionar botão "Análise de Impacto" que abre o narrativo |
+| `supabase/functions/update-valuation-metrics/index.ts` | Edge function para salvar lossMetrics no Supabase |
+| Migração SQL | RLS policy para UPDATE na `valuation_history` (owner only) |
 
