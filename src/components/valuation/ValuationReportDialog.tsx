@@ -30,6 +30,7 @@ interface ValuationReportDialogProps {
   onClose: () => void;
   onBackToStart: () => void;
   result: ValuationResult;
+  valuationId?: string;
 }
 
 export const ValuationReportDialog = ({
