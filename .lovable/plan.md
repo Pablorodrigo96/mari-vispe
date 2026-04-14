@@ -1,59 +1,96 @@
 
 
-## Plano: Relatório Narrativo de Impacto Financeiro (Máquina de Conversão)
+## Plano: Diagnóstico de Degradação + Valor Verdadeiro vs Valor Potencial
 
-Construir um componente narrativo de 9 blocos que transforma o resultado do valuation em uma jornada emocional de conversão: sonho, choque, gap, perda real, urgência e CTA.
+### Conceito Revisado
+
+Três valores distintos no fluxo:
+1. **Valor Estimado** = MASHUP VALUE (cálculo atual, não muda)
+2. **Valor Potencial** = MASHUP VALUE × 1.78 (média de valorização Vispe)
+3. **Valor Verdadeiro (True Value)** = MASHUP VALUE degradado por respostas do diagnóstico
+
+O **GAP** passa a ser entre True Value e Potencial. O diagnóstico é um questionário de ~12 perguntas sim/não que degrada o valor estimado, revelando o True Value.
 
 ---
 
 ### Arquivos a Criar
 
-**1. `src/lib/valuationCalculator.ts` — Adicionar `calculateLossMetrics()`**
-- Calcula perda mensal e anual usando dois métodos (ineficiência 3% + gap/36 meses)
-- Retorna `monthlyLoss`, `annualLoss`, `recoverTimeMonths`, `gapValue`, `gapPercent`, etc.
-- Adiciona interface `LossMetrics` e tipo `LeadScore`
-- Adiciona lógica de lead scoring: hot/warm/cold baseado em gapValue e faturamento mensal
+**1. `src/components/valuation/ValuationDiagnostic.tsx` — Questionário de Diagnóstico**
+- Componente com ~12 perguntas sim/não, agrupadas por categoria:
+  - **Fiscal/Tributário**: Ganho de capital otimizado, planejamento tributário (reforma)
+  - **Financeiro**: Controle de EBITDA, endividamento controlado, plano de contas, balanço auditado
+  - **Governança**: Área de controladoria, monitoramento contínuo de indicadores, organograma atualizado
+  - **Operacional**: Processos documentados, máquina de vendas estruturada, ativo imobilizado registrado
+- Cada "não" aplica um fator de degradação (ex: -3% a -8% cada, configurável)
+- UI: cards com toggle/switch para cada item, visual clean com ícones por categoria
+- Ao final: calcula `degradationFactor` (soma dos penalizadores) e `trueValue = mashupValue * (1 - degradationFactor)`
+- Botão "Revelar Valor Verdadeiro" que dispara a narrativa
 
-**2. `src/components/valuation/ValuationNarrativeReport.tsx` — Componente principal (novo)**
-- 9 blocos sequenciais com staggered fade-in via framer-motion (já instalado)
-- Bloco 1 (Sonho): card verde com potentialValue em destaque
-- Bloco 2 (Choque): card âmbar com currentValue
-- Bloco 3 (Gap): card laranja com barra de progresso visual
-- Bloco 4 (Virada): texto centralizado dramático, sem card
-- Bloco 5 (Perda Real): card vermelho com monthlyLoss e annualLoss em destaque enorme
-- Bloco 6 (Consequências): card cinza com 3 itens de alerta
-- Bloco 7 (Causa): card azul com 5 pills dos pilares do gap
-- Bloco 8 (Urgência): card escuro com contador animado (IntersectionObserver + useEffect incrementando de 0 até monthlyLoss)
-- Bloco 9 (CTA): card verde com dois botões — "Fazer Diagnóstico" e "Falar com especialista" (WhatsApp)
-- Responsivo mobile-first, valores monetários com destaque visual claro
-
-**3. `src/lib/formatters.ts` — Helper `formatCurrencyCompact()`**
-- Já existe `formatCurrency` no projeto; usar a existente que já faz "R$ X mi" / "R$ X mil"
-- Confirmar que atende os requisitos; se necessário, ajustar
+**2. Atualizar `src/lib/valuationCalculator.ts` — Novos cálculos**
+- Nova interface `DiagnosticAnswers` com os ~12 campos booleanos
+- Nova interface `DegradationResult` com `trueValue`, `potentialValue`, `totalDegradation`, `itemBreakdown`
+- Nova função `calculateTrueValue(result, diagnosticAnswers)`:
+  - `potentialValue = mashupValue * 1.78`
+  - Cada resposta negativa aplica penalidade configurável
+  - `trueValue = mashupValue * (1 - sumOfPenalties)`
+  - `gap = potentialValue - trueValue`
+- Atualizar `calculateLossMetrics()` para usar trueValue vs potentialValue em vez do antigo equityGap
 
 ---
 
 ### Arquivos a Modificar
 
-**4. `src/components/valuation/ValuationReportDialog.tsx`**
-- Após a seção "Disclaimer" e antes do CTA WhatsApp final, adicionar um botão:
-  "Ver Análise Completa de Impacto"
-- Esse botão abre um novo Dialog/Drawer full-width com o `ValuationNarrativeReport`
-- Ao abrir, calcular e salvar `lossMetrics` e `leadScore` no JSONB `result` do `valuation_history` via update (usar edge function ou RPC, pois a tabela não permite UPDATE direto pelo cliente)
+**3. `src/components/valuation/ValuationNarrativeReport.tsx` — Redesign completo**
+- Recebe `diagnosticAnswers` além de `result`
+- Bloco 1 (Sonho): Valor Potencial = MASHUP × 1.78, com texto "Média de valorização dos clientes Vispe"
+- Bloco 2 (Estimado): MASHUP VALUE como "estimativa de mercado"
+- Bloco 3 (Diagnóstico): resumo visual das respostas, mostrando cada item que degrada (vermelho = não, verde = sim)
+- Bloco 4 (True Value): valor real degradado, com breakdown da degradação
+- Bloco 5 (GAP): entre True Value e Potencial, com barra de progresso
+- Blocos 6-9: Perda real (recalculada), consequências, urgência e CTA (mantidos mas com valores corretos)
 
-**5. Migração SQL — Permitir UPDATE do campo `result` na `valuation_history`**
-- Adicionar RLS policy para UPDATE permitindo que o owner atualize apenas o campo `result` do seu próprio registro
-- Alternativamente, criar uma edge function `update-valuation-result` que recebe o valuation_id e os lossMetrics, valida ownership via JWT, e faz o update com service_role
+**4. `src/components/valuation/ValuationReportDialog.tsx`**
+- O botão "Ver Análise Completa de Impacto" agora abre o Diagnóstico primeiro
+- Fluxo: Relatório → clica botão → Diagnóstico (responde perguntas) → Narrativa com True Value
+
+**5. Edge function `update-valuation-metrics`**
+- Atualizar para salvar também `diagnosticAnswers` e `trueValue` no JSONB `result`
 
 ---
 
-### Decisão Técnica: Update do valuation_history
+### Tabela de Degradação (valores iniciais configuráveis)
 
-Como a tabela `valuation_history` atualmente não permite UPDATE pelo cliente, vou criar uma **edge function** `update-valuation-metrics` que:
-- Recebe `{ valuationId, lossMetrics, leadScore, leadScoreReason }`
-- Valida JWT e ownership (user_id matches)
-- Faz merge no campo JSONB `result` com as novas métricas
-- Usa service_role para o update
+```text
+Item                                    | Penalidade se "Não"
+----------------------------------------|--------------------
+Ganho de capital otimizado              | -5%
+Endividamento controlado                | -8%
+Controle de EBITDA                      | -7%
+Área de controladoria                   | -5%
+Monitoramento contínuo de indicadores   | -4%
+Plano de contas estruturado             | -4%
+Balanço auditado                        | -6%
+Planejamento tributário (reforma)       | -5%
+Máquina de vendas estruturada           | -5%
+Organograma atualizado                  | -3%
+Processos documentados                  | -4%
+Ativo imobilizado registrado            | -3%
+```
+
+Total máximo de degradação: ~59% (True Value mínimo ~41% do MASHUP)
+
+---
+
+### Fluxo do Usuário
+
+```text
+Valuation Wizard (3 steps)
+  → Relatório (MASHUP VALUE)
+    → Botão "Diagnóstico de Valor"
+      → Questionário (12 perguntas sim/não)
+        → Narrativa com True Value revelado
+          → CTA: Consultoria Vispe
+```
 
 ---
 
@@ -61,9 +98,9 @@ Como a tabela `valuation_history` atualmente não permite UPDATE pelo cliente, v
 
 | Arquivo | Ação |
 |---|---|
-| `src/lib/valuationCalculator.ts` | Adicionar `calculateLossMetrics()` + `LeadScore` type |
-| `src/components/valuation/ValuationNarrativeReport.tsx` | Criar componente com 9 blocos narrativos |
-| `src/components/valuation/ValuationReportDialog.tsx` | Adicionar botão "Análise de Impacto" que abre o narrativo |
-| `supabase/functions/update-valuation-metrics/index.ts` | Edge function para salvar lossMetrics no Supabase |
-| Migração SQL | RLS policy para UPDATE na `valuation_history` (owner only) |
+| `src/lib/valuationCalculator.ts` | Adicionar `DiagnosticAnswers`, `calculateTrueValue()`, potentialValue = mashup × 1.78 |
+| `src/components/valuation/ValuationDiagnostic.tsx` | Criar questionário de 12 itens com degradação |
+| `src/components/valuation/ValuationNarrativeReport.tsx` | Redesign: 3 valores, breakdown de degradação, gap correto |
+| `src/components/valuation/ValuationReportDialog.tsx` | Fluxo: relatório → diagnóstico → narrativa |
+| `supabase/functions/update-valuation-metrics/index.ts` | Salvar diagnosticAnswers + trueValue |
 
