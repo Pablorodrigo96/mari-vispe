@@ -22,10 +22,10 @@ import { formatFullCurrency } from '@/lib/formatters';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
+import { DiagnosticAnswers, calculateTrueValue, calculateTrueValueLossMetrics, categoryLabels } from '@/lib/diagnosticCalculator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ValuationNarrativeReport } from './ValuationNarrativeReport';
 import { ValuationDiagnostic } from './ValuationDiagnostic';
-import { DiagnosticAnswers } from '@/lib/diagnosticCalculator';
 
 interface ValuationReportDialogProps {
   open: boolean;
@@ -291,6 +291,143 @@ export const ValuationReportDialog = ({
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
     addText('© PME.B3 - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
     addText('www.pmeb3.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: [16, 185, 129] });
+
+    // === PAGE 3: Diagnostic (conditional) ===
+    if (diagnosticAnswers) {
+      const degradation = calculateTrueValue(result, diagnosticAnswers);
+      const lossMetrics = calculateTrueValueLossMetrics(result, degradation);
+
+      doc.addPage();
+      yPos = margin;
+
+      // Header
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      addText('PME.B3', margin, 18, { fontSize: 20, fontStyle: 'bold', color: [16, 185, 129] });
+      addText('DIAGNÓSTICO DE VALOR — True Value', margin, 30, { fontSize: 13, color: [255, 255, 255] });
+
+      yPos = 55;
+
+      // 3 Value Boxes
+      const boxWidth = (pageWidth - 2 * margin - 10) / 3;
+
+      // Estimated
+      doc.setFillColor(229, 231, 235);
+      doc.roundedRect(margin, yPos, boxWidth, 28, 2, 2, 'F');
+      addText('Valor Estimado', margin + 3, yPos + 8, { fontSize: 8, fontStyle: 'bold', color: [100, 100, 100] });
+      addText(formatFullCurrency(degradation.estimatedValue), margin + 3, yPos + 20, { fontSize: 12, fontStyle: 'bold', color: [50, 50, 50] });
+
+      // True Value (red)
+      doc.setFillColor(254, 226, 226);
+      doc.roundedRect(margin + boxWidth + 5, yPos, boxWidth, 28, 2, 2, 'F');
+      addText('True Value (Hoje)', margin + boxWidth + 8, yPos + 8, { fontSize: 8, fontStyle: 'bold', color: [185, 28, 28] });
+      addText(formatFullCurrency(degradation.trueValue), margin + boxWidth + 8, yPos + 20, { fontSize: 12, fontStyle: 'bold', color: [185, 28, 28] });
+
+      // Potential (green)
+      doc.setFillColor(16, 185, 129);
+      doc.roundedRect(margin + (boxWidth + 5) * 2, yPos, boxWidth, 28, 2, 2, 'F');
+      addText('Valor Potencial', margin + (boxWidth + 5) * 2 + 3, yPos + 8, { fontSize: 8, fontStyle: 'bold', color: [255, 255, 255] });
+      addText(formatFullCurrency(degradation.potentialValue), margin + (boxWidth + 5) * 2 + 3, yPos + 20, { fontSize: 12, fontStyle: 'bold', color: [255, 255, 255] });
+
+      yPos += 38;
+
+      // Total Degradation
+      const totalPct = (degradation.totalDegradation * 100).toFixed(1);
+      const totalLoss = degradation.estimatedValue - degradation.trueValue;
+      addText(`Degradação Total: -${totalPct}% (${formatFullCurrency(totalLoss)} perdidos)`, margin, yPos, { fontSize: 10, fontStyle: 'bold', color: [185, 28, 28] });
+      yPos += 12;
+
+      // Diagnostic Items Table
+      addText('DETALHAMENTO POR ITEM', margin, yPos, { fontSize: 11, fontStyle: 'bold' });
+      yPos += 8;
+      doc.setDrawColor(16, 185, 129);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, margin + 55, yPos);
+      yPos += 6;
+
+      // Table header
+      const dColWidths = [65, 30, 20, 30];
+      doc.setFillColor(15, 23, 42);
+      doc.rect(margin, yPos - 3, pageWidth - 2 * margin, 7, 'F');
+      let dxPos = margin;
+      ['Item', 'Categoria', 'Resp.', 'Impacto'].forEach((h, i) => {
+        addText(h, dxPos + 2, yPos + 1, { fontSize: 8, fontStyle: 'bold', color: [255, 255, 255] });
+        dxPos += dColWidths[i];
+      });
+      yPos += 8;
+
+      // Table rows
+      degradation.itemBreakdown.forEach((row) => {
+        if (yPos > pageHeight - 40) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        const isNo = !row.answer;
+        const textColor: [number, number, number] = isNo ? [185, 28, 28] : [0, 0, 0];
+
+        // Truncate label for PDF
+        const shortLabel = row.item.label.length > 55 ? row.item.label.substring(0, 52) + '...' : row.item.label;
+
+        dxPos = margin;
+        addText(shortLabel, dxPos + 2, yPos, { fontSize: 7.5, color: textColor });
+        dxPos += dColWidths[0];
+        addText(categoryLabels[row.item.category] || row.item.category, dxPos + 2, yPos, { fontSize: 7.5, color: textColor });
+        dxPos += dColWidths[1];
+        addText(row.answer ? 'Sim' : 'Não', dxPos + 2, yPos, { fontSize: 7.5, fontStyle: 'bold', color: textColor });
+        dxPos += dColWidths[2];
+        addText(row.impact > 0 ? `-${formatFullCurrency(row.impact)}` : '—', dxPos + 2, yPos, { fontSize: 7.5, color: textColor });
+
+        yPos += 6;
+      });
+
+      yPos += 8;
+
+      // Lead Score
+      const scoreColors: Record<string, [number, number, number]> = {
+        hot: [185, 28, 28],
+        warm: [217, 119, 6],
+        cold: [100, 116, 139],
+      };
+      const scoreLabels: Record<string, string> = { hot: 'HOT 🔥', warm: 'WARM ⚡', cold: 'COLD ❄️' };
+
+      addText('LEAD SCORE', margin, yPos, { fontSize: 11, fontStyle: 'bold' });
+      yPos += 8;
+      addText(scoreLabels[lossMetrics.leadScore] || lossMetrics.leadScore.toUpperCase(), margin, yPos, { fontSize: 14, fontStyle: 'bold', color: scoreColors[lossMetrics.leadScore] || [0, 0, 0] });
+      addText(lossMetrics.leadScoreReason, margin + 35, yPos, { fontSize: 9, color: [100, 100, 100] });
+
+      yPos += 12;
+
+      // Gap bar
+      addText('GAP: TRUE VALUE → POTENCIAL', margin, yPos, { fontSize: 11, fontStyle: 'bold' });
+      yPos += 8;
+
+      const barFullWidth = pageWidth - 2 * margin;
+      const trueRatio = degradation.potentialValue > 0 ? degradation.trueValue / degradation.potentialValue : 0.5;
+      const trueBarWidth = barFullWidth * trueRatio;
+      const gapBarWidth = barFullWidth - trueBarWidth;
+
+      // True value bar (red)
+      doc.setFillColor(254, 202, 202);
+      doc.roundedRect(margin, yPos, trueBarWidth, 10, 1, 1, 'F');
+      addText('True Value', margin + 2, yPos + 7, { fontSize: 7, fontStyle: 'bold', color: [185, 28, 28] });
+
+      // Gap bar (green)
+      doc.setFillColor(16, 185, 129);
+      doc.roundedRect(margin + trueBarWidth, yPos, gapBarWidth, 10, 1, 1, 'F');
+      if (gapBarWidth > 30) {
+        addText(`Gap: ${formatFullCurrency(degradation.gap)}`, margin + trueBarWidth + 2, yPos + 7, { fontSize: 7, fontStyle: 'bold', color: [255, 255, 255] });
+      }
+
+      yPos += 18;
+      addText(`True Value: ${formatFullCurrency(degradation.trueValue)}  →  Potencial: ${formatFullCurrency(degradation.potentialValue)}  (Gap: +${degradation.gapPercent.toFixed(1)}%)`, margin, yPos, { fontSize: 9, color: [80, 80, 80] });
+
+      // Footer
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+      addText('© PME.B3 - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
+      addText('www.pmeb3.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: [16, 185, 129] });
+    }
 
     // Save
     doc.save(`valuation-${result.inputs.companyName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`);
