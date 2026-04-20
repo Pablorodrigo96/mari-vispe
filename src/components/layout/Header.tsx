@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Building2, LogOut, ClipboardList, User, Shield, UserSearch, DollarSign, BarChart3 } from 'lucide-react';
+import { Menu, X, Building2, LogOut, ClipboardList, User, Shield, UserSearch, DollarSign, BarChart3, Briefcase } from 'lucide-react';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -146,6 +146,12 @@ export function Header() {
                       Potencial da Carteira
                     </DropdownMenuItem>
                   )}
+                  {isPartnerAccountant && (
+                    <DropdownMenuItem onClick={() => navigate('/parceiro')}>
+                      <Briefcase className="w-4 h-4 mr-2" />
+                      Painel do Parceiro
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="w-4 h-4 mr-2" />
@@ -237,6 +243,16 @@ export function Header() {
                       >
                         <BarChart3 className="w-4 h-4 mr-2" />
                         Potencial da Carteira
+                      </Button>
+                    )}
+                    {isPartnerAccountant && (
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start" 
+                        onClick={() => { navigate('/parceiro'); setMobileMenuOpen(false); }}
+                      >
+                        <Briefcase className="w-4 h-4 mr-2" />
+                        Painel do Parceiro
                       </Button>
                     )}
                     <Button variant="outline" className="w-full justify-center" onClick={handleSignOut}>

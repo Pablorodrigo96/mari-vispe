@@ -330,6 +330,21 @@ const NewListingWizard = () => {
               />
             </div>
           )}
+
+          {/* Aviso de Reserva 45 dias para parceiros */}
+          {isPartnerAccountant && currentStep === 4 && (
+            <div className="mt-6 p-4 rounded-lg border border-accent/30 bg-accent/10">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-semibold text-foreground">Reserva exclusiva de 45 dias</p>
+                  <p className="text-muted-foreground mt-1">
+                    Como contador parceiro, este lead será automaticamente reservado para você por 45 dias. Para garantir a comissão cheia (20%), suba documentos no Cofre Digital ou gere um valuation dentro deste período.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between mt-8 pt-6 border-t">

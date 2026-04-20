@@ -583,6 +583,7 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string
+          vdr_readiness: number | null
           verified: boolean | null
           video_url: string | null
         }
@@ -616,6 +617,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_id: string
+          vdr_readiness?: number | null
           verified?: boolean | null
           video_url?: string | null
         }
@@ -649,6 +651,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+          vdr_readiness?: number | null
           verified?: boolean | null
           video_url?: string | null
         }
@@ -780,6 +783,48 @@ export type Database = {
           notes?: string | null
           partner_user_id?: string
           scheduled_at?: string | null
+        }
+        Relationships: []
+      }
+      partner_lead_reservations: {
+        Row: {
+          commission_type: string
+          created_at: string
+          expires_at: string
+          id: string
+          listing_id: string
+          partner_user_id: string
+          qualified_at: string | null
+          qualifying_action: string | null
+          reserved_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          commission_type?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          listing_id: string
+          partner_user_id: string
+          qualified_at?: string | null
+          qualifying_action?: string | null
+          reserved_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          commission_type?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          listing_id?: string
+          partner_user_id?: string
+          qualified_at?: string | null
+          qualifying_action?: string | null
+          reserved_at?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1020,6 +1065,51 @@ export type Database = {
         }
         Relationships: []
       }
+      vdr_documents: {
+        Row: {
+          created_at: string
+          doc_category: string
+          doc_name: string
+          file_url: string
+          id: string
+          listing_id: string
+          rejection_reason: string | null
+          status: string
+          updated_at: string
+          uploaded_by: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          doc_category: string
+          doc_name: string
+          file_url: string
+          id?: string
+          listing_id: string
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_by: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          doc_category?: string
+          doc_name?: string
+          file_url?: string
+          id?: string
+          listing_id?: string
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_by?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       public_buyer_profiles: {
@@ -1189,7 +1279,12 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_vdr_readiness: {
+        Args: { p_listing_id: string }
+        Returns: number
+      }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      expire_old_reservations: { Args: never; Returns: undefined }
       get_teaser_view_count: {
         Args: { p_listing_id: string }
         Returns: {
