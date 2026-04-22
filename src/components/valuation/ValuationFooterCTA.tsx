@@ -10,11 +10,11 @@ export const ValuationFooterCTA = ({ onStartDiagnostic }: ValuationFooterCTAProp
     <section className="py-16 gradient-navy">
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-primary-foreground mb-4">
-            Pronto para descobrir o valor do seu negócio?
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary-foreground mb-4">
+            Cada dia sem saber seu valor é dinheiro na mesa.
           </h2>
           <p className="text-primary-foreground/80 mb-8 text-lg">
-            Faça o diagnóstico gratuito e receba seu laudo profissional em instantes.
+            Não espere uma oferta para descobrir quanto vale. Comece agora — é grátis.
           </p>
           <Button
             onClick={onStartDiagnostic}

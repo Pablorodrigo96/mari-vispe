@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { ValuationTypeSelector } from '@/components/valuation/ValuationTypeSelector';
+import { ValuationWhySection } from '@/components/valuation/ValuationWhySection';
+import { ValuationHowItWorks } from '@/components/valuation/ValuationHowItWorks';
 import { MethodologySection } from '@/components/valuation/MethodologySection';
+import { ValuationBeforeAfter } from '@/components/valuation/ValuationBeforeAfter';
 import { TrustSection } from '@/components/valuation/TrustSection';
 import { ValuationTestimonials } from '@/components/valuation/ValuationTestimonials';
 import { ValuationFooterCTA } from '@/components/valuation/ValuationFooterCTA';
@@ -74,6 +77,7 @@ const Valuation = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      {/* 1. Hero + Plans */}
       <ValuationTypeSelector 
         onSelectFree={handleSelectFree} 
         onSelectDCF={handleSelectDCF}
@@ -82,9 +86,19 @@ const Valuation = () => {
         onSubscribeMaster={handleSubscribeMaster}
         onOpenCertifier={handleOpenCertifier}
       />
+      {/* 2. Why */}
+      <ValuationWhySection />
+      {/* 3. How it works */}
+      <ValuationHowItWorks />
+      {/* 4. Methodology */}
       <MethodologySection />
+      {/* 5. Before vs After */}
+      <ValuationBeforeAfter />
+      {/* 6. Trust */}
       <TrustSection />
+      {/* 7. Testimonials */}
       <ValuationTestimonials />
+      {/* 8. Footer CTA */}
       <ValuationFooterCTA onStartDiagnostic={handleSelectFree} />
 
       <ValuationPaymentModal
