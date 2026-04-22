@@ -1,72 +1,42 @@
 
 
-## Plano: Transformar /valuation em Landing Page Comercial
+## Plano: CRM Centralizado — Gestao de Todos os Cadastros
 
-Reestruturar a pagina de Valuation como uma landing page de alta conversao, mantendo toda a logica de planos e pagamentos existente mas adicionando secoes comerciais e melhorando o copy.
-
----
-
-### Estrutura da nova pagina (de cima para baixo)
-
-1. **Hero Imersivo** (reescrever `ValuationTypeSelector` header area)
-   - Background dark com particles (manter)
-   - Headline mais agressivo: "Quanto vale sua empresa? Descubra agora e surpreenda-se."
-   - Sub-headline com pain point: "87% dos empresarios nao sabem o valor real do seu negocio — e perdem dinheiro por isso."
-   - CTA unico e claro: "Descobrir Meu Valor Gratis" (scroll para secao de planos)
-   - Counter animado: "+1.200 valuations realizados" / "R$ 2.8B em empresas avaliadas" / "Resultado em 3 minutos"
-
-2. **Nova secao: "Por que fazer um Valuation?"** (novo componente `ValuationWhySection.tsx`)
-   - 4 cards com icones e copy de dor/beneficio:
-     - "Negocie com poder" — Saiba exatamente o valor para nao aceitar ofertas abaixo do justo
-     - "Atraia investidores" — Laudo profissional aceito por fundos e compradores
-     - "Planeje sua saida" — Tenha clareza sobre o momento certo de vender
-     - "Identifique gaps" — Descubra o que esta destruindo valor na sua empresa
-
-3. **Nova secao: "Como funciona"** (novo componente `ValuationHowItWorks.tsx`)
-   - 3 steps visuais horizontais com numeros grandes:
-     - 1. "Preencha os dados" — Informacoes basicas da empresa (5 min)
-     - 2. "Receba seu valor" — Calculo instantaneo por 3 metodologias
-     - 3. "Diagnostique e potencialize" — Descubra quanto sua empresa pode valer apos consultoria
-
-4. **Secao de Planos e Compra Avulsa** (manter `ValuationTypeSelector` cards, refatorar)
-   - Mover para o meio da pagina como secao propria
-   - Adicionar headline "Escolha como calcular o valor da sua empresa"
-   - Manter cards de Basico/Master + compra avulsa + iniciar valuation
-
-5. **Metodologia** (manter `MethodologySection`, melhorar copy)
-   - Titulo mais comercial: "Tres metodologias, um resultado preciso"
-   - Adicionar selo "Baseado em +500 transacoes reais do mercado brasileiro"
-
-6. **Nova secao: "Antes vs Depois da Vispe"** (novo componente `ValuationBeforeAfter.tsx`)
-   - Tabela comparativa lado a lado:
-     - Sem Valuation: "Negocia no escuro", "Aceita primeira oferta", "Perde 30-50% do valor"
-     - Com Valuation PME.B3: "Dados reais de mercado", "Argumenta com laudo", "Valoriza +78% com consultoria"
-
-7. **Trust Section** (manter `TrustSection`, sem mudancas)
-
-8. **Depoimentos** (manter `ValuationTestimonials`, melhorar copy do header)
-   - Titulo: "Empresarios que descobriram o valor real dos seus negocios"
-
-9. **Footer CTA** (manter `ValuationFooterCTA`, copy mais urgente)
-   - "Cada dia sem saber seu valor e dinheiro na mesa. Comece agora."
+Criar uma nova pagina `/admin/crm` que consolida em abas todos os tipos de cadastros da plataforma, permitindo busca, filtro e acoes rapidas em um unico lugar.
 
 ---
 
-### Arquivos a criar
+### Estrutura da pagina (Tabs)
 
-| Arquivo | Descricao |
-|---|---|
-| `src/components/valuation/ValuationWhySection.tsx` | 4 cards de dor/beneficio com icones e framer-motion |
-| `src/components/valuation/ValuationHowItWorks.tsx` | 3 steps visuais numerados (timeline horizontal) |
-| `src/components/valuation/ValuationBeforeAfter.tsx` | Tabela comparativa antes/depois com destaque visual |
+1. **Usuarios** — Todos os perfis (profiles + user_roles). Filtro por role, busca por nome/telefone. Acoes: adicionar/remover role, toggle contador parceiro. (Logica ja existe em AdminUsers, sera reutilizada)
 
-### Arquivos a modificar
+2. **Compradores** — Tabela `buyer_profiles`. Colunas: nome, empresa, categorias, budget min/max, estado, cidade, WhatsApp, status, data. Acoes: ver detalhes, desativar.
+
+3. **Investidores / Interesses** — Tabela `interest_logs`. Colunas: nome, email, WhatsApp, empresa, ticker do ativo, data. Permite ver quem demonstrou interesse em quais ativos.
+
+4. **Leads de Capital** — Tabela `capital_requests`. Colunas: empresa, tipo de capital, valor solicitado, lead score, status, data. Link para detalhe existente.
+
+5. **Parceiros / Contadores** — Perfis com `is_partner_accountant=true` OU role `advisor`. Colunas: nome, telefone, qtd de reservas, reservas ativas, VDR readiness medio. Acoes: toggle contador parceiro.
+
+6. **Franqueados** — Usuarios com role `franchisee` + solicitacoes pendentes. Acoes: aprovar/rejeitar. (Logica ja existe em AdminUsers)
+
+---
+
+### Arquivos
 
 | Arquivo | Acao |
 |---|---|
-| `src/pages/Valuation.tsx` | Adicionar novas secoes na ordem correta |
-| `src/components/valuation/ValuationTypeSelector.tsx` | Refatorar hero (headline + stats animados) e mover planos para secao separada visualmente |
-| `src/components/valuation/MethodologySection.tsx` | Melhorar titulo e adicionar selo de transacoes |
-| `src/components/valuation/ValuationTestimonials.tsx` | Atualizar titulo do header |
-| `src/components/valuation/ValuationFooterCTA.tsx` | Copy mais urgente e persuasivo |
+| `src/pages/admin/AdminCRM.tsx` | Nova pagina com 6 abas (Tabs) consolidando todos os cadastros |
+| `src/components/admin/AdminSidebar.tsx` | Adicionar item "CRM" no menu com icone `Contact` |
+| `src/App.tsx` | Adicionar rota `/admin/crm` |
+
+### Detalhes tecnicos
+
+- Cada aba faz query independente ao Supabase (profiles, buyer_profiles, interest_logs, capital_requests, partner_lead_reservations, franchisee_requests)
+- Busca textual unificada por nome/email/telefone em cada aba
+- Exportar CSV por aba (botao "Exportar")
+- Paginacao client-side (50 por pagina) usando os componentes Pagination existentes
+- Reutiliza Badge, Table, Card, Tabs, Select, Input ja existentes
+- Protegido por AdminRoute (somente admins)
+- Nenhuma migracao necessaria — usa tabelas e RLS existentes
 
