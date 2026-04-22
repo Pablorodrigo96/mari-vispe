@@ -88,7 +88,7 @@ function UsersTab() {
 
   let filtered = filterBySearch(enriched, search, ['full_name', 'phone', 'company_name', 'cpf_cnpj']);
   if (roleFilter !== 'all') {
-    filtered = filtered.filter(u => u.roles.includes(roleFilter));
+    filtered = filtered.filter(u => u.roles.includes(roleFilter as any));
   }
 
   const togglePartner = async (userId: string, current: boolean) => {
