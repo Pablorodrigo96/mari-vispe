@@ -74,17 +74,42 @@ export const ValuationTypeSelector = ({
             Valuation Inteligente
           </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
-            Descubra o valor da sua empresa{' '}
-            <span className="text-gradient-gold">em minutos.</span>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+            Quanto vale sua empresa?{' '}
+            <span className="text-gradient-gold">Descubra agora.</span>
           </h1>
           
-          <p className="text-lg sm:text-xl text-white/60 mb-4 max-w-2xl mx-auto">
-            Escolha seu plano ou compre valuations individualmente
+          <p className="text-lg sm:text-xl text-white/60 mb-8 max-w-2xl mx-auto">
+            87% dos empresários não sabem o valor real do seu negócio — e perdem dinheiro por isso.
           </p>
 
+          <Button
+            onClick={onSelectFree}
+            size="lg"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-10 py-6 shadow-gold mb-8"
+          >
+            Descobrir Meu Valor Grátis
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+
+          {/* Animated counters */}
+          <div className="flex flex-wrap justify-center gap-8 mt-4">
+            <div className="text-center">
+              <p className="text-2xl sm:text-3xl font-bold text-white">+1.200</p>
+              <p className="text-xs text-white/50">valuations realizados</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl sm:text-3xl font-bold text-white">R$ 2.8B</p>
+              <p className="text-xs text-white/50">em empresas avaliadas</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl sm:text-3xl font-bold text-white">3 min</p>
+              <p className="text-xs text-white/50">para seu resultado</p>
+            </div>
+          </div>
+
           {user && !loading && (
-            <div className="inline-flex items-center gap-2 glass-card px-4 py-2 rounded-full text-sm">
+            <div className="inline-flex items-center gap-2 glass-card px-4 py-2 rounded-full text-sm mt-6">
               <span className="text-white/60">Seu plano:</span>
               <Badge variant={isMasterPlan ? 'default' : 'secondary'} className={isMasterPlan ? 'bg-accent text-accent-foreground' : ''}>
                 {planName}
@@ -94,6 +119,18 @@ export const ValuationTypeSelector = ({
               </span>
             </div>
           )}
+        </motion.div>
+
+        {/* Plans headline */}
+        <motion.div
+          className="text-center mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.15 }}
+        >
+          <h2 className="text-xl sm:text-2xl font-semibold text-white">
+            Escolha como calcular o valor da sua empresa
+          </h2>
         </motion.div>
 
         {/* Plans Section */}

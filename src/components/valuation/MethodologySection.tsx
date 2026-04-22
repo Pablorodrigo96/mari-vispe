@@ -23,13 +23,16 @@ export const MethodologySection = () => {
     <section className="py-16 bg-muted/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
-            Metodologia de Múltiplos de Mercado
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4">
+            Três metodologias, um resultado preciso
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-muted-foreground max-w-2xl mx-auto mb-4">
             Utilizamos múltiplos de mercado baseados em transações reais do mercado brasileiro 
             (2024/2025) para estimar o valor da sua empresa com precisão.
           </p>
+          <span className="inline-flex items-center gap-2 text-xs font-medium text-accent bg-accent/10 px-4 py-1.5 rounded-full">
+            📊 Baseado em +500 transações reais do mercado brasileiro
+          </span>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">

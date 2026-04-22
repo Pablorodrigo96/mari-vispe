@@ -43,11 +43,11 @@ export const ValuationTestimonials = () => {
     <section id="depoimentos" className="py-16 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
-            O Que Nossos Clientes Dizem
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4">
+            Empresários que descobriram o valor real dos seus negócios
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Milhares de founders já descobriram o valor de suas empresas com nossa metodologia.
+            Mais de 1.200 founders já validaram o valor de suas empresas com nossa metodologia.
           </p>
         </div>
 
