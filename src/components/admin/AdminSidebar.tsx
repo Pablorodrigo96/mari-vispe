@@ -6,12 +6,14 @@ import {
   CreditCard, 
   ChartBar,
   Banknote,
-  ArrowLeft
+  ArrowLeft,
+  Contact
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { name: 'CRM', href: '/admin/crm', icon: Contact },
   { name: 'Usuários', href: '/admin/users', icon: Users },
   { name: 'Anúncios', href: '/admin/listings', icon: Building2 },
   { name: 'Assinaturas', href: '/admin/subscriptions', icon: CreditCard },

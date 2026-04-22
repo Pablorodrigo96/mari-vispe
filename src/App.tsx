@@ -41,6 +41,7 @@ import AdminValuations from "./pages/admin/AdminValuations";
 import AdminPartnerships from "./pages/admin/AdminPartnerships";
 import AdminCapital from "./pages/admin/AdminCapital";
 import AdminCapitalProviders from "./pages/admin/AdminCapitalProviders";
+import AdminCRM from "./pages/admin/AdminCRM";
 import MatchingBuyers from "./pages/MatchingBuyers";
 import CapitalCase from "./pages/CapitalCase";
 import CapitalBySegment from "./pages/CapitalBySegment";
@@ -86,6 +87,7 @@ const App = () => (
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/crm" element={<AdminCRM />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/listings" element={<AdminListings />} />
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
