@@ -1,42 +1,52 @@
 
 
-## Plano: CRM Centralizado — Gestao de Todos os Cadastros
+## Plano: Fluxo Completo do Head de Parcerias (Sérgio)
 
-Criar uma nova pagina `/admin/crm` que consolida em abas todos os tipos de cadastros da plataforma, permitindo busca, filtro e acoes rapidas em um unico lugar.
+Expandir a pagina `/admin/parcerias` com 3 abas para que o Sergio tenha visao 360 de todos os contadores parceiros, suas reservas de leads, documentos VDR e atividades — tudo em um unico lugar.
 
 ---
 
 ### Estrutura da pagina (Tabs)
 
-1. **Usuarios** — Todos os perfis (profiles + user_roles). Filtro por role, busca por nome/telefone. Acoes: adicionar/remover role, toggle contador parceiro. (Logica ja existe em AdminUsers, sera reutilizada)
+**Aba 1 — Visao Geral (existente, melhorada)**
+- KPIs atuais + novos: total de reservas ativas, taxa de conversao reserva-exclusivo, VDR readiness medio global
+- Ranking de parceiros (tabela existente) com colunas adicionais: reservas ativas, reservas exclusivas, VDR readiness medio
 
-2. **Compradores** — Tabela `buyer_profiles`. Colunas: nome, empresa, categorias, budget min/max, estado, cidade, WhatsApp, status, data. Acoes: ver detalhes, desativar.
+**Aba 2 — Reservas de Leads (nova)**
+- Kanban visual com 4 colunas: Reservado / Exclusivo / Expirado / Fechado pela Matriz
+- Cada card mostra: nome da empresa, contador responsavel, dias restantes (countdown), tipo de comissao, VDR readiness
+- Filtros: por contador, por status, por prazo (expirando em 7 dias)
+- Acoes: marcar como "fechado pela matriz", forcar exclusividade manual
 
-3. **Investidores / Interesses** — Tabela `interest_logs`. Colunas: nome, email, WhatsApp, empresa, ticker do ativo, data. Permite ver quem demonstrou interesse em quais ativos.
+**Aba 3 — Cofre Digital (VDR) (nova)**
+- Lista de todos os documentos VDR enviados (tabela `vdr_documents`)
+- Colunas: empresa, categoria do doc, status (pendente/validado/rejeitado), enviado por, data
+- Acoes: validar documento, rejeitar com motivo — atualiza automaticamente o `vdr_readiness` do listing via trigger existente
+- Filtro por status e por listing
 
-4. **Leads de Capital** — Tabela `capital_requests`. Colunas: empresa, tipo de capital, valor solicitado, lead score, status, data. Link para detalhe existente.
-
-5. **Parceiros / Contadores** — Perfis com `is_partner_accountant=true` OU role `advisor`. Colunas: nome, telefone, qtd de reservas, reservas ativas, VDR readiness medio. Acoes: toggle contador parceiro.
-
-6. **Franqueados** — Usuarios com role `franchisee` + solicitacoes pendentes. Acoes: aprovar/rejeitar. (Logica ja existe em AdminUsers)
+**Aba 4 — Detalhes do Parceiro (drill-down)**
+- Ao clicar em um parceiro na aba 1, abre um painel lateral (Sheet) ou modal com:
+  - Dados do perfil (nome, empresa, telefone)
+  - Todas as reservas daquele parceiro com status e countdown
+  - Todos os docs VDR enviados por ele
+  - Historico de atividades registradas
+  - Botao para registrar nova atividade (logica existente)
 
 ---
 
-### Arquivos
+### Arquivos a modificar
 
 | Arquivo | Acao |
 |---|---|
-| `src/pages/admin/AdminCRM.tsx` | Nova pagina com 6 abas (Tabs) consolidando todos os cadastros |
-| `src/components/admin/AdminSidebar.tsx` | Adicionar item "CRM" no menu com icone `Contact` |
-| `src/App.tsx` | Adicionar rota `/admin/crm` |
+| `src/pages/admin/AdminPartnerships.tsx` | Refatorar com Tabs (Visao Geral / Reservas / VDR / Atividades). Adicionar queries para `partner_lead_reservations` e `vdr_documents`. Adicionar drill-down por parceiro via Sheet. Acoes de validar/rejeitar VDR. |
 
 ### Detalhes tecnicos
 
-- Cada aba faz query independente ao Supabase (profiles, buyer_profiles, interest_logs, capital_requests, partner_lead_reservations, franchisee_requests)
-- Busca textual unificada por nome/email/telefone em cada aba
-- Exportar CSV por aba (botao "Exportar")
-- Paginacao client-side (50 por pagina) usando os componentes Pagination existentes
-- Reutiliza Badge, Table, Card, Tabs, Select, Input ja existentes
-- Protegido por AdminRoute (somente admins)
-- Nenhuma migracao necessaria — usa tabelas e RLS existentes
+- Query `partner_lead_reservations` com join em `listings` (titulo, categoria) e `profiles` (nome do parceiro)
+- Query `vdr_documents` com join em `listings` e `profiles`
+- Validacao/rejeicao de VDR: update no `vdr_documents` (status, validated_by, rejection_reason) — o trigger `update_listing_vdr_readiness` ja recalcula automaticamente
+- Kanban usa grid CSS com 4 colunas (nao precisa drag-and-drop, apenas visual)
+- Reutiliza componentes existentes: Tabs, Table, Badge, Sheet, Card, Select, Input
+- Nenhuma migracao necessaria — todas as tabelas e RLS ja existem
+- Admin ja tem permissao ALL em `partner_lead_reservations` e `vdr_documents`
 
