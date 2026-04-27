@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, AlertTriangle } from "lucide-react";
+import { useVertical } from "@/hooks/useVertical";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -15,16 +16,20 @@ import { cn } from "@/lib/utils";
 
 export default function BuyersPage() {
   const qc = useQueryClient();
+  const { buyerVerticalKey, vertical } = useVertical();
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
   const buyers = useQuery({
-    queryKey: ["eb", "buyers-list"],
+    queryKey: ["eb", "buyers-list", buyerVerticalKey],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .schema("equity_brain" as any).from("buyers" as any)
         .select(`*, theses:buyer_theses(count), matches:matches(count)`)
+        .order("prioridade_global", { ascending: true, nullsFirst: false })
         .order("nome");
+      if (buyerVerticalKey) q = q.eq("vertical_principal", buyerVerticalKey);
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as any[];
     },
@@ -75,8 +80,10 @@ export default function BuyersPage() {
         <table className="w-full text-sm">
           <thead className="bg-zinc-950 text-xs text-zinc-500">
             <tr>
+              <th className="text-left px-3 py-3 font-medium w-12">P</th>
               <th className="text-left px-4 py-3 font-medium">Nome</th>
               <th className="text-left px-3 py-3 font-medium">Tipo</th>
+              <th className="text-left px-3 py-3 font-medium">Vertical</th>
               <th className="text-right px-3 py-3 font-medium">Ticket</th>
               <th className="text-left px-3 py-3 font-medium">Setores</th>
               <th className="text-left px-3 py-3 font-medium">UFs</th>
@@ -87,7 +94,27 @@ export default function BuyersPage() {
           <tbody className="divide-y divide-zinc-800">
             {(buyers.data ?? []).map((b) => (
               <tr key={b.id} className="hover:bg-zinc-800/40 cursor-pointer" onClick={() => setDrawerId(b.id)}>
-                <td className="px-4 py-2.5 text-zinc-100 font-medium">{b.nome}</td>
+                <td className="px-3 py-2.5">
+                  {b.prioridade_global ? (
+                    <span className={cn(
+                      "inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold border",
+                      b.prioridade_global === 1 && "bg-emerald-950/60 text-emerald-300 border-emerald-800",
+                      b.prioridade_global === 2 && "bg-blue-950/60 text-blue-300 border-blue-800",
+                      b.prioridade_global === 3 && "bg-amber-950/60 text-amber-300 border-amber-800",
+                      b.prioridade_global === 4 && "bg-zinc-800 text-zinc-400 border-zinc-700",
+                    )}>P{b.prioridade_global}</span>
+                  ) : <span className="text-zinc-600 text-[10px]">—</span>}
+                </td>
+                <td className="px-4 py-2.5 text-zinc-100 font-medium">
+                  <div className="flex items-center gap-2">
+                    <span>{b.nome}</span>
+                    {b.cautela_flag && (
+                      <span title={b.cautela_motivo ?? "Em cautela"}>
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-3 py-2.5">
                   <span className={cn(
                     "px-2 py-0.5 rounded text-[10px] border",
@@ -96,6 +123,11 @@ export default function BuyersPage() {
                     b.tipo === "family_office" && "bg-amber-950/40 text-amber-300 border-amber-900",
                     !["estrategico", "fundo", "family_office"].includes(b.tipo) && "bg-zinc-800 text-zinc-300 border-zinc-700",
                   )}>{b.tipo}</span>
+                </td>
+                <td className="px-3 py-2.5">
+                  <span className="px-2 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700">
+                    {b.vertical_principal ?? "—"}
+                  </span>
                 </td>
                 <td className="px-3 py-2.5 text-right text-xs font-mono text-zinc-400 tabular-nums">
                   {formatBRL(b.ticket_min)} – {formatBRL(b.ticket_max)}
@@ -107,10 +139,10 @@ export default function BuyersPage() {
               </tr>
             ))}
             {buyers.isLoading && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center"><Loader2 className="h-5 w-5 animate-spin text-emerald-500 mx-auto" /></td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center"><Loader2 className="h-5 w-5 animate-spin text-emerald-500 mx-auto" /></td></tr>
             )}
             {!buyers.isLoading && (buyers.data ?? []).length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-zinc-500 text-xs">Nenhum buyer cadastrado.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-zinc-500 text-xs">Nenhum buyer cadastrado neste vertical.</td></tr>
             )}
           </tbody>
         </table>
