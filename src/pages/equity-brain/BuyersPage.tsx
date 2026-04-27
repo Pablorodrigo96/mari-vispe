@@ -80,8 +80,10 @@ export default function BuyersPage() {
         <table className="w-full text-sm">
           <thead className="bg-zinc-950 text-xs text-zinc-500">
             <tr>
+              <th className="text-left px-3 py-3 font-medium w-12">P</th>
               <th className="text-left px-4 py-3 font-medium">Nome</th>
               <th className="text-left px-3 py-3 font-medium">Tipo</th>
+              <th className="text-left px-3 py-3 font-medium">Vertical</th>
               <th className="text-right px-3 py-3 font-medium">Ticket</th>
               <th className="text-left px-3 py-3 font-medium">Setores</th>
               <th className="text-left px-3 py-3 font-medium">UFs</th>
@@ -92,7 +94,27 @@ export default function BuyersPage() {
           <tbody className="divide-y divide-zinc-800">
             {(buyers.data ?? []).map((b) => (
               <tr key={b.id} className="hover:bg-zinc-800/40 cursor-pointer" onClick={() => setDrawerId(b.id)}>
-                <td className="px-4 py-2.5 text-zinc-100 font-medium">{b.nome}</td>
+                <td className="px-3 py-2.5">
+                  {b.prioridade_global ? (
+                    <span className={cn(
+                      "inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold border",
+                      b.prioridade_global === 1 && "bg-emerald-950/60 text-emerald-300 border-emerald-800",
+                      b.prioridade_global === 2 && "bg-blue-950/60 text-blue-300 border-blue-800",
+                      b.prioridade_global === 3 && "bg-amber-950/60 text-amber-300 border-amber-800",
+                      b.prioridade_global === 4 && "bg-zinc-800 text-zinc-400 border-zinc-700",
+                    )}>P{b.prioridade_global}</span>
+                  ) : <span className="text-zinc-600 text-[10px]">—</span>}
+                </td>
+                <td className="px-4 py-2.5 text-zinc-100 font-medium">
+                  <div className="flex items-center gap-2">
+                    <span>{b.nome}</span>
+                    {b.cautela_flag && (
+                      <span title={b.cautela_motivo ?? "Em cautela"}>
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-3 py-2.5">
                   <span className={cn(
                     "px-2 py-0.5 rounded text-[10px] border",
