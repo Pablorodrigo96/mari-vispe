@@ -1,124 +1,115 @@
+## Diagnóstico — o que está vivo e o que falta
 
-# Restaurar Fluxos de Parceria + Pool Compartilhado de Oportunidades
+Investiguei o código atual:
 
-## Diagnóstico (resumo)
-A lógica de **Sérgio (Head de Parcerias)** e do **Contador Parceiro** **não foi perdida** — `AdminPartnerships.tsx` (3 abas: Visão Geral / Reservas / VDR), `PartnerDashboard.tsx`, `VDRUploader`, `ReservationCountdown`, todos os triggers (`auto_create_partner_reservation`, `qualify_reservation_on_vdr`, `update_listing_vdr_readiness`, `expire_old_reservations`) continuam ativos no banco.
+| Funcionalidade | Status |
+|---|---|
+| `/admin/parcerias` — Aba **Visão Geral** (KPIs globais + ranking de parceiros + drill-down lateral + registro de atividade) | ✅ **Funciona** (`AdminPartnerships.tsx` linhas 350–500+) |
+| `/admin/parcerias` — Aba **Reservas** (Kanban 4 colunas + filtro "expirando 7d" + Forçar exclusividade + Fechar pela matriz) | ✅ **Funciona** (handlers `handleForceExclusive`, `handleCloseByMatrix`) |
+| `/admin/parcerias` — Aba **Cofre Digital VDR** (validar ✓ / rejeitar ✗ com motivo, recálculo automático do `vdr_readiness`) | ✅ **Funciona** (handlers `handleValidateDoc`, `handleRejectDoc` + trigger `update_listing_vdr_readiness`) |
+| `/parceiro` — Stats + lista de reservas com countdown + Cofre Digital + Gerar Valuation + Pool da Rede | ✅ **Funciona** (`PartnerDashboard.tsx`) |
+| Triggers de banco: `auto_create_partner_reservation` (45 dias automático ao cadastrar listing), `qualify_reservation_on_vdr` (sobe para exclusivo ao subir doc), `expire_old_reservations` (avisa 7 dias antes + expira), `update_listing_vdr_readiness` | ✅ **Todos ativos** |
+| **Subir 200 clientes de uma vez (planilha) direto do painel do contador** | ❌ **Faltando no fluxo do parceiro** |
+| **Score individual por cliente da carteira** | 🟡 **Parcial** — `equity_score` existe na tabela `listings`, mas não há cálculo automático; precisa preencher no upload em lote |
+| **Dashboard agregado da carteira (potencial total em R$)** | 🟡 **Existe `/potencial-carteira`** mas é genérico (CFO/AC/M&A), não usa os scores individuais nem mostra a soma do `asking_price`/`annual_revenue` da carteira real |
 
-O que **realmente quebrou** com a refatoração da App Shell:
-
-1. `/parceiro` está dentro do `<AppShell>` mas a página ainda renderiza `PublicChrome` + `PublicFooter` + `pt-32` → visual quebrado (título atrás do topbar, footer público no meio do app SaaS).
-2. `/admin/parcerias` ficou **fora** do `<AppShell>` (usa o `AdminLayout` antigo) → ao clicar a sidebar lateral some e o head de parcerias perde a navegação.
-3. Nenhuma rota `/admin/*` tem mais o guarda `RequireRole` / `AdminRoute` — qualquer usuário logado abre.
-4. O **Pool Compartilhado de Oportunidades** (regra que você descreveu: "todos os parceiros, franqueados, BDRs veem o teaser básico de qualquer empresa cadastrada por outro, para fazer match porta-de-entrada × porta-de-saída") **nunca foi implementado** como aba dedicada — hoje cada parceiro só vê os leads que ele mesmo cadastrou.
+**O `BulkUploadDialog` já existe** em `src/components/sell/BulkUploadDialog.tsx` — usa `xlsx`, valida 16 colunas (título, categoria, faturamento, lucro, valor, cidade, estado, motivo, etc.) e insere em `public.listings`. Hoje está disponível só em `/vender` num botão menos óbvio. Por causa do trigger `auto_create_partner_reservation`, **se um contador parceiro fizer upload em lote por essa rota, cada uma das 200 linhas já vira uma reserva de 45 dias automaticamente**. A peça que falta é puxar esse fluxo para dentro do painel do parceiro como ação de primeira classe e enriquecê-lo com os campos contábeis que viram score.
 
 ---
 
-## Etapa 1 — Reintegrar `/parceiro` à App Shell (visual)
+## O que vai ser feito
+
+### Etapa 1 — Botão "Importar carteira (planilha)" dentro do `/parceiro`
 
 **Arquivo:** `src/pages/PartnerDashboard.tsx`
 
-- Remover `import PublicChrome` / `PublicFooter` e suas tags (já estamos no AppShell, ele dá o chrome).
-- Trocar `min-h-screen bg-background` → wrapper limpo com `p-6` (padrão das demais páginas dentro do shell).
-- Remover `pt-28` / `pt-32` (topbar do shell já reserva o espaço).
-- Manter o bloco "Acesso restrito" mas usando o card de empty-state padrão do app (sem header/footer público).
+- Adicionar uma seção **"Importar carteira"** no topo do painel (acima dos stats), com:
+  - Botão primário **"Importar 200 clientes de uma vez"** que abre o `BulkUploadDialog` já existente.
+  - Botão secundário **"Cadastrar 1 cliente"** que leva para `/vender`.
+  - Após upload bem-sucedido (`onSuccess`), recarrega `loadAll()` para que as novas reservas apareçam no card "Meus Leads Reservados" com countdown de 45 dias.
+- Importar `BulkUploadDialog` de `@/components/sell/BulkUploadDialog`.
 
-Resultado: o painel do contador respeita a sidebar/topbar persistente.
+Resultado: o contador entra no painel, vê o convite "Importar sua carteira completa", baixa o modelo Excel, sobe o arquivo. O trigger `auto_create_partner_reservation` cria automaticamente 1 reserva de 45 dias por linha, com notificação.
 
----
+### Etapa 2 — Estender o template Excel com campos contábeis (score)
 
-## Etapa 2 — Trazer `/admin/parcerias` (Sérgio) para a App Shell
+**Arquivo:** `src/components/sell/BulkUploadDialog.tsx`
 
-**Arquivos:** `src/App.tsx`, `src/pages/admin/AdminPartnerships.tsx`
+Adicionar 4 colunas opcionais ao template:
 
-- No `App.tsx`, mover `/admin/parcerias` (e demais `/admin/*`) para **dentro** do bloco `<Route element={<AppShell />}>`, envolvidas por `<RequireRole roles={["admin"]}>` (que já existe).
-- Em `AdminPartnerships.tsx`, substituir `<AdminLayout>` por um wrapper neutro `<div className="p-6 space-y-6">` (a sidebar do AppShell já cobre a navegação).
-- O `AdminSidebar` antigo continua útil só para os outros admins legados — vamos **adicionar um link "Parcerias"** no grupo "Cockpit Interno" do `AppSidebar.tsx` para admins, e um atalho contextual visível só quando `isHeadParcerias === true` (persona "Head de Parcerias" via View-As).
+| Coluna | Uso |
+|---|---|
+| `divida_total` (numeric) | Para o score patrimonial |
+| `caixa_disponivel` (numeric) | Idem |
+| `funcionarios` (int) | Tamanho da operação |
+| `crescimento_yoy_pct` (numeric) | Velocidade — peso alto no score |
 
-Resultado: Sérgio mantém a sidebar persistente do app, com seu link "Parcerias" sempre acessível, e as 3 abas continuam funcionando inalteradas (todo o JSX de Visão Geral / Reservas / VDR é preservado).
+E **calcular o `equity_score` (0–100) na hora do insert**, usando regra simples já existente em `src/lib/equityBrain.ts` (margem líquida + crescimento + relação dívida/EBITDA + tamanho). O score vai direto para `listings.equity_score`, então:
+- Aparece no ranking do Sérgio (`avg_equity_score` por parceiro).
+- Aparece no card de cada lead no painel do contador.
+- Alimenta o Equity Brain (já tem trigger `sync_listing_bootstrap_eb`).
 
----
+Sem campos contábeis adicionais, o score continua sendo calculado só pela base mínima (faturamento, lucro, idade) — não quebra nada.
 
-## Etapa 3 — Restaurar guarda de admin nas rotas `/admin/*`
+### Etapa 3 — Enriquecer o card do lead no `/parceiro` com o score individual
 
-**Arquivo:** `src/App.tsx`
+**Arquivo:** `src/pages/PartnerDashboard.tsx`
 
-Envolver cada `<Route path="/admin/...">` com `<RequireRole roles={["admin"]}>` (componente já existe em `src/components/auth/RequireRole.tsx`). Sem isso, qualquer usuário logado bate na URL e abre o painel — regressão de segurança herdada da refatoração.
+No bloco de cada reserva (já tem título, categoria, comissão, VDR%), adicionar:
+- Badge **"Score X/100"** colorido (verde ≥ 70, amarelo 40–69, vermelho < 40).
+- Linha "Potencial estimado: **R$ X**" usando `asking_price` (ou `annual_revenue × 1,5` se preço estiver oculto).
 
----
+### Etapa 4 — Dashboard "Potencial da Carteira" filtrado por contador
 
-## Etapa 4 — Pool Compartilhado de Oportunidades (a regra de negócio nova que você descreveu)
+**Arquivo:** `src/pages/PortfolioPotential.tsx`
 
-> "Todas oportunidades cadastradas por contadores/parceiros/franqueados/BDRs vão para um banco único, onde os demais veem informações básicas do teaser e podem executar o match. Quem cadastrou ganha pela porta de entrada; quem dá match ganha pela porta de saída."
+Hoje a página assume "X clientes × cenário fixo de honorários CFO". Vou adicionar **uma nova seção no topo** (mantendo a simulação de honorários abaixo, intacta):
 
-### 4.1 Backend (migration)
+- **Cards agregados da carteira real do contador logado**:
+  - Total de clientes cadastrados (count `listings` do user)
+  - Faturamento agregado (sum `annual_revenue`)
+  - Valor potencial M&A da carteira (sum `asking_price` ou estimativa)
+  - Score médio da carteira (avg `equity_score`)
+  - Nº de leads "prontos para vitrine" (`vdr_readiness = 100` ou score ≥ 70)
+- **Mini-tabela top 5 clientes** por score, com link para o anúncio.
+- **CTA**: "Comissão potencial em M&A: **R$ X** (5% sobre valor potencial agregado)".
 
-A view `public.public_listings` (security_invoker) **já existe** e já filtra os campos sensíveis (oculta CNPJ, user_id, CEP). Vamos:
+Isso converte os 200 clientes da planilha em uma narrativa financeira para o contador — ele vê na hora quanto pode ganhar.
 
-- **Criar** `public.partner_opportunity_pool` (view) que estende `public_listings` com:
-  - `originator_type` (`partner_accountant` / `franchisee` / `advisor` / `bdr` / `direct_seller`) calculado a partir de `profiles.is_partner_accountant` + `user_roles`
-  - `reservation_status` (`reserved` / `exclusive` / `expired` / `available`) — vindo de `partner_lead_reservations`
-  - `is_my_lead` (booleano: o usuário corrente é o originador?)
-  - **Sem expor o nome ou contato do originador** (privacidade) — só um identificador anonimizado e o tipo.
-- **Criar tabela** `partner_opportunity_interests`:
-  - Colunas: `id`, `listing_id`, `interested_user_id` (quem viu e marcou interesse de match), `originator_user_id` (cadastrante original), `commission_split` (`50_50` por padrão), `status` (`expressed` / `accepted` / `closed`), `created_at`.
-  - RLS: originador vê os interesses no seu lead; usuário interessado vê os próprios; admin vê todos.
-  - Trigger: ao criar interesse → notifica o originador ("Outro parceiro quer matchar um comprador da carteira dele com seu lead — split 50/50").
+### Etapa 5 — Link de navegação
 
-### 4.2 Front-end — nova aba no `PartnerDashboard`
+**Arquivo:** `src/components/layout/AppSidebar.tsx`
 
-`src/pages/PartnerDashboard.tsx` ganha um `<Tabs>` com 2 abas:
+Garantir que dentro do grupo **"Parcerias"** já existente apareça (para `isPartnerAccountant`/`isAdvisor`):
+- "Painel do Parceiro" → `/parceiro`
+- "Potencial da Carteira" → `/potencial-carteira`
 
-- **"Meus Leads Reservados"** (o que já existe hoje, intacto).
-- **"Pool de Oportunidades"** (nova) — lista de cards anônimos com:
-  - Categoria, faixa de receita anual, faixa de preço, cidade/UF, `vdr_readiness` (% de prontidão)
-  - Badge de tipo de originador
-  - Botão **"Tenho comprador para esse lead"** → abre modal pedindo confirmação (descreve a regra de comissão dividida 50/50) → cria registro em `partner_opportunity_interests` e dispara notificação ao originador.
-
-A mesma aba aparece também para:
-- Franqueados em `/painel` (widget rápido + link "Ver pool completo")
-- Advisors / BDRs (mesma rota `/parceiro` ou `/oportunidades-pool`)
-
-### 4.3 Lado do originador
-
-No card "Meus Leads Reservados" (existente), passa a aparecer um **badge "🔥 N parceiros interessados"** quando há linhas em `partner_opportunity_interests`. Clicar abre modal listando os interessados (anonimizados: "Parceiro contador em SP", "BDR interno") com botões **Aceitar match** / **Recusar**.
-
----
-
-## Etapa 5 — Documentar memória do projeto
-
-Atualizar `mem://features/partner-accountant-hub` com a regra do pool compartilhado e do split 50/50, e adicionar `mem://features/shared-opportunity-pool` indexado.
-
----
-
-## Arquivos que serão tocados
-
-**Editados**
-- `src/App.tsx` — mover `/admin/parcerias` (e demais admin) para dentro do AppShell + RequireRole
-- `src/pages/PartnerDashboard.tsx` — remover PublicChrome/Footer + adicionar Tabs (Meus Leads / Pool)
-- `src/pages/admin/AdminPartnerships.tsx` — trocar `<AdminLayout>` por wrapper limpo
-- `src/components/layout/AppSidebar.tsx` — adicionar link "Parcerias" para admin/head_parcerias
-- `mem://features/partner-accountant-hub` + `mem://index.md`
-
-**Criados**
-- `supabase/migrations/<ts>_partner_opportunity_pool.sql` — view do pool + tabela `partner_opportunity_interests` + RLS + trigger de notificação
-- `src/components/partner/SharedOpportunityCard.tsx` — card anônimo do pool
-- `src/components/partner/InterestModal.tsx` — modal "Tenho comprador para esse lead"
-- `src/components/partner/InterestedPartnersBadge.tsx` — badge "🔥 N interessados" no card do originador
-- `mem://features/shared-opportunity-pool`
-
-**Não tocados (preservados como estão)**
-- `src/components/partner/VDRUploader.tsx`
-- `src/components/partner/ReservationCountdown.tsx`
-- Todos os triggers de `partner_lead_reservations` e `vdr_documents`
-- `src/components/admin/AdminSidebar.tsx` (continua para retrocompatibilidade)
+Se já estiver lá, só confirmar a ordem. Se não, adicionar.
 
 ---
 
 ## Critérios de aceite
 
-1. Sérgio em `/admin/parcerias` vê a **sidebar do AppShell** persistente, com o item "Parcerias" destacado, e as 3 abas (Visão Geral / Reservas / VDR) renderizam idênticas ao especificado no fluxo original.
-2. Contador Parceiro em `/parceiro` vê a mesma sidebar, sem header/footer público duplicado, e tem 2 abas: "Meus Leads" e "Pool de Oportunidades".
-3. Tentar acessar `/admin/parcerias` sem ser admin → redireciona para `/`.
-4. Qualquer parceiro/franqueado/BDR vê no Pool todos os teasers anonimizados de leads de outros, com `vdr_readiness`, faixa de receita e botão de interesse.
-5. Originador recebe notificação em tempo real ao surgir interessado no seu lead.
-6. Triggers existentes (reserva 45d, qualificação por VDR, expiração) continuam disparando — nenhuma regression.
+1. Em `/parceiro`, contador vê botão **"Importar carteira (planilha)"** no topo. Clica, baixa modelo, sobe arquivo com 200 linhas → **200 reservas de 45 dias** aparecem na hora no card "Meus Leads Reservados", cada uma com countdown.
+2. Cada lead no card mostra **score individual** (badge colorido) e **potencial estimado em R$**.
+3. Em `/potencial-carteira`, contador vê **dashboard agregado real** da carteira que acabou de subir (total de clientes, faturamento somado, valor M&A potencial, top 5 por score) — abaixo continua a simulação de honorários original.
+4. Sérgio em `/admin/parcerias` aba **Visão Geral** vê o ranking atualizado com o contador no topo (200 leads cadastrados, score médio calculado).
+5. Sérgio na aba **Reservas** vê 200 novos cards na coluna "Reservado" do Kanban, filtráveis por parceiro.
+6. Quando o contador subir um doc no Cofre Digital de qualquer um desses 200 leads, o trigger `qualify_reservation_on_vdr` move o card para "Exclusivo" automaticamente — fluxo já existente, intacto.
+7. Triggers de expiração (45 dias), aviso (7 dias antes), recálculo de VDR e notificação por interesse continuam funcionando — nenhuma regression.
+
+---
+
+## Arquivos tocados
+
+**Editados**
+- `src/pages/PartnerDashboard.tsx` — banner de importação + score/potencial nos cards
+- `src/components/sell/BulkUploadDialog.tsx` — 4 colunas contábeis novas + cálculo de `equity_score` no insert
+- `src/pages/PortfolioPotential.tsx` — nova seção "Carteira real" no topo, simulação de honorários mantida
+- `src/components/layout/AppSidebar.tsx` — confirmar links Parcerias
+
+**Não tocados (preservados)**
+- `src/pages/admin/AdminPartnerships.tsx` — todas as 3 abas continuam exatamente como estão
+- `src/components/partner/VDRUploader.tsx`, `ReservationCountdown.tsx`, `SharedOpportunityCard.tsx`, `InterestModal.tsx`
+- Todos os triggers de banco (`auto_create_partner_reservation`, `qualify_reservation_on_vdr`, `update_listing_vdr_readiness`, `expire_old_reservations`, `notify_partner_interest`)
+- View `partner_opportunity_pool` e tabela `partner_opportunity_interests`
