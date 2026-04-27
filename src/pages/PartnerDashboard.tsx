@@ -191,6 +191,39 @@ export default function PartnerDashboard() {
         </p>
       </div>
 
+      {/* Banner: Importar carteira em lote */}
+      <Card className="!bg-gradient-to-br from-accent/10 via-accent/5 to-transparent border-accent/30">
+        <CardContent className="p-5">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div className="h-10 w-10 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-accent" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-foreground">
+                  Importe sua carteira completa de uma vez
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Suba uma planilha Excel com até 200 clientes. Cada linha vira uma reserva de 45 dias automaticamente,
+                  com score calculado a partir dos dados contábeis.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button size="sm" variant="outline" className="bg-transparent" onClick={() => downloadTemplate()}>
+                <Download className="w-3.5 h-3.5 mr-1" />Baixar modelo
+              </Button>
+              <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setBulkOpen(true)}>
+                <Upload className="w-3.5 h-3.5 mr-1" />Importar planilha
+              </Button>
+              <Button size="sm" variant="outline" className="bg-transparent" onClick={() => navigate('/vender')}>
+                <Plus className="w-3.5 h-3.5 mr-1" />1 cliente
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={<Clock className="w-5 h-5" />} label="Reservados" value={reserved.length} color="text-blue-400" />
