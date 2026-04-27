@@ -411,10 +411,23 @@ export function StrategicGraph() {
         width={size.w}
         height={size.h}
         backgroundColor="rgba(0,0,0,0)"
-        cooldownTicks={120}
-        d3AlphaDecay={0.025}
-        d3VelocityDecay={0.32}
-        warmupTicks={30}
+        cooldownTicks={80}
+        cooldownTime={3000}
+        d3AlphaDecay={0.05}
+        d3VelocityDecay={0.55}
+        warmupTicks={60}
+        onEngineStop={() => {
+          // Fixar nodes na posição final (sem mais drift)
+          nodes.forEach((n: any) => {
+            if (Number.isFinite(n.x) && Number.isFinite(n.y)) {
+              n.fx = n.x;
+              n.fy = n.y;
+            }
+          });
+          // Enquadrar todo o grafo já parado
+          fgRef.current?.zoomToFit(400, 60);
+        }}
+        enableNodeDrag={false}
         linkCurvature={(l: any) => 0.12 + (l.weight ?? 0) * 0.08}
         linkDirectionalParticles={(l: any) => (l.weight >= 0.7 ? 2 : 0)}
         linkDirectionalParticleWidth={(l: any) => 1.5 + l.weight * 1.5}
