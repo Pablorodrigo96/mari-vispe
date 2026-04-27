@@ -535,12 +535,22 @@ export function StrategicGraph() {
         onReset={handleReset}
       />
 
-      {/* Stats badge */}
-      <div className="absolute top-3 right-3 z-10 bg-zinc-950/90 border border-zinc-800 rounded-md px-3 py-1.5 backdrop-blur">
-        <div className="text-[10px] text-zinc-400 font-mono">
+      {/* Stats badge + status */}
+      <div className="absolute top-3 right-3 z-10 bg-zinc-950/90 border border-cyan-900/40 rounded-md px-3 py-1.5 backdrop-blur shadow-[0_0_20px_rgba(56,189,248,0.08)]">
+        <div className="text-[10px] text-zinc-400 font-mono flex items-center gap-2">
           <span className="text-emerald-400 font-bold">{nodes.length}</span> nodes ·{" "}
           <span className="text-cyan-400 font-bold">{edges.length}</span> edges ·{" "}
           <span className="text-rose-400 font-bold">{clusters.length}</span> clusters
+          <span className="ml-2 flex items-center gap-1">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                recalculating ? "bg-amber-400 animate-pulse" : stabilized ? "bg-emerald-400" : "bg-cyan-400 animate-pulse"
+              }`}
+            />
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500">
+              {recalculating ? "Recalculando malha…" : stabilized ? "Rede estabilizada" : "Tecendo rede…"}
+            </span>
+          </span>
         </div>
       </div>
 
