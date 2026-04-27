@@ -1,88 +1,79 @@
-# Equity Brain v2 — Fase 4: Loop Adaptativo
 
-Fechar o ciclo: cada `deal_event` (rejeição, NDA, fechamento) registrado pelo BDR alimenta um motor Bayesiano que ajusta os pesos por buyer em `equity_brain.buyer_revealed_thetas`. O `match-company-v2` já consome essa tabela via `blendWeights` (Fase 2), então não precisa mexer no motor de matching.
+# Equity Brain v2 — O que ainda falta
 
-## O que será criado
+Olhando o escopo original do prompt do v2 (sistema híbrido adaptativo com 6 capacidades) contra o que já está em produção, **as 4 fases entregues cobrem o núcleo**: motor v2 com blend de pesos, mandate active probability, MatchDecisionCard com SHAP/IC/price bands, RPC de feedback e loop Bayesiano de revealed_thetas.
 
-### 1. Edge Function `update-buyer-revealed-thetas`
+Status atual no banco:
+- 3.582 matches v2 calculados
+- 10 buyer_archetypes ativos
+- 86 companies_scored
+- **0 deal_events / 0 revealed_thetas / 0 ai_runs / 0 call_feedback** ← o loop nunca rodou de verdade
 
-Arquivo: `supabase/functions/update-buyer-revealed-thetas/index.ts`
+Faltam 5 frentes para fechar o ciclo e oficializar o v2 em produção. Sugiro executar em **3 fases curtas**.
 
-- Auth: admin only via `getClaims()` + `user_roles`.
-- Body: `{ buyer_id?: string, since_days?: number (default 365), dry_run?: boolean }`
-- Lê eventos de `equity_brain.deal_events` (com `match_id` para extrair `feature_contributions`).
-- Para cada evento atribui um sinal alvo:
-  - `closed`: +1.0 · `term_sheet`: +0.85 · `loi_received`: +0.7 · `nda_signed`: +0.4
-  - `reply_received`: +0.2 · `contacted`: 0
-  - `rejected`: -0.7 · `dropped`: -0.5
-- Penalidade extra por motivo de rejeição (mapeia para features específicas):
-  - `geo_fora_radar` → penaliza `geografia`, `densidade_local`
-  - `tamanho_*` → penaliza `tamanho`, `financeiro`
-  - `setor_secundario` → penaliza `setor`, `vertical_fit`
-  - `governanca_problema` → penaliza `governanca` · etc.
-- Decay temporal (half-life 90 dias): eventos antigos pesam menos.
-- Bayesian online update tipo Welford: `mean += w·(obs − mean)/(n+w)`, std cai como `1/√n`.
-- Peso por feature proporcional à contribuição que o feature teve no match (features que mais influenciaram a recomendação aprendem mais).
-- Upsert em chunks de 200 em `buyer_revealed_thetas (buyer_id, feature_name)`.
-- Retorna summary por buyer (eventos processados, features atualizadas) + amostra de thetas.
+---
 
-### 2. UI: nova aba "Aprendizado" em `/equity-brain/shadow`
+## Fase 5 — Operacionalização (cron + observabilidade)
 
-Arquivo: `src/pages/equity-brain/ShadowPage.tsx` (editar)
+Hoje o motor adaptativo só roda se alguém clicar no botão na ShadowPage. Precisa virar processo contínuo.
 
-- Adicionar `<TabsTrigger value="learning">` com ícone `Brain`.
-- Conteúdo:
-  - **Botões**: "Treinar todos os buyers", "Dry-run (preview)" — invocam `update-buyer-revealed-thetas`.
-  - **Card de eventos recentes**: lista os últimos 20 `deal_events` (tipo, motivo, timestamp, buyer).
-  - **Tabela de thetas top**: top 30 entradas de `buyer_revealed_thetas` ordenadas por `n_observations`, com coluna delta vs default.
-- Carrega via PostgREST direto no schema `equity_brain` (já exposto na Fase 2).
+1. **Ativar pg_cron jobs** via `setup-equity-brain-crons`:
+   - `match-company-v2` recompute incremental: a cada 6h para companies com mudança em `company_signals`
+   - `update-buyer-revealed-thetas`: diário 03:00 BRT (processa eventos das últimas 24h)
+   - `compute-mandate-active-proba`: semanal (decay de mandatos sem atividade)
+2. **Tabela `equity_brain.engine_runs`** (nova): registra cada execução (engine, started_at, finished_at, rows_processed, error). Já existe `ai_runs` mas é para LLM; criar uma irmã para os engines determinísticos.
+3. **Card "Saúde do Motor"** na ShadowPage: última execução de cada job, taxa de erro, throughput.
 
-### 3. Validação end-to-end
+## Fase 6 — Drift v1 ↔ v2 + ingestão real de feedback
 
-- Curl `update-buyer-revealed-thetas` com `dry_run: true` para confirmar que processa eventos sem efeitos colaterais.
-- Em seguida, rodar sem `dry_run` para popular a tabela (se houver eventos).
-- Re-executar `match-company-v2` para confirmar que os scores se ajustam ao consumir os novos thetas.
+Sem deal_events, o loop adaptativo é teórico. Duas frentes em paralelo:
 
-## O que NÃO entra
+1. **Dashboard de Drift v1↔v2** (nova aba "Drift" em ShadowPage):
+   - Distribuição de scores v1 vs v2 (histograma)
+   - Top-N agreement (% de overlap nos top 50 matches por buyer)
+   - Buyers com maior divergência (candidatos a investigação)
+   - Série temporal: drift médio por semana → mostra se v2 está convergindo ou divergindo
+2. **Backfill seed de deal_events**: criar script admin que importa eventos históricos de `interest_logs` + `messages` mapeando para `contacted` / `reply_received`. Dá ~50-200 eventos iniciais para o Bayesiano ter sinal.
+3. **Hook automático no MatchDecisionCard**: quando BDR clica "Contatado via WhatsApp", já dispara `eb_log_deal_event('contacted')` sem precisar abrir modal. Reduz fricção e aumenta volume de eventos.
 
-- Trigger DB automático que enfileira buyers a cada novo evento (decisão: fica para uma fase futura quando volume justificar — por enquanto basta o botão manual + execução agendada via cron externa).
-- Reescrita do match v2: ele já lê `buyer_revealed_thetas` via `blendWeights` (Fase 2 entregou isso).
+## Fase 7 — Ingestão de calls (capacidade #5 do escopo original) + Flip oficial
 
-## Arquitetura do loop
+A capacidade "feedback automático de calls via Claude" existe nas 3 edge functions (`claude-analyze-call`, `claude-classify-thesis`, `feedback-from-call`) mas **não tem UI**. Calls são a fonte mais rica de sinal.
 
-```text
-BDR registra outcome
-        │
-        ▼
-deal_events (RPC eb_log_deal_event — Fase 3)
-        │
-        ▼
-update-buyer-revealed-thetas (Fase 4 — manual ou cron)
-        │
-        ▼
-buyer_revealed_thetas (mean/std/n por buyer×feature)
-        │
-        ▼
-match-company-v2 → blendWeights(default, revealed)
-        │
-        ▼
-Novos matches refletem o que aquele buyer realmente fechou
-```
+1. **UI de upload de call** em `/equity-brain/calls/[id]`:
+   - Upload de áudio/transcript
+   - Trigger `claude-analyze-call` → extrai sentiment, objeções, próximos passos
+   - `claude-classify-thesis` → identifica tese real do buyer pela conversa
+   - `feedback-from-call` → grava em `call_feedback` + `deal_events`
+2. **Loop fechado**: `update-buyer-revealed-thetas` passa a consumir também `call_feedback` (não só deal_events) para refinar revealed_thetas com mais granularidade.
+3. **Flip oficial v2 → produção**:
+   - Migrar páginas `/equity-brain/oportunidades`, `/grafo`, `/mapa`, `/board` para consumir `match-company-v2` por padrão
+   - Manter `match-company` (v1) como fallback acessível via flag `?engine=v1`
+   - Remover prefixo "Shadow" da página, renomear para `/equity-brain/lab` (cantinho de experimentação)
+   - Atualizar `mem://features/equity-brain-v2-*` marcando como GA
 
-## Como o peso é ajustado (resumo técnico)
+---
 
-Para um evento `closed` em um match cujo `feature_contributions` tinha `geografia` com contribuição alta:
-1. observation = +1.0
-2. weight = decay × (0.3 + contrib_normalizada)  → ~0.9 se evento recente e geografia foi top contributor
-3. posterior_mean da feature `geografia` para esse buyer sobe em direção a +1
-4. n_observations += weight, std cai
+## O que NÃO precisa (já está pronto ou fora de escopo)
 
-Próxima rodada de matching para esse buyer aumenta o peso de `geografia` via `blendWeights`.
+- Motor v2 com blend de pesos ✅ Fase 2
+- Mandate active probability ✅ Fase 2
+- SHAP/IC/price bands no card ✅ Fase 3
+- RPC de feedback `eb_log_deal_event` ✅ Fase 3
+- Loop Bayesiano ✅ Fase 4
+- Edge functions de Claude (já existem, só falta UI) ✅ código pronto
+- Vector embeddings: extensão pgvector já habilitada, mas sem caso de uso aprovado — fica para v3
 
-## Plano de execução
+---
 
-1. Criar `supabase/functions/update-buyer-revealed-thetas/index.ts` (já implementado no draft acima).
-2. Editar `ShadowPage.tsx`: adicionar imports `Brain`, novo state `learning`, nova `TabsTrigger`+`TabsContent`, fetch de `deal_events` e `buyer_revealed_thetas`.
-3. Deploy da edge function (automático).
-4. Curl smoke test com `dry_run: true`.
-5. Atualizar memória `mem://features/equity-brain-v2-decision` para incluir o loop adaptativo.
+## Resumo executivo
+
+| Fase | Entrega | Esforço |
+|------|---------|---------|
+| 5 | Cron ativo + saúde do motor | Pequeno |
+| 6 | Drift dashboard + backfill de eventos + 1-click feedback | Médio |
+| 7 | UI de calls + flip oficial v2 em produção | Médio |
+
+Recomendo começar pela **Fase 5** (operacionalização) porque sem cron rodando o sistema continua estático. Depois Fase 6 para gerar volume de feedback, e por fim Fase 7 para fechar com calls + flip.
+
+**Quer que eu comece pela Fase 5?**
