@@ -102,6 +102,12 @@ export function StrategicGraph() {
     return () => cancelAnimationFrame(raf);
   }, [isMobile]);
 
+  // Helper: raio base do node (precisa estar antes dos useEffects que usam ele)
+  const getBaseRadius = (n: GraphNode) => {
+    const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
+    return Math.max(2, 4 + (score / 100) * 12);
+  };
+
   // ---------- Data ----------
   const queries = useQueries({
     queries: [
