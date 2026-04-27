@@ -71,7 +71,10 @@ function buildJobs(supabaseUrl: string, serviceKey: string) {
     },
   ].map((j) => ({
     ...j,
-    sql: `
+    sql:
+      j.fn === "__inline_sql__"
+        ? (j.body as any).sql
+        : `
       SELECT net.http_post(
         url     := '${supabaseUrl}/functions/v1/${j.fn}',
         headers := '${JSON.stringify({
