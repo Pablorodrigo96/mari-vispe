@@ -54,6 +54,7 @@ export default function PartnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [vdrListingId, setVdrListingId] = useState<string | null>(null);
   const [vdrListingTitle, setVdrListingTitle] = useState<string>('');
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   // Pool
   const [pool, setPool] = useState<PoolOpportunity[]>([]);
