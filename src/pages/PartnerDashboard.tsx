@@ -273,6 +273,15 @@ export default function PartnerDashboard() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-foreground break-words">{r.listing?.title ?? 'Anúncio removido'}</h3>
                             <Badge variant="outline" className="bg-transparent text-xs">{r.listing?.category}</Badge>
+                            {r.listing?.equity_score != null && (
+                              <Badge className={`text-xs border ${
+                                r.listing.equity_score >= 70 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
+                                r.listing.equity_score >= 40 ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' :
+                                'bg-red-500/15 text-red-400 border-red-500/30'
+                              }`}>
+                                Score {r.listing.equity_score}/100
+                              </Badge>
+                            )}
                             {r.commission_type === 'full' && <Badge className="bg-accent/15 text-accent border-accent/30 text-xs">20% comissão</Badge>}
                             {r.commission_type === 'discovery_fee' && <Badge className="bg-muted text-muted-foreground text-xs">Taxa de descoberta</Badge>}
                             {!!r.interest_count && r.interest_count > 0 && (
@@ -285,6 +294,19 @@ export default function PartnerDashboard() {
                             {r.listing?.city && r.listing?.state ? `${r.listing.city}/${r.listing.state} · ` : ''}
                             Reservado em {formatDate(r.reserved_at)}
                           </p>
+                          {(() => {
+                            const potential = r.listing?.asking_price && r.listing.asking_price > 0
+                              ? r.listing.asking_price
+                              : (r.listing?.annual_revenue ?? 0) * 1.5;
+                            return potential > 0 ? (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Potencial: <span className="text-accent font-medium">{formatCurrency(potential)}</span>
+                                {(!r.listing?.asking_price || r.listing.asking_price === 0) && (
+                                  <span className="text-[10px] ml-1">(estimado)</span>
+                                )}
+                              </p>
+                            ) : null;
+                          })()}
                           {r.listing?.vdr_readiness != null && r.listing.vdr_readiness > 0 && (
                             <p className="text-xs text-muted-foreground mt-1">
                               VDR: <span className="text-accent font-medium">{r.listing.vdr_readiness}%</span>
