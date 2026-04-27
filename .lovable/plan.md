@@ -1,56 +1,18 @@
-## Plano: Bootstrap do módulo Equity Brain
+## Plano: Criar `docs/EQUITY_BRAIN_README.md`
 
-Estado atual verificado no banco:
-- `pg_cron` 1.6.4 já está ativa
-- `vector` e `pg_net` ainda NÃO estão instaladas
-- Schema `equity_brain` ainda NÃO existe
+Criar um único arquivo Markdown novo no repositório, sem alterar código ou banco.
 
-Vou executar uma única migration consolidada com 2 blocos:
+### Arquivo a criar
+- **Caminho**: `docs/EQUITY_BRAIN_README.md`
+- **Conteúdo** (pt-BR): documento descrevendo os dois domínios que convivem no projeto:
+  1. **Marketplace PME.B3 (público)** — tabelas em `public`, comportamento reativo, rotas atuais.
+  2. **Equity Brain (proprietário Vispe)** — tabelas em `equity_brain`, comportamento ativo (prospecção/BDR), rotas novas (`/equity-brain/*`).
+- Inclui a **Regra de ouro**: marketplace alimenta o Equity Brain via signals `intencao_venda_explicita`, e acesso restrito a `role IN ('admin','advisor') OR is_partner_accountant=true OR é_BDR_Vispe`.
 
-### Bloco 1 — Ativar extensões faltantes
+### Não inclui
+- Nenhuma migração SQL, edge function, rota React ou alteração de RLS — apenas documentação. Os itens listados (rotas `/equity-brain/*`, tabelas em `equity_brain.*`) são referência de roadmap e serão implementados em planos posteriores.
 
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
+### Diff resumido
 ```
-
-`pg_cron` permanece com `IF NOT EXISTS` (no-op, já ativa). `vector` (pgvector) habilita embeddings para o motor de IA. `pg_net` habilita chamadas HTTP assíncronas a partir do Postgres (úteis para webhooks/edge functions agendadas).
-
-### Bloco 2 — Criar schema isolado `equity_brain`
-
-```sql
-CREATE SCHEMA IF NOT EXISTS equity_brain;
-
-GRANT USAGE ON SCHEMA equity_brain TO anon, authenticated, service_role;
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA equity_brain
-  GRANT SELECT ON TABLES TO authenticated;
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA equity_brain
-  GRANT ALL ON TABLES TO service_role;
++ docs/EQUITY_BRAIN_README.md  (novo, ~25 linhas)
 ```
-
-Schema separado garante que o motor Equity Brain evolua sem colidir com `public` (marketplace, valuations, capital, parcerias). RLS continuará sendo definido por tabela conforme o módulo for crescendo.
-
-### Bloco 3 — Verificação pós-migration
-
-Após aplicar, vou rodar:
-
-```sql
-SELECT extname, extversion FROM pg_extension
-WHERE extname IN ('vector','pg_cron','pg_net');
-
-SELECT schema_name FROM information_schema.schemata
-WHERE schema_name = 'equity_brain';
-```
-
-E retorno os resultados completos para você confirmar.
-
-### Observações
-
-- Nenhuma tabela existente é alterada
-- Nenhum dado é movido ou removido
-- Nenhuma RLS atual é tocada
-- Operação 100% aditiva e reversível (`DROP EXTENSION` / `DROP SCHEMA`)
-- `pg_net` e `vector` são extensões oficialmente suportadas pelo Supabase
