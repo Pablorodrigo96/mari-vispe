@@ -42,8 +42,7 @@ export default function GrafoPage() {
     queryKey: ["grafo", "theses-list"],
     queryFn: async () => {
       const { data } = await supabase
-        .schema("equity_brain" as any)
-        .from("investment_theses" as any)
+        .from("eb_investment_theses" as any)
         .select("thesis_key,display_name")
         .eq("active", true);
       return (data ?? []) as any[];
@@ -54,8 +53,7 @@ export default function GrafoPage() {
     queryKey: ["grafo", "buyers-list"],
     queryFn: async () => {
       const { data } = await supabase
-        .schema("equity_brain" as any)
-        .from("buyers" as any)
+        .from("eb_buyers" as any)
         .select("id,nome")
         .order("nome");
       return (data ?? []) as any[];

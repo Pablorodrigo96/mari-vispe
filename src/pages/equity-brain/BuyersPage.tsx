@@ -24,7 +24,7 @@ export default function BuyersPage() {
     queryKey: ["eb", "buyers-list", buyerVerticalKey],
     queryFn: async () => {
       let q = supabase
-        .schema("equity_brain" as any).from("buyers" as any)
+        .from("eb_buyers" as any)
         .select(`*, theses:buyer_theses(count), matches:matches(count)`)
         .order("prioridade_global", { ascending: true, nullsFirst: false })
         .order("nome");
@@ -42,7 +42,7 @@ export default function BuyersPage() {
   const createBuyer = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("buyers" as any)
+        .from("eb_buyers" as any)
         .insert({
           nome: form.nome,
           tipo: form.tipo,

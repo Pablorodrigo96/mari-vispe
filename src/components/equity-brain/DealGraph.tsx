@@ -135,8 +135,7 @@ export function DealGraph({ filterThesisKey, filterBuyerId, filterUfs }: DealGra
         queryKey: ["graph", "companies", filterUfs],
         queryFn: async () => {
           let q = supabase
-            .schema("equity_brain" as any)
-            .from("opportunities_ready" as any)
+            .from("eb_opportunities_ready" as any)
             .select("cnpj, razao_social, uf, setor_ma, ma_score")
             .order("ma_score", { ascending: false })
             .limit(50);
@@ -150,8 +149,7 @@ export function DealGraph({ filterThesisKey, filterBuyerId, filterUfs }: DealGra
         queryKey: ["graph", "theses"],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("investment_theses" as any)
+            .from("eb_investment_theses" as any)
             .select("thesis_key, display_name, category, active")
             .eq("active", true);
           if (error) throw error;
@@ -162,8 +160,7 @@ export function DealGraph({ filterThesisKey, filterBuyerId, filterUfs }: DealGra
         queryKey: ["graph", "buyers"],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("buyers" as any)
+            .from("eb_buyers" as any)
             .select("id, nome, tipo, ticket_min, ticket_max")
             .limit(30);
           if (error) throw error;
@@ -174,8 +171,7 @@ export function DealGraph({ filterThesisKey, filterBuyerId, filterUfs }: DealGra
         queryKey: ["graph", "buyer-theses"],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("buyer_theses" as any)
+            .from("eb_buyer_theses" as any)
             .select("buyer_id, thesis_key, prioridade, active")
             .eq("active", true);
           if (error) throw error;
@@ -186,8 +182,7 @@ export function DealGraph({ filterThesisKey, filterBuyerId, filterUfs }: DealGra
         queryKey: ["graph", "matches"],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("matches" as any)
+            .from("eb_matches" as any)
             .select("cnpj, buyer_id, thesis_key, match_score, is_current")
             .eq("is_current", true)
             .order("match_score", { ascending: false })

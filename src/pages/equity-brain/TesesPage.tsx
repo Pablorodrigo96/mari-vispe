@@ -8,7 +8,7 @@ export default function TesesPage() {
     queryKey: ["eb", "theses-catalog"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("investment_theses" as any)
+        .from("eb_investment_theses" as any)
         .select("*").order("category");
       if (error) throw error;
       return (data ?? []) as any[];
@@ -19,7 +19,7 @@ export default function TesesPage() {
     queryKey: ["eb", "thesis-usage"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("buyer_theses" as any)
+        .from("eb_buyer_theses" as any)
         .select("thesis_key").eq("active", true);
       if (error) throw error;
       const counts = new Map<string, number>();

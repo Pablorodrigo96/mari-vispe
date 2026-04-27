@@ -21,7 +21,7 @@ export default function CallsPage() {
     queryKey: ["eb", "calls-history", user?.id, isAdmin],
     queryFn: async () => {
       let q = supabase
-        .schema("equity_brain" as any).from("v_bdr_history" as any)
+        .from("eb_v_bdr_history" as any)
         .select("*").order("call_at", { ascending: false }).limit(100);
       if (!isAdmin && user?.id) q = q.eq("bdr_user_id", user.id);
       const { data, error } = await q;
@@ -35,7 +35,7 @@ export default function CallsPage() {
     queryKey: ["eb", "calls-pipeline"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("opportunities_ready" as any)
+        .from("eb_opportunities_ready" as any)
         .select("cnpj, razao_social, uf, municipio, setor_ma, ma_score, best_thesis_name")
         .gte("ma_score", 60)
         .order("ma_score", { ascending: false })

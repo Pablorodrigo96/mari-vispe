@@ -84,8 +84,7 @@ export function BrasilMap({ filters, onSelectCompany }: BrasilMapProps) {
     queryKey: ["eb", "map", "by-uf"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any)
-        .from("v_opportunities_by_uf" as any)
+        .from("eb_v_opportunities_by_uf" as any)
         .select("uf,total,premium_count,strong_count,avg_ma_score,top_setor");
       if (error) throw error;
       return data as Array<{
@@ -115,8 +114,7 @@ export function BrasilMap({ filters, onSelectCompany }: BrasilMapProps) {
     queryKey: ["eb", "map", "muni", roundedBounds, filters.ufs, filters.minScore],
     queryFn: async () => {
       let q = supabase
-        .schema("equity_brain" as any)
-        .from("v_opportunities_by_municipio" as any)
+        .from("eb_v_opportunities_by_municipio" as any)
         .select("uf,municipio,total,premium_count,avg_ma_score,lat_centroid,lng_centroid")
         .gte("lat_centroid", roundedBounds!.s)
         .lte("lat_centroid", roundedBounds!.n)
@@ -137,8 +135,7 @@ export function BrasilMap({ filters, onSelectCompany }: BrasilMapProps) {
     queryFn: async () => {
       // Pegamos coords da tabela companies via join filtrando por bounds
       let q = supabase
-        .schema("equity_brain" as any)
-        .from("companies" as any)
+        .from("eb_companies" as any)
         .select("cnpj,razao_social,nome_fantasia,uf,municipio,setor_ma,latitude,longitude")
         .not("latitude", "is", null)
         .not("longitude", "is", null)
@@ -156,8 +153,7 @@ export function BrasilMap({ filters, onSelectCompany }: BrasilMapProps) {
       // Busca scores dos CNPJs visíveis
       const cnpjs = companies.map((c: any) => c.cnpj);
       const { data: scored } = await supabase
-        .schema("equity_brain" as any)
-        .from("companies_scored" as any)
+        .from("eb_companies_scored" as any)
         .select("cnpj,ma_score")
         .in("cnpj", cnpjs);
       const scoreMap = new Map<string, number>(
@@ -177,8 +173,7 @@ export function BrasilMap({ filters, onSelectCompany }: BrasilMapProps) {
     queryKey: ["eb", "map", "buyers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any)
-        .from("buyers" as any)
+        .from("eb_buyers" as any)
         .select("id,name,buyer_type,uf");
       if (error) throw error;
       return data as Array<{ id: string; name: string; buyer_type: string | null; uf: string | null }>;

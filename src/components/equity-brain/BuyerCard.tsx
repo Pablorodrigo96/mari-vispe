@@ -19,7 +19,7 @@ export function BuyerCard({ buyerId }: BuyerCardProps) {
     queryKey: ["eb", "buyer", buyerId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("buyers" as any)
+        .from("eb_buyers" as any)
         .select("*").eq("id", buyerId).maybeSingle();
       if (error) throw error;
       return data as any;
@@ -30,7 +30,7 @@ export function BuyerCard({ buyerId }: BuyerCardProps) {
     queryKey: ["eb", "buyer-theses", buyerId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("buyer_theses" as any)
+        .from("eb_buyer_theses" as any)
         .select("*, investment_theses(display_name, description)")
         .eq("buyer_id", buyerId)
         .order("prioridade");
@@ -43,7 +43,7 @@ export function BuyerCard({ buyerId }: BuyerCardProps) {
     queryKey: ["eb", "buyer-matches", buyerId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("matches_enriched" as any)
+        .from("eb_matches_enriched" as any)
         .select("cnpj, razao_social, uf, setor_ma, match_score, thesis_name")
         .eq("buyer_id", buyerId)
         .order("match_score", { ascending: false })
@@ -57,7 +57,7 @@ export function BuyerCard({ buyerId }: BuyerCardProps) {
     queryKey: ["eb", "thesis-catalog"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("investment_theses" as any)
+        .from("eb_investment_theses" as any)
         .select("thesis_key, display_name").eq("active", true);
       if (error) throw error;
       return (data ?? []) as any[];
@@ -67,7 +67,7 @@ export function BuyerCard({ buyerId }: BuyerCardProps) {
   const addThesis = useMutation({
     mutationFn: async (thesis_key: string) => {
       const { error } = await supabase
-        .schema("equity_brain" as any).from("buyer_theses" as any)
+        .from("eb_buyer_theses" as any)
         .insert({ buyer_id: buyerId, thesis_key, prioridade: 2, active: true });
       if (error) throw error;
     },
@@ -82,7 +82,7 @@ export function BuyerCard({ buyerId }: BuyerCardProps) {
   const removeThesis = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .schema("equity_brain" as any).from("buyer_theses" as any)
+        .from("eb_buyer_theses" as any)
         .delete().eq("id", id);
       if (error) throw error;
     },
