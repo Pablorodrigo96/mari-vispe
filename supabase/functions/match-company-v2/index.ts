@@ -388,10 +388,15 @@ serve(async (req) => {
       }
     }
 
+    await finishRun("success", newMatches.length);
     return new Response(JSON.stringify({
       ok: true, processed: newMatches.length, persisted: persist,
-      sample: newMatches.slice(0, 5),
+      sample: newMatches.slice(0, 5), run_id: runId,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } catch (innerErr: any) {
+      await finishRun("error", 0, innerErr?.message ?? String(innerErr));
+      throw innerErr;
+    }
   } catch (err: any) {
     console.error("match-company-v2 error:", err);
     return new Response(JSON.stringify({ error: err.message ?? String(err) }), {
