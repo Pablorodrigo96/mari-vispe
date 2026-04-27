@@ -1112,6 +1112,803 @@ export type Database = {
       }
     }
     Views: {
+      eb_buyer_theses: {
+        Row: {
+          active: boolean | null
+          buyer_id: string | null
+          created_at: string | null
+          custom_notes: string | null
+          custom_pitch: string | null
+          id: string | null
+          prioridade: number | null
+          thesis_key: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          buyer_id?: string | null
+          created_at?: string | null
+          custom_notes?: string | null
+          custom_pitch?: string | null
+          id?: string | null
+          prioridade?: number | null
+          thesis_key?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          buyer_id?: string | null
+          created_at?: string | null
+          custom_notes?: string | null
+          custom_pitch?: string | null
+          id?: string | null
+          prioridade?: number | null
+          thesis_key?: string | null
+        }
+        Relationships: []
+      }
+      eb_buyers: {
+        Row: {
+          cautela_flag: boolean | null
+          cautela_motivo: string | null
+          cnpj: string | null
+          created_at: string | null
+          deals_realizados: number | null
+          id: string | null
+          municipios_interesse: string[] | null
+          nome: string | null
+          observacoes: string | null
+          porte_alvo: string[] | null
+          prioridade_global: number | null
+          responsavel_id: string | null
+          setores_interesse: string[] | null
+          sinergias_chave: string[] | null
+          source: string | null
+          status: string | null
+          subsetores_interesse: string[] | null
+          ticket_max: number | null
+          ticket_min: number | null
+          tipo: string | null
+          ufs_interesse: string[] | null
+          ultimo_contato_em: string | null
+          updated_at: string | null
+          vertical_principal: string | null
+          website: string | null
+        }
+        Insert: {
+          cautela_flag?: boolean | null
+          cautela_motivo?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          deals_realizados?: number | null
+          id?: string | null
+          municipios_interesse?: string[] | null
+          nome?: string | null
+          observacoes?: string | null
+          porte_alvo?: string[] | null
+          prioridade_global?: number | null
+          responsavel_id?: string | null
+          setores_interesse?: string[] | null
+          sinergias_chave?: string[] | null
+          source?: string | null
+          status?: string | null
+          subsetores_interesse?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          tipo?: string | null
+          ufs_interesse?: string[] | null
+          ultimo_contato_em?: string | null
+          updated_at?: string | null
+          vertical_principal?: string | null
+          website?: string | null
+        }
+        Update: {
+          cautela_flag?: boolean | null
+          cautela_motivo?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          deals_realizados?: number | null
+          id?: string | null
+          municipios_interesse?: string[] | null
+          nome?: string | null
+          observacoes?: string | null
+          porte_alvo?: string[] | null
+          prioridade_global?: number | null
+          responsavel_id?: string | null
+          setores_interesse?: string[] | null
+          sinergias_chave?: string[] | null
+          source?: string | null
+          status?: string | null
+          subsetores_interesse?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          tipo?: string | null
+          ufs_interesse?: string[] | null
+          ultimo_contato_em?: string | null
+          updated_at?: string | null
+          vertical_principal?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      eb_call_feedback: {
+        Row: {
+          ai_extracted: Json | null
+          bdr_user_id: string | null
+          call_at: string | null
+          cnpj: string | null
+          created_at: string | null
+          dor_principal: string | null
+          duration_seconds: number | null
+          ebitda_revelado: number | null
+          faturamento_revelado: number | null
+          followup_action: string | null
+          followup_at: string | null
+          id: string | null
+          interest_level: number | null
+          num_socios_real: number | null
+          outcome: string | null
+          raw_notes: string | null
+          signals_added: string[] | null
+          timing_estimado: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_extracted?: Json | null
+          bdr_user_id?: string | null
+          call_at?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          dor_principal?: string | null
+          duration_seconds?: number | null
+          ebitda_revelado?: number | null
+          faturamento_revelado?: number | null
+          followup_action?: string | null
+          followup_at?: string | null
+          id?: string | null
+          interest_level?: number | null
+          num_socios_real?: number | null
+          outcome?: string | null
+          raw_notes?: string | null
+          signals_added?: string[] | null
+          timing_estimado?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_extracted?: Json | null
+          bdr_user_id?: string | null
+          call_at?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          dor_principal?: string | null
+          duration_seconds?: number | null
+          ebitda_revelado?: number | null
+          faturamento_revelado?: number | null
+          followup_action?: string | null
+          followup_at?: string | null
+          id?: string | null
+          interest_level?: number | null
+          num_socios_real?: number | null
+          outcome?: string | null
+          raw_notes?: string | null
+          signals_added?: string[] | null
+          timing_estimado?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      eb_companies: {
+        Row: {
+          bairro: string | null
+          capital_social: number | null
+          cnae_descricao: string | null
+          cnae_principal: string | null
+          cnpj: string | null
+          created_at: string | null
+          data_abertura: string | null
+          ebitda_estimado: number | null
+          faturamento_estimado: number | null
+          funcionarios_estimado: number | null
+          has_listing: boolean | null
+          last_enriched_at: string | null
+          latitude: number | null
+          listing_id: string | null
+          longitude: number | null
+          municipio: string | null
+          natureza_descricao: string | null
+          natureza_juridica: string | null
+          nome_fantasia: string | null
+          porte: string | null
+          qtd_socios: number | null
+          razao_social: string | null
+          setor_ma: string | null
+          situacao_cadastral: string | null
+          socios_pf: number | null
+          socios_pj: number | null
+          source: string | null
+          subsetor_ma: string | null
+          uf: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bairro?: string | null
+          capital_social?: number | null
+          cnae_descricao?: string | null
+          cnae_principal?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          data_abertura?: string | null
+          ebitda_estimado?: number | null
+          faturamento_estimado?: number | null
+          funcionarios_estimado?: number | null
+          has_listing?: boolean | null
+          last_enriched_at?: string | null
+          latitude?: number | null
+          listing_id?: string | null
+          longitude?: number | null
+          municipio?: string | null
+          natureza_descricao?: string | null
+          natureza_juridica?: string | null
+          nome_fantasia?: string | null
+          porte?: string | null
+          qtd_socios?: number | null
+          razao_social?: string | null
+          setor_ma?: string | null
+          situacao_cadastral?: string | null
+          socios_pf?: number | null
+          socios_pj?: number | null
+          source?: string | null
+          subsetor_ma?: string | null
+          uf?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bairro?: string | null
+          capital_social?: number | null
+          cnae_descricao?: string | null
+          cnae_principal?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          data_abertura?: string | null
+          ebitda_estimado?: number | null
+          faturamento_estimado?: number | null
+          funcionarios_estimado?: number | null
+          has_listing?: boolean | null
+          last_enriched_at?: string | null
+          latitude?: number | null
+          listing_id?: string | null
+          longitude?: number | null
+          municipio?: string | null
+          natureza_descricao?: string | null
+          natureza_juridica?: string | null
+          nome_fantasia?: string | null
+          porte?: string | null
+          qtd_socios?: number | null
+          razao_social?: string | null
+          setor_ma?: string | null
+          situacao_cadastral?: string | null
+          socios_pf?: number | null
+          socios_pj?: number | null
+          source?: string | null
+          subsetor_ma?: string | null
+          uf?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      eb_companies_enriched: {
+        Row: {
+          bairro: string | null
+          capital_social: number | null
+          cep: string | null
+          cnae_descricao: string | null
+          cnae_principal: string | null
+          cnae_secundarios: Json | null
+          cnpj: string | null
+          created_at: string | null
+          data_abertura: string | null
+          data_situacao_cadastral: string | null
+          ebitda_estimado: number | null
+          endereco_logradouro: string | null
+          endereco_numero: string | null
+          faturamento_estimado: number | null
+          funcionarios_estimado: number | null
+          has_listing: boolean | null
+          last_enriched_at: string | null
+          latitude: number | null
+          listing_asking_price: number | null
+          listing_created_at: string | null
+          listing_id: string | null
+          listing_title: string | null
+          longitude: number | null
+          municipio: string | null
+          natureza_descricao: string | null
+          natureza_juridica: string | null
+          nome_fantasia: string | null
+          porte: string | null
+          qtd_socios: number | null
+          raw_data: Json | null
+          razao_social: string | null
+          setor_ma: string | null
+          signal_count: number | null
+          signal_weight_sum: number | null
+          signals: Json | null
+          situacao_cadastral: string | null
+          socios_pf: number | null
+          socios_pj: number | null
+          source: string | null
+          subsetor_ma: string | null
+          uf: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      eb_companies_scored: {
+        Row: {
+          buyer_fit_score: number | null
+          capital_social: number | null
+          cnae_descricao: string | null
+          cnae_principal: string | null
+          cnpj: string | null
+          data_abertura: string | null
+          has_listing: boolean | null
+          idade_empresa: number | null
+          listing_id: string | null
+          ma_breakdown: Json | null
+          ma_score: number | null
+          municipio: string | null
+          nome_fantasia: string | null
+          porte: string | null
+          qtd_socios: number | null
+          razao_social: string | null
+          scores_computed_at: string | null
+          setor_ma: string | null
+          subsetor_ma: string | null
+          sucessao_breakdown: Json | null
+          sucessao_score: number | null
+          uf: string | null
+          vispe_breakdown: Json | null
+          vispe_score: number | null
+        }
+        Relationships: []
+      }
+      eb_company_scores: {
+        Row: {
+          buyer_fit_score: number | null
+          cnpj: string | null
+          computed_at: string | null
+          formula_version: string | null
+          id: string | null
+          is_current: boolean | null
+          ma_breakdown: Json | null
+          ma_score: number | null
+          score_engine_version: string | null
+          sucessao_breakdown: Json | null
+          sucessao_score: number | null
+          vispe_breakdown: Json | null
+          vispe_score: number | null
+        }
+        Insert: {
+          buyer_fit_score?: number | null
+          cnpj?: string | null
+          computed_at?: string | null
+          formula_version?: string | null
+          id?: string | null
+          is_current?: boolean | null
+          ma_breakdown?: Json | null
+          ma_score?: number | null
+          score_engine_version?: string | null
+          sucessao_breakdown?: Json | null
+          sucessao_score?: number | null
+          vispe_breakdown?: Json | null
+          vispe_score?: number | null
+        }
+        Update: {
+          buyer_fit_score?: number | null
+          cnpj?: string | null
+          computed_at?: string | null
+          formula_version?: string | null
+          id?: string | null
+          is_current?: boolean | null
+          ma_breakdown?: Json | null
+          ma_score?: number | null
+          score_engine_version?: string | null
+          sucessao_breakdown?: Json | null
+          sucessao_score?: number | null
+          vispe_breakdown?: Json | null
+          vispe_score?: number | null
+        }
+        Relationships: []
+      }
+      eb_company_signals: {
+        Row: {
+          cnpj: string | null
+          confidence: number | null
+          created_at: string | null
+          expires_at: string | null
+          id: string | null
+          signal_key: string | null
+          signal_text: string | null
+          signal_value: number | null
+          source: string | null
+          updated_at: string | null
+          weight: number | null
+        }
+        Insert: {
+          cnpj?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          signal_key?: string | null
+          signal_text?: string | null
+          signal_value?: number | null
+          source?: string | null
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Update: {
+          cnpj?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          signal_key?: string | null
+          signal_text?: string | null
+          signal_value?: number | null
+          source?: string | null
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      eb_events: {
+        Row: {
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          error_message: string | null
+          event_type: string | null
+          id: number | null
+          payload: Json | null
+          processed_at: string | null
+          processed_status: string | null
+          retry_count: number | null
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          event_type?: string | null
+          id?: number | null
+          payload?: Json | null
+          processed_at?: string | null
+          processed_status?: string | null
+          retry_count?: number | null
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          event_type?: string | null
+          id?: number | null
+          payload?: Json | null
+          processed_at?: string | null
+          processed_status?: string | null
+          retry_count?: number | null
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
+      eb_investment_theses: {
+        Row: {
+          active: boolean | null
+          boosting_signals: string[] | null
+          category: string | null
+          default_pitch_template: string | null
+          description: string | null
+          display_name: string | null
+          required_signals: string[] | null
+          thesis_key: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          boosting_signals?: string[] | null
+          category?: string | null
+          default_pitch_template?: string | null
+          description?: string | null
+          display_name?: string | null
+          required_signals?: string[] | null
+          thesis_key?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          boosting_signals?: string[] | null
+          category?: string | null
+          default_pitch_template?: string | null
+          description?: string | null
+          display_name?: string | null
+          required_signals?: string[] | null
+          thesis_key?: string | null
+        }
+        Relationships: []
+      }
+      eb_matches: {
+        Row: {
+          ai_confidence: number | null
+          ai_pitch: string | null
+          ai_thesis_summary: string | null
+          assigned_bdr: string | null
+          buyer_id: string | null
+          cnpj: string | null
+          computed_at: string | null
+          geografia_fit: number | null
+          id: string | null
+          is_current: boolean | null
+          ma_score_emp: number | null
+          match_score: number | null
+          porte_fit: number | null
+          prioridade: number | null
+          reasons: Json | null
+          setor_fit: number | null
+          status: string | null
+          tese_fit: number | null
+          thesis_key: string | null
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_pitch?: string | null
+          ai_thesis_summary?: string | null
+          assigned_bdr?: string | null
+          buyer_id?: string | null
+          cnpj?: string | null
+          computed_at?: string | null
+          geografia_fit?: number | null
+          id?: string | null
+          is_current?: boolean | null
+          ma_score_emp?: number | null
+          match_score?: number | null
+          porte_fit?: number | null
+          prioridade?: number | null
+          reasons?: Json | null
+          setor_fit?: number | null
+          status?: string | null
+          tese_fit?: number | null
+          thesis_key?: string | null
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_pitch?: string | null
+          ai_thesis_summary?: string | null
+          assigned_bdr?: string | null
+          buyer_id?: string | null
+          cnpj?: string | null
+          computed_at?: string | null
+          geografia_fit?: number | null
+          id?: string | null
+          is_current?: boolean | null
+          ma_score_emp?: number | null
+          match_score?: number | null
+          porte_fit?: number | null
+          prioridade?: number | null
+          reasons?: Json | null
+          setor_fit?: number | null
+          status?: string | null
+          tese_fit?: number | null
+          thesis_key?: string | null
+        }
+        Relationships: []
+      }
+      eb_matches_enriched: {
+        Row: {
+          ai_pitch: string | null
+          ai_thesis_summary: string | null
+          assigned_bdr: string | null
+          buyer_id: string | null
+          buyer_nome: string | null
+          buyer_tipo: string | null
+          capital_social: number | null
+          cnae_descricao: string | null
+          cnae_principal: string | null
+          cnpj: string | null
+          computed_at: string | null
+          data_abertura: string | null
+          geografia_fit: number | null
+          has_listing: boolean | null
+          id: string | null
+          ma_score: number | null
+          ma_score_emp: number | null
+          match_score: number | null
+          municipio: string | null
+          nome_fantasia: string | null
+          porte: string | null
+          porte_fit: number | null
+          prioridade: number | null
+          qtd_socios: number | null
+          razao_social: string | null
+          reasons: Json | null
+          setor_fit: number | null
+          setor_ma: string | null
+          setores_interesse: string[] | null
+          status: string | null
+          subsetor_ma: string | null
+          sucessao_score: number | null
+          tese_fit: number | null
+          thesis_category: string | null
+          thesis_description: string | null
+          thesis_key: string | null
+          thesis_name: string | null
+          ticket_max: number | null
+          ticket_min: number | null
+          uf: string | null
+          vispe_score: number | null
+        }
+        Relationships: []
+      }
+      eb_opportunities_ready: {
+        Row: {
+          ai_pitch: string | null
+          assigned_bdr: string | null
+          best_thesis_key: string | null
+          best_thesis_name: string | null
+          bubble_color: string | null
+          bubble_size: number | null
+          buyers_count: number | null
+          cnae_descricao: string | null
+          cnae_principal: string | null
+          cnpj: string | null
+          data_abertura: string | null
+          default_pitch: string | null
+          has_listing: boolean | null
+          latitude: number | null
+          listing_id: string | null
+          longitude: number | null
+          ma_score: number | null
+          municipio: string | null
+          nome_fantasia: string | null
+          razao_social: string | null
+          refreshed_at: string | null
+          setor_ma: string | null
+          situacao_cadastral: string | null
+          source_match_count: number | null
+          status: string | null
+          subsetor_ma: string | null
+          sucessao_score: number | null
+          top_buyers: Json | null
+          uf: string | null
+          vispe_score: number | null
+        }
+        Relationships: []
+      }
+      eb_score_engine_versions: {
+        Row: {
+          activated_at: string | null
+          created_at: string | null
+          created_by: string | null
+          deactivated_at: string | null
+          description: string | null
+          id: string | null
+          notes: string | null
+          thresholds_json: Json | null
+          version: string | null
+          weights_json: Json | null
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deactivated_at?: string | null
+          description?: string | null
+          id?: string | null
+          notes?: string | null
+          thresholds_json?: Json | null
+          version?: string | null
+          weights_json?: Json | null
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deactivated_at?: string | null
+          description?: string | null
+          id?: string | null
+          notes?: string | null
+          thresholds_json?: Json | null
+          version?: string | null
+          weights_json?: Json | null
+        }
+        Relationships: []
+      }
+      eb_signal_catalog: {
+        Row: {
+          affects_scores: string[] | null
+          category: string | null
+          default_weight: number | null
+          description: string | null
+          signal_key: string | null
+        }
+        Insert: {
+          affects_scores?: string[] | null
+          category?: string | null
+          default_weight?: number | null
+          description?: string | null
+          signal_key?: string | null
+        }
+        Update: {
+          affects_scores?: string[] | null
+          category?: string | null
+          default_weight?: number | null
+          description?: string | null
+          signal_key?: string | null
+        }
+        Relationships: []
+      }
+      eb_v_bdr_history: {
+        Row: {
+          bdr_user_id: string | null
+          call_at: string | null
+          cnpj: string | null
+          dor_principal: string | null
+          followup_action: string | null
+          followup_at: string | null
+          id: string | null
+          interest_level: number | null
+          ma_score: number | null
+          outcome: string | null
+          razao_social: string | null
+          sucessao_score: number | null
+          timing_estimado: string | null
+          vispe_score: number | null
+        }
+        Relationships: []
+      }
+      eb_v_isp_universe: {
+        Row: {
+          buyer_fit_score: number | null
+          cnae_descricao: string | null
+          cnae_principal: string | null
+          cnpj: string | null
+          faturamento_estimado: number | null
+          has_listing: boolean | null
+          ma_score: number | null
+          municipio: string | null
+          nome_fantasia: string | null
+          porte: string | null
+          qtd_socios: number | null
+          razao_social: string | null
+          scores_computed_at: string | null
+          situacao_cadastral: string | null
+          sucessao_score: number | null
+          uf: string | null
+          vispe_score: number | null
+        }
+        Relationships: []
+      }
+      eb_v_opportunities_by_municipio: {
+        Row: {
+          avg_ma_score: number | null
+          lat_centroid: number | null
+          lng_centroid: number | null
+          municipio: string | null
+          premium_count: number | null
+          total: number | null
+          uf: string | null
+        }
+        Relationships: []
+      }
+      eb_v_opportunities_by_uf: {
+        Row: {
+          avg_ma_score: number | null
+          premium_count: number | null
+          strong_count: number | null
+          top_setor: string | null
+          total: number | null
+          uf: string | null
+        }
+        Relationships: []
+      }
       public_buyer_profiles: {
         Row: {
           buyer_name: string | null
