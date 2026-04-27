@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel, Brain } from "lucide-react";
+import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel, Brain, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { MatchDecisionCard, type MatchDecisionRow } from "@/components/equity-brain/MatchDecisionCard";
+import { EngineHealthCard } from "@/components/equity-brain/EngineHealthCard";
 
 type MatchRow = MatchDecisionRow;
 
