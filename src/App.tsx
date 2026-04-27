@@ -63,6 +63,7 @@ import EBCallsPage from "./pages/equity-brain/CallsPage";
 import EBDealDetailPage from "./pages/equity-brain/DealDetailPage";
 import EBMapaPage from "./pages/equity-brain/MapaPage";
 import EBGrafoPage from "./pages/equity-brain/GrafoPage";
+import EBGrafoJarvisPage from "./pages/equity-brain/GrafoJarvisPage";
 import EBBoardPage from "./pages/equity-brain/BoardPage";
 import EBShadowPage from "./pages/equity-brain/ShadowPage";
 
@@ -150,6 +151,7 @@ const App = () => (
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
               <Route path="mapa"          element={<EBMapaPage />} />
               <Route path="grafo"         element={<EBGrafoPage />} />
+              <Route path="grafo-jarvis"  element={<EBGrafoJarvisPage />} />
               <Route path="buyers"        element={<EBBuyersPage />} />
               <Route path="teses"         element={<EBTesesPage />} />
               <Route path="calls"         element={<EBCallsPage />} />
