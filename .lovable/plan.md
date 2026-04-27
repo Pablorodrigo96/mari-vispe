@@ -1,88 +1,123 @@
-## Plano — Fase 1 Equity Brain: Camada de Dados Estruturados (1.1 → 1.4)
+# Equity Brain — Fase 1.5 a 1.7: ingestão, sinais e view enriquecida
 
-Esta fase cria **apenas a estrutura de tabelas, índices, RLS e seeds**. Edge functions (`sync-companies-from-cnpj`, `compute-signals`) e a view `companies_enriched` ficam para fases seguintes (estão listadas como entregáveis do bloco maior, mas os prompts 1.1–1.4 pedem só schema + seeds).
+## Objetivo
 
-Tudo vai em **uma única migration** no schema isolado `equity_brain`, sem tocar `public`.
+Fechar a Fase 1 do Equity Brain com:
+1. **Edge function `sync-companies-from-cnpj`** — popula `equity_brain.companies` + `company_partners` a partir da base nacional da Receita Federal (`EXTERNAL_DB_URL`).
+2. **Edge function `compute-signals`** — gera sinais determinísticos em `equity_brain.company_signals` a partir das regras do catálogo.
+3. **View `equity_brain.companies_enriched`** — consolida companies + signals (JSONB) + listing para leitura única do front e dos scores.
 
 ---
 
-### 🔧 Correção crítica vs. prompt original
+## ⚠️ Correção crítica vs. prompt original
 
-O prompt usa nas policies:
+O prompt assume que `EXTERNAL_DB_URL` é uma **API REST** (`fetch(${EXTERNAL_DB_URL}/companies?...)`). **Não é.** Verifiquei `supabase/functions/national-search/index.ts` e confirmei:
+
+- `EXTERNAL_DB_URL` é uma **connection string Postgres** (usada com `deno-postgres`, mesmo padrão da edge `national-search` que já roda em produção).
+- O schema real é o **layout oficial da Receita Federal**: tabelas `empresas`, `estabelecimentos`, `socios` — **não** uma tabela única `companies`.
+- Não existe `EXTERNAL_DB_TOKEN` na lista de secrets.
+
+**Adapto o `sync-companies-from-cnpj`** para conectar via `deno-postgres` exatamente como o `national-search`, fazer JOIN entre `estabelecimentos + empresas + socios` e mapear para `equity_brain.companies`. O resto do pipeline (filtros ATIVA/idade≥5, mapeamento CNAE→setor, upsert, retorno JSON) fica idêntico ao prompt.
+
+---
+
+## 1.5 — Edge function `sync-companies-from-cnpj`
+
+**Arquivo novo:** `supabase/functions/sync-companies-from-cnpj/index.ts`
+
+- `POST` com body `{ uf?: string, cnae_prefixes?: string[], limit?: number, offset?: number }` (default `limit=1000, offset=0`, máx 5000).
+- Conecta no `EXTERNAL_DB_URL` via `deno-postgres`.
+- Query base com JOIN `estabelecimentos + empresas`, filtrando `situacao_cadastral='02'` (ATIVA na codificação RF) e `data_inicio_atividade <= CURRENT_DATE - INTERVAL '5 years'`. Filtros opcionais por `uf` e `cnae_fiscal_principal LIKE ANY(prefixes)`.
+- Segunda query para sócios: `SELECT ... FROM socios WHERE cnpj_basico = ANY($cnpj_basicos)`.
+- Mapeamentos:
+  - `situacao_cadastral`: `'02'→'ATIVA'`, `'03'→'SUSPENSA'`, `'04'→'INAPTA'`, `'08'→'BAIXADA'`, `'01'→'NULA'`.
+  - `porte_empresa`: `'01'→'ME'`, `'03'→'EPP'`, `'05'→'DEMAIS'`; reclassifica para `MEDIA` quando `capital_social > 1_000_000`.
+  - `identificador_socio`: `1→'PJ'`, `2→'PF'`, `3→'PF'`.
+- Lookup `setor_ma`/`subsetor_ma` via `equity_brain.cnae_setor_map` em memória.
+- Marca `has_listing=true` e preenche `listing_id` cruzando com `public.listings.cnpj` no lote.
+- **UPSERT** em `equity_brain.companies` com `onConflict: 'cnpj'`.
+- **Sócios:** `DELETE WHERE cnpj = ANY($cnpjs_do_lote)` + `INSERT` em massa (idempotência por refresh do snapshot).
+- Retorna `{ imported, skipped, partners_imported, errors }`.
+- **Auth:** `verify_jwt` no default (true) — operação cara, só admin/service role.
+
+---
+
+## 1.6 — Edge function `compute-signals`
+
+**Arquivo novo:** `supabase/functions/compute-signals/index.ts`
+
+Implementação fiel ao prompt (TS puro sobre cliente Supabase, sem IA):
+- Body: `{ cnpjs?: string[], filter?: { uf?: string, setor_ma?: string }, limit?: number }` (default 500).
+- Query: `supabase.schema("equity_brain").from("companies").select("*, company_partners(*)")` com filtros opcionais.
+- 11 regras determinísticas: idade da empresa (15+/10–15), situação ativa, sócios PF / único / família (mesmo último sobrenome), idade do sócio (usa `company_partners.idade_estimada` quando existir — fica nulo na maioria por ora, conforme aceito como "imprecisão temporária"), setor consolidando/recorrente, porte atrativo, capital alto, intenção de venda explícita, governança baixa, oportunidade CFO Vispe.
+- `signal_value` numérico relevante; `signal_text` descritivo; `weight` do catálogo; `source='derived_sql'`; `confidence=1.0`.
+- **UPSERT** com `onConflict: 'cnpj,signal_key'` (UNIQUE já criado na Fase 1.3).
+- **`regiao_com_compradores_ativos`**: código preparado mas comentado — depende da Fase 3.
+- Retorna `{ companies, signals }`.
+
+---
+
+## 1.7 — View `equity_brain.companies_enriched` (migration)
+
 ```sql
-EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_partner_accountant = true)
+CREATE OR REPLACE VIEW equity_brain.companies_enriched
+WITH (security_invoker = true) AS
+SELECT
+  c.*,
+  COALESCE(
+    (SELECT jsonb_object_agg(
+        s.signal_key,
+        jsonb_build_object('value', s.signal_value, 'weight', s.weight,
+                           'text', s.signal_text, 'confidence', s.confidence))
+     FROM equity_brain.company_signals s WHERE s.cnpj = c.cnpj),
+    '{}'::jsonb
+  ) AS signals,
+  (SELECT COUNT(*) FROM equity_brain.company_signals s WHERE s.cnpj = c.cnpj) AS signal_count,
+  (SELECT COALESCE(SUM(s.weight), 0) FROM equity_brain.company_signals s WHERE s.cnpj = c.cnpj) AS signal_weight_sum,
+  l.title AS listing_title,
+  l.asking_price AS listing_asking_price,
+  l.created_at AS listing_created_at
+FROM equity_brain.companies c
+LEFT JOIN public.listings l ON l.id = c.listing_id;
+
+GRANT SELECT ON equity_brain.companies_enriched TO authenticated;
 ```
 
-Verifiquei a tabela `public.profiles`: o vínculo com auth é via **`user_id`**, não `id` (`id` é PK independente). Vou trocar por `p.user_id = auth.uid()` em todas as policies, senão nenhum contador parceiro consegue ler.
-
-Também ajusto `'admin'`/`'advisor'` para cast `::app_role` (assinatura da função `public.has_role(uuid, app_role)`).
+**Segurança:** views Postgres por padrão executam como o dono e **ignoram RLS** das tabelas base. Como `companies`/`company_signals` têm RLS restrito (admin/advisor/contador parceiro), uso `WITH (security_invoker = true)` (Postgres 15+, suportado no Supabase) para respeitar o RLS das tabelas base. Sem isso, qualquer authenticated leria dados sensíveis via view.
 
 ---
 
-### 1.1 — `equity_brain.companies`
+## Verificação operacional após apply
 
-- DDL completa conforme especificado: identificação, classificação CNAE/natureza/porte, geografia (lat/long), tempo/situação, capital, agregados de sócios, enriquecimento estimado (faturamento/funcionarios/ebitda), vínculos com plataforma (`has_listing`, `listing_id` FK → `public.listings`), setor M&A normalizado, raw_data JSONB, timestamps.
-- 9 índices conforme prompt (incluindo composto `uf+cnae` e parcial `listing_id WHERE NOT NULL`).
-- Função `equity_brain.set_updated_at()` + trigger `trg_companies_updated_at`.
-- RLS habilitado:
-  - `companies_read_admins_advisors` (SELECT, authenticated): admin OU advisor OU partner_accountant.
-  - `companies_write_service_only` (ALL, service_role).
-
-### 1.2 — `equity_brain.company_partners`
-
-- Tabela de sócios detalhados, FK `cnpj` → `companies(cnpj) ON DELETE CASCADE`.
-- Campos: nome, cpf_cnpj, tipo (PF/PJ), qualificação, data_entrada, **idade_estimada**, **is_provavel_fundador**, raw_data.
-- 3 índices: cnpj, idade_estimada, tipo.
-- RLS: leitura admin/advisor/partner_accountant; escrita service_role.
-
-### 1.3 — `equity_brain.company_signals` + `signal_catalog`
-
-- `company_signals`: id, cnpj (FK CASCADE), signal_key, signal_value, signal_text, weight, source, confidence, expires_at, timestamps. UNIQUE `(cnpj, signal_key)`.
-- 3 índices: cnpj, key, source.
-- `signal_catalog`: lookup com signal_key PK, category, description, default_weight, affects_scores TEXT[].
-- **Seed dos 18 signals** do prompt (estrutural, sucessao, mercado, governanca, comercial) com `ON CONFLICT (signal_key) DO UPDATE`.
-- RLS:
-  - `signals_read_admins_advisors` + `signals_write_service`.
-  - `catalog_read_all_authenticated` (qualquer authenticated lê o catálogo — referência pública interna).
-
-### 1.4 — `equity_brain.cnae_setor_map`
-
-- Lookup CNAE → setor M&A canônico, com flags `is_recorrente` e `is_consolidando`.
-- **Seed inicial** dos 19 CNAEs do prompt: ISP/Telecom (8), Saúde (5), Indústria (2), Tecnologia/SaaS (3) com `ON CONFLICT DO UPDATE`. Estrutura permite expansão futura.
-- Índice em `setor_ma`.
-- RLS: `cnae_map_read_all` (todos os authenticated).
+1. Deploy automático das 2 edges.
+2. Curl de teste do sync (JWT admin):
+   ```bash
+   curl -X POST https://eiprjgotjruiutztjavp.functions.supabase.co/sync-companies-from-cnpj \
+     -H "Authorization: Bearer <admin_jwt>" -H "Content-Type: application/json" \
+     -d '{"cnae_prefixes":["6190"],"uf":"RS","limit":1000}'
+   ```
+3. `SELECT COUNT(*) FROM equity_brain.companies;` → ≈1000.
+4. `SELECT COUNT(*) FROM equity_brain.company_partners;` → variável.
+5. Curl do compute-signals: `{"filter":{"setor_ma":"isp_telecom"},"limit":1000}`.
+6. `SELECT cnpj, razao_social, signal_count, signal_weight_sum FROM equity_brain.companies_enriched ORDER BY signal_weight_sum DESC LIMIT 10;`
 
 ---
 
-### 📋 Verificações ao final
+## 📁 Diff resumido
 
-A migration roda atomicamente. Após apply, valido com:
-
-```sql
-SELECT table_name FROM information_schema.tables WHERE table_schema='equity_brain' ORDER BY 1;
--- esperado: cnae_setor_map, companies, company_partners, company_signals, signal_catalog
-
-SELECT COUNT(*) FROM equity_brain.signal_catalog;        -- 18
-SELECT setor_ma, COUNT(*) FROM equity_brain.cnae_setor_map GROUP BY setor_ma;
--- isp_telecom: 8, saude: 5, industria: 2, tecnologia: 3
 ```
++ supabase/functions/sync-companies-from-cnpj/index.ts                  (novo, ~180 linhas)
++ supabase/functions/compute-signals/index.ts                           (novo, ~140 linhas)
++ supabase/migrations/<ts>_equity_brain_companies_enriched_view.sql     (novo, ~25 linhas)
+```
+
+Sem alterações em `supabase/config.toml`, schema `public`, edges existentes, ou `types.ts` (regenerado depois na Fase 2 quando o front consumir a view).
 
 ---
 
-### 🚫 O que NÃO faço aqui
+## 🚫 Fora de escopo
 
-- **Sem alterar `public`**: nenhuma alteração em `listings`, `profiles`, `user_roles` etc. A FK `companies.listing_id → public.listings(id)` é a única referência cruzada (somente leitura/SET NULL).
-- **Sem edge functions** (`sync-companies-from-cnpj`, `compute-signals`) — entram em fase posterior.
-- **Sem view `companies_enriched`** — depende de signals já populados; entra junto com a edge `compute-signals`.
-- **Sem rotas React** `/equity-brain/*` — fase de UI.
-- **Sem alterar `supabase/config.toml`**.
-
----
-
-### 📁 Diff resumido
-
-```
-+ supabase/migrations/<timestamp>_equity_brain_phase1_data_layer.sql   (novo, ~250 linhas)
-```
-
-Próxima fase (após esta aprovada): edge function `sync-companies-from-cnpj` puxando do `EXTERNAL_DB_URL` em batch + `compute-signals` derivando os 18 sinais do catálogo.
+- UI React em `/equity-brain/*` (fase de UI).
+- Tabela `equity_brain.buyers` e o sinal `regiao_com_compradores_ativos` ativo (Fase 3).
+- Inferência de idade do sócio via IA (Fase 7).
+- Cron schedule do sync via `pg_cron` (deixo pronto para ativar quando você pedir).
