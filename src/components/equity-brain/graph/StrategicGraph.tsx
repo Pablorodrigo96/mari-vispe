@@ -467,13 +467,35 @@ export function StrategicGraph() {
       />
       {/* Grid sutil estilo HUD */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        className="absolute inset-0 pointer-events-none opacity-[0.05]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
+            "linear-gradient(rgba(56,189,248,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.5) 1px, transparent 1px)",
+          backgroundSize: "56px 56px",
         }}
       />
+      {/* HUD: anéis concêntricos centrais estilo Jarvis */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.10]">
+        <defs>
+          <radialGradient id="hud-ring" cx="50%" cy="50%" r="50%">
+            <stop offset="60%" stopColor="rgba(56,189,248,0)" />
+            <stop offset="100%" stopColor="rgba(56,189,248,0.6)" />
+          </radialGradient>
+        </defs>
+        <g style={{ transform: "translate(50%, 50%)" }}>
+          <circle r="120" fill="none" stroke="rgba(56,189,248,0.5)" strokeDasharray="2 6" strokeWidth="0.6" />
+          <circle r="240" fill="none" stroke="rgba(16,185,129,0.4)" strokeDasharray="3 10" strokeWidth="0.6" />
+          <circle r="380" fill="none" stroke="rgba(56,189,248,0.3)" strokeDasharray="1 4" strokeWidth="0.5" />
+          <circle r="540" fill="none" stroke="rgba(168,85,247,0.25)" strokeDasharray="4 14" strokeWidth="0.5" />
+          <line x1="-700" y1="0" x2="700" y2="0" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+          <line x1="0" y1="-700" x2="0" y2="700" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+        </g>
+      </svg>
+      {/* Cantos HUD */}
+      <div className="absolute top-2 left-2 w-6 h-6 border-l border-t border-cyan-500/30 pointer-events-none" />
+      <div className="absolute top-2 right-2 w-6 h-6 border-r border-t border-cyan-500/30 pointer-events-none" />
+      <div className="absolute bottom-2 left-2 w-6 h-6 border-l border-b border-cyan-500/30 pointer-events-none" />
+      <div className="absolute bottom-2 right-2 w-6 h-6 border-r border-b border-cyan-500/30 pointer-events-none" />
 
       {isLoading && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-zinc-950/80">
