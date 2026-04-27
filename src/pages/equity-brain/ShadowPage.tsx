@@ -10,6 +10,7 @@ import { MatchDecisionCard, type MatchDecisionRow } from "@/components/equity-br
 import { EngineHealthCard } from "@/components/equity-brain/EngineHealthCard";
 import { DriftAnalyticsCard } from "@/components/equity-brain/DriftAnalyticsCard";
 import { BackfillHistoryCard } from "@/components/equity-brain/BackfillHistoryCard";
+import { EventQueueHealthCard } from "@/components/equity-brain/EventQueueHealthCard";
 
 type MatchRow = MatchDecisionRow;
 
