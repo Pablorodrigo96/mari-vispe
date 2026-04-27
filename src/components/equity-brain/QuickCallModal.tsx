@@ -82,15 +82,48 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="dark bg-zinc-900 border-zinc-800 text-zinc-100 max-w-2xl">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="dark bg-zinc-900 border-zinc-800 text-zinc-100 max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-zinc-100">
-            Registrar call · <span className="text-emerald-400">{razaoSocial ?? cnpj}</span>
+            {nextPitch ? "Próximo pitch sugerido" : "Registrar call"} · <span className="text-emerald-400">{razaoSocial ?? cnpj}</span>
           </DialogTitle>
         </DialogHeader>
 
+        {nextPitch && (
+          <div className="rounded-lg border border-emerald-700/40 bg-emerald-950/30 p-4 space-y-3">
+            <div className="flex items-center gap-2 text-emerald-300 text-xs uppercase tracking-wider">
+              <Sparkles className="h-3.5 w-3.5" />
+              Pitch gerado por Claude (Fase 7)
+            </div>
+            {nextPitch.abertura_curta && (
+              <div>
+                <div className="text-[10px] uppercase text-zinc-500 mb-1">Abertura curta</div>
+                <div className="text-sm text-zinc-100 break-words">{nextPitch.abertura_curta}</div>
+              </div>
+            )}
+            {nextPitch.pitch && (
+              <div>
+                <div className="text-[10px] uppercase text-zinc-500 mb-1">Pitch completo</div>
+                <div className="text-sm text-zinc-200 whitespace-pre-wrap break-words">{nextPitch.pitch}</div>
+              </div>
+            )}
+            {nextPitch.subject && (
+              <div>
+                <div className="text-[10px] uppercase text-zinc-500 mb-1">Assunto</div>
+                <div className="text-sm text-zinc-200 break-words">{nextPitch.subject}</div>
+              </div>
+            )}
+            <Button onClick={copyPitch} size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-semibold">
+              {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
+              {copied ? "Copiado" : "Copiar pitch"}
+            </Button>
+          </div>
+        )}
+
+        {!nextPitch && (
         <div className="space-y-4">
+
           <div>
             <Label className="text-xs uppercase tracking-wider text-zinc-400">Resultado</Label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2">
