@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Map as MapIcon, Maximize2, Minimize2 } from "lucide-react";
+import { Map as MapIcon, Maximize2, Minimize2, Brain } from "lucide-react";
 import { StrategicGraph } from "@/components/equity-brain/graph/StrategicGraph";
 import { Button } from "@/components/ui/button";
 
@@ -41,6 +41,14 @@ export default function GrafoPage() {
           </div>
 
           <div className="flex-1" />
+
+          <Link
+            to="/equity-brain/grafo-jarvis"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 hover:bg-emerald-900/40 text-xs transition-colors"
+          >
+            <Brain className="h-3.5 w-3.5" />
+            Modo Jarvis 3D
+          </Link>
 
           <Link
             to="/equity-brain/mapa"
