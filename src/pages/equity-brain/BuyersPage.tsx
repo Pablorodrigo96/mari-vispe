@@ -16,16 +16,20 @@ import { cn } from "@/lib/utils";
 
 export default function BuyersPage() {
   const qc = useQueryClient();
+  const { buyerVerticalKey, vertical } = useVertical();
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
   const buyers = useQuery({
-    queryKey: ["eb", "buyers-list"],
+    queryKey: ["eb", "buyers-list", buyerVerticalKey],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .schema("equity_brain" as any).from("buyers" as any)
         .select(`*, theses:buyer_theses(count), matches:matches(count)`)
+        .order("prioridade_global", { ascending: true, nullsFirst: false })
         .order("nome");
+      if (buyerVerticalKey) q = q.eq("vertical_principal", buyerVerticalKey);
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as any[];
     },
