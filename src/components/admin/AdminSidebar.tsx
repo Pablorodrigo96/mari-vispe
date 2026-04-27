@@ -74,6 +74,37 @@ export function AdminSidebar() {
             );
           })}
         </ul>
+
+        {showCockpit && (
+          <div className="mt-6 pt-4 border-t border-border">
+            <div className="flex items-center gap-2 px-4 mb-2">
+              <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="text-[10px] uppercase tracking-widest font-semibold text-emerald-500">Cockpit Interno</span>
+            </div>
+            <ul className="space-y-1">
+              {ebItems.map((item) => {
+                const isActive = location.pathname === item.href ||
+                  location.pathname.startsWith(item.href + '/');
+                return (
+                  <li key={item.name}>
+                    <Link
+                      to={item.href}
+                      className={cn(
+                        'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                          : 'text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/5'
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.name}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </nav>
 
       <div className="p-4 border-t border-border">
