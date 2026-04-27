@@ -53,10 +53,10 @@ export function GraphLegend() {
           </div>
 
           <div className="pt-2 border-t border-zinc-800 text-[9px] text-zinc-500 leading-relaxed">
-            <div>• <b>Espessura</b>: peso da conexão</div>
-            <div>• <b>Opacidade</b>: confiança</div>
-            <div>• <b>Tamanho</b>: strategic_score</div>
-            <div>• <b>Glow pulsante</b>: top oportunidades</div>
+            <div>• <b>Tamanho</b>: score + nº de conexões fortes</div>
+            <div>• <b>Glow pulsante</b>: hub de oportunidade</div>
+            <div>• <b>Linhas acendem</b> ao passar o mouse</div>
+            <div>• <b>Partículas</b>: sinapses de alta confiança</div>
           </div>
         </div>
       )}
