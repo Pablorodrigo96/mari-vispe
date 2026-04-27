@@ -1,103 +1,134 @@
-# Fase 6 — Drift v1↔v2 + Ingestão Real de Feedback
 
-Objetivo: medir continuamente a divergência entre o motor v1 (legado) e o v2 (adaptativo), e popular o loop bayesiano com **feedback histórico real** (interest_logs, messages) além do botão 1-clique no card.
+# Fase 7 — Closing the Feedback Loop (event-driven)
 
----
+## Status atual
 
-## 1. Drift Analytics (v1 vs v2)
+A infra **já existe**: `process-event`, `feedback-from-call`, `claude-analyze-call`, `fire-webhook`, tabela `equity_brain.events` com triggers, cron `process-events-every-minute` ativo. Mas:
 
-**Tabela nova** `equity_brain.drift_snapshots`:
-- `id`, `snapshot_at`, `cnpj` (nullable — null = snapshot global)
-- `top_n` (10/50/100), `overlap_pct` (jaccard top-N)
-- `spearman_corr` (correlação de ranks)
-- `mean_score_v1`, `mean_score_v2`, `std_v1`, `std_v2`
-- `histogram_v1` jsonb, `histogram_v2` jsonb (10 bins)
-- `sample_size`
-- RLS: admin-only
+- **846 eventos não processados** acumulados (743 `company.signal_added` + 103 `buyer.thesis_added`) — a fila está engargalada
+- `claude-generate-pitch` existe como função mas nunca foi conectada ao fluxo de BDR
+- Não há **monitoramento da saúde da fila** no painel Shadow
+- O loop não fecha: signals novos da call não geram **embeddings semânticos** (campo `signal_text` fica órfão)
+- BDR não tem botão **"Gerar pitch agora"** após registrar uma call
 
-**Edge Function nova** `compute-drift-snapshot`:
-- Para cada empresa ativa (ou amostra de 200), busca top-100 buyers em `equity_brain.matches` (v1) e `equity_brain.matches_v2` (v2)
-- Calcula overlap, Spearman, distribuições
-- Insere snapshot global agregado + per-cnpj para top 50 empresas
-- Loga em `engine_runs`
-
-**Cron**: semanal, domingo 05:00 BRT (após mandate-decay).
+A Fase 7 amarra essas pontas.
 
 ---
 
-## 2. Ingestão de Feedback Histórico
+## 1. Desbloquear a fila (one-shot + observabilidade contínua)
 
-**Edge Function nova** `backfill-deal-events-from-history`:
-- Lê `interest_logs` → gera `deal_events` tipo `contacted` (idempotente via `metadata.source='backfill_interest'` + unique check)
-- Lê `messages` agrupadas por (listing_id, sender_email) → gera `reply_received` quando há ≥2 mensagens
-- Para cada evento gerado, tenta linkar a um `match_id` em `matches_v2` correspondente (cnpj da listing + buyer_id se conhecido); se não houver, cria com `match_id = null` e `cnpj` direto
-- Marca em `equity_brain.engine_runs.metadata.backfilled_count`
-- Idempotente: pula registros já processados (lookup por metadata key)
+**Edge function nova** `drain-events-bulk`:
+- Roda em loop interno chamando `process-event` até esvaziar (com timeout de 50s e cap de 30 batches)
+- Auth: admin only
+- Retorna agregado: `total_processed`, `success`, `errors`, `dropped`, `iterations`
 
-**Trigger automática**: rodar uma vez via botão admin no painel Shadow.
+**Botão admin** no Shadow → tab "Saúde": "Drenar fila agora" (mostra contagem atual via `equity_brain.events`).
 
----
-
-## 3. UI — Aba "Drift" no /equity-brain/shadow
-
-Novo componente `DriftAnalyticsCard.tsx`:
-- **Histograma comparativo** v1 vs v2 (recharts BarChart com bars lado a lado)
-- **Tabela top-N overlap** (N=10/50/100): % concordância
-- **Gráfico série temporal** (LineChart): overlap_pct e spearman ao longo das semanas
-- **Filtro por cnpj** (autocomplete) para drill-down em uma empresa específica
-- Botão "Computar agora" que invoca `compute-drift-snapshot` manualmente
-
-Adicionar tab "Drift" no `ShadowPage.tsx` (já tem Saúde, Comparação, etc.).
+**Card novo** `EventQueueHealthCard.tsx` no Shadow:
+- Contador `unprocessed` (cor verde <100, amarelo <1000, vermelho ≥1000)
+- Distribuição por `event_type`
+- Última 20 erros (`processed_status='error'`) com `retry_count`, `error_message`, `entity_id`
+- Auto-refresh a cada 30s
 
 ---
 
-## 4. UI — Feedback 1-clique no MatchDecisionCard
+## 2. Pitch on-demand pós-call
 
-Em `src/components/equity-brain/MatchDecisionCard.tsx`:
-- Adicionar botão **"📨 Resposta recebida"** ao lado dos botões existentes (Rejeitar/Contatar)
-- Ao clicar: `supabase.rpc('eb_log_deal_event', { p_match_id, p_event_type: 'reply_received' })`
-- Toast de sucesso + atualizar estado local
-- Permissão: admin/advisor (mesma do RPC)
+**Editar** `feedback-from-call/index.ts`:
+- Após processar `claude-analyze-call`, **se `outcome ∈ {qualified, interested_later, meeting_scheduled}`**, dispara em fire-and-forget `claude-generate-pitch` para preparar próxima abordagem
+- Salva resultado em `call_feedback.followup_action` (texto curto) e novo campo `next_pitch jsonb`
+
+**Migração SQL**:
+- `ALTER TABLE equity_brain.call_feedback ADD COLUMN next_pitch jsonb;`
+
+**Editar** `QuickCallModal.tsx`:
+- Após sucesso, mostra preview do `next_pitch` retornado (se houver) com botões "Copiar" e "Marcar follow-up no calendário"
 
 ---
 
-## 5. Painel admin de backfill
+## 3. Embeddings semânticos dos signals
 
-No `ShadowPage.tsx` aba "Saúde", adicionar card **"Backfill Histórico"**:
-- Botão "Executar backfill agora" (chama `backfill-deal-events-from-history`)
-- Mostra última execução: `rows_processed`, `backfilled_count`, status
-- Aviso: "Idempotente — pode rodar múltiplas vezes com segurança"
+Hoje `company_signals.signal_text` é texto livre — sem embedding. Vamos enriquecer para busca futura por similaridade.
+
+**Migração SQL**:
+- `ALTER TABLE equity_brain.company_signals ADD COLUMN embedding vector(768);` (pgvector já habilitado)
+- Index HNSW para cosine similarity
+
+**Edge function nova** `embed-signal`:
+- Recebe `signal_id`, gera embedding via Lovable AI Gateway (`google/text-embedding-004` se disponível, senão fallback para Lovable AI text completion + TF-IDF simples)
+- Atualiza row
+
+**Trigger SQL** `trg_embed_signal_text`:
+- AFTER INSERT em `company_signals` quando `signal_text IS NOT NULL` → enfileira `event_type='signal.embed_pending'` em `equity_brain.events`
+
+**Editar** `process-event`:
+- Roteia `signal.embed_pending` → chama `embed-signal`
+
+**Nota**: se text-embedding-004 não estiver disponível no gateway, deixamos a função preparada mas com flag `EMBEDDINGS_ENABLED=false` no início; foco da Fase 7 fica nos outros 3 itens. Decisão será na implementação após `secrets--fetch_secrets` confirmar modelos disponíveis.
+
+---
+
+## 4. Auto-correção de retries presos
+
+**Editar** `process-event`:
+- Antes do batch, faz "auto-retry" de eventos com `retry_count > 0 AND processed_at IS NULL AND created_at < now() - interval '5 min'` (já é o caso, mas explicitar lógica)
+- Se `retry_count >= MAX_RETRIES`: drop com `processed_status='error'` (já implementado)
+
+**Cron novo** `eb-event-cleanup-hourly`:
+- A cada hora, limpa eventos `processed_status IN ('success','skipped')` com `processed_at < now() - 7 days` (mantém erros para auditoria)
+
+---
+
+## 5. UI — feedback visual no painel Shadow
+
+**Editar** `ShadowPage.tsx`:
+- Nova tab **"Eventos"** ou adicionar `EventQueueHealthCard` na aba "Saúde" existente (preferência: aba Saúde)
+- Botão "Drenar fila agora" no topo
 
 ---
 
 ## Arquivos
 
-**Migração SQL**:
-- Criar `equity_brain.drift_snapshots` + RLS
+**Migração SQL** (uma só):
+- `ALTER TABLE equity_brain.call_feedback ADD COLUMN next_pitch jsonb;`
+- `ALTER TABLE equity_brain.company_signals ADD COLUMN embedding vector(768);` + index
+- Trigger `trg_embed_signal_text`
 
-**Edge Functions** (novas):
-- `supabase/functions/compute-drift-snapshot/index.ts`
-- `supabase/functions/backfill-deal-events-from-history/index.ts`
+**Edge Functions novas**:
+- `supabase/functions/drain-events-bulk/index.ts`
+- `supabase/functions/embed-signal/index.ts` (com flag se modelo de embedding indisponível)
 
-**Edge Function** (editar):
-- `supabase/functions/setup-equity-brain-crons/index.ts` → adicionar cron `eb-v2-drift-weekly`
+**Edge Functions editar**:
+- `supabase/functions/process-event/index.ts` → handler `signal.embed_pending`
+- `supabase/functions/feedback-from-call/index.ts` → disparar `claude-generate-pitch` quando outcome quente
+- `supabase/functions/setup-equity-brain-crons/index.ts` → cron `eb-event-cleanup-hourly`
 
-**Componentes** (novos):
-- `src/components/equity-brain/DriftAnalyticsCard.tsx`
-- `src/components/equity-brain/BackfillHistoryCard.tsx`
+**Componentes novos**:
+- `src/components/equity-brain/EventQueueHealthCard.tsx`
 
-**Componentes** (editar):
-- `src/pages/equity-brain/ShadowPage.tsx` → nova tab "Drift" + card backfill
-- `src/components/equity-brain/MatchDecisionCard.tsx` → botão "Resposta recebida"
+**Componentes editar**:
+- `src/pages/equity-brain/ShadowPage.tsx` → integra novo card na tab Saúde
+- `src/components/equity-brain/QuickCallModal.tsx` → preview de `next_pitch`
+
+**Memória**:
+- Atualizar `mem://features/equity-brain-v2-event-loop` (novo arquivo)
 
 ---
 
 ## Validação pós-deploy
 
-1. Invocar `compute-drift-snapshot` manualmente → verificar 1 row global em `drift_snapshots`
-2. Invocar `backfill-deal-events-from-history` → conferir `deal_events.metadata.source='backfill_*'`
-3. Rodar `update-buyer-revealed-thetas` → confirmar que thetas mudam após backfill
-4. Abrir aba Drift → conferir histogramas e overlap
-5. Cron registrado em `cron.job` com schedule `0 5 * * 0`
+1. Invocar `drain-events-bulk` → conferir que `unprocessed` cai de 846 para perto de 0
+2. Registrar uma call com `outcome='qualified'` e `raw_notes` longas → confirmar que `next_pitch` é populado
+3. Inserir um `company_signals` com `signal_text` → verificar que `embedding` é populado em ~1min (se EMBEDDINGS_ENABLED)
+4. Abrir Shadow → tab Saúde → ver card de fila com contadores corretos
+5. `SELECT * FROM cron.job WHERE jobname='eb-event-cleanup-hourly'` retorna 1 linha
+
+---
+
+## O que **não** entra na Fase 7 (fica para 8+)
+
+- Slack/email de `opportunity.promoted` (Fase 11 conforme comentário no código)
+- Busca por similaridade semântica usando os embeddings (precisa UI separada, fica Fase 8)
+- Reconciliação de signals duplicados (Fase 9)
 
 Após aprovação, sigo direto com a implementação.
