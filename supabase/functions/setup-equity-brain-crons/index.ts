@@ -70,19 +70,7 @@ function buildJobs(supabaseUrl: string, serviceKey: string) {
     `.trim(),
   }));
 }
-    ...j,
-    sql: `
-      SELECT net.http_post(
-        url     := '${supabaseUrl}/functions/v1/${j.fn}',
-        headers := '${JSON.stringify({
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${serviceKey}`,
-        }).replace(/'/g, "''")}'::jsonb,
-        body    := '${JSON.stringify(j.body).replace(/'/g, "''")}'::jsonb
-      );
-    `.trim(),
-  }));
-}
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
