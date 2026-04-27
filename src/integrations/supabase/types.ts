@@ -2188,6 +2188,16 @@ export type Database = {
         Returns: number
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      eb_log_deal_event: {
+        Args: {
+          p_event_type: string
+          p_match_id: string
+          p_metadata?: Json
+          p_notes?: string
+          p_rejection_reason?: string
+        }
+        Returns: string
+      }
       expire_old_reservations: { Args: never; Returns: undefined }
       get_teaser_view_count: {
         Args: { p_listing_id: string }
