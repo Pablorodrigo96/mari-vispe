@@ -64,6 +64,7 @@ import EBDealDetailPage from "./pages/equity-brain/DealDetailPage";
 import EBMapaPage from "./pages/equity-brain/MapaPage";
 import EBGrafoPage from "./pages/equity-brain/GrafoPage";
 import EBBoardPage from "./pages/equity-brain/BoardPage";
+import EBShadowPage from "./pages/equity-brain/ShadowPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
@@ -154,6 +155,7 @@ const App = () => (
               <Route path="calls"         element={<EBCallsPage />} />
               <Route path="empresa/:cnpj" element={<EBDealDetailPage />} />
               <Route path="board"         element={<EBBoardPage />} />
+              <Route path="shadow"        element={<EBShadowPage />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
