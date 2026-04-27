@@ -587,10 +587,9 @@ export function StrategicGraph() {
         }}
         onNodeClick={(n: any) => {
           setSelectedNode(n as GraphNode);
-          // Center on node
-          if (fgRef.current) {
-            fgRef.current.centerAt((n as any).x, (n as any).y, 600);
-            fgRef.current.zoom(2.2, 600);
+          // Center suavemente, sem zoom agressivo
+          if (fgRef.current && Number.isFinite(n.x) && Number.isFinite(n.y)) {
+            fgRef.current.centerAt(n.x, n.y, 700);
           }
         }}
         onNodeHover={(n: any) => setHoveredNodeId((n as any)?.id ?? null)}
