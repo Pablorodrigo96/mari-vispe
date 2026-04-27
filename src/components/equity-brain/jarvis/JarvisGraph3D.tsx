@@ -482,45 +482,29 @@ export function JarvisGraph3D() {
         <GraphFilterSidebar
           collapsed={filterCollapsed}
           onToggleCollapse={() => setFilterCollapsed((c) => !c)}
-          verticalsList={verticalsList}
-          ufsList={ufsList}
+          verticals={verticalsList}
+          ufs={ufsList}
           thesesList={(thesesQ.data ?? []) as any[]}
           buyersList={(buyersQ.data ?? []) as any[]}
           selectedVerticals={selectedVerticals}
-          onToggleVertical={(v) => {
-            const s = new Set(selectedVerticals);
-            s.has(v) ? s.delete(v) : s.add(v);
-            setSelectedVerticals(s);
-          }}
           selectedUfs={selectedUfs}
-          onToggleUf={(u) => {
-            const s = new Set(selectedUfs);
-            s.has(u) ? s.delete(u) : s.add(u);
-            setSelectedUfs(s);
-          }}
           selectedNodeTypes={selectedNodeTypes}
-          onToggleNodeType={(t) => {
-            const s = new Set(selectedNodeTypes);
-            s.has(t) ? s.delete(t) : s.add(t);
-            setSelectedNodeTypes(s);
-          }}
           enabledLayers={enabledLayers}
-          onToggleLayer={(l) => {
-            const s = new Set(enabledLayers);
-            s.has(l) ? s.delete(l) : s.add(l);
-            setEnabledLayers(s);
-          }}
           minWeight={minWeight}
-          onMinWeightChange={setMinWeight}
           minConfidence={minConfidence}
-          onMinConfidenceChange={setMinConfidence}
           thesisFilter={thesisFilter}
-          onThesisFilterChange={setThesisFilter}
           buyerFilter={buyerFilter}
-          onBuyerFilterChange={setBuyerFilter}
+          onChange={(patch) => {
+            if (patch.selectedVerticals !== undefined) setSelectedVerticals(patch.selectedVerticals);
+            if (patch.selectedUfs !== undefined) setSelectedUfs(patch.selectedUfs);
+            if (patch.selectedNodeTypes !== undefined) setSelectedNodeTypes(patch.selectedNodeTypes);
+            if (patch.enabledLayers !== undefined) setEnabledLayers(patch.enabledLayers);
+            if (patch.minWeight !== undefined) setMinWeight(patch.minWeight);
+            if (patch.minConfidence !== undefined) setMinConfidence(patch.minConfidence);
+            if (patch.thesisFilter !== undefined) setThesisFilter(patch.thesisFilter);
+            if (patch.buyerFilter !== undefined) setBuyerFilter(patch.buyerFilter);
+          }}
           onReset={handleReset}
-          stats={{ nodes: graphData.nodes.length, edges: graphData.links.length }}
-          recalculating={false}
         />
       </div>
 
