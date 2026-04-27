@@ -81,16 +81,13 @@ const App = () => (
           <ViewAsBanner />
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/painel" element={<Painel />} />
+
+            {/* Public-only routes (visitor experience kept intact) */}
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/mapa" element={<MapView />} />
             <Route path="/sell" element={<Sell />} />
             <Route path="/vender" element={<Vender />} />
             <Route path="/anuncio/:id" element={<ListingDetail />} />
-            <Route path="/meus-anuncios" element={<MyListings />} />
-            <Route path="/editar-anuncio/:id" element={<EditListing />} />
-            <Route path="/meu-perfil" element={<MyProfile />} />
-            <Route path="/meus-valuations" element={<MyValuations />} />
             <Route path="/valuation" element={<Valuation />} />
             <Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
             <Route path="/valuation/dcf" element={<ValuationDCF />} />
@@ -101,12 +98,24 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/matching" element={<Matching />} />
-            <Route path="/matching/resultados" element={<MatchingResults />} />
             <Route path="/teaser/:ticker" element={<BlindTeaser />} />
-            <Route path="/cadastrar-comprador" element={<RegisterBuyer />} />
-            <Route path="/minhas-captacoes" element={<MyCapitalRequests />} />
-            <Route path="/minhas-captacoes/:id" element={<CapitalRequestDetail />} />
-            
+
+            {/* Authenticated end-user routes — wrapped in AppShell (sidebar + topbar) */}
+            <Route element={<AppShell />}>
+              <Route path="/painel" element={<Painel />} />
+              <Route path="/meus-anuncios" element={<MyListings />} />
+              <Route path="/editar-anuncio/:id" element={<EditListing />} />
+              <Route path="/meu-perfil" element={<MyProfile />} />
+              <Route path="/meus-valuations" element={<MyValuations />} />
+              <Route path="/cadastrar-comprador" element={<RegisterBuyer />} />
+              <Route path="/minhas-captacoes" element={<MyCapitalRequests />} />
+              <Route path="/minhas-captacoes/:id" element={<CapitalRequestDetail />} />
+              <Route path="/matching/resultados" element={<MatchingResults />} />
+              <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />
+              <Route path="/potencial-carteira" element={<PortfolioPotential />} />
+              <Route path="/parceiro" element={<PartnerDashboard />} />
+            </Route>
+
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/crm" element={<AdminCRM />} />
