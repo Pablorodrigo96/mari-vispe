@@ -565,40 +565,54 @@ export function StrategicGraph() {
         enableNodeDrag={false}
         linkCurvature={(l: any) => 0.18 + (l.weight ?? 0) * 0.1}
         linkDirectionalParticles={(l: any) => {
-          // Particles só quando há foco (hover/selected) e link toca o foco
-          const focusId = hoveredNodeId ?? selectedNode?.id ?? null;
-          if (!focusId) return 0;
-          const sId = l.source.id ?? l.source;
-          const tId = l.target.id ?? l.target;
-          const touches = sId === focusId || tId === focusId;
-          if (!touches) return 0;
-          return l.weight >= 0.7 ? 3 : l.weight >= 0.5 ? 2 : 0;
+          // Modo foco (selecionado): partículas só nas top-N
+          if (focusedEdgeIds) {
+            return focusedEdgeIds.has(edgeKey(l)) ? (l.weight >= 0.7 ? 3 : 2) : 0;
+          }
+          // Hover sem seleção: partículas em links que tocam o hover
+          if (hoveredNodeId) {
+            const sId = l.source.id ?? l.source;
+            const tId = l.target.id ?? l.target;
+            if (sId !== hoveredNodeId && tId !== hoveredNodeId) return 0;
+            return l.weight >= 0.7 ? 3 : l.weight >= 0.5 ? 2 : 0;
+          }
+          return 0;
         }}
         linkDirectionalParticleWidth={(l: any) => 1.5 + (l.weight ?? 0) * 1.8}
         linkDirectionalParticleSpeed={() => 0.006}
         linkDirectionalParticleColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#52525b"}
         linkWidth={(l: any) => {
-          const focusId = hoveredNodeId ?? selectedNode?.id ?? null;
           const sId = l.source.id ?? l.source;
           const tId = l.target.id ?? l.target;
-          const touches = focusId ? (sId === focusId || tId === focusId) : false;
-          if (touches) return (l.weight ?? 0.3) * 2.6 + 0.8; // aceso
-          if (focusId) return 0.0001; // outras somem
-          // Idle: só top-N renderiza, e bem fininho
+          // Modo FOCO: apenas top-N visíveis, fortes e brilhantes
+          if (focusedEdgeIds) {
+            return focusedEdgeIds.has(edgeKey(l)) ? (l.weight ?? 0.3) * 3 + 1 : 0.0001;
+          }
+          // Hover sem seleção: realça vizinhança
+          if (hoveredNodeId) {
+            const touches = sId === hoveredNodeId || tId === hoveredNodeId;
+            if (touches) return (l.weight ?? 0.3) * 2.6 + 0.8;
+            return 0.0001;
+          }
+          // Idle: só top-N renderiza fininho
           return idleEdgeIds.has(edgeKey(l)) ? 0.5 : 0.0001;
         }}
         linkColor={(l: any) => {
           const base = EDGE_COLORS[l.edge_type] ?? "#52525b";
-          const focusId = hoveredNodeId ?? selectedNode?.id ?? null;
           const sId = l.source.id ?? l.source;
           const tId = l.target.id ?? l.target;
-          const touches = focusId ? (sId === focusId || tId === focusId) : false;
           const toAlpha = (a: number) =>
             base.startsWith("hsl(")
               ? base.replace("hsl(", "hsla(").replace(")", `, ${a})`)
               : base;
-          if (touches) return toAlpha(0.95);
-          if (focusId) return toAlpha(0.02);
+          if (focusedEdgeIds) {
+            return focusedEdgeIds.has(edgeKey(l)) ? toAlpha(0.95) : toAlpha(0);
+          }
+          if (hoveredNodeId) {
+            const touches = sId === hoveredNodeId || tId === hoveredNodeId;
+            if (touches) return toAlpha(0.95);
+            return toAlpha(0.02);
+          }
           return idleEdgeIds.has(edgeKey(l)) ? toAlpha(0.13) : toAlpha(0);
         }}
         onNodeClick={(n: any) => {
