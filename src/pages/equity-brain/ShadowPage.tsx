@@ -181,6 +181,7 @@ export default function EBShadowPage() {
           <TabsTrigger value="summary"><Target className="h-4 w-4 mr-1" />Top v2 Matches</TabsTrigger>
           <TabsTrigger value="diff"><TrendingUp className="h-4 w-4 mr-1" />Divergências v1↔v2</TabsTrigger>
           <TabsTrigger value="decision"><Gavel className="h-4 w-4 mr-1" />Decisão & Feedback</TabsTrigger>
+          <TabsTrigger value="learning"><Brain className="h-4 w-4 mr-1" />Aprendizado</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
