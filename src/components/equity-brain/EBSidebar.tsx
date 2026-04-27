@@ -1,11 +1,13 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, ArrowLeft, LogOut } from "lucide-react";
+import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
 const items = [
   { to: "/equity-brain",                label: "Dashboard",      Icon: LayoutDashboard, end: true },
   { to: "/equity-brain/oportunidades",  label: "Oportunidades",  Icon: Target },
+  { to: "/equity-brain/mapa",           label: "Mapa",           Icon: MapIcon },
+  { to: "/equity-brain/grafo",          label: "Grafo",          Icon: Network },
   { to: "/equity-brain/buyers",         label: "Buyers",         Icon: Users },
   { to: "/equity-brain/teses",          label: "Teses",          Icon: Lightbulb },
   { to: "/equity-brain/calls",          label: "Calls",          Icon: PhoneCall },

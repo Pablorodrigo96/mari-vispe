@@ -46,6 +46,33 @@ export function tierFor(maScore: number | null | undefined): "premium" | "strong
   return "standard";
 }
 
+// Alias usado pelos novos cockpits (Mapa/Grafo)
+export const tierFromScore = tierFor;
+
+/** HSL color por tier para uso direto em SVG/Leaflet (sem Tailwind). */
+export function tierHslColor(tier: "premium" | "strong" | "standard"): string {
+  switch (tier) {
+    case "premium":  return "hsl(160, 84%, 39%)"; // emerald-500
+    case "strong":   return "hsl(38, 92%, 50%)";  // amber-500
+    default:         return "hsl(240, 5%, 65%)";  // zinc-400
+  }
+}
+
+/**
+ * Escala de cor para choropleth do mapa do Brasil.
+ * `densityPct` = premium_count / total (0..1).
+ * Sai de zinc-900 (densidade ~0) até emerald-400 (densidade alta).
+ */
+export function choroplethColor(densityPct: number): string {
+  const p = Math.max(0, Math.min(1, densityPct || 0));
+  if (p >= 0.30) return "hsl(160, 84%, 45%)";
+  if (p >= 0.20) return "hsl(160, 70%, 38%)";
+  if (p >= 0.12) return "hsl(160, 60%, 30%)";
+  if (p >= 0.06) return "hsl(160, 45%, 22%)";
+  if (p >  0)    return "hsl(160, 30%, 16%)";
+  return "hsl(240, 6%, 12%)"; // zinc-900
+}
+
 export function tierLabel(tier: string): { label: string; cls: string } {
   switch (tier) {
     case "premium":  return { label: "Premium",  cls: "bg-emerald-950/60 text-emerald-300 border-emerald-900/60" };
