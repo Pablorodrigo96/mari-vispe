@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, AlertTriangle } from "lucide-react";
+import { useVertical } from "@/hooks/useVertical";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
