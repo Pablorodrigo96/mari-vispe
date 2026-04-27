@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   TrendingUp, TrendingDown, CheckCircle2, XCircle, FileSignature,
-  Loader2, ChevronDown, ChevronUp, AlertTriangle, Activity,
+  Loader2, ChevronDown, ChevronUp, AlertTriangle, Activity, MessageCircleReply,
 } from "lucide-react";
 
 export type MatchDecisionRow = {
@@ -250,6 +250,15 @@ export function MatchDecisionCard({
               >
                 {submitting === "contacted" ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
                 Contatado
+              </Button>
+              <Button
+                size="sm" variant="outline"
+                className="bg-transparent border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10"
+                disabled={!!submitting}
+                onClick={() => logEvent("reply_received")}
+              >
+                {submitting === "reply_received" ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <MessageCircleReply className="h-3.5 w-3.5 mr-1" />}
+                Resposta recebida
               </Button>
               <Button
                 size="sm" variant="outline"

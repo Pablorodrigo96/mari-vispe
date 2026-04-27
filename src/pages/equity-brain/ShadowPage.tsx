@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel, Brain, Activity } from "lucide-react";
+import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel, Brain, Activity, GitCompare } from "lucide-react";
 import { toast } from "sonner";
 import { MatchDecisionCard, type MatchDecisionRow } from "@/components/equity-brain/MatchDecisionCard";
 import { EngineHealthCard } from "@/components/equity-brain/EngineHealthCard";
+import { DriftAnalyticsCard } from "@/components/equity-brain/DriftAnalyticsCard";
+import { BackfillHistoryCard } from "@/components/equity-brain/BackfillHistoryCard";
 
 type MatchRow = MatchDecisionRow;
 
@@ -39,7 +41,7 @@ export default function EBShadowPage() {
   const [running, setRunning] = useState<string | null>(null);
   const [v1, setV1] = useState<MatchRow[]>([]);
   const [v2, setV2] = useState<MatchRow[]>([]);
-  const [tab, setTab] = useState<"summary" | "diff" | "decision" | "learning" | "health">("summary");
+  const [tab, setTab] = useState<"summary" | "diff" | "decision" | "learning" | "drift" | "health">("summary");
   const [events, setEvents] = useState<DealEvent[]>([]);
   const [thetas, setThetas] = useState<Theta[]>([]);
 
@@ -183,6 +185,7 @@ export default function EBShadowPage() {
           <TabsTrigger value="diff"><TrendingUp className="h-4 w-4 mr-1" />Divergências v1↔v2</TabsTrigger>
           <TabsTrigger value="decision"><Gavel className="h-4 w-4 mr-1" />Decisão & Feedback</TabsTrigger>
           <TabsTrigger value="learning"><Brain className="h-4 w-4 mr-1" />Aprendizado</TabsTrigger>
+          <TabsTrigger value="drift"><GitCompare className="h-4 w-4 mr-1" />Drift</TabsTrigger>
           <TabsTrigger value="health"><Activity className="h-4 w-4 mr-1" />Saúde</TabsTrigger>
         </TabsList>
 
@@ -415,8 +418,15 @@ export default function EBShadowPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="drift" className="mt-4">
+          <DriftAnalyticsCard />
+        </TabsContent>
+
         <TabsContent value="health" className="mt-4">
-          <EngineHealthCard />
+          <div className="space-y-4">
+            <EngineHealthCard />
+            <BackfillHistoryCard />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
