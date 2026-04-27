@@ -41,7 +41,7 @@ export default function EBShadowPage() {
   const [running, setRunning] = useState<string | null>(null);
   const [v1, setV1] = useState<MatchRow[]>([]);
   const [v2, setV2] = useState<MatchRow[]>([]);
-  const [tab, setTab] = useState<"summary" | "diff" | "decision" | "learning" | "health">("summary");
+  const [tab, setTab] = useState<"summary" | "diff" | "decision" | "learning" | "drift" | "health">("summary");
   const [events, setEvents] = useState<DealEvent[]>([]);
   const [thetas, setThetas] = useState<Theta[]>([]);
 
