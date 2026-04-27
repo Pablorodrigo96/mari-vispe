@@ -90,22 +90,32 @@ export function StrategicGraph() {
     };
   }, []);
 
-  // ---------- Pulse animation tick ----------
+  // ---------- Pulse animation tick (30fps p/ economizar) ----------
   useEffect(() => {
     if (isMobile) return;
     let raf: number;
-    const tick = () => {
-      setPulse((p) => (p + 0.03) % (Math.PI * 2));
+    let last = 0;
+    const tick = (t: number) => {
+      if (t - last > 33) {
+        setPulse((p) => (p + 0.06) % (Math.PI * 2));
+        last = t;
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [isMobile]);
 
-  // Helper: raio base do node (precisa estar antes dos useEffects que usam ele)
+  // Degree map (preenchido após edges existirem) — ref mutável p/ getBaseRadius
+  const degreeMapRef = useRef<Map<string, number>>(new Map());
+
+  // Helper: raio composto — score + log(grau) + bônus hot
   const getBaseRadius = (n: GraphNode) => {
     const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
-    return Math.max(2, 4 + (score / 100) * 12);
+    const deg = degreeMapRef.current.get(n.id) ?? 0;
+    const scorePart = (score / 100) * 8;
+    const degPart = Math.log(1 + deg) * 4;
+    return Math.max(4, 3 + scorePart + degPart);
   };
 
   // ---------- Data ----------
