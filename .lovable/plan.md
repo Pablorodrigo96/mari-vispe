@@ -1,52 +1,56 @@
+## Plano: Bootstrap do módulo Equity Brain
 
+Estado atual verificado no banco:
+- `pg_cron` 1.6.4 já está ativa
+- `vector` e `pg_net` ainda NÃO estão instaladas
+- Schema `equity_brain` ainda NÃO existe
 
-## Plano: Fluxo Completo do Head de Parcerias (Sérgio)
+Vou executar uma única migration consolidada com 2 blocos:
 
-Expandir a pagina `/admin/parcerias` com 3 abas para que o Sergio tenha visao 360 de todos os contadores parceiros, suas reservas de leads, documentos VDR e atividades — tudo em um unico lugar.
+### Bloco 1 — Ativar extensões faltantes
 
----
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+```
 
-### Estrutura da pagina (Tabs)
+`pg_cron` permanece com `IF NOT EXISTS` (no-op, já ativa). `vector` (pgvector) habilita embeddings para o motor de IA. `pg_net` habilita chamadas HTTP assíncronas a partir do Postgres (úteis para webhooks/edge functions agendadas).
 
-**Aba 1 — Visao Geral (existente, melhorada)**
-- KPIs atuais + novos: total de reservas ativas, taxa de conversao reserva-exclusivo, VDR readiness medio global
-- Ranking de parceiros (tabela existente) com colunas adicionais: reservas ativas, reservas exclusivas, VDR readiness medio
+### Bloco 2 — Criar schema isolado `equity_brain`
 
-**Aba 2 — Reservas de Leads (nova)**
-- Kanban visual com 4 colunas: Reservado / Exclusivo / Expirado / Fechado pela Matriz
-- Cada card mostra: nome da empresa, contador responsavel, dias restantes (countdown), tipo de comissao, VDR readiness
-- Filtros: por contador, por status, por prazo (expirando em 7 dias)
-- Acoes: marcar como "fechado pela matriz", forcar exclusividade manual
+```sql
+CREATE SCHEMA IF NOT EXISTS equity_brain;
 
-**Aba 3 — Cofre Digital (VDR) (nova)**
-- Lista de todos os documentos VDR enviados (tabela `vdr_documents`)
-- Colunas: empresa, categoria do doc, status (pendente/validado/rejeitado), enviado por, data
-- Acoes: validar documento, rejeitar com motivo — atualiza automaticamente o `vdr_readiness` do listing via trigger existente
-- Filtro por status e por listing
+GRANT USAGE ON SCHEMA equity_brain TO anon, authenticated, service_role;
 
-**Aba 4 — Detalhes do Parceiro (drill-down)**
-- Ao clicar em um parceiro na aba 1, abre um painel lateral (Sheet) ou modal com:
-  - Dados do perfil (nome, empresa, telefone)
-  - Todas as reservas daquele parceiro com status e countdown
-  - Todos os docs VDR enviados por ele
-  - Historico de atividades registradas
-  - Botao para registrar nova atividade (logica existente)
+ALTER DEFAULT PRIVILEGES IN SCHEMA equity_brain
+  GRANT SELECT ON TABLES TO authenticated;
 
----
+ALTER DEFAULT PRIVILEGES IN SCHEMA equity_brain
+  GRANT ALL ON TABLES TO service_role;
+```
 
-### Arquivos a modificar
+Schema separado garante que o motor Equity Brain evolua sem colidir com `public` (marketplace, valuations, capital, parcerias). RLS continuará sendo definido por tabela conforme o módulo for crescendo.
 
-| Arquivo | Acao |
-|---|---|
-| `src/pages/admin/AdminPartnerships.tsx` | Refatorar com Tabs (Visao Geral / Reservas / VDR / Atividades). Adicionar queries para `partner_lead_reservations` e `vdr_documents`. Adicionar drill-down por parceiro via Sheet. Acoes de validar/rejeitar VDR. |
+### Bloco 3 — Verificação pós-migration
 
-### Detalhes tecnicos
+Após aplicar, vou rodar:
 
-- Query `partner_lead_reservations` com join em `listings` (titulo, categoria) e `profiles` (nome do parceiro)
-- Query `vdr_documents` com join em `listings` e `profiles`
-- Validacao/rejeicao de VDR: update no `vdr_documents` (status, validated_by, rejection_reason) — o trigger `update_listing_vdr_readiness` ja recalcula automaticamente
-- Kanban usa grid CSS com 4 colunas (nao precisa drag-and-drop, apenas visual)
-- Reutiliza componentes existentes: Tabs, Table, Badge, Sheet, Card, Select, Input
-- Nenhuma migracao necessaria — todas as tabelas e RLS ja existem
-- Admin ja tem permissao ALL em `partner_lead_reservations` e `vdr_documents`
+```sql
+SELECT extname, extversion FROM pg_extension
+WHERE extname IN ('vector','pg_cron','pg_net');
 
+SELECT schema_name FROM information_schema.schemata
+WHERE schema_name = 'equity_brain';
+```
+
+E retorno os resultados completos para você confirmar.
+
+### Observações
+
+- Nenhuma tabela existente é alterada
+- Nenhum dado é movido ou removido
+- Nenhuma RLS atual é tocada
+- Operação 100% aditiva e reversível (`DROP EXTENSION` / `DROP SCHEMA`)
+- `pg_net` e `vector` são extensões oficialmente suportadas pelo Supabase
