@@ -250,6 +250,13 @@ serve(async (req) => {
     const { data: canonicals } = await supabase.schema("equity_brain" as any)
       .from("canonical_transactions").select("*");
 
+    // Scores agregados (ma_score) por CNPJ
+    const { data: scoresRows } = await supabase.schema("equity_brain" as any)
+      .from("company_scores").select("cnpj, ma_score").eq("is_current", true)
+      .in("cnpj", companies.map((c:any)=>c.cnpj));
+    const maScoreByCnpj = new Map<string, number>();
+    for (const s of scoresRows ?? []) maScoreByCnpj.set(s.cnpj, Number(s.ma_score ?? 0));
+
     const newMatches: any[] = [];
 
     for (const company of companies) {
