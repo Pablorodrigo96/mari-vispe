@@ -53,11 +53,11 @@ export function GraphLegend() {
           </div>
 
           <div className="pt-2 border-t border-zinc-800 text-[9px] text-zinc-500 leading-relaxed">
-            <div>• <b>Rede estabilizada</b>: nodes congelam após o layout</div>
-            <div>• <b>Recalculando malha</b>: micro-pulso a cada 10s</div>
+            <div>• <b>Rede congelada</b>: nodes ficam parados após o layout</div>
+            <div>• <b>Clique num nó</b>: ativa modo foco — só conexões fortes daquele nó</div>
             <div>• <b>Tamanho</b>: score + nº de conexões fortes</div>
             <div>• <b>Glow pulsante</b>: hub de oportunidade</div>
-            <div>• <b>Linhas acendem</b> ao passar o mouse</div>
+            <div>• <b>Hover</b>: acende vizinhança sem selecionar</div>
             <div>• <b>Partículas</b>: sinapses de alta confiança</div>
           </div>
         </div>

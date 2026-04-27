@@ -321,20 +321,49 @@ export function StrategicGraph() {
     degreeMapRef.current = degreeMap;
   }, [degreeMap]);
 
-  // ---------- Idle edges: só top-80 mais fortes renderizam sem hover ----------
-  const idleEdgeIds = useMemo(() => {
-    const sorted = [...edges]
-      .filter((e) => (e.weight ?? 0) >= 0.55)
-      .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
-      .slice(0, 80);
-    return new Set(sorted.map((e) => `${(e.source as any).id ?? e.source}__${(e.target as any).id ?? e.target}__${e.edge_type}`));
-  }, [edges]);
-
   const edgeKey = (l: any) => {
     const sId = l.source.id ?? l.source;
     const tId = l.target.id ?? l.target;
     return `${sId}__${tId}__${l.edge_type}`;
   };
+
+  // ---------- Idle edges: só top-60 mais fortes renderizam sem foco ----------
+  const idleEdgeIds = useMemo(() => {
+    const sorted = [...edges]
+      .filter((e) => (e.weight ?? 0) >= 0.55)
+      .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
+      .slice(0, 60);
+    return new Set(sorted.map((e) => `${(e.source as any).id ?? e.source}__${(e.target as any).id ?? e.target}__${e.edge_type}`));
+  }, [edges]);
+
+  // ---------- FOCUS MODE: top-12 conexões mais fortes do nó selecionado ----------
+  const TOP_FOCUS_EDGES = 12;
+  const focusedEdgeIds = useMemo(() => {
+    if (!selectedNode) return null;
+    const focusId = selectedNode.id;
+    const incident = edges.filter((e) => {
+      const sId = (e.source as any).id ?? e.source;
+      const tId = (e.target as any).id ?? e.target;
+      return sId === focusId || tId === focusId;
+    });
+    const sorted = [...incident].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+    const top = sorted.slice(0, TOP_FOCUS_EDGES);
+    return new Set(top.map(edgeKey));
+  }, [selectedNode, edges]);
+
+  // Vizinhos visíveis no modo foco (apenas os que ainda têm aresta visível)
+  const focusedNeighborIds = useMemo(() => {
+    if (!focusedEdgeIds || !selectedNode) return null;
+    const set = new Set<string>([selectedNode.id]);
+    edges.forEach((e) => {
+      if (!focusedEdgeIds.has(edgeKey(e))) return;
+      const sId = (e.source as any).id ?? e.source;
+      const tId = (e.target as any).id ?? e.target;
+      set.add(sId);
+      set.add(tId);
+    });
+    return set;
+  }, [focusedEdgeIds, selectedNode, edges]);
 
   const handleReset = () => {
     setSelectedVerticals(new Set());
@@ -383,53 +412,8 @@ export function StrategicGraph() {
     fg.d3ReheatSimulation();
   }, [nodes, edges]);
 
-  // ---------- Pulso programado: a cada 10s libera + reaquece levemente ----------
-  useEffect(() => {
-    if (!stabilized) return;
-    let freezeTimer: ReturnType<typeof setTimeout> | null = null;
-    const interval = setInterval(() => {
-      // Não mexer se usuário está interagindo
-      if (hoveredRef.current || selectedRef.current) return;
-      const fg = fgRef.current;
-      if (!fg || !nodes.length) return;
-
-      setRecalculating(true);
-      // Solta os nodes
-      nodes.forEach((n: any) => {
-        n.fx = undefined;
-        n.fy = undefined;
-      });
-      // Reaquece BEM levemente (alpha pequeno)
-      try {
-        (fg as any).d3Force("charge")?.strength?.(-300);
-      } catch {}
-      try {
-        const sim: any = (fg as any).d3ReheatSimulation;
-        sim?.call(fg);
-      } catch {}
-
-      // Após ~900ms congela de novo
-      freezeTimer = setTimeout(() => {
-        nodes.forEach((n: any) => {
-          if (Number.isFinite(n.x) && Number.isFinite(n.y)) {
-            n.fx = n.x;
-            n.fy = n.y;
-          }
-        });
-        // Restaura charge forte para o próximo ciclo
-        try {
-          const chargeStrength = -900 - Math.min(600, nodes.length * 3);
-          (fg as any).d3Force("charge")?.strength?.(chargeStrength);
-        } catch {}
-        setRecalculating(false);
-      }, 900);
-    }, 10000);
-
-    return () => {
-      clearInterval(interval);
-      if (freezeTimer) clearTimeout(freezeTimer);
-    };
-  }, [stabilized, nodes]);
+  // ---------- Pulso de movimento removido: o grafo permanece congelado após estabilizar.
+  // Toda sensação de "vida" é puramente visual (glow, partículas, anéis HUD). ----------
 
   // ---------- Mobile fallback ----------
   if (isMobile) {
@@ -544,15 +528,34 @@ export function StrategicGraph() {
           <span className="ml-2 flex items-center gap-1">
             <span
               className={`h-1.5 w-1.5 rounded-full ${
-                recalculating ? "bg-amber-400 animate-pulse" : stabilized ? "bg-emerald-400" : "bg-cyan-400 animate-pulse"
+                stabilized ? "bg-emerald-400" : "bg-cyan-400 animate-pulse"
               }`}
             />
             <span className="text-[9px] uppercase tracking-wider text-zinc-500">
-              {recalculating ? "Recalculando malha…" : stabilized ? "Rede estabilizada" : "Tecendo rede…"}
+              {stabilized ? "Rede congelada" : "Tecendo rede…"}
             </span>
           </span>
         </div>
       </div>
+
+      {/* Badge de modo foco — só quando há nó selecionado */}
+      {selectedNode && focusedEdgeIds && (
+        <div className="absolute top-14 right-3 z-10 bg-emerald-950/80 border border-emerald-700/60 rounded-md px-3 py-1.5 backdrop-blur shadow-[0_0_18px_rgba(16,185,129,0.18)] flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] uppercase tracking-wider text-emerald-300 font-bold">
+            Modo foco
+          </span>
+          <span className="text-[10px] text-zinc-300 font-mono">
+            {focusedEdgeIds.size} conexões fortes
+          </span>
+          <button
+            onClick={() => setSelectedNode(null)}
+            className="ml-1 text-[10px] text-zinc-400 hover:text-emerald-300 underline-offset-2 hover:underline"
+          >
+            limpar
+          </button>
+        </div>
+      )}
 
       <ForceGraph2D
         ref={fgRef as any}
@@ -581,40 +584,54 @@ export function StrategicGraph() {
         enableNodeDrag={false}
         linkCurvature={(l: any) => 0.18 + (l.weight ?? 0) * 0.1}
         linkDirectionalParticles={(l: any) => {
-          // Particles só quando há foco (hover/selected) e link toca o foco
-          const focusId = hoveredNodeId ?? selectedNode?.id ?? null;
-          if (!focusId) return 0;
-          const sId = l.source.id ?? l.source;
-          const tId = l.target.id ?? l.target;
-          const touches = sId === focusId || tId === focusId;
-          if (!touches) return 0;
-          return l.weight >= 0.7 ? 3 : l.weight >= 0.5 ? 2 : 0;
+          // Modo foco (selecionado): partículas só nas top-N
+          if (focusedEdgeIds) {
+            return focusedEdgeIds.has(edgeKey(l)) ? (l.weight >= 0.7 ? 3 : 2) : 0;
+          }
+          // Hover sem seleção: partículas em links que tocam o hover
+          if (hoveredNodeId) {
+            const sId = l.source.id ?? l.source;
+            const tId = l.target.id ?? l.target;
+            if (sId !== hoveredNodeId && tId !== hoveredNodeId) return 0;
+            return l.weight >= 0.7 ? 3 : l.weight >= 0.5 ? 2 : 0;
+          }
+          return 0;
         }}
         linkDirectionalParticleWidth={(l: any) => 1.5 + (l.weight ?? 0) * 1.8}
         linkDirectionalParticleSpeed={() => 0.006}
         linkDirectionalParticleColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#52525b"}
         linkWidth={(l: any) => {
-          const focusId = hoveredNodeId ?? selectedNode?.id ?? null;
           const sId = l.source.id ?? l.source;
           const tId = l.target.id ?? l.target;
-          const touches = focusId ? (sId === focusId || tId === focusId) : false;
-          if (touches) return (l.weight ?? 0.3) * 2.6 + 0.8; // aceso
-          if (focusId) return 0.0001; // outras somem
-          // Idle: só top-N renderiza, e bem fininho
+          // Modo FOCO: apenas top-N visíveis, fortes e brilhantes
+          if (focusedEdgeIds) {
+            return focusedEdgeIds.has(edgeKey(l)) ? (l.weight ?? 0.3) * 3 + 1 : 0.0001;
+          }
+          // Hover sem seleção: realça vizinhança
+          if (hoveredNodeId) {
+            const touches = sId === hoveredNodeId || tId === hoveredNodeId;
+            if (touches) return (l.weight ?? 0.3) * 2.6 + 0.8;
+            return 0.0001;
+          }
+          // Idle: só top-N renderiza fininho
           return idleEdgeIds.has(edgeKey(l)) ? 0.5 : 0.0001;
         }}
         linkColor={(l: any) => {
           const base = EDGE_COLORS[l.edge_type] ?? "#52525b";
-          const focusId = hoveredNodeId ?? selectedNode?.id ?? null;
           const sId = l.source.id ?? l.source;
           const tId = l.target.id ?? l.target;
-          const touches = focusId ? (sId === focusId || tId === focusId) : false;
           const toAlpha = (a: number) =>
             base.startsWith("hsl(")
               ? base.replace("hsl(", "hsla(").replace(")", `, ${a})`)
               : base;
-          if (touches) return toAlpha(0.95);
-          if (focusId) return toAlpha(0.02);
+          if (focusedEdgeIds) {
+            return focusedEdgeIds.has(edgeKey(l)) ? toAlpha(0.95) : toAlpha(0);
+          }
+          if (hoveredNodeId) {
+            const touches = sId === hoveredNodeId || tId === hoveredNodeId;
+            if (touches) return toAlpha(0.95);
+            return toAlpha(0.02);
+          }
           return idleEdgeIds.has(edgeKey(l)) ? toAlpha(0.13) : toAlpha(0);
         }}
         onNodeClick={(n: any) => {
@@ -636,9 +653,12 @@ export function StrategicGraph() {
           const isHot = hotNodeIds.has(n.id);
           const isHovered = n.id === hoveredNodeId;
           const isSelected = selectedNode?.id === n.id;
+          // Modo foco (selecionado): só vizinhança visível; demais escurecidos
+          // Sem seleção, hover usa neighborIds normalmente
           const focusActive = !!(hoveredNodeId || selectedNode);
-          const isNeighbor = focusActive && neighborIds.has(n.id) && !isHovered && !isSelected;
-          const isDimmed = focusActive && !neighborIds.has(n.id) && !isSelected;
+          const visibleSet = focusedNeighborIds ?? (hoveredNodeId ? neighborIds : null);
+          const isNeighbor = !!visibleSet && visibleSet.has(n.id) && !isHovered && !isSelected;
+          const isDimmed = !!visibleSet && !visibleSet.has(n.id) && !isSelected;
 
           // Raio efetivo
           const r = isHovered || isSelected ? baseR * 1.7 : isNeighbor ? baseR * 1.25 : baseR;
@@ -727,8 +747,8 @@ export function StrategicGraph() {
         nodePointerAreaPaint={(node: any, color, ctx) => {
           const n = node as GraphNode;
           if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-          // Área de clique ampla baseada no raio real + folga
-          const baseR = Math.max(10, getBaseRadius(n) + 8);
+          // Área de clique generosa para facilitar seleção mesmo de nodes pequenos
+          const baseR = Math.max(16, getBaseRadius(n) + 14);
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(node.x, node.y, baseR, 0, 2 * Math.PI);

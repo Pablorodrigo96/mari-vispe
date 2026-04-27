@@ -1,89 +1,44 @@
-## Objetivo
+Vou corrigir o comportamento do grafo para priorizar uso analítico: nós parados, clique fácil e conexões filtradas automaticamente ao selecionar um nó.
 
-Corrigir o problema principal do Grafo: as bolinhas não podem ficar em movimento contínuo porque isso inviabiliza análise, hover e clique. O grafo deve ficar praticamente parado para uso, com movimento controlado e sutil apenas a cada 10 segundos, mantendo uma estética mais tecnológica, tipo cérebro de IA / Jarvis.
+## O que será implementado
 
-## Plano de implementação
+1. **Parar o movimento frenético de vez**
+   - Remover o pulso físico de 10 segundos que hoje solta os nós e reaquece a simulação.
+   - Trocar esse efeito por um “pulso visual” apenas: brilho, partículas e HUD continuam dando sensação de IA viva, mas sem mover as bolinhas.
+   - Após o primeiro layout estabilizar, todos os nós serão fixados com `fx/fy` e a simulação será parada explicitamente.
 
-### 1. Parar o movimento frenético
+2. **Modo foco automático ao selecionar um nó**
+   - Ao clicar em qualquer nó, o grafo entrará em modo de foco.
+   - Todas as conexões que não pertencem ao nó selecionado ficarão ocultas.
+   - Apenas os links do nó selecionado serão exibidos, com destaque nos mais fortes.
+   - Os nós sem relação direta serão escurecidos para reduzir poluição visual.
 
-Ajustar `src/components/equity-brain/graph/StrategicGraph.tsx` para que a simulação física rode apenas para organizar o layout inicial e depois congele as posições dos nodes.
+3. **Mostrar só os links mais relevantes**
+   - Para evitar travamento e poluição visual, o modo foco exibirá apenas as conexões mais fortes do nó selecionado.
+   - Critério proposto: top 12 conexões por peso, priorizando `weight >= 0.55`; se houver poucas, mostra as melhores disponíveis.
+   - Links fortes terão brilho/partículas discretas; links mais fracos ficam ocultos nesse modo.
 
-- Reduzir o tempo de simulação ativa.
-- Fixar `fx` e `fy` assim que o layout estabilizar.
-- Remover qualquer reaquecimento contínuo que possa estar sendo disparado por mudanças de referência em `nodes`/`edges`.
-- Garantir que hover, seleção e pulse visual não chamem `d3ReheatSimulation()` nem soltem os nodes.
+4. **Melhorar usabilidade de clique**
+   - Aumentar ainda mais a área invisível de clique dos nós.
+   - Ao selecionar, centralizar o nó sem aplicar zoom agressivo.
+   - Adicionar um pequeno badge/controle no topo: “Modo foco ativo: X conexões fortes”, com botão para limpar foco.
 
-### 2. Movimento controlado a cada 10 segundos
+5. **Manter visual tecnológico sem sacrificar performance**
+   - Preservar o visual Jarvis/IA: fundo HUD, glow, anéis e partículas.
+   - Remover efeitos baseados em movimento físico contínuo.
+   - Renderizar partículas somente em conexões fortes do nó selecionado ou hovered.
 
-Adicionar um ciclo discreto:
-
-- A cada 10 segundos, liberar uma micro-reorganização por poucos ticks.
-- O movimento será leve, curto e automático.
-- Ao terminar, o grafo volta a ficar congelado.
-- Se o usuário estiver com mouse sobre um node ou com um node selecionado, a reorganização será pausada para não atrapalhar o clique/análise.
-
-Comportamento esperado:
-
-```text
-0s: layout estabiliza e congela
-10s: pulso leve de reorganização por ~0.8s
-11s: congela novamente
-20s: novo pulso leve, se não houver interação
-```
-
-### 3. Melhorar a clicabilidade
-
-- Aumentar a área invisível de clique/hover dos nodes sem aumentar visualmente todas as bolinhas.
-- Manter nodes selecionados fixos no centro quando clicados.
-- Evitar zoom/recenter agressivo caso isso atrapalhe a navegação.
-- Garantir que nodes pequenos continuem fáceis de selecionar.
-
-### 4. Deixar sellers e clusters mais afastados
-
-Recalibrar as forças para análise visual:
-
-- Mais `forceCollide` para evitar sobreposição.
-- Distâncias de links maiores, principalmente em conexões fracas.
-- Repulsão forte no layout inicial, mas sem manter velocidade residual depois.
-- Separação extra quando o filtro exibe muitos sellers, evitando o conglomerado central.
-
-### 5. Visual “cérebro IA / Jarvis” sem movimentar os nodes
-
-Trocar movimento físico por movimento visual de baixo custo:
-
-- Fundo mais tecnológico com HUD/grid radial sutil.
-- Anéis concêntricos translúcidos e linhas finas estilo interface Jarvis.
-- Glow cyan/emerald nos hubs.
-- Micro-pulse apenas no brilho dos nodes, não na posição deles.
-- Partículas/sinapses somente em hover ou node selecionado.
-- Links idle quase invisíveis; conexões fortes aparecem ao passar o mouse.
-
-### 6. Indicador de estado
-
-Adicionar um pequeno status no topo direito ou próximo ao badge atual:
-
-- “Rede estabilizada” quando congelado.
-- “Recalculando malha…” durante o pulso de 10 segundos.
-
-Isso deixa claro que o grafo está vivo, mas sob controle.
-
-## Arquivos a alterar
+## Arquivos que serão alterados
 
 - `src/components/equity-brain/graph/StrategicGraph.tsx`
-  - controle de simulação/congelamento
-  - pulso a cada 10 segundos
-  - ajuste das forças
-  - melhorias de hover/click
-  - estética neural/Jarvis
+  - Ajustar simulação, congelamento, seleção, renderização de links e estado de foco.
 
 - `src/components/equity-brain/graph/GraphLegend.tsx`
-  - atualizar textos para explicar: grafo estabilizado, conexões sob hover, tamanho por score/conexões
+  - Atualizar a legenda para explicar que o grafo fica congelado e que as conexões aparecem por foco/hover.
 
 ## Resultado esperado
 
-- As bolinhas param de se mexer freneticamente.
-- O usuário consegue clicar e analisar targets sem dificuldade.
-- O grafo ainda parece vivo, mas por brilho, sinapses e pequenos pulsos controlados.
-- A cada 10 segundos ocorre apenas uma reorganização leve e curta.
-- Sellers e empresas ficam mais afastados e legíveis.
-- O visual fica mais tecnológico, próximo de uma interface IA/Jarvis, sem travar o gráfico.
+- O grafo deixa de se mover freneticamente.
+- Você consegue clicar nos nós com precisão.
+- Ao selecionar uma empresa/comprador/tese, o gráfico limpa automaticamente o excesso e mostra apenas as relações mais fortes daquele nó.
+- A experiência continua visualmente impactante, mas fica realmente utilizável para análise.
