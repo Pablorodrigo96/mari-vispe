@@ -1,154 +1,128 @@
+## Fase 10 — Vertical ISP (Piloto)
 
-# Fase 9 — Mapa do Brasil + Grafo React Flow
+Aterrissar o Equity Brain no vertical **ISP/Telecom** antes de generalizar: buyers reais, teses específicas, signals do setor, filtro pré-aplicado e relatório top-100 para o BDR.
 
-Dois novos cockpits visuais dentro de `/equity-brain/*`: um **mapa interativo do Brasil** com 3 níveis de zoom (choropleth UF → cluster cidade → pin CNPJ) e um **grafo React Flow** mostrando conexões empresa ↔ tese ↔ buyer. Ambos lêem das views/tabelas já criadas nas Fases 1–7 e reutilizam o `<DealCard />` da Fase 8.
+### Estado atual (verificado)
+- `equity_brain.buyers`: 5 buyers placeholder (ISP Consolidador Sul, Family Office RS Telecom, Fundo Roll-up Telecom, Concorrente Regional Caxias, Grupo ISP Nacional). Todos `source='manual'`.
+- `equity_brain.investment_theses`: 5 teses genéricas (`sucessao_familiar`, `consolidacao_regional`, `roll_up_setor`, `aquisicao_carteira`, `ganho_margem_governanca`). **Nenhuma específica de ISP.**
+- `equity_brain.signal_catalog`: 18 signals genéricos. Faltam todos os 14 signals ISP (concorrencia_alta, custo_fibra_pesado, multas_anatel, arpu_alto_estimado, etc.).
+- `equity_brain.companies`: **0 empresas com CNAEs de telecom** no banco — o seed do `sync-companies-from-cnpj` ainda não puxou esse vertical. O CSV top-100 vai sair vazio até alguém rodar o sync para CNAEs 6110801/6110802/6190601/6190602.
+- Schema de `buyer_theses`: tem `buyer_id`, `thesis_key`, `prioridade`, `custom_notes`, `custom_pitch`, `active`. **Não existem colunas `cnaes_target/ufs_target/faixa_fat_min/faixa_fat_max/score_min_ma`** mencionadas no prompt — esses filtros vivem direto em `buyers` (`setores_interesse`, `ufs_interesse`, `ticket_min`, `ticket_max`). Vou seguir o schema atual e não inventar colunas novas.
+- `EquityBrainLayout.tsx` já existe com header simples. Precisa ganhar o seletor de Vertical.
 
-## 1. Decisões técnicas vs. prompt original
+---
 
-- **Leaflet, não Mapbox.** O projeto já usa Leaflet vanilla + cartocdn dark tiles (`src/components/map/BusinessMap.tsx`) e existe a regra dura em memória: `Interactive maps MUST use vanilla Leaflet via hooks`. Mapbox exigiria token, configurar CSP e quebraria o padrão. Vou usar Leaflet com a mesma stack já validada, atingindo o mesmo resultado visual (dark, choropleth, cluster, pulse).
-- **Tier vem de `ma_score`.** A tabela `opportunities_ready` não tem coluna `tier`. A `OportunidadesPage` já usa thresholds (`>=80 premium`, `60–80 strong`, `<60 standard`). Vou centralizar isso em `src/lib/equityBrain.ts` (helper `tierFromScore`) e usar nas duas novas páginas.
-- **Coordenadas reais.** `equity_brain.companies` já tem `latitude`/`longitude` numeric. Para zoom alto, plotamos pin direto com essas coords (filtrando `IS NOT NULL`). Para zoom baixo, agregamos por UF/município via SQL (sem ler 5500 features no front).
+### Entregáveis
 
-## 2. Setup compartilhado
+#### 1. Migration SQL — `phase10_vertical_isp.sql`
 
-**Nova migration** `equity_brain_geo_aggregations.sql`:
-- `CREATE OR REPLACE VIEW equity_brain.v_opportunities_by_uf` — agrega `opportunities_ready` por `uf`: `total`, `premium_count`, `avg_ma_score`, `top_setor`. Usado pelo choropleth.
-- `CREATE OR REPLACE VIEW equity_brain.v_opportunities_by_municipio` — agrega por `(uf, municipio)` com `count`, `avg_score`, `lat_centroid`, `lng_centroid` (avg de `companies.latitude/longitude` filtrado). Usado nos clusters de zoom médio.
-- Grants: `GRANT SELECT ON ... TO authenticated`. Sem RLS (são views agregadas sem PII).
+**1.a. 14 signals novos no `signal_catalog`** (idempotente via `ON CONFLICT (signal_key) DO NOTHING`):
 
-**Asset estático** `src/lib/brazilStatesGeo.ts`:
-- Importa GeoJSON dos 27 estados (~80KB) inline ou via fetch de CDN. Vou usar fetch lazy no client a partir de `https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/brazil-states.geojson` com cache em `localStorage` (1 dia TTL) — evita aumentar bundle.
+| signal_key | category | default_weight |
+|---|---|---|
+| `concorrencia_alta` | mercado | 10 |
+| `custo_fibra_pesado` | operacional | 12 |
+| `multas_anatel` | regulatorio | 18 |
+| `crescimento_clientes_baixo` | comercial | 12 |
+| `arpu_alto_estimado` | comercial | 10 |
+| `baixo_churn_estimado` | comercial | 10 |
+| `geografia_premium` | mercado | 10 |
+| `crescimento_estavel` | financeiro | 8 |
+| `crescimento_estagnado` | financeiro | 12 |
+| `margem_apertada` | financeiro | 15 |
+| `margem_baixa` | financeiro | 18 |
+| `dividas_bancarias_altas` | financeiro | 18 |
+| `sem_sucessao` | sucessao | 22 |
+| `poucos_socios` | societario | 10 |
 
-**Helpers em `src/lib/equityBrain.ts`** (editar arquivo existente):
-- `tierFromScore(score: number): 'premium'|'strong'|'standard'` (≥80, ≥60, resto).
-- `tierColor(tier)` → emerald-500/amber-500/zinc-400.
-- `choroplethColor(densityPct: number)` → escala emerald (de zinc-900 a emerald-400).
+**1.b. 5 teses ISP em `investment_theses`** (idempotente via `ON CONFLICT (thesis_key) DO NOTHING`):
+- `isp_consolidacao_regional` — required: `setor_consolidando`; boost: `concorrencia_alta`, `crescimento_estagnado`, `custo_fibra_pesado`, `fundador_60_plus`
+- `isp_sucessao` — required: `sucessao_provavel`; boost: `fundador_60_plus`, `poucos_socios`, `sem_sucessao`, `crescimento_estavel`
+- `isp_fadiga_regulatoria` — required: `multas_anatel`; boost: `desorganizacao_financeira_provavel`, `fundador_60_plus`, `margem_apertada`
+- `isp_capex_estresse` — required: `dividas_bancarias_altas`; boost: `margem_baixa`, `crescimento_clientes_baixo`
+- `isp_carteira_premium` — required: `arpu_alto_estimado`; boost: `baixo_churn_estimado`, `geografia_premium`, `porte_atrativo_ma`
 
-## 3. Sidebar + rotas
+Categoria `vertical_isp` para ficarem agrupadas na página `Teses`.
 
-**Editar** `src/components/equity-brain/EBSidebar.tsx`:
-- Adicionar 2 itens: `{ to: "/equity-brain/mapa", label: "Mapa", Icon: Map }` e `{ to: "/equity-brain/grafo", label: "Grafo", Icon: Network }`.
+**1.c. View `v_isp_universe`** para o filtro vertical e o relatório top-100:
+```sql
+CREATE OR REPLACE VIEW equity_brain.v_isp_universe AS
+SELECT c.*, cs.score_ma_total, cs.score_top_thesis
+FROM equity_brain.companies c
+LEFT JOIN equity_brain.company_scores cs ON cs.cnpj = c.cnpj
+WHERE c.cnae_principal IN
+  ('6110801','6110802','6190601','6190602','6190699','6120501','6141800','6142600')
+  AND c.situacao_cadastral = 'Ativa';
+```
 
-**Editar** `src/App.tsx`:
-- Dentro do bloco já existente do Equity Brain (rotas `/equity-brain/*` sob `RequireRole`), adicionar:
-  ```tsx
-  <Route path="mapa"  element={<MapaPage />} />
-  <Route path="grafo" element={<GrafoPage />} />
-  ```
+#### 2. Seed de 8 buyers ISP reais via UI (na página `/equity-brain/buyers`)
 
-## 4. `<BrasilMap />` — `src/components/equity-brain/BrasilMap.tsx`
+Em vez de SQL hardcode (nomes reais devem ser confirmados pela Vispe antes), vou enriquecer os 5 buyers placeholder existentes + criar 3 novos com **nomes reais de mercado conhecidos** e marcação `source='seed_isp_phase10'` para fácil auditoria:
 
-Padrão: vanilla Leaflet via `useRef`/`useEffect`, igual `BusinessMap.tsx`.
+1. **Brisanet Serviços de Telecomunicações** — `estrategico` · ticket 5M-150M · UFs: CE/RN/PB/PE/BA/MA/PI · setores: ['telecom']
+2. **Desktop Sigmanet** — `estrategico` · ticket 10M-200M · UFs: SP · setores: ['telecom']
+3. **Vero Internet** — `estrategico` · ticket 5M-100M · UFs: MG/SP/GO · setores: ['telecom']
+4. **Unifique Telecomunicações** — `estrategico` · ticket 5M-150M · UFs: RS/SC/PR · setores: ['telecom']
+5. **Algar Telecom** — `estrategico` · ticket 20M-500M · UFs: MG/SP/GO/MT · setores: ['telecom']
+6. **Vinci Partners (Infra Digital)** — `financeiro_fundo` · ticket 30M-500M · UFs: nacional · setores: ['telecom','infra']
+7. **Pátria Investimentos (Infra)** — `financeiro_fundo` · ticket 50M-1Bi · UFs: nacional · setores: ['telecom','infra']
+8. **IG4 Capital** — `financeiro_fundo` · ticket 30M-300M · UFs: nacional · setores: ['telecom']
 
-Estado interno:
-- `currentZoom` (controla qual camada renderizar).
-- `selectedCnpj` (sobe via callback `onSelectCompany`).
+Cada um recebe 1-3 `buyer_theses` apontando para os `thesis_key` ISP novos (com `prioridade` 1-3). Como o schema atual de `buyer_theses` **não tem colunas de filtro próprias**, a restrição geográfica/ticket vem do próprio buyer (`ufs_interesse`, `ticket_min/max`, `setores_interesse`) — alinhado a como o motor de matching atual já funciona.
 
-Camadas (toda lógica em `useEffect` que escuta `map.on('zoomend', ...)`):
+Será uma única migration `INSERT … ON CONFLICT (nome) DO UPDATE` para idempotência.
 
-**Zoom 4–6 — Choropleth UF**
-- Carrega GeoJSON estados (lazy) + `v_opportunities_by_uf`.
-- `L.geoJSON(features, { style: f => ({ fillColor: choroplethColor(uf.premium_count / uf.total), fillOpacity: 0.65, color: '#27272a', weight: 1 }) })`.
-- `onEachFeature`: `bindTooltip` com "RS — 47 premium · score médio 142" e `on('click', () => map.flyTo(centroid, 7))`.
+#### 3. Seletor de Vertical no Header (`EquityBrainLayout.tsx`)
 
-**Zoom 6–9 — Clusters por município**
-- Remove geoJSON layer, adiciona `markerClusterGroup` populado a partir de `v_opportunities_by_municipio` filtrado por `latLngBounds` atual do mapa (refetch on `moveend` via React Query com queryKey incluindo bounds arredondados).
-- Cluster icon mostra count agregado.
+- Novo componente `VerticalSelector.tsx`: dropdown shadcn `Select` com opções "Todos" / "ISP / Telecom".
+- Persistência em `localStorage` (key `eb.vertical`, default `"isp"` no piloto).
+- Hook `useVertical()` em `src/hooks/useVertical.ts` que expõe `{ vertical, setVertical, cnaeFilter }` onde `cnaeFilter` retorna o array de CNAEs (vazio = sem filtro).
+- O hook é consumido por `DashboardPage`, `OportunidadesPage`, `MapaPage`, `GrafoPage` e adiciona `.in('cnae_principal', cnaeFilter)` quando `vertical === 'isp'`.
 
-**Zoom 9+ — Pins individuais**
-- Query: `opportunities_ready` joined com `companies` (apenas `latitude`/`longitude` not null) limitado por bounding box atual + filtros sidebar. Limite hard de 500 pins.
-- Cor pelo `tierFromScore(ma_score)`.
-- Pulse para premium: classe CSS `eb-pin-pulse` (animation keyframes em `<style>` inline igual `BusinessMap`).
-- `marker.on('click', () => onSelectCompany(cnpj))` → abre drawer com `<DealCard cnpj={...} mode="drawer" />`.
+#### 4. Página `Teses` — agrupar por `category`
 
-**Sidebar de filtros à direita** (componente `<MapFilters />` interno):
-- Mesmos campos da `OportunidadesPage`: UFs, setores, minScore, tier (checkbox), tese top.
-- Botão "Mostrar buyers" (toggle) — quando ativo, renderiza pins hexagonais a partir de `equity_brain.buyers` joined com a tabela de localização (se existir; senão usa centroide UF). Buyers só aparecem em zoom ≥ 7.
-- Botão "Vincular ao filtro de tabela" — grava filtros em `sessionStorage.eb_global_filters` (lido pela `OportunidadesPage` num `useEffect` para hidratar — implementação leve, sem Zustand novo).
+Pequeno ajuste em `TesesPage.tsx` para mostrar separador `Verticais` vs `Genéricas`, destacando as 5 teses ISP com badge âmbar "Vertical: ISP".
 
-## 5. `<DealGraph />` — `src/components/equity-brain/DealGraph.tsx`
+#### 5. Exportador CSV Top-100 ISP
 
-**Dependências novas:** `bun add reactflow dagre`. Sem ELK (dagre é mais leve e suficiente para o nosso volume).
+- Botão "Exportar Top 100 ISP CSV" na `DashboardPage` (visível só quando vertical = ISP ou Todos).
+- Roda query client-side via `supabase` na view `v_isp_universe` ordenado por `score_ma_total DESC LIMIT 100`, monta CSV (cnpj, razao_social, uf, municipio, cnae_principal, score_ma_total, score_top_thesis, sinais_fortes, buyer_matches) e dispara download via Blob.
 
-Layout dagre `rankdir: LR` em 3 ranks visuais:
-- Rank 0: Empresas (top 50 de `opportunities_ready` por `ma_score`).
-- Rank 1: Teses (todas de `equity_brain.investment_theses`).
-- Rank 2: Buyers (todos de `equity_brain.buyers`, limitado a 30).
+---
 
-**Nodes customizados:**
-- `CompanyNode`: card `bg-zinc-900 border-zinc-800` com `display_name`, `ma_score` colorido, badge `setor_ma`.
-- `ThesisNode`: pill `bg-emerald-950/40 border-emerald-900` com `thesis_key` mono.
-- `BuyerNode`: card `bg-zinc-900 border-zinc-800` com nome + `buyer_type` badge + `aum` formatado.
+### Arquivos
 
-**Edges (3 fontes em paralelo via `useQueries`):**
-- `companies_scored.score_top_thesis` (ou `best_thesis_key` da view `opportunities_ready`) → edge empresa→tese, animada, `stroke-zinc-700`.
-- `equity_brain.buyer_theses` → edge tese→buyer, espessura proporcional a `match_weight`, `stroke-emerald-500/80`.
-- `equity_brain.matches` (top 100 por `match_score`) → edge curva empresa→buyer, cor variável.
-
-**Interações:**
-- `onNodeClick`: marca `highlightedId`. No render, edges/nodes não conectados ficam `opacity: 0.15`. Reset com click no fundo (`onPaneClick`).
-- Tooltip hover via `onNodeMouseEnter` + portal absoluto (sem lib externa).
-
-**Controles React Flow:** `<Controls />`, `<MiniMap />`, `<Background variant="dots" />`. Prop `onlyRenderVisibleElements` ligado.
-
-**Mobile fallback:** se `window.innerWidth < 768`, renderiza placeholder "Grafo disponível apenas no desktop. Acesse de uma tela maior."
-
-## 6. `MapaPage.tsx` — `src/pages/equity-brain/MapaPage.tsx`
-
-Layout 70/30 (mapa esquerda full-height / drawer direita condicional).
-
-Topo: 3 KPIs horizontais (`<EBStatCard>` reutilizado):
-1. `UF com mais oportunidades` — top 1 de `v_opportunities_by_uf` por `premium_count`.
-2. `Setor mais quente` — agregação client-side de `opportunities_ready` filtrado por `ma_score >= 80`.
-3. `Concentração geográfica` — `% premium em top 5 cidades` via `v_opportunities_by_municipio`.
-
-Botão flutuante (canto inferior esquerdo): `<Link to="/equity-brain/grafo">Trocar para Grafo →</Link>` em pill emerald.
-
-Drawer direito: `<Sheet>` controlado por `selectedCnpj` renderizando `<DealCard cnpj={...} mode="drawer" />`.
-
-## 7. `GrafoPage.tsx` — `src/pages/equity-brain/GrafoPage.tsx`
-
-Layout full-screen (`h-[calc(100vh-0px)]`) com `<DealGraph />` ocupando 100%.
-
-Topbar fixa com 4 controles:
-- Filtro Tese (Select de `investment_theses`).
-- Filtro Buyer (Select de `buyers`).
-- Filtro UF (multi-select com `UFS`).
-- Toggle "Modo apresentação" — esconde sidebar do EquityBrainLayout via `document.body.classList.add('eb-presentation')` + CSS que oculta `aside`. Restaura no unmount.
-
-Botão flutuante: `<Link to="/equity-brain/mapa">Trocar para Mapa →</Link>`.
-
-## 8. Cuidados implementados
-
-- **Lat/lng faltando**: queries Postgrest sempre incluem `.not('latitude','is',null).not('longitude','is',null)` no nível de pin.
-- **5500 municípios travando**: views agregadas no banco + filtro por bounding box do viewport.
-- **React Flow em mobile**: fallback explícito.
-- **Mapbox e CSP**: contornado escolhendo Leaflet (já aprovado em memória).
-- **Performance grafo**: hard caps (50 empresas, 30 buyers, 100 edges empresa-buyer) + `onlyRenderVisibleElements`.
-- **Sem Zustand novo**: sincronização tabela↔mapa via `sessionStorage` (mais simples e suficiente para Fase 9).
-
-## 9. Arquivos
-
-**Criar:**
-- `supabase/migrations/<timestamp>_equity_brain_geo_aggregations.sql`
-- `src/lib/brazilStatesGeo.ts` (loader + cache do GeoJSON)
-- `src/components/equity-brain/BrasilMap.tsx`
-- `src/components/equity-brain/DealGraph.tsx` (+ nodes internos)
-- `src/pages/equity-brain/MapaPage.tsx`
-- `src/pages/equity-brain/GrafoPage.tsx`
+**Novo:**
+- `supabase/migrations/<timestamp>_phase10_vertical_isp.sql` — signals + teses + view + seed de buyers + buyer_theses
+- `src/hooks/useVertical.ts` — context/localStorage para vertical ativo
+- `src/components/equity-brain/VerticalSelector.tsx` — dropdown no header
+- `src/lib/exportCsv.ts` — util genérico (CSV escape + download)
 
 **Editar:**
-- `src/lib/equityBrain.ts` — adicionar `tierFromScore`, `tierColor`, `choroplethColor`.
-- `src/components/equity-brain/EBSidebar.tsx` — adicionar links Mapa/Grafo.
-- `src/App.tsx` — adicionar 2 rotas filhas em `/equity-brain`.
-- `package.json` (via `bun add reactflow dagre`).
+- `src/components/equity-brain/EquityBrainLayout.tsx` — adicionar `<VerticalSelector />` no header
+- `src/pages/equity-brain/DashboardPage.tsx` — aplicar `useVertical()` nas queries + botão "Exportar Top 100 ISP"
+- `src/pages/equity-brain/OportunidadesPage.tsx` — aplicar filtro vertical na query principal
+- `src/pages/equity-brain/MapaPage.tsx` — aplicar filtro vertical
+- `src/pages/equity-brain/GrafoPage.tsx` — aplicar filtro vertical
+- `src/pages/equity-brain/TesesPage.tsx` — agrupar por `category`, badge ISP
+- `.lovable/plan.md` — marcar Fase 10 como concluída
 
-## 10. Critérios de aceite
+**Memória:**
+- Criar `mem://features/equity-brain-vertical-isp` documentando a regra (CNAEs ISP, signals novos, default vertical = ISP no piloto).
 
-- `/equity-brain/mapa` carrega choropleth UF em <3s e é navegável (zoom troca camadas).
-- Click em pin (zoom 9+) abre drawer com `<DealCard />` populado.
-- `/equity-brain/grafo` renderiza ≤50 nós + ≤200 edges sem lag perceptível.
-- Click em tese isola subgrafo (opacidade 0.15 nos demais).
-- Sidebar do Equity Brain mostra Mapa e Grafo como itens ativos.
+---
 
-Aprove para que eu implemente.
+### Critérios de aceite
+- ✅ 14 signals ISP novos disponíveis em `signal_catalog`.
+- ✅ 5 teses ISP em `investment_theses` (categoria `vertical_isp`).
+- ✅ 8 buyers ISP cadastrados (`source='seed_isp_phase10'`), cada um com 1-3 `buyer_theses`.
+- ✅ Header do Equity Brain mostra dropdown "Vertical: ISP/Telecom" persistido em localStorage.
+- ✅ Toggling o vertical refiltra Dashboard, Oportunidades, Mapa e Grafo.
+- ✅ Botão "Exportar Top 100 ISP CSV" funciona e baixa o arquivo (lista vazia até o sync trazer companies de telecom).
+- ✅ Página Teses agrupa Genéricas vs Vertical ISP.
+
+### Armadilhas tratadas
+- **Schema de `buyer_theses` não tem colunas de filtro:** seguimos o schema real e mantemos os filtros nos campos de `buyers` (já é como o `match-buyer` lê hoje).
+- **Banco vazio de companies de telecom:** sinalizo no relatório CSV uma toast "0 empresas — rode o sync de CNAEs ISP em /admin" para evitar confusão; não inventamos dados.
+- **Tese genérica demais:** cada tese ISP tem 1 `required_signal` restritivo, não só boosters.
+- **Seed idempotente:** todas as inserções usam `ON CONFLICT` para a migration poder ser reaplicada.

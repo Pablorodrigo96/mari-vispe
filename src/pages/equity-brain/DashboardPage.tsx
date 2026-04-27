@@ -1,30 +1,41 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Building2, Target, Flame, PhoneCall, Sheet as SheetIcon } from "lucide-react";
+import { Building2, Target, Flame, PhoneCall, Sheet as SheetIcon, Download } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useVertical } from "@/hooks/useVertical";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { EBFunnel } from "@/components/equity-brain/EBFunnel";
 import { DealCard } from "@/components/equity-brain/DealCard";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { formatNumber, relativeTime, eventIcon, scoreColor } from "@/lib/equityBrain";
+import { rowsToCsv, downloadCsv } from "@/lib/exportCsv";
 import { cn } from "@/lib/utils";
 
 const REFRESH_MS = 60_000;
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { cnaeFilter, isIsp } = useVertical();
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const kpis = useQuery({
-    queryKey: ["eb", "dashboard-kpis"],
+    queryKey: ["eb", "dashboard-kpis", cnaeFilter.join(",")],
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
+      const companiesQ = supabase.schema("equity_brain" as any).from("companies" as any).select("cnpj", { count: "exact", head: true }).eq("situacao_cadastral", "Ativa");
+      const premiumQ   = supabase.schema("equity_brain" as any).from("opportunities_ready" as any).select("cnpj", { count: "exact", head: true }).gte("ma_score", 80);
+      if (cnaeFilter.length > 0) {
+        companiesQ.in("cnae_principal", cnaeFilter);
+        premiumQ.in("cnae_principal", cnaeFilter);
+      }
       const [companies, scored, premium, callsWeek] = await Promise.all([
-        supabase.schema("equity_brain" as any).from("companies" as any).select("cnpj", { count: "exact", head: true }).eq("situacao_cadastral", "Ativa"),
+        companiesQ,
         supabase.schema("equity_brain" as any).from("companies_scored" as any).select("ma_score").not("ma_score", "is", null).limit(1000),
-        supabase.schema("equity_brain" as any).from("opportunities_ready" as any).select("cnpj", { count: "exact", head: true }).gte("ma_score", 80),
+        premiumQ,
         supabase.schema("equity_brain" as any).from("call_feedback" as any).select("id", { count: "exact", head: true }).gte("call_at", new Date(Date.now() - 7 * 86400000).toISOString()),
       ]);
       const scores = (scored.data ?? []) as any[];
@@ -60,19 +71,52 @@ export default function DashboardPage() {
   });
 
   const top = useQuery({
-    queryKey: ["eb", "dashboard-top"],
+    queryKey: ["eb", "dashboard-top", cnaeFilter.join(",")],
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .schema("equity_brain" as any).from("opportunities_ready" as any)
-        .select("cnpj, razao_social, uf, municipio, setor_ma, ma_score, vispe_score, sucessao_score, buyers_count, best_thesis_name")
+        .select("cnpj, razao_social, uf, municipio, setor_ma, ma_score, vispe_score, sucessao_score, buyers_count, best_thesis_name, cnae_principal")
         .gte("ma_score", 80)
         .order("ma_score", { ascending: false })
         .limit(50);
+      if (cnaeFilter.length > 0) q = q.in("cnae_principal", cnaeFilter);
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as any[];
     },
   });
+
+  async function exportTop100Isp() {
+    setExporting(true);
+    try {
+      const { data, error } = await supabase
+        .schema("equity_brain" as any).from("v_isp_universe" as any)
+        .select("cnpj, razao_social, uf, municipio, cnae_principal, ma_score, vispe_score, sucessao_score, buyer_fit_score")
+        .not("ma_score", "is", null)
+        .order("ma_score", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const rows = data ?? [];
+      if (rows.length === 0) {
+        toast.warning("Nenhuma empresa ISP no banco ainda", {
+          description: "Rode o sync de CNAEs de telecom em /admin antes de exportar.",
+        });
+        return;
+      }
+      const csv = rowsToCsv(rows as any[], [
+        "cnpj", "razao_social", "uf", "municipio", "cnae_principal",
+        "ma_score", "vispe_score", "sucessao_score", "buyer_fit_score",
+      ]);
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadCsv(`top100-isp-${stamp}.csv`, csv);
+      toast.success(`${rows.length} empresas exportadas`);
+    } catch (e: any) {
+      toast.error("Falha ao exportar", { description: e?.message });
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const events = useQuery({
     queryKey: ["eb", "dashboard-events"],
@@ -91,9 +135,20 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-100">Dashboard</h1>
-        <p className="text-sm text-zinc-500 mt-1">Visão consolidada do funil de M&A · auto-refresh 60s</p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-100">Dashboard{isIsp && <span className="text-emerald-400 text-base font-medium ml-2">· Vertical ISP</span>}</h1>
+          <p className="text-sm text-zinc-500 mt-1">Visão consolidada do funil de M&A · auto-refresh 60s</p>
+        </div>
+        <Button
+          variant="outline" size="sm"
+          onClick={exportTop100Isp}
+          disabled={exporting}
+          className="bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:text-emerald-300"
+        >
+          <Download className="h-3.5 w-3.5 mr-1.5" />
+          {exporting ? "Exportando…" : "Exportar Top 100 ISP CSV"}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

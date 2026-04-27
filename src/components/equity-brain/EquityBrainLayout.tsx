@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { EBSidebar } from "./EBSidebar";
+import { VerticalSelector } from "./VerticalSelector";
 import { Input } from "@/components/ui/input";
 
 export function EquityBrainLayout() {
@@ -22,7 +23,7 @@ export function EquityBrainLayout() {
       <EBSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur sticky top-0 z-30 flex items-center gap-3 px-6">
-          <form onSubmit={onSubmit} className="relative w-80 max-w-full">
+          <form onSubmit={onSubmit} className="relative w-72 max-w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
             <Input
               value={search}
@@ -31,6 +32,9 @@ export function EquityBrainLayout() {
               className="pl-9 h-9 bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-emerald-700"
             />
           </form>
+          <div className="ml-3">
+            <VerticalSelector />
+          </div>
           <div className="ml-auto text-xs text-zinc-500">
             Cockpit interno · admin / advisor
           </div>

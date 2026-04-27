@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Filter, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useVertical } from "@/hooks/useVertical";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ const PAGE_SIZES = [25, 50, 100, 200];
 
 export default function OportunidadesPage() {
   const { isAdmin } = useUserRoles();
+  const { cnaeFilter, isIsp } = useVertical();
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
 
   // Filtros
@@ -50,14 +52,15 @@ export default function OportunidadesPage() {
   });
 
   const dataQ = useQuery({
-    queryKey: ["eb", "opps", debounced, page, pageSize],
+    queryKey: ["eb", "opps", debounced, page, pageSize, cnaeFilter.join(",")],
     queryFn: async () => {
       let q = supabase
         .schema("equity_brain" as any).from("opportunities_ready" as any)
-        .select("cnpj, razao_social, uf, municipio, setor_ma, ma_score, vispe_score, sucessao_score, buyers_count, best_thesis_name, refreshed_at, status", { count: "exact" })
+        .select("cnpj, razao_social, uf, municipio, setor_ma, ma_score, vispe_score, sucessao_score, buyers_count, best_thesis_name, refreshed_at, status, cnae_principal", { count: "exact" })
         .order("ma_score", { ascending: false })
         .range(page * pageSize, page * pageSize + pageSize - 1);
 
+      if (cnaeFilter.length > 0) q = q.in("cnae_principal", cnaeFilter);
       if (ufs.length > 0) q = q.in("uf", ufs);
       if (setores.length > 0) q = q.in("setor_ma", setores);
       if (minScore > 0) q = q.gte("ma_score", minScore);
