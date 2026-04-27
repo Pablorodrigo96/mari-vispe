@@ -462,11 +462,11 @@ export function StrategicGraph() {
         width={size.w}
         height={size.h}
         backgroundColor="rgba(0,0,0,0)"
-        cooldownTicks={80}
-        cooldownTime={3000}
-        d3AlphaDecay={0.05}
+        cooldownTicks={150}
+        cooldownTime={5000}
+        d3AlphaDecay={0.04}
         d3VelocityDecay={0.55}
-        warmupTicks={60}
+        warmupTicks={80}
         onEngineStop={() => {
           // Fixar nodes na posição final (sem mais drift)
           nodes.forEach((n: any) => {
@@ -476,31 +476,46 @@ export function StrategicGraph() {
             }
           });
           // Enquadrar todo o grafo já parado
-          fgRef.current?.zoomToFit(400, 60);
+          fgRef.current?.zoomToFit(500, 80);
         }}
         enableNodeDrag={false}
-        linkCurvature={(l: any) => 0.12 + (l.weight ?? 0) * 0.08}
-        linkDirectionalParticles={(l: any) => (l.weight >= 0.7 ? 2 : 0)}
-        linkDirectionalParticleWidth={(l: any) => 1.5 + l.weight * 1.5}
+        linkCurvature={(l: any) => 0.18 + (l.weight ?? 0) * 0.1}
+        linkDirectionalParticles={(l: any) => {
+          // Particles só quando há foco (hover/selected) e link toca o foco
+          const focusId = hoveredNodeId ?? selectedNode?.id ?? null;
+          if (!focusId) return 0;
+          const sId = l.source.id ?? l.source;
+          const tId = l.target.id ?? l.target;
+          const touches = sId === focusId || tId === focusId;
+          if (!touches) return 0;
+          return l.weight >= 0.7 ? 3 : l.weight >= 0.5 ? 2 : 0;
+        }}
+        linkDirectionalParticleWidth={(l: any) => 1.5 + (l.weight ?? 0) * 1.8}
+        linkDirectionalParticleSpeed={() => 0.006}
         linkDirectionalParticleColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#52525b"}
         linkWidth={(l: any) => {
-          const isHl = hoveredNodeId
-            ? (l.source.id ?? l.source) === hoveredNodeId || (l.target.id ?? l.target) === hoveredNodeId
-            : true;
-          return (l.weight * 3.5 + 0.3) * (isHl ? 1.5 : 1);
+          const focusId = hoveredNodeId ?? selectedNode?.id ?? null;
+          const sId = l.source.id ?? l.source;
+          const tId = l.target.id ?? l.target;
+          const touches = focusId ? (sId === focusId || tId === focusId) : false;
+          if (touches) return (l.weight ?? 0.3) * 2.6 + 0.8; // aceso
+          if (focusId) return 0.0001; // outras somem
+          // Idle: só top-N renderiza, e bem fininho
+          return idleEdgeIds.has(edgeKey(l)) ? 0.5 : 0.0001;
         }}
         linkColor={(l: any) => {
           const base = EDGE_COLORS[l.edge_type] ?? "#52525b";
-          const conf = l.confidence ?? 0.6;
-          if (!hoveredNodeId) {
-            return base.replace("hsl(", "hsla(").replace(")", `, ${conf * 0.55 + 0.15})`);
-          }
+          const focusId = hoveredNodeId ?? selectedNode?.id ?? null;
           const sId = l.source.id ?? l.source;
           const tId = l.target.id ?? l.target;
-          const isHl = sId === hoveredNodeId || tId === hoveredNodeId;
-          return base
-            .replace("hsl(", "hsla(")
-            .replace(")", `, ${isHl ? 0.95 : 0.05})`);
+          const touches = focusId ? (sId === focusId || tId === focusId) : false;
+          const toAlpha = (a: number) =>
+            base.startsWith("hsl(")
+              ? base.replace("hsl(", "hsla(").replace(")", `, ${a})`)
+              : base;
+          if (touches) return toAlpha(0.95);
+          if (focusId) return toAlpha(0.02);
+          return idleEdgeIds.has(edgeKey(l)) ? toAlpha(0.13) : toAlpha(0);
         }}
         onNodeClick={(n: any) => {
           setSelectedNode(n as GraphNode);
@@ -516,55 +531,90 @@ export function StrategicGraph() {
         }}
         nodeCanvasObject={(node: any, ctx, globalScale) => {
           const n = node as GraphNode;
-          // Skip if simulation hasn't positioned this node yet
           if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
           const baseR = getBaseRadius(n);
           const color = NODE_COLORS[n.type] ?? "#71717a";
           const isHot = hotNodeIds.has(n.id);
           const isHovered = n.id === hoveredNodeId;
           const isSelected = selectedNode?.id === n.id;
-          const isNeighbor = hoveredNodeId && neighborIds.has(n.id) && !isHovered;
-          const isDimmed = hoveredNodeId && !neighborIds.has(n.id);
+          const focusActive = !!(hoveredNodeId || selectedNode);
+          const isNeighbor = focusActive && neighborIds.has(n.id) && !isHovered && !isSelected;
+          const isDimmed = focusActive && !neighborIds.has(n.id) && !isSelected;
 
-          // Raio efetivo: hover aumenta 1.6x, vizinhos 1.2x (efeito visual sem mover)
-          const r = isHovered ? baseR * 1.6 : isNeighbor ? baseR * 1.2 : baseR;
-          const alpha = isDimmed ? 0.15 : 1;
+          // Raio efetivo
+          const r = isHovered || isSelected ? baseR * 1.7 : isNeighbor ? baseR * 1.25 : baseR;
+          const alpha = isDimmed ? 0.18 : 1;
 
-          // Glow pulse para hotspots
+          const toHsla = (a: number) =>
+            color.startsWith("hsl(")
+              ? color.replace("hsl(", "hsla(").replace(")", `, ${a})`)
+              : color;
+
+          // ---- Glow externo difuso (neurônio respirando) ----
           if (isHot && !isDimmed) {
-            const pulseR = Math.max(r + 0.5, r + Math.sin(pulse) * 4 + 6);
-            const grad = ctx.createRadialGradient(node.x, node.y, r, node.x, node.y, pulseR);
-            grad.addColorStop(0, color.replace("hsl(", "hsla(").replace(")", ", 0.45)"));
-            grad.addColorStop(1, color.replace("hsl(", "hsla(").replace(")", ", 0)"));
+            const breath = Math.sin(pulse) * 0.5 + 0.5; // 0..1
+            const outerR = r + 10 + breath * 8;
+            try {
+              const g2 = ctx.createRadialGradient(node.x, node.y, r, node.x, node.y, outerR);
+              g2.addColorStop(0, toHsla(0.18 + breath * 0.15));
+              g2.addColorStop(1, toHsla(0));
+              ctx.beginPath();
+              ctx.fillStyle = g2;
+              ctx.arc(node.x, node.y, outerR, 0, 2 * Math.PI);
+              ctx.fill();
+            } catch {}
+          }
+
+          // ---- Glow do hover/selected (radial, cor do node) ----
+          if ((isHovered || isSelected) && !isDimmed) {
+            const haloR = r + 14;
+            try {
+              const g3 = ctx.createRadialGradient(node.x, node.y, r, node.x, node.y, haloR);
+              g3.addColorStop(0, toHsla(0.55));
+              g3.addColorStop(1, toHsla(0));
+              ctx.beginPath();
+              ctx.fillStyle = g3;
+              ctx.arc(node.x, node.y, haloR, 0, 2 * Math.PI);
+              ctx.fill();
+            } catch {}
+          }
+
+          // ---- Glow interno sutil pra dar luminosidade ----
+          if (!isDimmed) {
+            try {
+              const gi = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, r * 1.4);
+              gi.addColorStop(0, toHsla(0.95));
+              gi.addColorStop(0.7, toHsla(0.7));
+              gi.addColorStop(1, toHsla(0));
+              ctx.beginPath();
+              ctx.fillStyle = gi;
+              ctx.arc(node.x, node.y, r * 1.4, 0, 2 * Math.PI);
+              ctx.fill();
+            } catch {}
+          } else {
+            // Dimmed: só círculo plano (perf)
             ctx.beginPath();
-            ctx.fillStyle = grad;
-            ctx.arc(node.x, node.y, pulseR, 0, 2 * Math.PI);
+            ctx.fillStyle = toHsla(alpha);
+            ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
             ctx.fill();
           }
 
-          // Halo no hover/selected
-          if (isHovered || isSelected) {
-            ctx.beginPath();
-            ctx.strokeStyle = "rgba(255,255,255,0.9)";
-            ctx.lineWidth = 2.5 / globalScale;
-            ctx.arc(node.x, node.y, r + 4, 0, 2 * Math.PI);
-            ctx.stroke();
-          }
-
-          // Node core
+          // ---- Núcleo sólido ----
           ctx.beginPath();
-          ctx.fillStyle = color.replace("hsl(", "hsla(").replace(")", `, ${alpha})`);
+          ctx.fillStyle = toHsla(alpha);
           ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
           ctx.fill();
 
-          // Borda fina
-          ctx.beginPath();
-          ctx.strokeStyle = `rgba(0,0,0,${alpha * 0.6})`;
-          ctx.lineWidth = 1 / globalScale;
-          ctx.arc(node.x, node.y, baseR, 0, 2 * Math.PI);
-          ctx.stroke();
+          // Anel branco fino quando hover/selected
+          if (isHovered || isSelected) {
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(255,255,255,0.9)";
+            ctx.lineWidth = 1.8 / globalScale;
+            ctx.arc(node.x, node.y, r + 2, 0, 2 * Math.PI);
+            ctx.stroke();
+          }
 
-          // Label só em zoom maior ou em hover
+          // Label só em zoom maior, hover ou selected
           if (globalScale > 1.4 || isHovered || isSelected) {
             const fontSize = Math.min(11, 9 / globalScale + 4);
             ctx.font = `${isHovered || isSelected ? "bold " : ""}${fontSize}px Inter, system-ui`;
@@ -572,7 +622,7 @@ export function StrategicGraph() {
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             const label = n.label.length > 28 ? n.label.slice(0, 26) + "…" : n.label;
-            ctx.fillText(label, node.x, node.y + baseR + 3);
+            ctx.fillText(label, node.x, node.y + r + 4);
           }
         }}
         nodePointerAreaPaint={(node: any, color, ctx) => {
