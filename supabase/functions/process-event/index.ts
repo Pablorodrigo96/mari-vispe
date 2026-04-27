@@ -123,6 +123,13 @@ serve(async (req) => {
             });
             break;
           }
+          case "signal.embed_pending": {
+            // Fase 7 — gera embedding semântico do signal_text
+            result = await callEdge(supabaseUrl, serviceKey, "embed-signal", {
+              signal_id: ev.entity_id,
+            });
+            break;
+          }
           case "opportunity.promoted": {
             console.log(`[process-event] opportunity.promoted entity=${ev.entity_id} (Slack/email pendente — Fase 11)`);
             isSkipped = true;
