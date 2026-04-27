@@ -15,7 +15,9 @@ const VALID_REASONS = ['retirement', 'relocation', 'new_venture', 'health', 'par
 const TEMPLATE_HEADERS = [
   'titulo', 'categoria', 'descricao', 'faturamento_anual', 'lucro_anual',
   'valor_pedido', 'cidade', 'estado', 'motivo_venda', 'cep', 'bairro',
-  'rua', 'ano_fundacao', 'cnpj', 'ocultar_preco', 'info_adicional'
+  'rua', 'ano_fundacao', 'cnpj', 'ocultar_preco', 'info_adicional',
+  // Campos contábeis opcionais — alimentam o equity_score automaticamente
+  'divida_total', 'caixa_disponivel', 'funcionarios', 'crescimento_yoy_pct',
 ];
 
 const TEMPLATE_EXAMPLE = [
@@ -23,8 +25,67 @@ const TEMPLATE_EXAMPLE = [
   'Padaria com 15 anos de mercado, localizada em região nobre de São Paulo. Carteira fiel de clientes, faturamento recorrente e marca consolidada no bairro. Oportunidade única para quem deseja investir no setor alimentício.',
   1200000, 240000, 800000, 'São Paulo', 'SP', 'retirement',
   '01310-100', 'Bela Vista', 'Rua Augusta', 2010, '12.345.678/0001-90',
-  'nao', ''
+  'nao', '',
+  // contábeis (opcionais)
+  150000, 80000, 12, 18,
 ];
+
+/**
+ * Calcula equity_score (0-100) com a base contábil disponível.
+ * Pesos: margem líquida (40), crescimento YoY (30), saúde patrimonial (20), tamanho/idade (10).
+ */
+function computeEquityScore(d: Record<string, any>): number {
+  const revenue = Number(d.faturamento_anual) || 0;
+  const profit = Number(d.lucro_anual) || 0;
+  const debt = Number(d.divida_total) || 0;
+  const cash = Number(d.caixa_disponivel) || 0;
+  const employees = Number(d.funcionarios) || 0;
+  const growth = Number(d.crescimento_yoy_pct) || 0;
+  const foundationYear = Number(d.ano_fundacao) || 0;
+  const ageYears = foundationYear > 1900 ? new Date().getFullYear() - foundationYear : 0;
+
+  // Margem líquida (0–40)
+  const margin = revenue > 0 ? profit / revenue : 0;
+  let marginScore = 0;
+  if (margin >= 0.25) marginScore = 40;
+  else if (margin >= 0.15) marginScore = 32;
+  else if (margin >= 0.10) marginScore = 24;
+  else if (margin >= 0.05) marginScore = 14;
+  else if (margin > 0) marginScore = 6;
+
+  // Crescimento YoY (0–30)
+  let growthScore = 0;
+  if (growth >= 30) growthScore = 30;
+  else if (growth >= 15) growthScore = 22;
+  else if (growth >= 5) growthScore = 14;
+  else if (growth > 0) growthScore = 6;
+
+  // Saúde patrimonial: dívida/EBITDA proxy + caixa (0–20)
+  let healthScore = 10; // base
+  if (debt > 0 && profit > 0) {
+    const leverage = debt / profit;
+    if (leverage < 1) healthScore = 20;
+    else if (leverage < 2) healthScore = 16;
+    else if (leverage < 3) healthScore = 10;
+    else if (leverage < 5) healthScore = 4;
+    else healthScore = 0;
+  } else if (debt === 0 && cash > 0) healthScore = 20;
+  if (cash > revenue * 0.1) healthScore = Math.min(20, healthScore + 4);
+
+  // Tamanho + idade (0–10)
+  let sizeScore = 0;
+  if (revenue >= 5_000_000) sizeScore += 4;
+  else if (revenue >= 1_000_000) sizeScore += 3;
+  else if (revenue >= 500_000) sizeScore += 2;
+  if (ageYears >= 10) sizeScore += 4;
+  else if (ageYears >= 5) sizeScore += 3;
+  else if (ageYears >= 2) sizeScore += 2;
+  if (employees >= 20) sizeScore += 2;
+  else if (employees >= 5) sizeScore += 1;
+  sizeScore = Math.min(10, sizeScore);
+
+  return Math.max(0, Math.min(100, Math.round(marginScore + growthScore + healthScore + sizeScore)));
+}
 
 interface ParsedRow {
   data: Record<string, any>;
