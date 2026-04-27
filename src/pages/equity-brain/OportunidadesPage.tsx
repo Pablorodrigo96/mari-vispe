@@ -45,7 +45,7 @@ export default function OportunidadesPage() {
     queryKey: ["eb", "setores-distinct"],
     queryFn: async () => {
       const { data } = await supabase
-        .schema("equity_brain" as any).from("opportunities_ready" as any)
+        .from("eb_opportunities_ready" as any)
         .select("setor_ma").not("setor_ma", "is", null).limit(1000);
       return Array.from(new Set((data ?? []).map((r: any) => r.setor_ma).filter(Boolean))).sort() as string[];
     },
@@ -55,7 +55,7 @@ export default function OportunidadesPage() {
     queryKey: ["eb", "opps", debounced, page, pageSize, cnaeFilter.join(",")],
     queryFn: async () => {
       let q = supabase
-        .schema("equity_brain" as any).from("opportunities_ready" as any)
+        .from("eb_opportunities_ready" as any)
         .select("cnpj, razao_social, uf, municipio, setor_ma, ma_score, vispe_score, sucessao_score, buyers_count, best_thesis_name, refreshed_at, status, cnae_principal", { count: "exact" })
         .order("ma_score", { ascending: false })
         .range(page * pageSize, page * pageSize + pageSize - 1);

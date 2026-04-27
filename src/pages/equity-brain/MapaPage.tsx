@@ -26,8 +26,7 @@ export default function MapaPage() {
     queryKey: ["mapa", "kpi-uf"],
     queryFn: async () => {
       const { data } = await supabase
-        .schema("equity_brain" as any)
-        .from("v_opportunities_by_uf" as any)
+        .from("eb_v_opportunities_by_uf" as any)
         .select("uf,total,premium_count,top_setor")
         .order("premium_count", { ascending: false });
       return (data ?? []) as any[];
@@ -38,8 +37,7 @@ export default function MapaPage() {
     queryKey: ["mapa", "kpi-muni"],
     queryFn: async () => {
       const { data } = await supabase
-        .schema("equity_brain" as any)
-        .from("v_opportunities_by_municipio" as any)
+        .from("eb_v_opportunities_by_municipio" as any)
         .select("municipio,uf,premium_count,total")
         .order("premium_count", { ascending: false })
         .limit(50);

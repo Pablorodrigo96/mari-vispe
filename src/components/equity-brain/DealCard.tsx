@@ -34,8 +34,7 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
         queryKey: ["eb", "company", cnpj],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("companies_enriched" as any)
+            .from("eb_companies_enriched" as any)
             .select("*").eq("cnpj", cnpj).maybeSingle();
           if (error) throw error;
           return data as any;
@@ -45,8 +44,7 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
         queryKey: ["eb", "scored", cnpj],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("companies_scored" as any)
+            .from("eb_companies_scored" as any)
             .select("*").eq("cnpj", cnpj).maybeSingle();
           if (error) throw error;
           return data as any;
@@ -56,8 +54,7 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
         queryKey: ["eb", "signals", cnpj],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("company_signals" as any)
+            .from("eb_company_signals" as any)
             .select("signal_key, weight, signal_text, source, created_at")
             .eq("cnpj", cnpj).order("weight", { ascending: false }).limit(20);
           if (error) throw error;
@@ -68,8 +65,7 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
         queryKey: ["eb", "matches", cnpj],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("matches_enriched" as any)
+            .from("eb_matches_enriched" as any)
             .select("*").eq("cnpj", cnpj).order("match_score", { ascending: false }).limit(10);
           if (error) throw error;
           return (data ?? []) as any[];
@@ -79,8 +75,7 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
         queryKey: ["eb", "opp", cnpj],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("opportunities_ready" as any)
+            .from("eb_opportunities_ready" as any)
             .select("*").eq("cnpj", cnpj).maybeSingle();
           if (error) throw error;
           return data as any;
@@ -90,8 +85,7 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
         queryKey: ["eb", "calls", cnpj],
         queryFn: async () => {
           const { data, error } = await supabase
-            .schema("equity_brain" as any)
-            .from("call_feedback" as any)
+            .from("eb_call_feedback" as any)
             .select("id, call_at, outcome, interest_level, raw_notes, dor_principal, timing_estimado")
             .eq("cnpj", cnpj).order("call_at", { ascending: false }).limit(5);
           if (error) throw error;

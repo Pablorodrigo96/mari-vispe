@@ -50,17 +50,17 @@ export default function DashboardPage() {
     queryKey: ["eb", "dashboard-kpis", cnaeFilter.join(",")],
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
-      const companiesQ = supabase.schema("equity_brain" as any).from("companies" as any).select("cnpj", { count: "exact", head: true }).eq("situacao_cadastral", "Ativa");
-      const premiumQ   = supabase.schema("equity_brain" as any).from("opportunities_ready" as any).select("cnpj", { count: "exact", head: true }).gte("ma_score", 80);
+      const companiesQ = supabase.from("eb_companies" as any).select("cnpj", { count: "exact", head: true }).eq("situacao_cadastral", "Ativa");
+      const premiumQ   = supabase.from("eb_opportunities_ready" as any).select("cnpj", { count: "exact", head: true }).gte("ma_score", 80);
       if (cnaeFilter.length > 0) {
         companiesQ.in("cnae_principal", cnaeFilter);
         premiumQ.in("cnae_principal", cnaeFilter);
       }
       const [companies, scored, premium, callsWeek] = await Promise.all([
         companiesQ,
-        supabase.schema("equity_brain" as any).from("companies_scored" as any).select("ma_score").not("ma_score", "is", null).limit(1000),
+        supabase.from("eb_companies_scored" as any).select("ma_score").not("ma_score", "is", null).limit(1000),
         premiumQ,
-        supabase.schema("equity_brain" as any).from("call_feedback" as any).select("id", { count: "exact", head: true }).gte("call_at", new Date(Date.now() - 7 * 86400000).toISOString()),
+        supabase.from("eb_call_feedback" as any).select("id", { count: "exact", head: true }).gte("call_at", new Date(Date.now() - 7 * 86400000).toISOString()),
       ]);
       const scores = (scored.data ?? []) as any[];
       const avgMa = scores.length > 0 ? scores.reduce((a, b) => a + Number(b.ma_score ?? 0), 0) / scores.length : 0;
@@ -78,11 +78,11 @@ export default function DashboardPage() {
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
       const [universe, filtered, ranked, premium, talking] = await Promise.all([
-        supabase.schema("equity_brain" as any).from("companies" as any).select("cnpj", { count: "exact", head: true }),
-        supabase.schema("equity_brain" as any).from("companies_scored" as any).select("cnpj", { count: "exact", head: true }).gte("ma_score", 50),
-        supabase.schema("equity_brain" as any).from("opportunities_ready" as any).select("cnpj", { count: "exact", head: true }),
-        supabase.schema("equity_brain" as any).from("opportunities_ready" as any).select("cnpj", { count: "exact", head: true }).gte("ma_score", 80),
-        supabase.schema("equity_brain" as any).from("call_feedback" as any).select("cnpj", { count: "exact", head: true }).gte("call_at", new Date(Date.now() - 30 * 86400000).toISOString()),
+        supabase.from("eb_companies" as any).select("cnpj", { count: "exact", head: true }),
+        supabase.from("eb_companies_scored" as any).select("cnpj", { count: "exact", head: true }).gte("ma_score", 50),
+        supabase.from("eb_opportunities_ready" as any).select("cnpj", { count: "exact", head: true }),
+        supabase.from("eb_opportunities_ready" as any).select("cnpj", { count: "exact", head: true }).gte("ma_score", 80),
+        supabase.from("eb_call_feedback" as any).select("cnpj", { count: "exact", head: true }).gte("call_at", new Date(Date.now() - 30 * 86400000).toISOString()),
       ]);
       return [
         { label: "Universo",     value: universe.count ?? 0 },
@@ -99,7 +99,7 @@ export default function DashboardPage() {
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
       let q = supabase
-        .schema("equity_brain" as any).from("opportunities_ready" as any)
+        .from("eb_opportunities_ready" as any)
         .select("cnpj, razao_social, uf, municipio, setor_ma, ma_score, vispe_score, sucessao_score, buyers_count, best_thesis_name, cnae_principal")
         .gte("ma_score", 80)
         .order("ma_score", { ascending: false })
@@ -115,7 +115,7 @@ export default function DashboardPage() {
     setExporting(true);
     try {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("v_isp_universe" as any)
+        .from("eb_v_isp_universe" as any)
         .select("cnpj, razao_social, uf, municipio, cnae_principal, ma_score, vispe_score, sucessao_score, buyer_fit_score")
         .not("ma_score", "is", null)
         .order("ma_score", { ascending: false })
@@ -147,7 +147,7 @@ export default function DashboardPage() {
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any).from("events" as any)
+        .from("eb_events" as any)
         .select("id, event_type, entity_type, entity_id, processed_status, created_at")
         .eq("processed_status", "success")
         .order("created_at", { ascending: false })
