@@ -1,15 +1,56 @@
+## Plano: Bootstrap do módulo Equity Brain
 
+Estado atual verificado no banco:
+- `pg_cron` 1.6.4 já está ativa
+- `vector` e `pg_net` ainda NÃO estão instaladas
+- Schema `equity_brain` ainda NÃO existe
 
-## Plano: Configurar Sergio como Head de Parcerias
+Vou executar uma única migration consolidada com 2 blocos:
 
-Duas operacoes de dados (sem mudanca de schema):
+### Bloco 1 — Ativar extensões faltantes
 
-### 1. Atribuir role `admin` ao Sergio
-Inserir na tabela `user_roles` o registro `(user_id: 5c85799b-fa2e-4035-806a-da10c3696c23, role: admin)` para que ele passe pelo `AdminRoute` e acesse `/admin/parcerias`.
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+```
 
-### 2. Atualizar perfil com nome
-Atualizar `profiles` com `full_name = 'Sérgio William'` para que ele apareca corretamente nas listagens do painel.
+`pg_cron` permanece com `IF NOT EXISTS` (no-op, já ativa). `vector` (pgvector) habilita embeddings para o motor de IA. `pg_net` habilita chamadas HTTP assíncronas a partir do Postgres (úteis para webhooks/edge functions agendadas).
 
-### Observacao
-Nenhuma migracao necessaria. Ambas sao operacoes de dados (INSERT/UPDATE) nas tabelas existentes `user_roles` e `profiles`.
+### Bloco 2 — Criar schema isolado `equity_brain`
 
+```sql
+CREATE SCHEMA IF NOT EXISTS equity_brain;
+
+GRANT USAGE ON SCHEMA equity_brain TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA equity_brain
+  GRANT SELECT ON TABLES TO authenticated;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA equity_brain
+  GRANT ALL ON TABLES TO service_role;
+```
+
+Schema separado garante que o motor Equity Brain evolua sem colidir com `public` (marketplace, valuations, capital, parcerias). RLS continuará sendo definido por tabela conforme o módulo for crescendo.
+
+### Bloco 3 — Verificação pós-migration
+
+Após aplicar, vou rodar:
+
+```sql
+SELECT extname, extversion FROM pg_extension
+WHERE extname IN ('vector','pg_cron','pg_net');
+
+SELECT schema_name FROM information_schema.schemata
+WHERE schema_name = 'equity_brain';
+```
+
+E retorno os resultados completos para você confirmar.
+
+### Observações
+
+- Nenhuma tabela existente é alterada
+- Nenhum dado é movido ou removido
+- Nenhuma RLS atual é tocada
+- Operação 100% aditiva e reversível (`DROP EXTENSION` / `DROP SCHEMA`)
+- `pg_net` e `vector` são extensões oficialmente suportadas pelo Supabase
