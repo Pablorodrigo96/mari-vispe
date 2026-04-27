@@ -4,24 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target } from "lucide-react";
+import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel } from "lucide-react";
 import { toast } from "sonner";
+import { MatchDecisionCard, type MatchDecisionRow } from "@/components/equity-brain/MatchDecisionCard";
 
-type MatchRow = {
-  id: string;
-  cnpj: string;
-  buyer_id: string;
-  thesis_key: string;
-  match_score: number;
-  p_close_12m: number | null;
-  ev_p50: number | null;
-  data_confidence: number | null;
-  abstain: boolean | null;
-  buyer_archetype: string | null;
-  feature_contributions: any;
-  reasons: any;
-  engine_version: string;
-};
+type MatchRow = MatchDecisionRow;
 
 const fmtPct = (n: number | null) => (n == null ? "—" : `${(n * 100).toFixed(1)}%`);
 const fmtBRL = (n: number | null) =>
@@ -32,7 +19,7 @@ export default function EBShadowPage() {
   const [running, setRunning] = useState<string | null>(null);
   const [v1, setV1] = useState<MatchRow[]>([]);
   const [v2, setV2] = useState<MatchRow[]>([]);
-  const [tab, setTab] = useState<"summary" | "diff">("summary");
+  const [tab, setTab] = useState<"summary" | "diff" | "decision">("summary");
 
   async function load() {
     setLoading(true);
@@ -155,6 +142,7 @@ export default function EBShadowPage() {
         <TabsList className="bg-slate-900/60">
           <TabsTrigger value="summary"><Target className="h-4 w-4 mr-1" />Top v2 Matches</TabsTrigger>
           <TabsTrigger value="diff"><TrendingUp className="h-4 w-4 mr-1" />Divergências v1↔v2</TabsTrigger>
+          <TabsTrigger value="decision"><Gavel className="h-4 w-4 mr-1" />Decisão & Feedback</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
@@ -238,6 +226,29 @@ export default function EBShadowPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="decision" className="mt-4">
+          <div className="mb-3">
+            <p className="text-sm text-muted-foreground">
+              Cards de decisão para BDRs: bandas de preço (p10/p50/p90), probabilidade de fechamento com IC,
+              top contribuições e botões para registrar feedback (rejeição, NDA, fechado). Cada evento alimenta
+              o motor adaptativo da Fase 4.
+            </p>
+          </div>
+          {v2.length === 0 ? (
+            <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-800">
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                Nenhum match v2 disponível. Rode o motor v2 primeiro.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {v2.slice(0, 24).map((m) => (
+                <MatchDecisionCard key={m.id} match={m} onLogged={load} />
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
