@@ -100,6 +100,28 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
     const sinceISO = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
 
+    // Engine run tracking (Fase 5 — observabilidade)
+    const runStart = Date.now();
+    const { data: runRow } = await supabase.schema("equity_brain" as any).from("engine_runs").insert({
+      engine: "update-buyer-revealed-thetas",
+      status: "running",
+      triggered_by: isServiceRole ? "cron" : "manual",
+      metadata: { buyer_id: targetBuyerId ?? null, since_days: sinceDays, dry_run: dryRun },
+    }).select("id").single();
+    const runId = runRow?.id ?? null;
+    async function finishRun(status: "success" | "error", rowsProcessed: number, errorMsg?: string) {
+      if (!runId) return;
+      await supabase.schema("equity_brain" as any).from("engine_runs").update({
+        finished_at: new Date().toISOString(),
+        duration_ms: Date.now() - runStart,
+        rows_processed: rowsProcessed,
+        status,
+        error_message: errorMsg ?? null,
+      }).eq("id", runId);
+    }
+
+    try {
+
     // 1. Eventos
     let evQuery = supabase.schema("equity_brain" as any).from("deal_events")
       .select("id, match_id, buyer_id, event_type, rejection_reason, event_ts, metadata")
