@@ -37,6 +37,25 @@ function buildJobs(supabaseUrl: string, serviceKey: string) {
       fn: "process-event",
       body: {},
     },
+    // ───── Equity Brain v2 — Fase 5 (operacionalização do motor adaptativo) ─────
+    {
+      name: "eb-v2-recompute-incremental-6h",
+      schedule: "15 */6 * * *", // a cada 6h, deslocado em 15min do calculate-scores
+      fn: "match-company-v2",
+      body: { limit_companies: 200, persist: true },
+    },
+    {
+      name: "eb-v2-update-thetas-daily",
+      schedule: "0 6 * * *", // 06:00 UTC = 03:00 BRT (após recompute scores)
+      fn: "update-buyer-revealed-thetas",
+      body: { since_days: 1, dry_run: false },
+    },
+    {
+      name: "eb-v2-mandate-decay-weekly",
+      schedule: "0 7 * * 0", // domingo 07:00 UTC = 04:00 BRT
+      fn: "compute-mandate-active-proba",
+      body: { limit: 5000, dry_run: false },
+    },
   ].map((j) => ({
     ...j,
     sql: `
@@ -51,6 +70,7 @@ function buildJobs(supabaseUrl: string, serviceKey: string) {
     `.trim(),
   }));
 }
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });

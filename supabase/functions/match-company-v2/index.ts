@@ -205,6 +205,28 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
+    // Engine run tracking (Fase 5 — observabilidade)
+    const runStart = Date.now();
+    const { data: runRow } = await supabase.schema("equity_brain" as any).from("engine_runs").insert({
+      engine: "match-company-v2",
+      status: "running",
+      triggered_by: isServiceRole ? "cron" : "manual",
+      metadata: { cnpjs: cnpjs?.length ?? null, buyer_ids: buyerIds?.length ?? null, limit_companies: limitCompanies, persist },
+    }).select("id").single();
+    const runId = runRow?.id ?? null;
+
+    async function finishRun(status: "success" | "error", rowsProcessed: number, errorMsg?: string) {
+      if (!runId) return;
+      await supabase.schema("equity_brain" as any).from("engine_runs").update({
+        finished_at: new Date().toISOString(),
+        duration_ms: Date.now() - runStart,
+        rows_processed: rowsProcessed,
+        status,
+        error_message: errorMsg ?? null,
+      }).eq("id", runId);
+    }
+
+    try {
     // Carrega dados
     let cQuery = supabase.schema("equity_brain" as any).from("companies")
       .select("cnpj, razao_social, uf, municipio, setor_ma, subsetor_ma, porte, situacao_cadastral, faturamento_estimado, ebitda_estimado").limit(limitCompanies);
@@ -366,10 +388,15 @@ serve(async (req) => {
       }
     }
 
+    await finishRun("success", newMatches.length);
     return new Response(JSON.stringify({
       ok: true, processed: newMatches.length, persisted: persist,
-      sample: newMatches.slice(0, 5),
+      sample: newMatches.slice(0, 5), run_id: runId,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } catch (innerErr: any) {
+      await finishRun("error", 0, innerErr?.message ?? String(innerErr));
+      throw innerErr;
+    }
   } catch (err: any) {
     console.error("match-company-v2 error:", err);
     return new Response(JSON.stringify({ error: err.message ?? String(err) }), {

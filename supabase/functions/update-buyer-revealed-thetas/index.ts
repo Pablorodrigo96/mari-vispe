@@ -100,6 +100,28 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
     const sinceISO = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
 
+    // Engine run tracking (Fase 5 — observabilidade)
+    const runStart = Date.now();
+    const { data: runRow } = await supabase.schema("equity_brain" as any).from("engine_runs").insert({
+      engine: "update-buyer-revealed-thetas",
+      status: "running",
+      triggered_by: isServiceRole ? "cron" : "manual",
+      metadata: { buyer_id: targetBuyerId ?? null, since_days: sinceDays, dry_run: dryRun },
+    }).select("id").single();
+    const runId = runRow?.id ?? null;
+    async function finishRun(status: "success" | "error", rowsProcessed: number, errorMsg?: string) {
+      if (!runId) return;
+      await supabase.schema("equity_brain" as any).from("engine_runs").update({
+        finished_at: new Date().toISOString(),
+        duration_ms: Date.now() - runStart,
+        rows_processed: rowsProcessed,
+        status,
+        error_message: errorMsg ?? null,
+      }).eq("id", runId);
+    }
+
+    try {
+
     // 1. Eventos
     let evQuery = supabase.schema("equity_brain" as any).from("deal_events")
       .select("id, match_id, buyer_id, event_type, rejection_reason, event_ts, metadata")
@@ -110,9 +132,10 @@ serve(async (req) => {
     if (evErr) throw evErr;
 
     if (!events?.length) {
+      await finishRun("success", 0);
       return new Response(JSON.stringify({
         ok: true, buyers_updated: 0, events_processed: 0,
-        message: "Sem eventos novos para aprender",
+        message: "Sem eventos novos para aprender", run_id: runId,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -213,6 +236,7 @@ serve(async (req) => {
       }
     }
 
+    await finishRun("success", upserts.length);
     return new Response(JSON.stringify({
       ok: true,
       buyers_updated: summary.length,
@@ -221,7 +245,12 @@ serve(async (req) => {
       dry_run: dryRun,
       summary: summary.slice(0, 20),
       sample_thetas: upserts.slice(0, 10),
+      run_id: runId,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } catch (innerErr: any) {
+      await finishRun("error", 0, innerErr?.message ?? String(innerErr));
+      throw innerErr;
+    }
   } catch (err: any) {
     console.error("update-buyer-revealed-thetas error:", err);
     return new Response(JSON.stringify({ error: err.message ?? String(err) }), {

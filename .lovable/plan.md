@@ -1,79 +1,101 @@
+# Equity Brain v2 — Fases 5, 6 e 7 (fechamento do ciclo)
 
-# Equity Brain v2 — O que ainda falta
-
-Olhando o escopo original do prompt do v2 (sistema híbrido adaptativo com 6 capacidades) contra o que já está em produção, **as 4 fases entregues cobrem o núcleo**: motor v2 com blend de pesos, mandate active probability, MatchDecisionCard com SHAP/IC/price bands, RPC de feedback e loop Bayesiano de revealed_thetas.
-
-Status atual no banco:
-- 3.582 matches v2 calculados
-- 10 buyer_archetypes ativos
-- 86 companies_scored
-- **0 deal_events / 0 revealed_thetas / 0 ai_runs / 0 call_feedback** ← o loop nunca rodou de verdade
-
-Faltam 5 frentes para fechar o ciclo e oficializar o v2 em produção. Sugiro executar em **3 fases curtas**.
-
----
+Implementação consecutiva das três fases restantes para tirar o v2 do "shadow" e colocar em produção com loop fechado.
 
 ## Fase 5 — Operacionalização (cron + observabilidade)
 
-Hoje o motor adaptativo só roda se alguém clicar no botão na ShadowPage. Precisa virar processo contínuo.
+**Objetivo:** motor adaptativo rodando sozinho, com saúde monitorável.
 
-1. **Ativar pg_cron jobs** via `setup-equity-brain-crons`:
-   - `match-company-v2` recompute incremental: a cada 6h para companies com mudança em `company_signals`
-   - `update-buyer-revealed-thetas`: diário 03:00 BRT (processa eventos das últimas 24h)
-   - `compute-mandate-active-proba`: semanal (decay de mandatos sem atividade)
-2. **Tabela `equity_brain.engine_runs`** (nova): registra cada execução (engine, started_at, finished_at, rows_processed, error). Já existe `ai_runs` mas é para LLM; criar uma irmã para os engines determinísticos.
-3. **Card "Saúde do Motor"** na ShadowPage: última execução de cada job, taxa de erro, throughput.
+1. **Tabela `equity_brain.engine_runs`** (migration)
+   - Colunas: `id`, `engine` (text), `started_at`, `finished_at`, `rows_processed`, `status` (`running`/`success`/`error`), `error_message`, `metadata` (jsonb)
+   - RLS: somente admin lê
+   - Índice em `(engine, started_at desc)`
 
-## Fase 6 — Drift v1 ↔ v2 + ingestão real de feedback
+2. **Instrumentar 3 edge functions** para gravar em `engine_runs`:
+   - `match-company-v2`
+   - `update-buyer-revealed-thetas`
+   - `compute-mandate-active-proba`
+   - Cada execução insere 1 linha no início e atualiza no fim
 
-Sem deal_events, o loop adaptativo é teórico. Duas frentes em paralelo:
+3. **Estender `setup-equity-brain-crons`** com 3 novos jobs (além dos 3 já existentes):
+   - `eb-v2-recompute-incremental` — a cada 6h → `match-company-v2` (modo incremental, só companies com signals novos)
+   - `eb-v2-update-thetas-daily` — diário 03:00 BRT → `update-buyer-revealed-thetas`
+   - `eb-v2-mandate-decay-weekly` — domingo 04:00 BRT → `compute-mandate-active-proba`
 
-1. **Dashboard de Drift v1↔v2** (nova aba "Drift" em ShadowPage):
-   - Distribuição de scores v1 vs v2 (histograma)
-   - Top-N agreement (% de overlap nos top 50 matches por buyer)
-   - Buyers com maior divergência (candidatos a investigação)
-   - Série temporal: drift médio por semana → mostra se v2 está convergindo ou divergindo
-2. **Backfill seed de deal_events**: criar script admin que importa eventos históricos de `interest_logs` + `messages` mapeando para `contacted` / `reply_received`. Dá ~50-200 eventos iniciais para o Bayesiano ter sinal.
-3. **Hook automático no MatchDecisionCard**: quando BDR clica "Contatado via WhatsApp", já dispara `eb_log_deal_event('contacted')` sem precisar abrir modal. Reduz fricção e aumenta volume de eventos.
+4. **Card "Saúde do Motor" na ShadowPage** (nova aba ou bloco no topo da aba existente)
+   - Última execução de cada engine (timestamp + status + duração)
+   - Taxa de erro últimas 24h
+   - Throughput (rows_processed médio)
+   - Botão "Ativar crons" (chama `setup-equity-brain-crons` com `action: enable`)
 
-## Fase 7 — Ingestão de calls (capacidade #5 do escopo original) + Flip oficial
+## Fase 6 — Drift v1↔v2 + ingestão real de feedback
 
-A capacidade "feedback automático de calls via Claude" existe nas 3 edge functions (`claude-analyze-call`, `claude-classify-thesis`, `feedback-from-call`) mas **não tem UI**. Calls são a fonte mais rica de sinal.
+**Objetivo:** gerar volume de eventos para o Bayesiano aprender de verdade.
 
-1. **UI de upload de call** em `/equity-brain/calls/[id]`:
-   - Upload de áudio/transcript
-   - Trigger `claude-analyze-call` → extrai sentiment, objeções, próximos passos
-   - `claude-classify-thesis` → identifica tese real do buyer pela conversa
-   - `feedback-from-call` → grava em `call_feedback` + `deal_events`
-2. **Loop fechado**: `update-buyer-revealed-thetas` passa a consumir também `call_feedback` (não só deal_events) para refinar revealed_thetas com mais granularidade.
-3. **Flip oficial v2 → produção**:
-   - Migrar páginas `/equity-brain/oportunidades`, `/grafo`, `/mapa`, `/board` para consumir `match-company-v2` por padrão
-   - Manter `match-company` (v1) como fallback acessível via flag `?engine=v1`
-   - Remover prefixo "Shadow" da página, renomear para `/equity-brain/lab` (cantinho de experimentação)
-   - Atualizar `mem://features/equity-brain-v2-*` marcando como GA
+1. **Aba "Drift" na ShadowPage** com 4 visualizações:
+   - Histograma sobreposto de scores v1 vs v2 (recharts)
+   - Tabela de Top-N agreement: % de overlap nos top 50 matches por buyer (top 20 buyers)
+   - Lista de buyers com maior divergência (rank Spearman entre v1 e v2)
+   - Linha temporal: drift médio semanal (precisa snapshot — ver passo 2)
 
----
+2. **Tabela `equity_brain.drift_snapshots`** (migration)
+   - Snapshot semanal de métricas agregadas v1 vs v2 (cron novo: domingo 05:00 BRT)
+   - Edge function `compute-drift-snapshot` que popula
 
-## O que NÃO precisa (já está pronto ou fora de escopo)
+3. **Backfill seed de `deal_events`**
+   - Edge function admin-only `backfill-deal-events-from-history`
+   - Mapeia `interest_logs` → `contacted` (quando há WhatsApp/email do interessado)
+   - Mapeia `messages` → `reply_received` (quando vendedor respondeu)
+   - Joga ~50–200 eventos iniciais para o loop começar a aprender
 
-- Motor v2 com blend de pesos ✅ Fase 2
-- Mandate active probability ✅ Fase 2
-- SHAP/IC/price bands no card ✅ Fase 3
-- RPC de feedback `eb_log_deal_event` ✅ Fase 3
-- Loop Bayesiano ✅ Fase 4
-- Edge functions de Claude (já existem, só falta UI) ✅ código pronto
-- Vector embeddings: extensão pgvector já habilitada, mas sem caso de uso aprovado — fica para v3
+4. **1-click feedback no `MatchDecisionCard`**
+   - Substituir o modal pesado por 3 botões diretos: "📞 Contatado", "✅ Resposta", "❌ Rejeitado"
+   - Cada um chama `eb_log_deal_event` direto, sem fricção
+   - Modal só abre para "Rejeitado" (precisa do `rejection_reason`)
 
----
+## Fase 7 — UI de calls + flip oficial v2 → produção
 
-## Resumo executivo
+**Objetivo:** abrir a fonte mais rica de sinal (calls) e tornar v2 o motor padrão.
 
-| Fase | Entrega | Esforço |
-|------|---------|---------|
-| 5 | Cron ativo + saúde do motor | Pequeno |
-| 6 | Drift dashboard + backfill de eventos + 1-click feedback | Médio |
-| 7 | UI de calls + flip oficial v2 em produção | Médio |
+1. **Página `/equity-brain/calls/[id]`** (nova rota)
+   - Listagem `/equity-brain/calls` com calls registradas
+   - Detalhe `/equity-brain/calls/[id]` com:
+     - Upload de áudio (storage bucket `call-recordings`, novo) ou colar transcript
+     - Botão "Analisar" → dispara `claude-analyze-call` → `claude-classify-thesis` → `feedback-from-call` em sequência
+     - Exibe sentiment, objeções, próximos passos, tese identificada
+   - Link no sidebar (`EBSidebar.tsx`): "Calls"
 
-Recomendo começar pela **Fase 5** (operacionalização) porque sem cron rodando o sistema continua estático. Depois Fase 6 para gerar volume de feedback, e por fim Fase 7 para fechar com calls + flip.
+2. **Storage bucket `call-recordings`** (privado, com RLS)
+   - Migration que cria o bucket
+   - Política: só admin/advisor lê e escreve
 
-**Quer que eu comece pela Fase 5?**
+3. **Estender `update-buyer-revealed-thetas`**
+   - Passa a consumir também `call_feedback` (não só `deal_events`)
+   - Sinal mais granular: feedback de call vale 1.5x evento de deal (calibrável)
+
+4. **Flip oficial v2 → produção**
+   - `OportunidadesPage.tsx`, `GrafoPage.tsx`, `MapaPage.tsx`, `BoardPage.tsx`: trocar fetch de `match-company` para `match-company-v2` por padrão
+   - Manter v1 acessível via query string `?engine=v1` (debug)
+   - Renomear rota `/equity-brain/shadow` → `/equity-brain/lab` (fica como sandbox de experimentação)
+   - Remover badge "Shadow" do header da página
+
+5. **Atualizar memórias**:
+   - `mem://features/equity-brain-v2-adaptive-loop` → marcar como GA
+   - Nova: `mem://features/equity-brain-v2-production` documentando o flip
+
+## Detalhes técnicos
+
+- **Migrations**: 3 no total
+  - `engine_runs` (Fase 5)
+  - `drift_snapshots` + adicionar `call_feedback` weight em `update_thetas` (Fase 6/7)
+  - `call-recordings` bucket + policies (Fase 7)
+- **Edge functions novas**: 2 (`compute-drift-snapshot`, `backfill-deal-events-from-history`)
+- **Edge functions modificadas**: 4 (`setup-equity-brain-crons`, `match-company-v2`, `update-buyer-revealed-thetas`, `compute-mandate-active-proba`)
+- **Componentes UI**: nova aba "Drift", nova aba "Saúde", refactor de `MatchDecisionCard` (botões 1-click), nova página `CallsPage` + `CallDetailPage`
+- **Sem novos secrets**: tudo usa `ANTHROPIC_API_KEY` (já existe) e `SUPABASE_SERVICE_ROLE_KEY` (já existe)
+
+## Ordem de execução
+
+Fase 5 → Fase 6 → Fase 7, em mensagens separadas com aprovação a cada migration.
+
+**Pode aprovar para começar pela Fase 5.**
