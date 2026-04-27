@@ -56,6 +56,12 @@ function buildJobs(supabaseUrl: string, serviceKey: string) {
       fn: "compute-mandate-active-proba",
       body: { limit: 5000, dry_run: false },
     },
+    {
+      name: "eb-v2-drift-weekly",
+      schedule: "0 8 * * 0", // domingo 08:00 UTC = 05:00 BRT (após mandate-decay)
+      fn: "compute-drift-snapshot",
+      body: { sample_companies: 50, top_n: 100 },
+    },
   ].map((j) => ({
     ...j,
     sql: `
