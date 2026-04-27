@@ -326,7 +326,7 @@ serve(async (req) => {
           geografia_fit: features.geografia,
           porte_fit: features.tamanho,
           tese_fit: features.tese,
-          ma_score_emp: company.ma_score ?? null,
+          ma_score_emp: maScoreByCnpj.get(company.cnpj) ?? null,
           reasons,
           p_close_12m: Number(pClose.toFixed(4)),
           p_close_ci_lower: Number(pCloseLower.toFixed(4)),
