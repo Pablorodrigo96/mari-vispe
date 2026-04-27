@@ -467,20 +467,22 @@ export function StrategicGraph() {
           const n = node as GraphNode;
           // Skip if simulation hasn't positioned this node yet
           if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-          const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
-          const baseR = Math.max(2, 4 + (score / 100) * 12);
+          const baseR = getBaseRadius(n);
           const color = NODE_COLORS[n.type] ?? "#71717a";
           const isHot = hotNodeIds.has(n.id);
           const isHovered = n.id === hoveredNodeId;
           const isSelected = selectedNode?.id === n.id;
+          const isNeighbor = hoveredNodeId && neighborIds.has(n.id) && !isHovered;
           const isDimmed = hoveredNodeId && !neighborIds.has(n.id);
 
+          // Raio efetivo: hover aumenta 1.6x, vizinhos 1.2x (efeito visual sem mover)
+          const r = isHovered ? baseR * 1.6 : isNeighbor ? baseR * 1.2 : baseR;
           const alpha = isDimmed ? 0.15 : 1;
 
           // Glow pulse para hotspots
           if (isHot && !isDimmed) {
-            const pulseR = Math.max(baseR + 0.5, baseR + Math.sin(pulse) * 4 + 6);
-            const grad = ctx.createRadialGradient(node.x, node.y, baseR, node.x, node.y, pulseR);
+            const pulseR = Math.max(r + 0.5, r + Math.sin(pulse) * 4 + 6);
+            const grad = ctx.createRadialGradient(node.x, node.y, r, node.x, node.y, pulseR);
             grad.addColorStop(0, color.replace("hsl(", "hsla(").replace(")", ", 0.45)"));
             grad.addColorStop(1, color.replace("hsl(", "hsla(").replace(")", ", 0)"));
             ctx.beginPath();
@@ -492,16 +494,16 @@ export function StrategicGraph() {
           // Halo no hover/selected
           if (isHovered || isSelected) {
             ctx.beginPath();
-            ctx.strokeStyle = "rgba(255,255,255,0.85)";
-            ctx.lineWidth = 2 / globalScale;
-            ctx.arc(node.x, node.y, baseR + 3, 0, 2 * Math.PI);
+            ctx.strokeStyle = "rgba(255,255,255,0.9)";
+            ctx.lineWidth = 2.5 / globalScale;
+            ctx.arc(node.x, node.y, r + 4, 0, 2 * Math.PI);
             ctx.stroke();
           }
 
           // Node core
           ctx.beginPath();
           ctx.fillStyle = color.replace("hsl(", "hsla(").replace(")", `, ${alpha})`);
-          ctx.arc(node.x, node.y, baseR, 0, 2 * Math.PI);
+          ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
           ctx.fill();
 
           // Borda fina
