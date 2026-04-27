@@ -65,6 +65,9 @@ import EBMapaPage from "./pages/equity-brain/MapaPage";
 import EBGrafoPage from "./pages/equity-brain/GrafoPage";
 import EBBoardPage from "./pages/equity-brain/BoardPage";
 
+// App shell for authenticated end-users (sidebar + topbar)
+import { AppShell } from "@/components/layout/AppShell";
+
 const queryClient = new QueryClient();
 
 const App = () => (
