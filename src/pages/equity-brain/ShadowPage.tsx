@@ -4,11 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel } from "lucide-react";
+import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel, Brain } from "lucide-react";
 import { toast } from "sonner";
 import { MatchDecisionCard, type MatchDecisionRow } from "@/components/equity-brain/MatchDecisionCard";
 
 type MatchRow = MatchDecisionRow;
+
+type DealEvent = {
+  id: string;
+  match_id: string | null;
+  buyer_id: string | null;
+  event_type: string;
+  rejection_reason: string | null;
+  event_ts: string;
+  notes: string | null;
+};
+
+type Theta = {
+  buyer_id: string;
+  feature_name: string;
+  posterior_mean: number;
+  posterior_std: number;
+  n_observations: number;
+  last_updated: string;
+};
 
 const fmtPct = (n: number | null) => (n == null ? "—" : `${(n * 100).toFixed(1)}%`);
 const fmtBRL = (n: number | null) =>
