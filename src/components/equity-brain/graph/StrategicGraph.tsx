@@ -419,7 +419,10 @@ export function StrategicGraph() {
         }}
         nodeCanvasObject={(node: any, ctx, globalScale) => {
           const n = node as GraphNode;
-          const baseR = 4 + (n.strategic_score / 100) * 12;
+          // Skip if simulation hasn't positioned this node yet
+          if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+          const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
+          const baseR = Math.max(2, 4 + (score / 100) * 12);
           const color = NODE_COLORS[n.type] ?? "#71717a";
           const isHot = hotNodeIds.has(n.id);
           const isHovered = n.id === hoveredNodeId;
@@ -430,7 +433,7 @@ export function StrategicGraph() {
 
           // Glow pulse para hotspots
           if (isHot && !isDimmed) {
-            const pulseR = baseR + Math.sin(pulse) * 4 + 6;
+            const pulseR = Math.max(baseR + 0.5, baseR + Math.sin(pulse) * 4 + 6);
             const grad = ctx.createRadialGradient(node.x, node.y, baseR, node.x, node.y, pulseR);
             grad.addColorStop(0, color.replace("hsl(", "hsla(").replace(")", ", 0.45)"));
             grad.addColorStop(1, color.replace("hsl(", "hsla(").replace(")", ", 0)"));
@@ -475,7 +478,9 @@ export function StrategicGraph() {
         }}
         nodePointerAreaPaint={(node: any, color, ctx) => {
           const n = node as GraphNode;
-          const baseR = 4 + (n.strategic_score / 100) * 12 + 4;
+          if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+          const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
+          const baseR = Math.max(2, 4 + (score / 100) * 12 + 4);
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(node.x, node.y, baseR, 0, 2 * Math.PI);
