@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   TrendingUp, TrendingDown, CheckCircle2, XCircle, FileSignature,
-  Loader2, ChevronDown, ChevronUp, AlertTriangle, Activity,
+  Loader2, ChevronDown, ChevronUp, AlertTriangle, Activity, MessageCircleReply,
 } from "lucide-react";
 
 export type MatchDecisionRow = {
