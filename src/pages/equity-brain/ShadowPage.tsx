@@ -425,6 +425,7 @@ export default function EBShadowPage() {
 
         <TabsContent value="health" className="mt-4">
           <div className="space-y-4">
+            <EventQueueHealthCard />
             <EngineHealthCard />
             <BackfillHistoryCard />
           </div>
