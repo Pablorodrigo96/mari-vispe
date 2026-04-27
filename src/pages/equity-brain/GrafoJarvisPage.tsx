@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Map as MapIcon, Maximize2, Minimize2, Brain } from "lucide-react";
-import { StrategicGraph } from "@/components/equity-brain/graph/StrategicGraph";
+import { Map as MapIcon, Maximize2, Minimize2, Network } from "lucide-react";
+import { JarvisGraph3D } from "@/components/equity-brain/jarvis/JarvisGraph3D";
 import { Button } from "@/components/ui/button";
 
-export default function GrafoPage() {
+export default function GrafoJarvisPage() {
   const [presentation, setPresentation] = useState(false);
 
-  // Modo apresentação: esconde a sidebar do EquityBrainLayout e o header
   useEffect(() => {
     if (presentation) {
       document.body.classList.add("eb-presentation");
@@ -28,26 +27,25 @@ export default function GrafoPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-1px)] bg-zinc-950">
-      {/* Topbar minimalista */}
       {!presentation && (
         <div className="flex items-center gap-3 px-4 py-2.5 border-b border-zinc-800 bg-zinc-950">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-semibold tracking-wider text-emerald-400 uppercase">
-              Strategic Knowledge Graph
+              Equity Brain · Jarvis 3D
             </span>
             <span className="text-[10px] text-zinc-500">
-              · sellers · buyers · teses · ativos · estratégias
+              · cérebro estratégico imersivo · sellers · buyers · teses · platforms
             </span>
           </div>
 
           <div className="flex-1" />
 
           <Link
-            to="/equity-brain/grafo-jarvis"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 hover:bg-emerald-900/40 text-xs transition-colors"
+            to="/equity-brain/grafo"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-emerald-300 hover:bg-zinc-800 text-xs transition-colors"
           >
-            <Brain className="h-3.5 w-3.5" />
-            Modo Jarvis 3D
+            <Network className="h-3.5 w-3.5" />
+            Modo 2D
           </Link>
 
           <Link
@@ -70,7 +68,6 @@ export default function GrafoPage() {
         </div>
       )}
 
-      {/* Botão sair da apresentação */}
       {presentation && (
         <button
           onClick={() => setPresentation(false)}
@@ -81,9 +78,8 @@ export default function GrafoPage() {
         </button>
       )}
 
-      {/* Grafo estratégico */}
       <div className="flex-1 relative min-h-0">
-        <StrategicGraph />
+        <JarvisGraph3D />
       </div>
     </div>
   );
