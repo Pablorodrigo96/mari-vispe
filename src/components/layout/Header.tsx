@@ -224,8 +224,36 @@ export function Header() {
                 </Link>
               ))}
               <div className="pt-4 mt-2 border-t border-border flex flex-col gap-2">
-                {user ? (
+                {user && !showLoggedOutUI ? (
                   <>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => { navigate('/painel'); setMobileMenuOpen(false); }}
+                    >
+                      <Briefcase className="w-4 h-4 mr-2" />
+                      Meu Painel
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => { navigate('/admin'); setMobileMenuOpen(false); }}
+                      >
+                        <Shield className="w-4 h-4 mr-2" />
+                        Painel Admin
+                      </Button>
+                    )}
+                    {(isAdmin || isAdvisor) && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => { navigate('/equity-brain'); setMobileMenuOpen(false); }}
+                      >
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        Equity Brain
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       className="w-full justify-start" 
@@ -288,9 +316,15 @@ export function Header() {
                     <Link to="/auth">Entrar</Link>
                   </Button>
                 )}
-                <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
-                  <Link to="/vender">Anunciar Grátis</Link>
-                </Button>
+                {showLoggedOutUI ? (
+                  <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+                    <Link to="/vender">Anunciar Grátis</Link>
+                  </Button>
+                ) : (
+                  <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+                    <Link to="/painel">Meu Painel</Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
