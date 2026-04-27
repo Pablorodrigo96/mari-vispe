@@ -1,15 +1,19 @@
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Building2, 
-  CreditCard, 
+import {
+  LayoutDashboard,
+  Users,
+  Building2,
+  CreditCard,
   ChartBar,
   Banknote,
   ArrowLeft,
-  Contact
+  Contact,
+  Sparkles,
+  Brain,
+  LineChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 
 const menuItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -25,6 +29,14 @@ const menuItems = [
 
 export function AdminSidebar() {
   const location = useLocation();
+  const { isAdmin, isAdvisor } = useEffectiveRoles();
+  const showCockpit = isAdmin || isAdvisor;
+
+  const ebItems = [
+    { name: 'Equity Brain', href: '/equity-brain', icon: Brain },
+    { name: 'Board Executivo', href: '/equity-brain/board', icon: LineChart },
+    { name: 'Buyers M&A', href: '/equity-brain/buyers', icon: Users },
+  ];
 
   return (
     <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
