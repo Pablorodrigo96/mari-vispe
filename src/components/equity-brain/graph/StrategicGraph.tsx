@@ -634,9 +634,12 @@ export function StrategicGraph() {
           const isHot = hotNodeIds.has(n.id);
           const isHovered = n.id === hoveredNodeId;
           const isSelected = selectedNode?.id === n.id;
+          // Modo foco (selecionado): só vizinhança visível; demais escurecidos
+          // Sem seleção, hover usa neighborIds normalmente
           const focusActive = !!(hoveredNodeId || selectedNode);
-          const isNeighbor = focusActive && neighborIds.has(n.id) && !isHovered && !isSelected;
-          const isDimmed = focusActive && !neighborIds.has(n.id) && !isSelected;
+          const visibleSet = focusedNeighborIds ?? (hoveredNodeId ? neighborIds : null);
+          const isNeighbor = !!visibleSet && visibleSet.has(n.id) && !isHovered && !isSelected;
+          const isDimmed = !!visibleSet && !visibleSet.has(n.id) && !isSelected;
 
           // Raio efetivo
           const r = isHovered || isSelected ? baseR * 1.7 : isNeighbor ? baseR * 1.25 : baseR;
