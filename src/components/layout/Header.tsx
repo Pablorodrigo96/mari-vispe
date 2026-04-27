@@ -106,9 +106,10 @@ export function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex lg:items-center lg:gap-3">
+            {realIsAdmin && <ViewAsSwitcher isTransparent={isTransparent} />}
             <NotificationDropdown />
-            
-            {user ? (
+
+            {user && !showLoggedOutUI ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className={cn('gap-2', isTransparent && 'hover:bg-white/10')}>
@@ -124,10 +125,20 @@ export function Header() {
                     {user.email}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/painel')}>
+                    <Briefcase className="w-4 h-4 mr-2" />
+                    Meu Painel
+                  </DropdownMenuItem>
                   {isAdmin && (
                     <DropdownMenuItem onClick={() => navigate('/admin')}>
                       <Shield className="w-4 h-4 mr-2" />
                       Painel Admin
+                    </DropdownMenuItem>
+                  )}
+                  {(isAdmin || isAdvisor) && (
+                    <DropdownMenuItem onClick={() => navigate('/equity-brain')}>
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      Equity Brain
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={() => navigate('/meu-perfil')}>
@@ -170,10 +181,16 @@ export function Header() {
                 <Link to="/auth">Entrar</Link>
               </Button>
             )}
-            
-            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold" asChild>
-              <Link to="/vender">Anunciar Grátis</Link>
-            </Button>
+
+            {showLoggedOutUI ? (
+              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold" asChild>
+                <Link to="/vender">Anunciar Grátis</Link>
+              </Button>
+            ) : (
+              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold" asChild>
+                <Link to="/painel">Meu Painel</Link>
+              </Button>
+            )}
           </div>
 
           {/* Mobile menu button */}
