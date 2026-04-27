@@ -44,7 +44,7 @@ export default function Painel() {
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data } = await supabase.from('profiles').select('full_name, company_name, phone, document').eq('user_id', user.id).maybeSingle();
+      const { data } = await supabase.from('profiles').select('full_name, company_name, phone').eq('user_id', user.id).maybeSingle();
       return data;
     },
     enabled: !!user,
