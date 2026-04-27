@@ -435,6 +435,13 @@ export default function PartnerDashboard() {
           if (interestModalOpp) await expressInterest(interestModalOpp, desc);
         }}
       />
+
+      {/* Bulk Upload Dialog */}
+      <BulkUploadDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        onSuccess={() => { setBulkOpen(false); loadAll(); }}
+      />
     </div>
   );
 }
