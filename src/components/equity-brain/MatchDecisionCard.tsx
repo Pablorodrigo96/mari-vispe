@@ -253,6 +253,15 @@ export function MatchDecisionCard({
               </Button>
               <Button
                 size="sm" variant="outline"
+                className="bg-transparent border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10"
+                disabled={!!submitting}
+                onClick={() => logEvent("reply_received")}
+              >
+                {submitting === "reply_received" ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <MessageCircleReply className="h-3.5 w-3.5 mr-1" />}
+                Resposta recebida
+              </Button>
+              <Button
+                size="sm" variant="outline"
                 className="bg-transparent border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
                 disabled={!!submitting}
                 onClick={() => logEvent("nda_signed")}
