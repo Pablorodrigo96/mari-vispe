@@ -18,6 +18,14 @@ import { useViewAs } from '@/contexts/ViewAsContext';
 const ease = [0.25, 0.46, 0.45, 0.94] as const;
 
 const Index = () => {
+  const { user, loading } = useAuth();
+  const { viewAs } = useViewAs();
+
+  // Logged-in users get their personal panel — unless admin is impersonating "visitante".
+  if (!loading && user && viewAs !== 'visitante') {
+    return <Navigate to="/painel" replace />;
+  }
+
   const { data: featuredListings, isLoading } = useQuery({
     queryKey: ['featured-listings-master'],
     queryFn: async () => {
