@@ -19,7 +19,7 @@ export default function EBShadowPage() {
   const [running, setRunning] = useState<string | null>(null);
   const [v1, setV1] = useState<MatchRow[]>([]);
   const [v2, setV2] = useState<MatchRow[]>([]);
-  const [tab, setTab] = useState<"summary" | "diff">("summary");
+  const [tab, setTab] = useState<"summary" | "diff" | "decision">("summary");
 
   async function load() {
     setLoading(true);
@@ -142,6 +142,7 @@ export default function EBShadowPage() {
         <TabsList className="bg-slate-900/60">
           <TabsTrigger value="summary"><Target className="h-4 w-4 mr-1" />Top v2 Matches</TabsTrigger>
           <TabsTrigger value="diff"><TrendingUp className="h-4 w-4 mr-1" />Divergências v1↔v2</TabsTrigger>
+          <TabsTrigger value="decision"><Gavel className="h-4 w-4 mr-1" />Decisão & Feedback</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
