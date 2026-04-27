@@ -21,5 +21,15 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: ["react", "react-dom", "react/jsx-runtime", "reactflow", "dagre"],
+    // 3D libs são lazy-loaded apenas em /equity-brain/grafo-jarvis e quebram o
+    // pre-bundle do esbuild (Timer / ./webgpu). Excluí-las mantém o resto do
+    // app funcionando no dev — Rollup ainda as resolve corretamente no build.
+    exclude: [
+      "react-force-graph-3d",
+      "three-render-objects",
+      "three-forcegraph",
+      "three",
+      "three-spritetext",
+    ],
   },
 }));

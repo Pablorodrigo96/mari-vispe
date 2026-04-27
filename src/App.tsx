@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -63,7 +64,8 @@ import EBCallsPage from "./pages/equity-brain/CallsPage";
 import EBDealDetailPage from "./pages/equity-brain/DealDetailPage";
 import EBMapaPage from "./pages/equity-brain/MapaPage";
 import EBGrafoPage from "./pages/equity-brain/GrafoPage";
-import EBGrafoJarvisPage from "./pages/equity-brain/GrafoJarvisPage";
+// Lazy: 3D graph carrega three/react-force-graph-3d só quando a rota é aberta.
+const EBGrafoJarvisPage = lazy(() => import("./pages/equity-brain/GrafoJarvisPage"));
 import EBBoardPage from "./pages/equity-brain/BoardPage";
 import EBShadowPage from "./pages/equity-brain/ShadowPage";
 
@@ -151,7 +153,20 @@ const App = () => (
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
               <Route path="mapa"          element={<EBMapaPage />} />
               <Route path="grafo"         element={<EBGrafoPage />} />
-              <Route path="grafo-jarvis"  element={<EBGrafoJarvisPage />} />
+              <Route
+                path="grafo-jarvis"
+                element={
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center h-[calc(100vh-1px)] bg-zinc-950 text-emerald-300 text-sm">
+                        Carregando cérebro 3D…
+                      </div>
+                    }
+                  >
+                    <EBGrafoJarvisPage />
+                  </Suspense>
+                }
+              />
               <Route path="buyers"        element={<EBBuyersPage />} />
               <Route path="teses"         element={<EBTesesPage />} />
               <Route path="calls"         element={<EBCallsPage />} />
