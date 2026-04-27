@@ -14,11 +14,13 @@ import { ReservationCountdown } from '@/components/partner/ReservationCountdown'
 import { VDRUploader } from '@/components/partner/VDRUploader';
 import { SharedOpportunityCard, type PoolOpportunity } from '@/components/partner/SharedOpportunityCard';
 import { InterestModal } from '@/components/partner/InterestModal';
+import { BulkUploadDialog, downloadTemplate } from '@/components/sell/BulkUploadDialog';
 import {
   Briefcase, Clock, CheckCircle2, AlertTriangle, FolderOpen,
   Calculator, ArrowRight, Loader2, Handshake, Search, Flame,
+  Upload, Download, Plus, Sparkles,
 } from 'lucide-react';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, formatCurrency } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { categories } from '@/data/mockData';
 
