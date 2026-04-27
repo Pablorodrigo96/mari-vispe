@@ -345,18 +345,26 @@ export function StrategicGraph() {
     const fg = fgRef.current;
     if (!fg || !nodes.length) return;
 
-    // Repulsão forte para espaçar
-    fg.d3Force("charge", forceManyBody().strength(-450).distanceMax(700));
-    // Anti-overlap baseado em raio + folga
+    // Repulsão muito forte — explode o aglomerado
+    const chargeStrength = -700 - Math.min(400, nodes.length * 2);
+    fg.d3Force("charge", forceManyBody().strength(chargeStrength).distanceMax(1400));
+
+    // Anti-overlap escala com o raio (hubs grandes empurram mais)
     fg.d3Force(
       "collide",
-      forceCollide<GraphNode>().radius((n) => getBaseRadius(n) + 14).strength(0.9),
+      forceCollide<GraphNode>().radius((n) => getBaseRadius(n) * 2.2 + 18).strength(0.95),
     );
-    // Distância dos links: links fracos = nodes mais distantes
+
+    // Links: fracos = longe e quase sem puxar; fortes = perto e ancoram clusters
     const linkForce: any = fg.d3Force("link");
     if (linkForce) {
-      linkForce.distance((l: any) => 80 + (1 - (l.weight ?? 0.3)) * 120).strength(0.5);
+      linkForce
+        .distance((l: any) => 140 + (1 - (l.weight ?? 0.3)) * 240)
+        .strength((l: any) => Math.max(0.05, (l.weight ?? 0.3) * 0.8));
     }
+
+    // Força radial leve mantém o grafo enquadrado no viewport
+    fg.d3Force("radial", forceRadial(0, 0, 0).strength(0.02));
 
     // Liberar fixações antigas (caso filtros tenham mudado o dataset)
     nodes.forEach((n: any) => {
