@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Users, Building2, CreditCard, ChartBar, TrendingUp, Clock, Heart } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, Building2, CreditCard, ChartBar, TrendingUp, Clock, Heart, Brain, ArrowRight, LineChart, Sparkles } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminRoute } from '@/components/admin/AdminRoute';
 import { StatsCard } from '@/components/admin/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -151,6 +154,48 @@ export default function AdminDashboard() {
               Visão geral da plataforma
             </p>
           </div>
+
+          {/* Equity Brain Highlight Banner */}
+          <Card className="border-emerald-500/40 bg-gradient-to-br from-emerald-950/20 via-background to-background overflow-hidden">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex items-start gap-4">
+                  <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white shrink-0">
+                    <Brain className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-xl font-bold text-foreground">Equity Brain</h2>
+                      <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-500">
+                        <Sparkles className="h-2.5 w-2.5 mr-1" />Cockpit M&A Vispe
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+                      Motor proprietário de M&A: 80+ buyers cadastrados, scores automáticos, matching, board executivo, vertical ISP.
+                      Domínio interno separado do marketplace público.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/equity-brain/buyers">
+                      <Users className="h-4 w-4 mr-2" />Buyers
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/equity-brain/board">
+                      <LineChart className="h-4 w-4 mr-2" />Board
+                    </Link>
+                  </Button>
+                  <Button size="sm" asChild className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                    <Link to="/equity-brain">
+                      Abrir Cockpit <ArrowRight className="h-4 w-4 ml-2" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

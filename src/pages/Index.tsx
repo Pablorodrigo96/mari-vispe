@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { ArrowRight, Building2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -12,10 +12,20 @@ import { ParticlesBackground } from '@/components/ui/particles-background';
 import { stats, categories } from '@/data/mockData';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useViewAs } from '@/contexts/ViewAsContext';
 
 const ease = [0.25, 0.46, 0.45, 0.94] as const;
 
 const Index = () => {
+  const { user, loading } = useAuth();
+  const { viewAs } = useViewAs();
+
+  // Logged-in users get their personal panel — unless admin is impersonating "visitante".
+  if (!loading && user && viewAs !== 'visitante') {
+    return <Navigate to="/painel" replace />;
+  }
+
   const { data: featuredListings, isLoading } = useQuery({
     queryKey: ['featured-listings-master'],
     queryFn: async () => {

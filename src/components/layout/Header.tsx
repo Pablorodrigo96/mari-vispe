@@ -13,8 +13,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ViewAsSwitcher } from '@/components/layout/ViewAsSwitcher';
 
 const navigation = [
   { name: 'Comprar Empresa', href: '/marketplace' },
@@ -41,9 +43,13 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { isAdmin, isAdvisor } = useUserRoles();
-  const { isPartnerAccountant } = usePartnerAccountant();
+  const { isAdmin: realIsAdmin } = useUserRoles();
+  const eff = useEffectiveRoles();
+  const { isAdmin, isAdvisor } = eff;
+  const isPartnerAccountant = eff.isPartnerAccountant;
   const scrollY = useScrollPosition();
+  // Admin impersonating "visitante" sees the logged-out UI everywhere.
+  const showLoggedOutUI = !user || eff.simulateLoggedOut;
 
   const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/sell', '/valuation'];
   const hasDarkHero = darkHeroRoutes.includes(location.pathname);
@@ -100,9 +106,10 @@ export function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex lg:items-center lg:gap-3">
+            {realIsAdmin && <ViewAsSwitcher isTransparent={isTransparent} />}
             <NotificationDropdown />
-            
-            {user ? (
+
+            {user && !showLoggedOutUI ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className={cn('gap-2', isTransparent && 'hover:bg-white/10')}>
@@ -118,10 +125,20 @@ export function Header() {
                     {user.email}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/painel')}>
+                    <Briefcase className="w-4 h-4 mr-2" />
+                    Meu Painel
+                  </DropdownMenuItem>
                   {isAdmin && (
                     <DropdownMenuItem onClick={() => navigate('/admin')}>
                       <Shield className="w-4 h-4 mr-2" />
                       Painel Admin
+                    </DropdownMenuItem>
+                  )}
+                  {(isAdmin || isAdvisor) && (
+                    <DropdownMenuItem onClick={() => navigate('/equity-brain')}>
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      Equity Brain
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={() => navigate('/meu-perfil')}>
@@ -164,10 +181,16 @@ export function Header() {
                 <Link to="/auth">Entrar</Link>
               </Button>
             )}
-            
-            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold" asChild>
-              <Link to="/vender">Anunciar Grátis</Link>
-            </Button>
+
+            {showLoggedOutUI ? (
+              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold" asChild>
+                <Link to="/vender">Anunciar Grátis</Link>
+              </Button>
+            ) : (
+              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold" asChild>
+                <Link to="/painel">Meu Painel</Link>
+              </Button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -201,8 +224,36 @@ export function Header() {
                 </Link>
               ))}
               <div className="pt-4 mt-2 border-t border-border flex flex-col gap-2">
-                {user ? (
+                {user && !showLoggedOutUI ? (
                   <>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => { navigate('/painel'); setMobileMenuOpen(false); }}
+                    >
+                      <Briefcase className="w-4 h-4 mr-2" />
+                      Meu Painel
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => { navigate('/admin'); setMobileMenuOpen(false); }}
+                      >
+                        <Shield className="w-4 h-4 mr-2" />
+                        Painel Admin
+                      </Button>
+                    )}
+                    {(isAdmin || isAdvisor) && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => { navigate('/equity-brain'); setMobileMenuOpen(false); }}
+                      >
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        Equity Brain
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       className="w-full justify-start" 
@@ -265,9 +316,15 @@ export function Header() {
                     <Link to="/auth">Entrar</Link>
                   </Button>
                 )}
-                <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
-                  <Link to="/vender">Anunciar Grátis</Link>
-                </Button>
+                {showLoggedOutUI ? (
+                  <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+                    <Link to="/vender">Anunciar Grátis</Link>
+                  </Button>
+                ) : (
+                  <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+                    <Link to="/painel">Meu Painel</Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
