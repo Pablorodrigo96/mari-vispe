@@ -193,6 +193,7 @@ export function BulkUploadDialog({ open, onOpenChange, onSuccess }: BulkUploadDi
           cnpj: d.cnpj ? String(d.cnpj).trim() : null,
           hide_price: ocultar === 'sim' || ocultar === 'true' || ocultar === '1',
           additional_info: d.info_adicional ? String(d.info_adicional).trim() : null,
+          equity_score: computeEquityScore(d),
           status: 'pending',
           plan: 'basic',
         };
