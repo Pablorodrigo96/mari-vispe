@@ -401,7 +401,8 @@ export function StrategicGraph() {
     });
     fg.d3ReheatSimulation();
 
-    // Hard freeze de segurança após 4s — caso o engine não pare sozinho
+    // Hard freeze de segurança após 6s — fixa nós sem pausar o canvas
+    // (NÃO chamar pauseAnimation: isso congela hover/click/zoom também)
     const safety = window.setTimeout(() => {
       try {
         nodes.forEach((n: any) => {
@@ -410,10 +411,9 @@ export function StrategicGraph() {
             n.fy = n.y;
           }
         });
-        (fgRef.current as any)?.pauseAnimation?.();
         setStabilized(true);
       } catch {}
-    }, 4000);
+    }, 6000);
     return () => window.clearTimeout(safety);
   }, [nodes, edges]);
 
