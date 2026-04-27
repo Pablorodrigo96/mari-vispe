@@ -583,27 +583,17 @@ export function StrategicGraph() {
           });
           // Enquadrar todo o grafo já parado
           fgRef.current?.zoomToFit(500, 80);
+          // Pausar a animação completamente — sem mais ticks visuais
+          try { (fgRef.current as any)?.pauseAnimation?.(); } catch {}
           setStabilized(true);
           setRecalculating(false);
         }}
         enableNodeDrag={false}
         linkCurvature={(l: any) => 0.18 + (l.weight ?? 0) * 0.1}
-        linkDirectionalParticles={(l: any) => {
-          // Modo foco (selecionado): partículas só nas top-N
-          if (focusedEdgeIds) {
-            return focusedEdgeIds.has(edgeKey(l)) ? (l.weight >= 0.7 ? 3 : 2) : 0;
-          }
-          // Hover sem seleção: partículas em links que tocam o hover
-          if (hoveredNodeId) {
-            const sId = l.source.id ?? l.source;
-            const tId = l.target.id ?? l.target;
-            if (sId !== hoveredNodeId && tId !== hoveredNodeId) return 0;
-            return l.weight >= 0.7 ? 3 : l.weight >= 0.5 ? 2 : 0;
-          }
-          return 0;
-        }}
-        linkDirectionalParticleWidth={(l: any) => 1.5 + (l.weight ?? 0) * 1.8}
-        linkDirectionalParticleSpeed={() => 0.006}
+        // Partículas móveis DESATIVADAS — causavam efeito "estrelas vibrando"
+        linkDirectionalParticles={() => 0}
+        linkDirectionalParticleWidth={() => 0}
+        linkDirectionalParticleSpeed={() => 0}
         linkDirectionalParticleColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#52525b"}
         linkWidth={(l: any) => {
           const sId = l.source.id ?? l.source;
