@@ -365,7 +365,8 @@ export function StrategicGraph() {
     setBuyerFilter(null);
   };
 
-  // ---------- Configurar forças d3 (espaçar nodes) e liberar fixação ao mudar dataset ----------
+  // ---------- Configurar forças d3 (espaçar nodes) ----------
+  // Só roda 1x quando o dataset muda. Logo após o engine parar, congelamos os nós.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || !nodes.length) return;
@@ -399,6 +400,21 @@ export function StrategicGraph() {
       n.fy = undefined;
     });
     fg.d3ReheatSimulation();
+
+    // Hard freeze de segurança após 4s — caso o engine não pare sozinho
+    const safety = window.setTimeout(() => {
+      try {
+        nodes.forEach((n: any) => {
+          if (Number.isFinite(n.x) && Number.isFinite(n.y)) {
+            n.fx = n.x;
+            n.fy = n.y;
+          }
+        });
+        (fgRef.current as any)?.pauseAnimation?.();
+        setStabilized(true);
+      } catch {}
+    }, 4000);
+    return () => window.clearTimeout(safety);
   }, [nodes, edges]);
 
   // ---------- Pulso de movimento removido: o grafo permanece congelado após estabilizar.
