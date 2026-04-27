@@ -103,6 +103,27 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
+    // Engine run tracking (Fase 5 — observabilidade)
+    const runStart = Date.now();
+    const { data: runRow } = await supabase.schema("equity_brain" as any).from("engine_runs").insert({
+      engine: "compute-mandate-active-proba",
+      status: "running",
+      triggered_by: isServiceRole ? "cron" : "manual",
+      metadata: { cnpjs: cnpjs?.length ?? null, limit, dry_run: dryRun },
+    }).select("id").single();
+    const runId = runRow?.id ?? null;
+    async function finishRun(status: "success" | "error", rowsProcessed: number, errorMsg?: string) {
+      if (!runId) return;
+      await supabase.schema("equity_brain" as any).from("engine_runs").update({
+        finished_at: new Date().toISOString(),
+        duration_ms: Date.now() - runStart,
+        rows_processed: rowsProcessed,
+        status,
+        error_message: errorMsg ?? null,
+      }).eq("id", runId);
+    }
+
+    try {
     // Carrega CNPJs alvo
     let companyQuery = supabase.schema("equity_brain" as any).from("companies").select("cnpj").limit(limit);
     if (cnpjs?.length) companyQuery = companyQuery.in("cnpj", cnpjs);
