@@ -1,129 +1,116 @@
 
-## Diagnóstico
+## Diagnóstico dos 3 problemas
 
-Hoje, mesmo após login, o usuário vê:
-- **O mesmo `<Header />` público** com "Comprar Empresa / Vender Empresa / Valuation / Investidores / Captação / Matching" — idêntico a um visitante.
-- O CTA dourado "**Anunciar Grátis**" continua visível (só some quando o admin troca para outra persona) — para o usuário comum logado, o componente atualmente mostra `Meu Painel`, mas o resto do header é igual ao público.
-- O `/painel` usa esse mesmo header público e renderiza apenas três cards de contadores + grid de ações pequenas. Não parece um software, parece uma landing page autenticada.
-- Não existe um "app shell" (sidebar + topbar + breadcrumb + área de conteúdo) próprio do usuário final como já existe para `/admin` e `/equity-brain`.
+**1. Sidebar some ao navegar (sem botão voltar):**
+Hoje só essas rotas ficam dentro do `<AppShell />`: `/painel`, `/meus-anuncios`, `/editar-anuncio/:id`, `/meu-perfil`, `/meus-valuations`, `/cadastrar-comprador`, `/minhas-captacoes`, `/matching/resultados`, `/potencial-carteira`, `/parceiro`. Mas o sidebar tem links para `/marketplace`, `/mapa`, `/vender`, `/valuation`, `/valuation/multiplos`, `/valuation/dcf`, `/valuation/certificador`, `/capital`, `/matching` — todas **fora** do AppShell. Resultado: o usuário clica num item do menu, cai num layout público (Header + Footer) sem sidebar e sem voltar.
 
-A visão de visitante e a de logado precisam ser **dois produtos visuais distintos**:
-- **Visitante** = site institucional/marketing (mantém-se intacto).
-- **Logado** = plataforma SaaS (sidebar à esquerda, topbar enxuta, módulos em boxes, contexto da conta sempre visível).
+**2. Equity Brain sem oportunidades:**
+Banco hoje: `companies = 84`, `company_signals = 0`, `company_scores = 0`, `opportunities_ready = 0`. O `sync-listings-to-equity-brain` faz o upsert das companies corretamente, mas os 3 edge functions encadeados (`compute-signals` → `calculate-scores` → `refresh-opportunities`) não estão produzindo linhas para empresas vindas de listings (provavelmente porque dependem de joins com tabelas externas que ainda não existem). As listings do marketplace têm receita/lucro/setor reais — dá pra gerar signals + scores diretamente disso.
 
----
-
-## O que será feito (sem remover nada que já funciona)
-
-### 1. Criar um App Shell para usuários logados — `AppShell`
-
-Novo componente `src/components/layout/AppShell.tsx` que envolve **todas as rotas privadas do usuário final** (não-admin, não-equity-brain). Estrutura:
-
-- **Sidebar fixa à esquerda** (`AppSidebar`, baseada em `@/components/ui/sidebar` com `collapsible="icon"`):
-  - **Visão geral** → `/painel`
-  - **Marketplace** (sub-itens: Buscar empresas, Mapa)
-  - **Vender** (sub-itens: Meus Anúncios, Anunciar Empresa, Bulk Upload se elegível)
-  - **Comprar** (sub-itens: Cadastrar Comprador, Matching, Resultados)
-  - **Valuation** (sub-itens: Novo Valuation, Meus Valuations, Múltiplos, DCF, Certificador)
-  - **Capital** (sub-itens: Solicitar, Minhas Captações)
-  - **Parcerias** (visível só para advisor/parceiro: Potencial da Carteira, Painel do Parceiro)
-  - **Cockpit Interno** (visível só para admin/advisor: Equity Brain, Admin)
-  - Rodapé da sidebar: avatar + nome + e-mail + botão "Sair"
-- **Topbar** enxuta (`AppTopbar`):
-  - `SidebarTrigger` à esquerda
-  - Breadcrumb dinâmico baseado na rota
-  - Busca rápida global (input com `Cmd+K` futuro — placeholder agora)
-  - `NotificationDropdown` (já existe)
-  - `ViewAsSwitcher` (apenas para admin real)
-  - Avatar com dropdown reduzido (Meu Perfil, Configurações, Sair)
-- **Área de conteúdo** com padding consistente e `bg-muted/20`.
-
-Memória `mem://style/dark-mode-contrast-standards` e `mem://constraints/published-vs-preview-url` permanecem respeitadas.
-
-### 2. Refatorar `/painel` (`Painel.tsx`) como dashboard de software real
-
-Substituir o layout atual por uma estrutura em **boxes/widgets** dentro do `AppShell`:
-
-- **Hero compacto**: saudação + chips de papel + barra de progresso "Complete seu perfil" (se faltar dado).
-- **KPIs em 4 cards** (não 3): Anúncios ativos, Valuations, Captações, Visualizações 30d.
-- **Grid 2×2 de "módulos"** (boxes grandes, com ícone, descrição e CTA primário):
-  - **Marketplace & Mapa** — buscar empresas
-  - **Vender uma empresa** — wizard novo + atalho para Meus Anúncios
-  - **Avaliar uma empresa** — Valuation, atalhos para múltiplos/DCF/certificador
-  - **Captar capital** — solicitar funding + minhas captações
-- **Seção "Para o seu perfil"**: boxes condicionais por papel (advisor/partner → Potencial da Carteira; franchisee → Mapa de Leads; admin/advisor → Equity Brain destaque).
-- **Atividade recente** (últimas notificações, últimos anúncios, últimas captações) em uma coluna lateral.
-- **Onboarding card**: passos pendentes (cadastrar comprador, completar perfil, anunciar primeira empresa).
-
-### 3. Tornar o `<Header />` público **estritamente público**
-
-Modificar `src/components/layout/Header.tsx`:
-- Quando `user && !simulateLoggedOut` → o componente **retorna `null`** (não renderiza nada). O usuário logado nunca verá esse header de marketing.
-- Páginas privadas usarão o `AppShell` (com seu próprio topbar). Páginas públicas (Index, Marketplace público, Valuation público, Capital, Investors, Auth, Terms, BlindTeaser) continuam com o `<Header />` público — mas, como elas redirecionam logados, o impacto é nulo.
-- Mantemos o caminho de impersonação: admin em `viewAs='visitante'` continua vendo o header público (necessário para QA).
-
-### 4. Aplicar o `AppShell` às rotas privadas do usuário final
-
-No `src/App.tsx`, agrupar as seguintes rotas dentro de uma rota pai com `AppShell` (mantendo todas as URLs e componentes existentes — apenas adicionando o wrapper de layout):
-
-- `/painel`
-- `/meus-anuncios`, `/editar-anuncio/:id`
-- `/meu-perfil`
-- `/meus-valuations`
-- `/cadastrar-comprador`
-- `/minhas-captacoes`, `/minhas-captacoes/:id`
-- `/matching`, `/matching/resultados`
-- `/potencial-carteira`
-- `/parceiro`
-- `/matching-compradores/:listingId`
-
-As rotas públicas (`/`, `/marketplace`, `/mapa`, `/vender`, `/valuation*`, `/investors`, `/capital*`, `/auth`, `/terms`, `/teaser/:ticker`, `/anuncio/:id`, `/payment-success`) **permanecem como estão** e continuam usando o `<Header />` público — mas internamente, se o usuário estiver logado e acessar `/marketplace`, `/valuation` etc., elas vão renderizar **dentro do `AppShell`** automaticamente (ver item 5).
-
-### 5. Páginas "duplas" (públicas + autenticadas)
-
-`/marketplace`, `/mapa`, `/valuation`, `/vender`, `/capital`, `/investors` são acessíveis tanto a visitantes quanto a logados. Para esses casos:
-
-- Criar um wrapper leve `PublicOrShell` que decide em runtime: se há `user && !simulateLoggedOut`, envolve o conteúdo no `AppShell` e remove o `<Header />` público interno; caso contrário, renderiza igual a hoje.
-- Para minimizar refactor, alterar cada uma dessas páginas para **não importar `<Header />` diretamente** e sim usar `<PageChrome>` (novo componente de 1 linha) que aplica o header certo conforme contexto. As páginas continuam funcionando para visitantes exatamente como hoje.
-
-### 6. Remover CTAs de visitante quando logado
-
-- `<Header />` (público) deixa de ser renderizado para logados (item 3).
-- `Index.tsx` — sem alteração (já redireciona).
-- `Footer.tsx` — manter, mas no `AppShell` o footer não aparece (padrão SaaS); fica apenas nas páginas públicas.
-- Em páginas de marketing (`/valuation`, `/capital`, `/investors`) acessadas por logados, o conteúdo continua disponível (não excluímos nada), mas os CTAs "Anunciar Grátis / Cadastre-se / Entrar" são suprimidos via `useAuth()` — substituídos por CTAs contextuais ("Avaliar agora", "Solicitar captação", "Falar com consultor").
-
-### 7. ViewAsSwitcher e RequireRole continuam funcionando
-
-- O switcher migra do `<Header />` público para o `AppTopbar` (somente admin real vê).
-- `viewAs='visitante'` força o usuário a ver o `<Header />` público + landing pages, exatamente como hoje (caminho de QA preservado).
-- Nada muda em `RequireRole`, `AdminRoute`, RLS ou edge functions.
+**3. Filtros do mapa pesados:**
+Hoje é uma sidebar lateral de 288px com accordions, checkboxes verticais para 27 estados, lista comprida de cidades, slider de preço, etc. Padrão OLX/Mercado Livre é: barra horizontal no topo com chips clicáveis ("Setor", "Localização", "Preço", "Tipo"), modal/popover para escolher múltiplos, chips removíveis logo abaixo mostrando filtros ativos, mapa em tela cheia.
 
 ---
 
-## Arquivos a criar
-- `src/components/layout/AppShell.tsx`
-- `src/components/layout/AppSidebar.tsx`
-- `src/components/layout/AppTopbar.tsx`
-- `src/components/layout/PageChrome.tsx`
-- `src/components/painel/PainelHero.tsx`
-- `src/components/painel/PainelKPIs.tsx`
-- `src/components/painel/PainelModules.tsx` (boxes grandes 2×2)
-- `src/components/painel/PainelActivity.tsx`
-- `src/components/painel/PainelOnboarding.tsx`
+## Plano em 3 frentes
 
-## Arquivos a editar
-- `src/App.tsx` — agrupar rotas privadas dentro do `AppShell`.
-- `src/components/layout/Header.tsx` — retornar `null` para usuário logado (exceto persona "visitante").
-- `src/pages/Painel.tsx` — refatorar para usar os novos widgets dentro do `AppShell`.
-- `src/pages/Marketplace.tsx`, `MapView.tsx`, `Valuation.tsx`, `ValuationMultiplos.tsx`, `ValuationDCF.tsx`, `ValuationCertifier.tsx`, `Vender.tsx`, `Sell.tsx`, `Capital.tsx`, `Investors.tsx`, `ListingDetail.tsx` — trocar `<Header />` por `<PageChrome />` para que sejam embutidas no `AppShell` quando o usuário estiver logado.
-- `mem://index.md` — adicionar referência à nova memória abaixo.
+### Frente 1 — Navegação persistente do logado
 
-## Memória a salvar
-- `mem://features/logged-in-app-shell` — descreve a separação visitante vs logado, o `AppShell` com sidebar + topbar e a regra de o `<Header />` público não renderizar para logados (exceto persona "visitante").
+**1.1. Levar todas as rotas-tool para dentro do `<AppShell />`** em `src/App.tsx`, criando um `<AuthRoute>` wrapper que:
+- Se logado → renderiza `<AppShell><Outlet/></AppShell>` (sidebar + topbar fixos)
+- Se visitante → renderiza a página crua com `<Header/>` público (mantendo o comportamento atual)
+
+Rotas que vão virar "híbridas": `/marketplace`, `/mapa`, `/vender`, `/sell`, `/valuation`, `/valuation/multiplos`, `/valuation/dcf`, `/valuation/certificador`, `/capital`, `/matching`, `/anuncio/:id`, `/teaser/:ticker`.
+
+**1.2. Cada página interna esconde seu próprio `<Header/>` quando estiver dentro do AppShell.** Crio um hook `useInAppShell()` que expõe um boolean (lê de um `AppShellContext`). As páginas hoje renderizam `<Header />` no topo — vão passar a fazer `{!inAppShell && <Header />}`. Mesma coisa para `<Footer />` em páginas que renderizam.
+
+**1.3. Topbar com breadcrumbs e botão "Voltar"** em `AppTopbar.tsx`:
+- Adiciona um botão de voltar (`ArrowLeft`) à esquerda quando `history.length > 1`
+- Breadcrumb dinâmico baseado na rota (ex: `Marketplace › Anúncio XYZ`)
+- Mantém busca global, notificações e ViewAsSwitcher
+
+**1.4. AppSidebar não some no mobile:** o problema atual é que ele está em `lg:block` (oculto < 1024px) e a versão mobile só aparece quando `mobileOpen=true`. Adiciono no `AppTopbar` o botão hambúrguer que dispara `onMenuClick` (já existe a prop) — só precisa garantir que o botão é visível e que o mobile drawer não fecha em cliques internos não intencionais.
+
+**1.5. Sidebar collapse com tooltip:** quando colapsado para `w-16`, garantir que ao passar o mouse num item ele mostre o nome (já tem `title=`, mas posso trocar para `Tooltip` do shadcn para ficar mais estável).
+
+---
+
+### Frente 2 — Equity Brain: gerar signals + scores reais a partir das 84 listings
+
+Como as edge functions atuais (`compute-signals`, `calculate-scores`) dependem de fontes externas (CNPJ enrichment, partners, etc.) que não estão populadas para os CNPJs sintéticos das listings, vou **criar uma migration SQL com uma função `equity_brain.bootstrap_from_listings()`** que faz tudo num só lugar:
+
+**2.1. Para cada listing já espelhada em `equity_brain.companies`, gerar `company_signals`** com base nos dados reais que temos:
+- `signal_revenue_tier` — peso 0–100 baseado em `annual_revenue` (tiers: <1M, 1–5M, 5–20M, >20M)
+- `signal_profitability` — `annual_profit / annual_revenue` mapeado para 0–100
+- `signal_age` — anos desde `foundation_year` (empresas 5–15 anos = peso máximo, candidatas a sucessão)
+- `signal_explicit_sale_intent` — peso fixo `90` (anúncio é declaração explícita de venda)
+- `signal_vdr_readiness` — usa o campo `vdr_readiness` já calculado em `public.listings`
+- `signal_plan_master` — peso `+15` se `plan = 'master'` (sinal de seriedade)
+- `signal_geo` — peso `+10` se a empresa está em SP/RJ/MG/PR/RS/SC (mercados líquidos)
+
+**2.2. Calcular `company_scores`** com fórmula:
+- `vispe_score` = média ponderada dos signals de qualidade (rev_tier, profitability, vdr_readiness)
+- `sucessao_score` = peso da idade da empresa + ausência de sucessor declarado
+- `ma_score` = `0.5 * vispe_score + 0.2 * sucessao_score + 0.2 * explicit_sale_intent + 0.1 * geo`
+- `buyer_fit_score` = simples count de `buyer_profiles` ativos compatíveis (categoria + estado + budget) → essa parte usa join com `public.buyer_profiles`
+
+**2.3. Atualizar `opportunities_ready`** (provavelmente é uma view ou tabela materializada — confirmo na implementação) para incluir essas 84 empresas.
+
+**2.4. Trigger automática:** estender o trigger existente em `public.listings` para chamar `bootstrap_from_listings()` para o listing recém-inserido/atualizado (não só o upsert da company, mas todo o ciclo signals+scores).
+
+**2.5. Botão "Sincronizar marketplace"** no `DashboardPage` continua existindo, mas agora chama uma nova edge function `bootstrap-equity-brain-from-listings` que executa o SQL acima em batch. Não dependemos mais de fontes externas pra ter dado quente no cockpit.
+
+**2.6. Validação:** após rodar uma vez, espera-se ver no dashboard `Empresas no banco: 84`, `Premium (≥80): N>0`, `opportunities_ready: 84`, e a tabela "Top 50 oportunidades" populada com as listings reais.
+
+---
+
+### Frente 3 — Filtros do Mapa estilo OLX/Mercado Livre
+
+Reescrever `src/pages/MapView.tsx` + criar `src/components/map/MapTopFilterBar.tsx`:
+
+**3.1. Topo (sticky, ~56px de altura):** barra horizontal com chips clicáveis:
+- 🏷️ **Setor** — abre `Popover` com checkbox grid de 12 categorias e contador (ex: "Setor (3)")
+- 📍 **Localização** — abre `Popover` com 2 abas: Estado e Cidade (cidades filtradas pelo estado escolhido)
+- 💰 **Preço** — abre `Popover` com slider duplo + dois inputs ("De / Até")
+- 👥 **Tipo** — toggle group inline ("Empresas", "Compradores", "Ambos") sem popover
+
+**3.2. Linha de chips ativos** logo abaixo: `<Badge>` removível para cada filtro selecionado (ex: `Tecnologia ×` `SP ×` `Até R$ 2M ×`), mais um botão "Limpar tudo" no canto direito.
+
+**3.3. Ordenação:** dropdown à direita ("Mais recentes / Maior preço / Menor preço / Maior receita").
+
+**3.4. Mapa ocupa 100% abaixo da barra.** Sem sidebar lateral. No mobile, a barra de filtros vira scroll horizontal e cada chip continua abrindo `Popover` (no mobile, `Drawer` shadcn de baixo pra cima).
+
+**3.5. Manter funcionalidade existente:** `BusinessMap` continua igual, recebendo `filteredListings`/`filteredBuyers`. Só muda como o filtro é montado. O botão "Cadastrar Comprador" permanece no canto superior direito do mapa.
+
+**3.6. Remover** o `MapFilterSidebar.tsx` antigo só depois de validar a nova UI (mantém arquivo, mas deixa de ser importado — assim nada quebra).
+
+---
+
+## Arquivos que serão criados/modificados
+
+**Frente 1 — navegação:**
+- `src/contexts/AppShellContext.tsx` (novo) — expõe `inAppShell` para páginas
+- `src/components/layout/AppShell.tsx` — provê o context
+- `src/components/layout/AppTopbar.tsx` — adiciona botão voltar + breadcrumbs
+- `src/components/layout/AppSidebar.tsx` — Tooltip nos itens colapsados
+- `src/App.tsx` — leva rotas híbridas pra dentro do shell quando logado
+- `src/pages/Marketplace.tsx`, `MapView.tsx`, `Sell.tsx`, `Vender.tsx`, `Valuation.tsx`, `ValuationMultiplos.tsx`, `ValuationDCF.tsx`, `ValuationCertifier.tsx`, `Capital.tsx`, `Matching.tsx`, `ListingDetail.tsx`, `BlindTeaser.tsx` — esconder `<Header/>`/`<Footer/>` quando `inAppShell`
+
+**Frente 2 — Equity Brain:**
+- `supabase/migrations/<timestamp>_equity_brain_bootstrap.sql` — função `equity_brain.bootstrap_from_listings()` + trigger estendida
+- `supabase/functions/bootstrap-equity-brain-from-listings/index.ts` (novo) — wrapper que chama o SQL em batch
+- `src/pages/equity-brain/DashboardPage.tsx` — botão "Sincronizar marketplace" passa a chamar a nova função
+
+**Frente 3 — filtros mapa:**
+- `src/components/map/MapTopFilterBar.tsx` (novo) — barra horizontal estilo OLX
+- `src/pages/MapView.tsx` — usa o novo componente, remove sidebar lateral
+- `src/components/map/MapFilterSidebar.tsx` — mantido como fallback (não importado)
+
+---
 
 ## Garantias
-- **Nada é removido**: todas as rotas, edge functions, RLS, planos, paywalls, wizards, valuations e fluxos continuam idênticos.
-- **Apenas dinâmica de página, layout, design e estrutura mudam**, conforme pedido.
-- O caminho de impersonação `viewAs='visitante'` continua permitindo que admins testem a UX pública.
-- Mobile: a sidebar usa `collapsible="offcanvas"` no breakpoint `md` (já é padrão do `@/components/ui/sidebar`), com `SidebarTrigger` sempre visível no topbar.
+
+- Nenhuma funcionalidade existente é removida — apenas remontada visualmente
+- Visitantes (deslogados) continuam vendo o site público com `Header/Footer` exatamente como hoje
+- RLS preservado — admin continua sendo admin via banco, ViewAs é só UI
+- Rota `/equity-brain/*` segue protegida por `RequireRole`

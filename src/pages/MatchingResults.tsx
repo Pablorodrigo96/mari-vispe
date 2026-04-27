@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { PublicChrome as Header } from '@/components/layout/PublicChrome';
+import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { MatchCard } from '@/components/matching/MatchCard';
 import { ConsultorBanner } from '@/components/matching/ConsultorBanner';
 import { Button } from '@/components/ui/button';

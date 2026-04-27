@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Filter, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Header } from '@/components/layout/Header';
+import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { BusinessMap } from '@/components/map/BusinessMap';
 import type { BuyerProfile } from '@/components/map/BusinessMap';
 import { MapFilterSidebar, defaultMapFilters, DEFAULT_MAX_PRICE, type MapFilterState } from '@/components/map/MapFilterSidebar';

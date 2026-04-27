@@ -1,4 +1,4 @@
-import { Header } from '@/components/layout/Header';
+import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { CertifierWizard } from '@/components/valuation/CertifierWizard';
 
 const ValuationCertifier = () => {

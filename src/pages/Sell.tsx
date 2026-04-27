@@ -1,7 +1,7 @@
 import { ArrowRight, CheckCircle, Shield, TrendingUp, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { PublicChrome as Header } from '@/components/layout/PublicChrome';
+import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { Button } from '@/components/ui/button';
 import { HowItWorks } from '@/components/sell/HowItWorks';
 import { PlansPreview } from '@/components/sell/PlansPreview';

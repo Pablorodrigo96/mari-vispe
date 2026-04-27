@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
+import { PublicChrome as Header } from '@/components/layout/PublicChrome';
+import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { CapitalSimulator } from '@/components/capital/CapitalSimulator';
 import { CapitalSocialProof } from '@/components/capital/CapitalSocialProof';
 import { CapitalComparison } from '@/components/capital/CapitalComparison';
