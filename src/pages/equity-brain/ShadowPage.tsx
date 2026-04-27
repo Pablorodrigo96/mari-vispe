@@ -76,7 +76,11 @@ export default function EBShadowPage() {
     try {
       const { data, error } = await supabase.functions.invoke(name, { body });
       if (error) throw error;
-      toast.success(`${label} concluído`, { description: `Processados: ${(data as any)?.processed ?? "—"}` });
+      const d: any = data ?? {};
+      const desc = d.processed != null ? `Processados: ${d.processed}`
+        : d.events_processed != null ? `Eventos: ${d.events_processed} · Buyers: ${d.buyers_updated} · Thetas: ${d.thetas_upserted}`
+        : "OK";
+      toast.success(`${label} concluído`, { description: desc });
       await load();
     } catch (e: any) {
       toast.error(`Falha em ${label}`, { description: e.message ?? String(e) });
