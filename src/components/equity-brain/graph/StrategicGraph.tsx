@@ -528,11 +528,11 @@ export function StrategicGraph() {
         width={size.w}
         height={size.h}
         backgroundColor="rgba(0,0,0,0)"
-        cooldownTicks={150}
-        cooldownTime={5000}
-        d3AlphaDecay={0.04}
-        d3VelocityDecay={0.55}
-        warmupTicks={80}
+        cooldownTicks={120}
+        cooldownTime={3500}
+        d3AlphaDecay={0.06}
+        d3VelocityDecay={0.7}
+        warmupTicks={60}
         onEngineStop={() => {
           // Fixar nodes na posição final (sem mais drift)
           nodes.forEach((n: any) => {
@@ -543,6 +543,8 @@ export function StrategicGraph() {
           });
           // Enquadrar todo o grafo já parado
           fgRef.current?.zoomToFit(500, 80);
+          setStabilized(true);
+          setRecalculating(false);
         }}
         enableNodeDrag={false}
         linkCurvature={(l: any) => 0.18 + (l.weight ?? 0) * 0.1}
