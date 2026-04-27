@@ -70,6 +70,13 @@ export function StrategicGraph() {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [pulse, setPulse] = useState(0);
+  const [stabilized, setStabilized] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
+  // Refs estáveis (sem causar re-render dos handlers)
+  const hoveredRef = useRef<string | null>(null);
+  const selectedRef = useRef<string | null>(null);
+  useEffect(() => { hoveredRef.current = hoveredNodeId; }, [hoveredNodeId]);
+  useEffect(() => { selectedRef.current = selectedNode?.id ?? null; }, [selectedNode]);
 
   // ---------- Container size ----------
   useEffect(() => {
