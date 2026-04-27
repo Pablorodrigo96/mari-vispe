@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart } from "lucide-react";
+import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -12,6 +12,7 @@ const items = [
   { to: "/equity-brain/buyers",         label: "Buyers",         Icon: Users },
   { to: "/equity-brain/teses",          label: "Teses",          Icon: Lightbulb },
   { to: "/equity-brain/calls",          label: "Calls",          Icon: PhoneCall },
+  { to: "/equity-brain/shadow",         label: "Shadow v1↔v2",   Icon: Sparkles },
 ];
 
 export function EBSidebar() {
