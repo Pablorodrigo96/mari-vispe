@@ -236,6 +236,7 @@ serve(async (req) => {
       }
     }
 
+    await finishRun("success", upserts.length);
     return new Response(JSON.stringify({
       ok: true,
       buyers_updated: summary.length,
@@ -244,7 +245,12 @@ serve(async (req) => {
       dry_run: dryRun,
       summary: summary.slice(0, 20),
       sample_thetas: upserts.slice(0, 10),
+      run_id: runId,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } catch (innerErr: any) {
+      await finishRun("error", 0, innerErr?.message ?? String(innerErr));
+      throw innerErr;
+    }
   } catch (err: any) {
     console.error("update-buyer-revealed-thetas error:", err);
     return new Response(JSON.stringify({ error: err.message ?? String(err) }), {
