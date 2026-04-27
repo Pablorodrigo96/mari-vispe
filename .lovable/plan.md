@@ -1,134 +1,77 @@
+# Diagnóstico do erro "Drenar fila agora"
 
-# Fase 7 — Closing the Feedback Loop (event-driven)
+Após deploy das edge functions novas (`process-event`, `drain-events-bulk`, `embed-signal`, `feedback-from-call`, `setup-equity-brain-crons`), inspecionei a fila e identifiquei **4 problemas reais** — não basta redeploy:
 
-## Status atual
+## O que está acontecendo
 
-A infra **já existe**: `process-event`, `feedback-from-call`, `claude-analyze-call`, `fire-webhook`, tabela `equity_brain.events` com triggers, cron `process-events-every-minute` ativo. Mas:
+1. **846 eventos pendentes** em `equity_brain.events` (quase todos `buyer.thesis_added`).
+2. Ao rodar `process-event` manualmente: **100/100 eventos falharam com `match-buyer 401: {"error":"Unauthorized"}`**.
+3. `drain-events-bulk` retorna **non-2xx** porque cada batch leva ~12s × 30 iterações = excede timeout do gateway.
+4. O painel "Fila de eventos (Fase 7)" mostra `unprocessed: 0` mesmo com 846 eventos — está consultando tabela errada.
+5. Warning no console: `Badge` não suporta refs (Radix Tabs reclama).
 
-- **846 eventos não processados** acumulados (743 `company.signal_added` + 103 `buyer.thesis_added`) — a fila está engargalada
-- `claude-generate-pitch` existe como função mas nunca foi conectada ao fluxo de BDR
-- Não há **monitoramento da saúde da fila** no painel Shadow
-- O loop não fecha: signals novos da call não geram **embeddings semânticos** (campo `signal_text` fica órfão)
-- BDR não tem botão **"Gerar pitch agora"** após registrar uma call
+## Causa raiz do 401
 
-A Fase 7 amarra essas pontas.
+Todas as functions chamadas internamente (`match-buyer`, `match-company`, `calculate-scores`, `embed-signal`, `claude-generate-pitch`) validam auth com `supabase.auth.getClaims(token)`. Esse método valida JWT contra o JWKS atual — mas a `SUPABASE_SERVICE_ROLE_KEY` é uma JWT legada e em alguns casos `getClaims` retorna `claims=null`, fazendo o check cair em "Unauthorized". O `match-buyer` invocado direto com auth admin funciona (200), mas service_role falha.
 
----
+# Correções
 
-## 1. Desbloquear a fila (one-shot + observabilidade contínua)
+## 1. Auth resiliente para service_role (5 functions)
 
-**Edge function nova** `drain-events-bulk`:
-- Roda em loop interno chamando `process-event` até esvaziar (com timeout de 50s e cap de 30 batches)
-- Auth: admin only
-- Retorna agregado: `total_processed`, `success`, `errors`, `dropped`, `iterations`
+Em `match-buyer`, `match-company`, `calculate-scores`, `embed-signal`, `claude-generate-pitch`: adicionar **fallback determinístico** comparando o bearer token diretamente com `SUPABASE_SERVICE_ROLE_KEY` antes de tentar `getClaims`. Padrão:
 
-**Botão admin** no Shadow → tab "Saúde": "Drenar fila agora" (mostra contagem atual via `equity_brain.events`).
+```ts
+const token = authHeader.replace("Bearer ", "");
+if (token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return { ok: true };
+// ... fallback existente para getClaims (usuários admin)
+```
 
-**Card novo** `EventQueueHealthCard.tsx` no Shadow:
-- Contador `unprocessed` (cor verde <100, amarelo <1000, vermelho ≥1000)
-- Distribuição por `event_type`
-- Última 20 erros (`processed_status='error'`) com `retry_count`, `error_message`, `entity_id`
-- Auto-refresh a cada 30s
+Aplicar o mesmo no `process-event` e `drain-events-bulk` por consistência.
 
----
+## 2. Drain assíncrono (sem timeout do gateway)
 
-## 2. Pitch on-demand pós-call
+`drain-events-bulk` hoje processa síncrono e estoura 150s. Mudar para padrão **fire-and-forget**:
+- Retornar 202 imediatamente com um `job_id`.
+- Usar `EdgeRuntime.waitUntil(...)` para iterar `process-event` em background.
+- Persistir progresso numa tabela leve `equity_brain.drain_jobs` (id, started_at, finished_at, totals jsonb, status).
+- Reduzir `MAX_ITERATIONS` para 20 e adicionar **delay 200ms** entre iterações (para evitar rate limit de 50/s do gateway que apareceu nos logs).
 
-**Editar** `feedback-from-call/index.ts`:
-- Após processar `claude-analyze-call`, **se `outcome ∈ {qualified, interested_later, meeting_scheduled}`**, dispara em fire-and-forget `claude-generate-pitch` para preparar próxima abordagem
-- Salva resultado em `call_feedback.followup_action` (texto curto) e novo campo `next_pitch jsonb`
+Frontend faz polling (a cada 2s) na tabela `drain_jobs` via Supabase realtime ou query simples.
 
-**Migração SQL**:
-- `ALTER TABLE equity_brain.call_feedback ADD COLUMN next_pitch jsonb;`
+## 3. RPC para stats da fila
 
-**Editar** `QuickCallModal.tsx`:
-- Após sucesso, mostra preview do `next_pitch` retornado (se houver) com botões "Copiar" e "Marcar follow-up no calendário"
+Criar função `public.eb_event_queue_stats()` SECURITY DEFINER que retorna `{unprocessed, errors, by_type[]}` lendo de `equity_brain.events`. O componente já tem fallback, mas hoje o fallback chama `eb_events` (nome inexistente) — também atualizar `EventQueueHealthCard` para usar a RPC + remover queries diretas a `eb_events`.
 
----
+## 4. Fix Badge forwardRef
 
-## 3. Embeddings semânticos dos signals
+Converter `src/components/ui/badge.tsx` para `React.forwardRef<HTMLDivElement, BadgeProps>` — elimina o warning quando Radix Tabs/Tooltip envolve Badges.
 
-Hoje `company_signals.signal_text` é texto livre — sem embedding. Vamos enriquecer para busca futura por similaridade.
+# Arquivos afetados
 
-**Migração SQL**:
-- `ALTER TABLE equity_brain.company_signals ADD COLUMN embedding vector(768);` (pgvector já habilitado)
-- Index HNSW para cosine similarity
+**Edge functions (modificar auth):**
+- `supabase/functions/match-buyer/index.ts`
+- `supabase/functions/match-company/index.ts`
+- `supabase/functions/calculate-scores/index.ts`
+- `supabase/functions/embed-signal/index.ts`
+- `supabase/functions/claude-generate-pitch/index.ts`
+- `supabase/functions/process-event/index.ts`
+- `supabase/functions/drain-events-bulk/index.ts` (refatorado para fire-and-forget)
 
-**Edge function nova** `embed-signal`:
-- Recebe `signal_id`, gera embedding via Lovable AI Gateway (`google/text-embedding-004` se disponível, senão fallback para Lovable AI text completion + TF-IDF simples)
-- Atualiza row
+**Migration:**
+- Tabela `equity_brain.drain_jobs` (id uuid, started_at, finished_at, status, totals jsonb)
+- Função `public.eb_event_queue_stats()` SECURITY DEFINER
 
-**Trigger SQL** `trg_embed_signal_text`:
-- AFTER INSERT em `company_signals` quando `signal_text IS NOT NULL` → enfileira `event_type='signal.embed_pending'` em `equity_brain.events`
+**Frontend:**
+- `src/components/ui/badge.tsx` (forwardRef)
+- `src/components/equity-brain/EventQueueHealthCard.tsx` (usar RPC + polling de drain_jobs)
 
-**Editar** `process-event`:
-- Roteia `signal.embed_pending` → chama `embed-signal`
+# Validação pós-deploy
 
-**Nota**: se text-embedding-004 não estiver disponível no gateway, deixamos a função preparada mas com flag `EMBEDDINGS_ENABLED=false` no início; foco da Fase 7 fica nos outros 3 itens. Decisão será na implementação após `secrets--fetch_secrets` confirmar modelos disponíveis.
+Após implementar, vou:
+1. Redeployar as 7 functions.
+2. Chamar `process-event` direto e confirmar `success > 0` (esperado: drenar `buyer.thesis_added` reais).
+3. Disparar `drain-events-bulk` pela UI e confirmar progresso na tabela `drain_jobs`.
+4. Inserir um signal teste e validar que `signal.embed_pending` vira `embedding` populado em `company_signals`.
+5. Postar um `feedback-from-call` "qualified" e validar que `next_pitch` é gravado.
 
----
-
-## 4. Auto-correção de retries presos
-
-**Editar** `process-event`:
-- Antes do batch, faz "auto-retry" de eventos com `retry_count > 0 AND processed_at IS NULL AND created_at < now() - interval '5 min'` (já é o caso, mas explicitar lógica)
-- Se `retry_count >= MAX_RETRIES`: drop com `processed_status='error'` (já implementado)
-
-**Cron novo** `eb-event-cleanup-hourly`:
-- A cada hora, limpa eventos `processed_status IN ('success','skipped')` com `processed_at < now() - 7 days` (mantém erros para auditoria)
-
----
-
-## 5. UI — feedback visual no painel Shadow
-
-**Editar** `ShadowPage.tsx`:
-- Nova tab **"Eventos"** ou adicionar `EventQueueHealthCard` na aba "Saúde" existente (preferência: aba Saúde)
-- Botão "Drenar fila agora" no topo
-
----
-
-## Arquivos
-
-**Migração SQL** (uma só):
-- `ALTER TABLE equity_brain.call_feedback ADD COLUMN next_pitch jsonb;`
-- `ALTER TABLE equity_brain.company_signals ADD COLUMN embedding vector(768);` + index
-- Trigger `trg_embed_signal_text`
-
-**Edge Functions novas**:
-- `supabase/functions/drain-events-bulk/index.ts`
-- `supabase/functions/embed-signal/index.ts` (com flag se modelo de embedding indisponível)
-
-**Edge Functions editar**:
-- `supabase/functions/process-event/index.ts` → handler `signal.embed_pending`
-- `supabase/functions/feedback-from-call/index.ts` → disparar `claude-generate-pitch` quando outcome quente
-- `supabase/functions/setup-equity-brain-crons/index.ts` → cron `eb-event-cleanup-hourly`
-
-**Componentes novos**:
-- `src/components/equity-brain/EventQueueHealthCard.tsx`
-
-**Componentes editar**:
-- `src/pages/equity-brain/ShadowPage.tsx` → integra novo card na tab Saúde
-- `src/components/equity-brain/QuickCallModal.tsx` → preview de `next_pitch`
-
-**Memória**:
-- Atualizar `mem://features/equity-brain-v2-event-loop` (novo arquivo)
-
----
-
-## Validação pós-deploy
-
-1. Invocar `drain-events-bulk` → conferir que `unprocessed` cai de 846 para perto de 0
-2. Registrar uma call com `outcome='qualified'` e `raw_notes` longas → confirmar que `next_pitch` é populado
-3. Inserir um `company_signals` com `signal_text` → verificar que `embedding` é populado em ~1min (se EMBEDDINGS_ENABLED)
-4. Abrir Shadow → tab Saúde → ver card de fila com contadores corretos
-5. `SELECT * FROM cron.job WHERE jobname='eb-event-cleanup-hourly'` retorna 1 linha
-
----
-
-## O que **não** entra na Fase 7 (fica para 8+)
-
-- Slack/email de `opportunity.promoted` (Fase 11 conforme comentário no código)
-- Busca por similaridade semântica usando os embeddings (precisa UI separada, fica Fase 8)
-- Reconciliação de signals duplicados (Fase 9)
-
-Após aprovação, sigo direto com a implementação.
+Posso começar?

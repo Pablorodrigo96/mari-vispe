@@ -2188,6 +2188,30 @@ export type Database = {
         Returns: number
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      eb_event_queue_stats: { Args: never; Returns: Json }
+      eb_event_recent_errors: {
+        Args: { p_limit?: number }
+        Returns: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          error_message: string
+          event_type: string
+          id: number
+          retry_count: number
+        }[]
+      }
+      eb_get_drain_job: {
+        Args: { p_job_id: string }
+        Returns: {
+          error_message: string
+          finished_at: string
+          id: string
+          started_at: string
+          status: string
+          totals: Json
+        }[]
+      }
       eb_log_deal_event: {
         Args: {
           p_event_type: string
