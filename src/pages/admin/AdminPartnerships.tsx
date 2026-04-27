@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -336,9 +335,9 @@ const AdminPartnerships = () => {
   const drillDownActivities = drillDownPartner ? activities.filter(a => a.partner_user_id === drillDownPartner.user_id) : [];
 
   return (
-    <AdminLayout>
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto">
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-foreground">Painel de Parcerias</h1>
+        <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Painel de Parcerias</h1>
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
@@ -769,7 +768,7 @@ const AdminPartnerships = () => {
           </SheetContent>
         </Sheet>
       </div>
-    </AdminLayout>
+    </div>
   );
 };
 

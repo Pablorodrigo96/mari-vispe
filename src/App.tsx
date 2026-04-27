@@ -117,19 +117,18 @@ const App = () => (
               <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />
               <Route path="/potencial-carteira" element={<PortfolioPotential />} />
               <Route path="/parceiro" element={<PartnerDashboard />} />
-            </Route>
 
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/crm" element={<AdminCRM />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/listings" element={<AdminListings />} />
-            <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
-            <Route path="/admin/valuations" element={<AdminValuations />} />
-            <Route path="/admin/parcerias" element={<AdminPartnerships />} />
-            <Route path="/admin/capital" element={<AdminCapital />} />
-            <Route path="/admin/capital/providers" element={<AdminCapitalProviders />} />
-            <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />
+              {/* Admin (sidebar do AppShell + RequireRole) */}
+              <Route path="/admin" element={<RequireRole roles={["admin"]}><AdminDashboard /></RequireRole>} />
+              <Route path="/admin/crm" element={<RequireRole roles={["admin"]}><AdminCRM /></RequireRole>} />
+              <Route path="/admin/users" element={<RequireRole roles={["admin"]}><AdminUsers /></RequireRole>} />
+              <Route path="/admin/listings" element={<RequireRole roles={["admin"]}><AdminListings /></RequireRole>} />
+              <Route path="/admin/subscriptions" element={<RequireRole roles={["admin"]}><AdminSubscriptions /></RequireRole>} />
+              <Route path="/admin/valuations" element={<RequireRole roles={["admin"]}><AdminValuations /></RequireRole>} />
+              <Route path="/admin/parcerias" element={<RequireRole roles={["admin"]}><AdminPartnerships /></RequireRole>} />
+              <Route path="/admin/capital" element={<RequireRole roles={["admin"]}><AdminCapital /></RequireRole>} />
+              <Route path="/admin/capital/providers" element={<RequireRole roles={["admin"]}><AdminCapitalProviders /></RequireRole>} />
+            </Route>
 
             
             {/* Capital SEO Pages */}

@@ -72,13 +72,14 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
     },
   ];
 
-  if (eff.isAdvisor || eff.isPartnerAccountant) {
+  if (eff.isAdvisor || eff.isPartnerAccountant || eff.isFranchisee || eff.isAdmin) {
     groups.push({
       id: 'partners', name: 'Parcerias', icon: Briefcase,
       children: [
+        { name: 'Painel do parceiro', href: '/parceiro', icon: Briefcase },
         { name: 'Potencial da carteira', href: '/potencial-carteira', icon: ChartBar },
-        ...(eff.isPartnerAccountant
-          ? [{ name: 'Painel do parceiro', href: '/parceiro', icon: Briefcase }]
+        ...(eff.isAdmin
+          ? [{ name: 'Head de Parcerias', href: '/admin/parcerias', icon: Shield }]
           : []),
       ],
     });
