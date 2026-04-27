@@ -695,8 +695,8 @@ export function StrategicGraph() {
         nodePointerAreaPaint={(node: any, color, ctx) => {
           const n = node as GraphNode;
           if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-          const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
-          const baseR = Math.max(2, 4 + (score / 100) * 12 + 4);
+          // Área de clique ampla baseada no raio real + folga
+          const baseR = Math.max(10, getBaseRadius(n) + 8);
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(node.x, node.y, baseR, 0, 2 * Math.PI);
