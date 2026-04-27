@@ -1,134 +1,75 @@
+## Diagnóstico
 
-## Diagnóstico curto
+- `public.listings` tem **84 anúncios ativos** (10 categorias, 18 UFs).
+- `equity_brain.companies` está com **0 registros** — por isso o cockpit (Empresas, Oportunidades, Mapa, Grafo) aparece vazio mesmo após todo o trabalho das fases anteriores.
+- Apenas **1 listing tem CNPJ preenchido** (`31.526.112/0001-04`). A `companies` usa `cnpj` como chave natural, então precisamos de uma estratégia para os 83 sem CNPJ.
+- Já existe a coluna `companies.has_listing` + `companies.listing_id` — o vínculo está previsto, só não foi populado.
 
-- O que construímos (Equity Brain, 80+ buyers, BoardPage, score versions) está em **`/equity-brain/*`**, isolado do `/admin` por design. Você não viu mudança porque estava em `/admin` (marketplace público), não no cockpit interno.
-- Não existe atalho do `/admin` para o `/equity-brain` → vou adicionar.
-- Não existe "ver como persona X" → vou criar um **View-As switcher** (só visual, não mexe em permissões reais).
-- Header e Home tratam logado e deslogado igual → vou separar com `LoggedInHomeDashboard` e Header consciente de auth.
-- **Nada será removido.** Tudo é aditivo: rotas, botões e componentes existentes continuam funcionando.
+## O que será feito
 
----
+### 1. Edge function `sync-listings-to-equity-brain`
 
-## Bloco 1 — Tornar o Equity Brain visível e descobrível
+Nova função (admin-only) que:
 
-### 1.1 Adicionar `/equity-brain/board` ao roteador
-- Em `src/App.tsx`, dentro do bloco `<Route path="/equity-brain" ...>`, adicionar:
-  ```tsx
-  <Route path="board" element={<EBBoardPage />} />
-  ```
-- Importar `BoardPage` (já existe em `src/pages/equity-brain/BoardPage.tsx`).
+1. Lê todas as listings ativas (`status='active'` ou `'pending'`).
+2. Para cada uma:
+   - Se tem CNPJ → usa o CNPJ real (formato só-dígitos, 14 chars).
+   - Se **não** tem CNPJ → gera um CNPJ sintético determinístico no formato `LST` + 11 dígitos derivados do `listing.id` (ex.: `LST00012345678`). Isso permite chave única, vínculo estável e fácil identificação visual de "originado de listing".
+3. Faz `UPSERT` em `equity_brain.companies` (`onConflict: cnpj`) preenchendo:
+   - `razao_social` ← `title`
+   - `nome_fantasia` ← `title`
+   - `setor_ma` / `subsetor_ma` ← derivado de `category` via mapa fixo (telecom→telecom, tech→saas, health→saude, education→educacao, services→servicos_b2b, agro→agro, energy→energia, commerce→varejo, food→varejo, construction→industria, industry→industria)
+   - `cnae_principal` ← primeiro CNAE do mapa de verticais para a categoria
+   - `uf` ← `state`, `municipio` ← `city`
+   - `data_abertura` ← `make_date(foundation_year, 1, 1)` quando existir
+   - `faturamento_estimado` ← `annual_revenue`
+   - `ebitda_estimado` ← `annual_profit` (proxy)
+   - `situacao_cadastral` ← `'ATIVA'`
+   - `porte` ← derivado do faturamento (ME/EPP/MEDIA/GRANDE)
+   - `has_listing = true`, `listing_id = listing.id`
+   - `source = 'marketplace_listing'`
+   - `raw_data` ← snapshot do listing
+4. Retorna `{ inserted, updated, skipped, errors }`.
 
-### 1.2 Adicionar item "Board" na sidebar do Equity Brain
-- Em `src/components/equity-brain/EBSidebar.tsx`, incluir entrada "Board Executivo" com ícone `LayoutDashboard` e rota `/equity-brain/board`.
+### 2. Disparo automático em cascata
 
-### 1.3 Adicionar atalho do `/admin` para o cockpit interno
-- Em `src/components/admin/AdminSidebar.tsx`, adicionar um bloco visualmente separado no rodapé do menu:
-  - Título: "Cockpit Interno"
-  - Links (visíveis somente para admin/advisor):
-    - **Equity Brain →** `/equity-brain`
-    - **Board Executivo →** `/equity-brain/board`
-    - **Buyers (Compradores M&A) →** `/equity-brain/buyers`
-- Usar `useUserRoles` para condicional. Estilo: borda superior + ícone `Sparkles` para destacar.
+Após o sync, a função chama (via `supabase.functions.invoke`) na ordem:
 
-### 1.4 Card destaque no `AdminDashboard`
-- Em `src/pages/admin/AdminDashboard.tsx`, adicionar acima do grid de stats um banner-card chamado **"Equity Brain — Cockpit M&A Vispe"** mostrando 3 KPIs rápidos do schema `equity_brain` (companies, buyers ativos, opportunities tier S+A) + botão "Abrir Cockpit".
-- Usar `supabase.from('equity_brain.buyers').select('count', { count: 'exact' })` etc.
-- Visível apenas se `isAdmin || isAdvisor`.
+1. `compute-signals` com `{ filter: { source: 'marketplace_listing' } }` — gera todos os signals determinísticos, incluindo `intencao_venda_explicita` (peso 50) que toda listing dispara via `has_listing=true`.
+2. `calculate-scores` — popula `company_scores` com a versão `v1.0`.
+3. `refresh-opportunities` — atualiza `opportunities_ready`.
 
----
+### 3. Trigger automático em `public.listings`
 
-## Bloco 2 — View-As (Visualizar como persona)
+Migration cria trigger `AFTER INSERT OR UPDATE` em `public.listings` que chama um pequeno wrapper SQL (SECURITY DEFINER) responsável por fazer o UPSERT mínimo em `equity_brain.companies` (apenas vínculo + flag `has_listing`). Assim, daqui pra frente, **todo novo anúncio entra automaticamente no Equity Brain**.
 
-### 2.1 Novo contexto `ViewAsContext`
-- Criar `src/contexts/ViewAsContext.tsx` com:
-  - `viewAs: 'real' | 'admin' | 'head_parcerias' | 'bdr' | 'parceiro' | 'franqueado' | 'consultor' | 'seller' | 'buyer'`
-  - `setViewAs(role)`, `resetViewAs()`
-  - Persistência em `localStorage` (key `pmeb3.view_as`)
-  - **Apenas usuários com role real `admin` podem alterar `viewAs`.** Demais usuários ficam travados em `'real'`.
-- Embrulhar `<App>` em `<ViewAsProvider>` em `src/App.tsx`, dentro de `<AuthProvider>`.
+A pipeline pesada (signals/scores/oportunidades) continua sendo disparada por cron / manual, não no trigger — para não bloquear o cadastro do usuário.
 
-### 2.2 Hook `useEffectiveRoles`
-- Criar `src/hooks/useEffectiveRoles.ts` que combina `useUserRoles` + `ViewAsContext`:
-  - Se `viewAs === 'real'`, retorna roles reais.
-  - Senão, retorna um set "fake" derivado da persona (ex.: `bdr` → `['advisor']`; `parceiro` → `['advisor']` + `isPartnerAccountant=true`; `franqueado` → `['franchisee']`; `head_parcerias` → `['admin']` com flag UI).
-- **Importante:** este hook é só para **renderização de UI**. RLS no Supabase continua usando role real, então não há risco de escalonamento. Se um admin "vendo como buyer" tentar acessar `/admin/users`, o RLS o deixa passar (ele é admin de fato), mas a UI esconde o item — comportamento desejado para QA visual.
+### 4. Botão "Sincronizar marketplace" no cockpit
 
-### 2.3 Componente `ViewAsSwitcher`
-- Criar `src/components/layout/ViewAsSwitcher.tsx`: um `DropdownMenu` no Header (ao lado do avatar) que aparece **somente para admin real**.
-- Opções: "Visão Real (Admin)", "Como Head de Parcerias", "Como BDR", "Como Parceiro Contábil", "Como Franqueado", "Como Consultor", "Como Vendedor", "Como Comprador".
-- Ao trocar, mostra um banner fino fixo no topo: `🔄 Visualizando como [persona] — Voltar à visão real` (botão).
+Em `src/pages/equity-brain/DashboardPage.tsx` adicionar um botão (visível só para `admin`/`advisor`) que chama a edge function e mostra o resultado em toast. Útil para reprocessar a qualquer momento.
 
-### 2.4 Adaptar consumidores existentes
-- `Header.tsx`, `AdminSidebar.tsx`, `EBSidebar.tsx`, `Footer.tsx` (e onde `useUserRoles` é chamado para condicional de UI) passam a usar `useEffectiveRoles` em vez de `useUserRoles` direto.
-- `RequireRole` e `AdminRoute` continuam usando `useUserRoles` (real) — nunca quebrar segurança.
+### 5. Documentação
 
----
+Atualiza `docs/EQUITY_BRAIN_README.md` explicando:
+- A regra `marketplace alimenta o Equity Brain` agora está implementada de fato.
+- CNPJs sintéticos `LST...` representam empresas originadas de listings sem CNPJ real e devem ser substituídos quando o usuário preencher o CNPJ.
 
-## Bloco 3 — Separar visão logado vs deslogado
+## Resultado esperado
 
-### 3.1 Header consciente de auth
-- Em `src/components/layout/Header.tsx`:
-  - Botão **"Anunciar Grátis"** só aparece se `!user` (visitante). Para logado, substituir por **"Meu Painel"** apontando para `/painel` (rota nova, ver 3.2).
-  - Mostrar `ViewAsSwitcher` ao lado do avatar quando admin real.
-  - Mobile menu: mesma lógica (esconder "Anunciar Grátis" para logado, mostrar "Meu Painel").
+- **84 empresas** aparecem em `equity_brain.companies` (1 real + 83 sintéticas).
+- Cada uma com signal `intencao_venda_explicita` (peso 50) → score alto garantido.
+- Cockpit (`/equity-brain`, `/equity-brain/oportunidades`, `/equity-brain/mapa`, `/equity-brain/grafo`) deixa de estar vazio.
+- Matches com os ~80 buyers já cadastrados começam a ser gerados pelo `match-batch` quando rodar.
 
-### 3.2 Nova rota `/painel` — Home pessoal pós-login
-- Criar `src/pages/Painel.tsx`: dashboard pessoal que **substitui** a `Index` quando o usuário está logado e digita `/`.
-- Em `src/pages/Index.tsx`: adicionar no topo:
-  ```tsx
-  if (!loading && user) return <Navigate to="/painel" replace />;
-  ```
-  (Importar `useAuth` e `Navigate`.)
-- Conteúdo do `Painel.tsx`:
-  - **Saudação personalizada** ("Olá, {full_name}") + chip com roles efetivas.
-  - **Cards de ação rápida** filtrados por role efetiva:
-    - Vendedor → "Meus Anúncios", "Cadastrar Empresa", "Ver Matches"
-    - Comprador → "Marketplace", "Cadastrar Comprador", "Captação"
-    - Consultor/Parceiro → "Potencial da Carteira", "Painel do Parceiro"
-    - Franqueado → "Leads na minha região"
-    - Admin → "Painel Admin", "Equity Brain", "Board Executivo"
-  - **Atividade recente** do usuário: últimos valuations, último anúncio criado, última notificação.
-  - **CTA secundário discreto** "Quer anunciar mais uma empresa? →" (mantém o fluxo de venda, sem o banner agressivo de visitante).
-- Reaproveitar componentes existentes (`Card`, `StatsCard`, `NotificationDropdown` resumido).
+## Arquivos afetados
 
-### 3.3 Marketplace e demais páginas públicas continuam abertas a logados
-- `/marketplace`, `/valuation`, `/capital`, `/anuncio/:id` permanecem idênticos — usuário logado pode navegar livremente. A separação é só em `/` (home) e nos CTAs do Header.
+- **Novo:** `supabase/functions/sync-listings-to-equity-brain/index.ts`
+- **Nova migration:** trigger `AFTER INSERT OR UPDATE` em `public.listings` + função SQL auxiliar
+- **Editado:** `src/pages/equity-brain/DashboardPage.tsx` (botão de sync)
+- **Editado:** `docs/EQUITY_BRAIN_README.md`
 
-### 3.4 Footer
-- Adicionar bloco condicional no Footer que, se logado, mostra link para `/painel` em vez de "Criar conta".
+## Não faz parte deste passo
 
----
-
-## Bloco 4 — Verificações finais
-
-- Testar fluxo: logout → `/` mostra landing pública com "Anunciar Grátis"; login → `/` redireciona para `/painel` que mostra dashboard pessoal.
-- Como admin: menu de avatar tem **"Painel Admin"** + **"Equity Brain"** + switcher "Visualizar como…".
-- "Visualizar como BDR" → sidebar do admin esconde itens não-BDR; voltar à visão real → tudo retorna.
-- Confirmar que nenhuma rota foi removida e que `RequireRole(['admin','advisor'])` continua barrando o `/equity-brain` por role real.
-
----
-
-## Arquivos que serão criados
-
-- `src/contexts/ViewAsContext.tsx`
-- `src/hooks/useEffectiveRoles.ts`
-- `src/components/layout/ViewAsSwitcher.tsx`
-- `src/pages/Painel.tsx`
-
-## Arquivos que serão editados (sem remover funcionalidades)
-
-- `src/App.tsx` — provider + rota `/painel` + rota `/equity-brain/board`
-- `src/components/layout/Header.tsx` — CTA condicional + switcher
-- `src/components/layout/Footer.tsx` — link condicional para painel
-- `src/components/admin/AdminSidebar.tsx` — bloco "Cockpit Interno"
-- `src/components/equity-brain/EBSidebar.tsx` — item Board
-- `src/pages/admin/AdminDashboard.tsx` — banner Equity Brain
-- `src/pages/Index.tsx` — redirect logado → `/painel`
-
----
-
-## Riscos e mitigações
-
-- **Risco:** quebrar segurança ao introduzir View-As. **Mitigação:** RLS continua usando `auth.uid()` real; View-As muda apenas UI. `RequireRole` e `AdminRoute` ignoram `viewAs`.
-- **Risco:** usuário logado perder acesso à landing pública. **Mitigação:** rota `/sobre` ou link "Ver como visitante" no menu (incluso como bônus no switcher: opção "Sair temporariamente do painel").
-- **Risco:** Painel.tsx ficar pesado. **Mitigação:** queries com `useQuery` e `enabled: !!user`, sem chamar nada antes do auth carregar.
+- Enriquecimento via base nacional de CNPJs (sócios reais, idades, etc.) — fica para o sync de prospecção fria, fora das listings.
+- Substituição automática do CNPJ sintético quando o usuário editar o anúncio e preencher o CNPJ real — pode ser adicionado depois, se necessário.
