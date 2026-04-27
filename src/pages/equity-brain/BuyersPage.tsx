@@ -124,6 +124,11 @@ export default function BuyersPage() {
                     !["estrategico", "fundo", "family_office"].includes(b.tipo) && "bg-zinc-800 text-zinc-300 border-zinc-700",
                   )}>{b.tipo}</span>
                 </td>
+                <td className="px-3 py-2.5">
+                  <span className="px-2 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700">
+                    {b.vertical_principal ?? "—"}
+                  </span>
+                </td>
                 <td className="px-3 py-2.5 text-right text-xs font-mono text-zinc-400 tabular-nums">
                   {formatBRL(b.ticket_min)} – {formatBRL(b.ticket_max)}
                 </td>
@@ -134,10 +139,10 @@ export default function BuyersPage() {
               </tr>
             ))}
             {buyers.isLoading && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center"><Loader2 className="h-5 w-5 animate-spin text-emerald-500 mx-auto" /></td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center"><Loader2 className="h-5 w-5 animate-spin text-emerald-500 mx-auto" /></td></tr>
             )}
             {!buyers.isLoading && (buyers.data ?? []).length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-zinc-500 text-xs">Nenhum buyer cadastrado.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-zinc-500 text-xs">Nenhum buyer cadastrado neste vertical.</td></tr>
             )}
           </tbody>
         </table>
