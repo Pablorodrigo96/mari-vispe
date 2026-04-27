@@ -51,6 +51,12 @@ export function Header() {
   // Admin impersonating "visitante" sees the logged-out UI everywhere.
   const showLoggedOutUI = !user || eff.simulateLoggedOut;
 
+  // Logged-in users use the AppShell — never show the public marketing header.
+  // Exception: admin in "visitante" persona keeps the public header for QA.
+  if (user && !eff.simulateLoggedOut) {
+    return null;
+  }
+
   const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/sell', '/valuation'];
   const hasDarkHero = darkHeroRoutes.includes(location.pathname);
   const isScrolled = scrollY > 20;

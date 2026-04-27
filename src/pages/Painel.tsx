@@ -1,45 +1,50 @@
-import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Building2, ChartBar, ClipboardList, UserSearch, DollarSign,
-  Briefcase, Sparkles, Shield, Plus, ArrowRight, MapPin, Users, Target,
+  Building2, ChartBar, ClipboardList, UserSearch, DollarSign, Briefcase,
+  Sparkles, Plus, ArrowRight, MapPin, Target, Eye, Award, Calculator,
+  TrendingUp, Activity,
 } from 'lucide-react';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
-interface QuickAction {
-  label: string;
+interface ModuleBox {
+  title: string;
   description: string;
-  to: string;
-  Icon: React.ComponentType<{ className?: string }>;
-  primary?: boolean;
+  icon: any;
+  primary: { label: string; to: string };
+  secondary?: { label: string; to: string };
+  tone: 'amber' | 'blue' | 'emerald' | 'violet';
 }
 
+const TONE: Record<ModuleBox['tone'], string> = {
+  amber: 'from-amber-500/10 to-amber-500/0 border-amber-500/20',
+  blue: 'from-blue-500/10 to-blue-500/0 border-blue-500/20',
+  emerald: 'from-emerald-500/10 to-emerald-500/0 border-emerald-500/20',
+  violet: 'from-violet-500/10 to-violet-500/0 border-violet-500/20',
+};
+const TONE_ICON: Record<ModuleBox['tone'], string> = {
+  amber: 'bg-amber-500/15 text-amber-500',
+  blue: 'bg-blue-500/15 text-blue-500',
+  emerald: 'bg-emerald-500/15 text-emerald-500',
+  violet: 'bg-violet-500/15 text-violet-500',
+};
+
 export default function Painel() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const eff = useEffectiveRoles();
-
-  useEffect(() => {
-    if (!loading && !user) navigate('/auth?redirect=/painel');
-  }, [user, loading, navigate]);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data } = await supabase
-        .from('profiles')
-        .select('full_name, company_name')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const { data } = await supabase.from('profiles').select('full_name, company_name, phone').eq('user_id', user.id).maybeSingle();
       return data;
     },
     enabled: !!user,
@@ -63,235 +68,247 @@ export default function Painel() {
     enabled: !!user,
   });
 
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
-      </div>
-    );
-  }
+  const { data: recentListings } = useQuery({
+    queryKey: ['painel-recent-listings', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase.from('listings').select('id, title, status, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(3);
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
 
-  // Build quick actions per effective persona (additive — never hide what user can do)
-  const actions: QuickAction[] = [];
+  const greetingName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'usuário';
 
-  // Universal
-  actions.push(
-    { label: 'Marketplace', description: 'Buscar empresas à venda', to: '/marketplace', Icon: Building2 },
-    { label: 'Valuation', description: 'Avaliar uma empresa', to: '/valuation', Icon: ChartBar },
-  );
+  // Onboarding progress
+  const checks = [
+    { label: 'Perfil completo', done: !!(profile?.full_name && profile?.phone) },
+    { label: 'Primeiro anúncio', done: (counts?.listings ?? 0) > 0 },
+    { label: 'Primeiro valuation', done: (counts?.valuations ?? 0) > 0 },
+    { label: 'Cadastrar comprador', done: false },
+  ];
+  const doneCount = checks.filter(c => c.done).length;
+  const progress = Math.round((doneCount / checks.length) * 100);
 
-  if (eff.isSeller || (!eff.isAdmin && !eff.isAdvisor && !eff.isFranchisee)) {
-    actions.push(
-      { label: 'Meus Anúncios', description: 'Gerenciar empresas anunciadas', to: '/meus-anuncios', Icon: ClipboardList, primary: true },
-      { label: 'Anunciar Empresa', description: 'Cadastrar nova empresa', to: '/vender', Icon: Plus },
-    );
-  }
-  if (eff.isBuyer) {
-    actions.push(
-      { label: 'Cadastrar Comprador', description: 'Receber matches automáticos', to: '/cadastrar-comprador', Icon: UserSearch, primary: true },
-      { label: 'Matching', description: 'Ver oportunidades para mim', to: '/matching', Icon: Target },
-    );
-  }
-  if (eff.isAdvisor || eff.isPartnerAccountant) {
-    actions.push(
-      { label: 'Potencial da Carteira', description: 'M&A oculto nos seus clientes', to: '/potencial-carteira', Icon: ChartBar, primary: true },
-    );
-  }
-  if (eff.isPartnerAccountant) {
-    actions.push(
-      { label: 'Painel do Parceiro', description: 'Reservas e leads', to: '/parceiro', Icon: Briefcase },
-    );
-  }
-  if (eff.isFranchisee) {
-    actions.push(
-      { label: 'Mapa de Leads', description: 'Oportunidades na minha região', to: '/mapa', Icon: MapPin, primary: true },
-    );
-  }
-  // Capital — universal
-  actions.push(
-    { label: 'Captação de Capital', description: 'Solicitar funding', to: '/capital', Icon: DollarSign },
-    { label: 'Minhas Captações', description: 'Acompanhar pedidos', to: '/minhas-captacoes', Icon: DollarSign },
-  );
-  // Admin / Equity Brain
-  if (eff.isAdmin) {
-    actions.push(
-      { label: 'Painel Admin', description: 'Marketplace e operações', to: '/admin', Icon: Shield, primary: true },
-      { label: 'Equity Brain', description: 'Cockpit M&A interno', to: '/equity-brain', Icon: Sparkles, primary: true },
-    );
-  }
-  if (eff.isAdvisor && !eff.isAdmin) {
-    actions.push(
-      { label: 'Equity Brain', description: 'Cockpit M&A interno', to: '/equity-brain', Icon: Sparkles, primary: true },
-    );
-  }
-
-  const greetingName = profile?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'usuário';
+  const modules: ModuleBox[] = [
+    {
+      title: 'Marketplace & Mapa',
+      description: 'Explore empresas à venda em todo o Brasil. Filtros por setor, faixa de receita e localização.',
+      icon: Building2, tone: 'blue',
+      primary: { label: 'Explorar marketplace', to: '/marketplace' },
+      secondary: { label: 'Ver mapa', to: '/mapa' },
+    },
+    {
+      title: 'Vender uma empresa',
+      description: 'Anuncie sua empresa para milhares de investidores qualificados. Gerencie e atualize seus anúncios.',
+      icon: ClipboardList, tone: 'amber',
+      primary: { label: 'Anunciar empresa', to: '/vender' },
+      secondary: { label: 'Meus anúncios', to: '/meus-anuncios' },
+    },
+    {
+      title: 'Avaliar uma empresa',
+      description: 'Calcule o valor de uma empresa por múltiplos, DCF, ou certifique um valuation existente.',
+      icon: ChartBar, tone: 'emerald',
+      primary: { label: 'Novo valuation', to: '/valuation' },
+      secondary: { label: 'Meus valuations', to: '/meus-valuations' },
+    },
+    {
+      title: 'Captar capital',
+      description: 'Solicite funding para sua empresa. Conectamos com bancos, fundos e family offices.',
+      icon: DollarSign, tone: 'violet',
+      primary: { label: 'Solicitar capital', to: '/capital' },
+      secondary: { label: 'Minhas captações', to: '/minhas-captacoes' },
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-
-      <main className="flex-1 pt-24 pb-16">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          {/* Greeting */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 flex-wrap mb-2">
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                Olá, {greetingName} 👋
-              </h1>
-              {eff.roles.length > 0 && (
-                <div className="flex gap-1.5 flex-wrap">
-                  {eff.roles.map((r) => (
-                    <Badge key={r} variant="secondary" className="text-[10px] uppercase tracking-wider">
-                      {r}
-                    </Badge>
-                  ))}
-                  {eff.isPartnerAccountant && (
-                    <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-accent/50 text-accent">
-                      Parceiro Contábil
-                    </Badge>
-                  )}
-                  {eff.isBDR && (
-                    <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-emerald-500/50 text-emerald-600">
-                      BDR
-                    </Badge>
-                  )}
-                  {eff.isHeadParcerias && (
-                    <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-blue-500/50 text-blue-600">
-                      Head de Parcerias
-                    </Badge>
-                  )}
-                </div>
-              )}
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
+      {/* Hero / greeting */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 flex-wrap mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Olá, {greetingName} 👋</h1>
+          {eff.roles.length > 0 && (
+            <div className="flex gap-1.5 flex-wrap">
+              {eff.roles.map((r) => (
+                <Badge key={r} variant="secondary" className="text-[10px] uppercase tracking-wider">{r}</Badge>
+              ))}
+              {eff.isPartnerAccountant && <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-accent/50 text-accent">Parceiro Contábil</Badge>}
+              {eff.isBDR && <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-emerald-500/50 text-emerald-600">BDR</Badge>}
             </div>
-            <p className="text-muted-foreground">
-              Seu painel pessoal na PME.B3. Acesse rapidamente as ferramentas certas para o seu perfil.
-            </p>
-          </div>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">Bem-vindo de volta à plataforma. Acesse os módulos abaixo para começar.</p>
+      </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Anúncios</p>
-                    <p className="text-3xl font-bold text-foreground mt-1">{counts?.listings ?? '–'}</p>
-                  </div>
-                  <ClipboardList className="h-8 w-8 text-accent/40" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Valuations</p>
-                    <p className="text-3xl font-bold text-foreground mt-1">{counts?.valuations ?? '–'}</p>
-                  </div>
-                  <ChartBar className="h-8 w-8 text-accent/40" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Captações</p>
-                    <p className="text-3xl font-bold text-foreground mt-1">{counts?.capital ?? '–'}</p>
-                  </div>
-                  <DollarSign className="h-8 w-8 text-accent/40" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+      {/* KPIs row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <KPI label="Anúncios" value={counts?.listings ?? '—'} icon={ClipboardList} />
+        <KPI label="Valuations" value={counts?.valuations ?? '—'} icon={ChartBar} />
+        <KPI label="Captações" value={counts?.capital ?? '—'} icon={DollarSign} />
+        <KPI label="Visualizações 30d" value="—" icon={Eye} hint="Em breve" />
+      </div>
 
-          {/* Equity Brain Highlight (admin/advisor only) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Modules grid 2x2 */}
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {modules.map((m) => (
+            <Card key={m.title} className={cn('group relative overflow-hidden border bg-gradient-to-br', TONE[m.tone])}>
+              <CardContent className="p-5 flex flex-col h-full">
+                <div className="flex items-start justify-between mb-3">
+                  <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center', TONE_ICON[m.tone])}>
+                    <m.icon className="h-5 w-5" />
+                  </div>
+                </div>
+                <h3 className="font-semibold text-foreground text-base mb-1">{m.title}</h3>
+                <p className="text-xs text-muted-foreground mb-4 flex-1">{m.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" asChild>
+                    <Link to={m.primary.to}>{m.primary.label} <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
+                  </Button>
+                  {m.secondary && (
+                    <Button size="sm" variant="ghost" asChild>
+                      <Link to={m.secondary.to}>{m.secondary.label}</Link>
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-5">
+          {/* Onboarding */}
+          {progress < 100 && (
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-accent" /> Complete seu setup
+                  </h3>
+                  <span className="text-xs font-mono text-muted-foreground">{progress}%</span>
+                </div>
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden mb-4">
+                  <div className="h-full bg-accent transition-all" style={{ width: `${progress}%` }} />
+                </div>
+                <ul className="space-y-2">
+                  {checks.map((c) => (
+                    <li key={c.label} className={cn('flex items-center gap-2 text-xs', c.done ? 'text-muted-foreground line-through' : 'text-foreground')}>
+                      <span className={cn('h-3.5 w-3.5 rounded-full border flex items-center justify-center text-[8px]', c.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-border')}>
+                        {c.done && '✓'}
+                      </span>
+                      {c.label}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recent activity */}
+          <Card>
+            <CardContent className="p-5">
+              <h3 className="font-semibold text-sm text-foreground flex items-center gap-2 mb-3">
+                <Activity className="h-4 w-4 text-muted-foreground" /> Atividade recente
+              </h3>
+              {recentListings && recentListings.length > 0 ? (
+                <ul className="space-y-2">
+                  {recentListings.map((l: any) => (
+                    <li key={l.id}>
+                      <Link to={`/anuncio/${l.id}`} className="block p-2 -mx-2 rounded-md hover:bg-muted transition-colors">
+                        <p className="text-xs font-medium text-foreground truncate">{l.title}</p>
+                        <p className="text-[10px] text-muted-foreground capitalize">{l.status} · {new Date(l.created_at).toLocaleDateString('pt-BR')}</p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">Sem atividade ainda. Comece anunciando uma empresa ou cadastrando-se como comprador.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Contextual / role boxes */}
+          {(eff.isAdvisor || eff.isPartnerAccountant) && (
+            <Card className="border-accent/30 bg-accent/5">
+              <CardContent className="p-5">
+                <h3 className="font-semibold text-sm text-foreground flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-4 w-4 text-accent" /> Para parceiros
+                </h3>
+                <p className="text-xs text-muted-foreground mb-3">Veja o potencial de M&A oculto na sua carteira de clientes.</p>
+                <Button size="sm" variant="outline" asChild className="w-full">
+                  <Link to="/potencial-carteira">Potencial da carteira <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {eff.isFranchisee && (
+            <Card className="border-blue-500/30 bg-blue-500/5">
+              <CardContent className="p-5">
+                <h3 className="font-semibold text-sm text-foreground flex items-center gap-2 mb-2">
+                  <MapPin className="h-4 w-4 text-blue-500" /> Para franqueados
+                </h3>
+                <p className="text-xs text-muted-foreground mb-3">Oportunidades dentro da sua região no mapa.</p>
+                <Button size="sm" variant="outline" asChild className="w-full">
+                  <Link to="/mapa">Abrir mapa de leads <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {(eff.isAdmin || eff.isAdvisor) && (
-            <Card className="mb-10 border-accent/40 bg-gradient-to-br from-emerald-950/20 via-background to-background overflow-hidden">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white font-black">
-                      EB
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                        Equity Brain
-                        <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-600">Interno Vispe</Badge>
-                      </h2>
-                      <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-                        Cockpit M&A proprietário: 80+ buyers cadastrados, motor de scores, matching automático, board executivo.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <Button variant="outline" asChild>
-                      <Link to="/equity-brain/buyers">
-                        <Users className="h-4 w-4 mr-2" />Buyers
-                      </Link>
-                    </Button>
-                    <Button variant="outline" asChild>
-                      <Link to="/equity-brain/board">
-                        <ChartBar className="h-4 w-4 mr-2" />Board
-                      </Link>
-                    </Button>
-                    <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                      <Link to="/equity-brain">
-                        Abrir Cockpit <ArrowRight className="h-4 w-4 ml-2" />
-                      </Link>
-                    </Button>
-                  </div>
+            <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-950/20 via-card to-card overflow-hidden">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white text-xs font-black">EB</div>
+                  <h3 className="font-semibold text-sm text-foreground">Equity Brain</h3>
+                  <Badge variant="outline" className="text-[9px] border-emerald-500/50 text-emerald-600">Interno</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">Cockpit M&A proprietário com 80+ buyers, motor de scores e board executivo.</p>
+                <div className="flex gap-2">
+                  <Button size="sm" asChild className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1">
+                    <Link to="/equity-brain">Abrir cockpit</Link>
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to="/equity-brain/board">Board</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Quick Actions */}
-          <div className="mb-10">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Ações rápidas</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {actions.map((a) => (
-                <Link
-                  key={a.to + a.label}
-                  to={a.to}
-                  className={`group rounded-xl border p-4 transition-all hover:shadow-md hover:border-accent/40 ${
-                    a.primary ? 'border-accent/30 bg-accent/5' : 'border-border bg-card'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
-                      a.primary ? 'bg-accent/20 text-accent' : 'bg-muted text-muted-foreground'
-                    }`}>
-                      <a.Icon className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-foreground text-sm">{a.label}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-accent transition-colors" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Secondary CTA */}
-          <Card className="bg-muted/30">
-            <CardContent className="py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
-                <p className="font-semibold text-foreground">Quer anunciar mais uma empresa?</p>
-                <p className="text-sm text-muted-foreground">Cadastro em poucos minutos, gratuito no plano básico.</p>
-              </div>
-              <Button asChild variant="outline">
-                <Link to="/vender">Anunciar empresa <ArrowRight className="h-4 w-4 ml-2" /></Link>
-              </Button>
-            </CardContent>
-          </Card>
+          {eff.isAdmin && (
+            <Card>
+              <CardContent className="p-5">
+                <h3 className="font-semibold text-sm text-foreground flex items-center gap-2 mb-2">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" /> Operações
+                </h3>
+                <Button size="sm" variant="outline" asChild className="w-full">
+                  <Link to="/admin">Painel administrativo</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
-      </main>
-
-      <Footer />
+      </div>
     </div>
+  );
+}
+
+function KPI({ label, value, icon: Icon, hint }: { label: string; value: any; icon: any; hint?: string }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</p>
+            <p className="text-2xl font-bold text-foreground mt-0.5">{value}</p>
+            {hint && <p className="text-[10px] text-muted-foreground/70 mt-0.5">{hint}</p>}
+          </div>
+          <Icon className="h-7 w-7 text-muted-foreground/30" />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
