@@ -13,8 +13,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ViewAsSwitcher } from '@/components/layout/ViewAsSwitcher';
 
 const navigation = [
   { name: 'Comprar Empresa', href: '/marketplace' },
@@ -41,9 +43,13 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { isAdmin, isAdvisor } = useUserRoles();
-  const { isPartnerAccountant } = usePartnerAccountant();
+  const { isAdmin: realIsAdmin } = useUserRoles();
+  const eff = useEffectiveRoles();
+  const { isAdmin, isAdvisor } = eff;
+  const isPartnerAccountant = eff.isPartnerAccountant;
   const scrollY = useScrollPosition();
+  // Admin impersonating "visitante" sees the logged-out UI everywhere.
+  const showLoggedOutUI = !user || eff.simulateLoggedOut;
 
   const darkHeroRoutes = ['/', '/matching', '/matching/results', '/investors', '/sell', '/valuation'];
   const hasDarkHero = darkHeroRoutes.includes(location.pathname);
