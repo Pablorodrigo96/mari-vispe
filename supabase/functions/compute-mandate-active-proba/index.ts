@@ -225,10 +225,15 @@ serve(async (req) => {
       if (upsertErr) console.error("upsert error:", upsertErr);
     }
 
+    await finishRun("success", results.length);
     return new Response(
-      JSON.stringify({ ok: true, processed: results.length, dry_run: dryRun, results: results.slice(0, 100) }),
+      JSON.stringify({ ok: true, processed: results.length, dry_run: dryRun, results: results.slice(0, 100), run_id: runId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+    } catch (innerErr: any) {
+      await finishRun("error", 0, innerErr?.message ?? String(innerErr));
+      throw innerErr;
+    }
   } catch (err: any) {
     console.error("compute-mandate-active-proba error:", err);
     return new Response(JSON.stringify({ error: err.message ?? String(err) }), {
