@@ -80,7 +80,7 @@ export default function PartnerDashboard() {
       supabase
         .from('partner_lead_reservations')
         .select(`id, listing_id, reserved_at, expires_at, status, qualifying_action, qualified_at, commission_type,
-                 listing:listings(id, title, category, city, state, asking_price, vdr_readiness)`)
+                 listing:listings(id, title, category, city, state, asking_price, vdr_readiness, annual_revenue, equity_score)`)
         .eq('partner_user_id', user!.id)
         .order('expires_at', { ascending: true }),
       supabase
