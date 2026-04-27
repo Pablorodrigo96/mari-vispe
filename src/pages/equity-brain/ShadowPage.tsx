@@ -414,6 +414,10 @@ export default function EBShadowPage() {
             </div>
           </div>
         </TabsContent>
+
+        <TabsContent value="health" className="mt-4">
+          <EngineHealthCard />
+        </TabsContent>
       </Tabs>
     </div>
   );
