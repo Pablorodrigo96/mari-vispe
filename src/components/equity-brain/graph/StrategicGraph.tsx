@@ -296,6 +296,39 @@ export function StrategicGraph() {
     );
   }, [edges]);
 
+  // ---------- Degree map (todas as conexões, peso ≥ 0.4) ----------
+  const degreeMap = useMemo(() => {
+    const m = new Map<string, number>();
+    edges.forEach((e) => {
+      if ((e.weight ?? 0) < 0.4) return;
+      const s = (e.source as any).id ?? e.source;
+      const t = (e.target as any).id ?? e.target;
+      m.set(s, (m.get(s) ?? 0) + 1);
+      m.set(t, (m.get(t) ?? 0) + 1);
+    });
+    return m;
+  }, [edges]);
+
+  // Sincroniza ref p/ getBaseRadius (usado por d3 forces e canvas)
+  useEffect(() => {
+    degreeMapRef.current = degreeMap;
+  }, [degreeMap]);
+
+  // ---------- Idle edges: só top-80 mais fortes renderizam sem hover ----------
+  const idleEdgeIds = useMemo(() => {
+    const sorted = [...edges]
+      .filter((e) => (e.weight ?? 0) >= 0.55)
+      .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
+      .slice(0, 80);
+    return new Set(sorted.map((e) => `${(e.source as any).id ?? e.source}__${(e.target as any).id ?? e.target}__${e.edge_type}`));
+  }, [edges]);
+
+  const edgeKey = (l: any) => {
+    const sId = l.source.id ?? l.source;
+    const tId = l.target.id ?? l.target;
+    return `${sId}__${tId}__${l.edge_type}`;
+  };
+
   const handleReset = () => {
     setSelectedVerticals(new Set());
     setSelectedUfs(new Set());
