@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
+import { forceCollide, forceManyBody } from "d3-force";
 import { useQueries } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,6 +101,12 @@ export function StrategicGraph() {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [isMobile]);
+
+  // Helper: raio base do node (precisa estar antes dos useEffects que usam ele)
+  const getBaseRadius = (n: GraphNode) => {
+    const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
+    return Math.max(2, 4 + (score / 100) * 12);
+  };
 
   // ---------- Data ----------
   const queries = useQueries({
@@ -290,6 +297,32 @@ export function StrategicGraph() {
     setBuyerFilter(null);
   };
 
+  // ---------- Configurar forças d3 (espaçar nodes) e liberar fixação ao mudar dataset ----------
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || !nodes.length) return;
+
+    // Repulsão forte para espaçar
+    fg.d3Force("charge", forceManyBody().strength(-450).distanceMax(700));
+    // Anti-overlap baseado em raio + folga
+    fg.d3Force(
+      "collide",
+      forceCollide<GraphNode>().radius((n) => getBaseRadius(n) + 14).strength(0.9),
+    );
+    // Distância dos links: links fracos = nodes mais distantes
+    const linkForce: any = fg.d3Force("link");
+    if (linkForce) {
+      linkForce.distance((l: any) => 80 + (1 - (l.weight ?? 0.3)) * 120).strength(0.5);
+    }
+
+    // Liberar fixações antigas (caso filtros tenham mudado o dataset)
+    nodes.forEach((n: any) => {
+      n.fx = undefined;
+      n.fy = undefined;
+    });
+    fg.d3ReheatSimulation();
+  }, [nodes, edges]);
+
   // ---------- Mobile fallback ----------
   if (isMobile) {
     return (
@@ -378,10 +411,23 @@ export function StrategicGraph() {
         width={size.w}
         height={size.h}
         backgroundColor="rgba(0,0,0,0)"
-        cooldownTicks={120}
-        d3AlphaDecay={0.025}
-        d3VelocityDecay={0.32}
-        warmupTicks={30}
+        cooldownTicks={80}
+        cooldownTime={3000}
+        d3AlphaDecay={0.05}
+        d3VelocityDecay={0.55}
+        warmupTicks={60}
+        onEngineStop={() => {
+          // Fixar nodes na posição final (sem mais drift)
+          nodes.forEach((n: any) => {
+            if (Number.isFinite(n.x) && Number.isFinite(n.y)) {
+              n.fx = n.x;
+              n.fy = n.y;
+            }
+          });
+          // Enquadrar todo o grafo já parado
+          fgRef.current?.zoomToFit(400, 60);
+        }}
+        enableNodeDrag={false}
         linkCurvature={(l: any) => 0.12 + (l.weight ?? 0) * 0.08}
         linkDirectionalParticles={(l: any) => (l.weight >= 0.7 ? 2 : 0)}
         linkDirectionalParticleWidth={(l: any) => 1.5 + l.weight * 1.5}
@@ -421,20 +467,22 @@ export function StrategicGraph() {
           const n = node as GraphNode;
           // Skip if simulation hasn't positioned this node yet
           if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-          const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
-          const baseR = Math.max(2, 4 + (score / 100) * 12);
+          const baseR = getBaseRadius(n);
           const color = NODE_COLORS[n.type] ?? "#71717a";
           const isHot = hotNodeIds.has(n.id);
           const isHovered = n.id === hoveredNodeId;
           const isSelected = selectedNode?.id === n.id;
+          const isNeighbor = hoveredNodeId && neighborIds.has(n.id) && !isHovered;
           const isDimmed = hoveredNodeId && !neighborIds.has(n.id);
 
+          // Raio efetivo: hover aumenta 1.6x, vizinhos 1.2x (efeito visual sem mover)
+          const r = isHovered ? baseR * 1.6 : isNeighbor ? baseR * 1.2 : baseR;
           const alpha = isDimmed ? 0.15 : 1;
 
           // Glow pulse para hotspots
           if (isHot && !isDimmed) {
-            const pulseR = Math.max(baseR + 0.5, baseR + Math.sin(pulse) * 4 + 6);
-            const grad = ctx.createRadialGradient(node.x, node.y, baseR, node.x, node.y, pulseR);
+            const pulseR = Math.max(r + 0.5, r + Math.sin(pulse) * 4 + 6);
+            const grad = ctx.createRadialGradient(node.x, node.y, r, node.x, node.y, pulseR);
             grad.addColorStop(0, color.replace("hsl(", "hsla(").replace(")", ", 0.45)"));
             grad.addColorStop(1, color.replace("hsl(", "hsla(").replace(")", ", 0)"));
             ctx.beginPath();
@@ -446,16 +494,16 @@ export function StrategicGraph() {
           // Halo no hover/selected
           if (isHovered || isSelected) {
             ctx.beginPath();
-            ctx.strokeStyle = "rgba(255,255,255,0.85)";
-            ctx.lineWidth = 2 / globalScale;
-            ctx.arc(node.x, node.y, baseR + 3, 0, 2 * Math.PI);
+            ctx.strokeStyle = "rgba(255,255,255,0.9)";
+            ctx.lineWidth = 2.5 / globalScale;
+            ctx.arc(node.x, node.y, r + 4, 0, 2 * Math.PI);
             ctx.stroke();
           }
 
           // Node core
           ctx.beginPath();
           ctx.fillStyle = color.replace("hsl(", "hsla(").replace(")", `, ${alpha})`);
-          ctx.arc(node.x, node.y, baseR, 0, 2 * Math.PI);
+          ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
           ctx.fill();
 
           // Borda fina
