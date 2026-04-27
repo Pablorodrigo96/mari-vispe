@@ -1,10 +1,12 @@
-# Equity Brain — Cron de recompute de scores
+# Equity Brain — Crons (recompute scores + refresh opportunities)
 
 > **Status:** preparado, **NÃO ativo**. Ative manualmente quando quiser.
 
-A Fase 2 prevê recálculo diário dos scores das empresas mais ativas. O snippet
-abaixo agenda a chamada via `pg_cron` + `pg_net` (extensões já habilitadas no
-projeto na Fase 1).
+As Fases 2 e 5 preveem jobs diários:
+- **Fase 2** — recálculo dos scores das empresas mais ativas.
+- **Fase 5** — refresh da warm layer `opportunities_ready`.
+
+Ambos rodam via `pg_cron` + `pg_net` (extensões já habilitadas no projeto na Fase 1).
 
 ## Por que não está no migration
 
