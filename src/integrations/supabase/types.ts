@@ -697,6 +697,13 @@ export type Database = {
             foreignKeyName: "messages_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
+            referencedRelation: "partner_opportunity_pool"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
             referencedRelation: "public_listings"
             referencedColumns: ["id"]
           },
@@ -742,6 +749,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "partner_opportunity_pool"
             referencedColumns: ["id"]
           },
           {
@@ -827,6 +841,70 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      partner_opportunity_interests: {
+        Row: {
+          buyer_description: string | null
+          closed_at: string | null
+          commission_split: string
+          created_at: string
+          id: string
+          interested_user_id: string
+          listing_id: string
+          originator_response_at: string | null
+          originator_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_description?: string | null
+          closed_at?: string | null
+          commission_split?: string
+          created_at?: string
+          id?: string
+          interested_user_id: string
+          listing_id: string
+          originator_response_at?: string | null
+          originator_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_description?: string | null
+          closed_at?: string | null
+          commission_split?: string
+          created_at?: string
+          id?: string
+          interested_user_id?: string
+          listing_id?: string
+          originator_response_at?: string | null
+          originator_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_opportunity_interests_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_opportunity_interests_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "partner_opportunity_pool"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_opportunity_interests_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1906,6 +1984,35 @@ export type Database = {
           top_setor: string | null
           total: number | null
           uf: string | null
+        }
+        Relationships: []
+      }
+      partner_opportunity_pool: {
+        Row: {
+          annual_profit: number | null
+          annual_revenue: number | null
+          asking_price: number | null
+          category: string | null
+          city: string | null
+          created_at: string | null
+          description: string | null
+          equity_score: number | null
+          foundation_year: number | null
+          hide_price: boolean | null
+          id: string | null
+          images: string[] | null
+          interest_count: number | null
+          is_my_lead: boolean | null
+          neighborhood: string | null
+          originator_state: string | null
+          originator_type: string | null
+          plan: string | null
+          reservation_expires_at: string | null
+          reservation_status: string | null
+          state: string | null
+          ticker: string | null
+          title: string | null
+          vdr_readiness: number | null
         }
         Relationships: []
       }
