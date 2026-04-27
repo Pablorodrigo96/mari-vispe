@@ -14,11 +14,13 @@ import { ReservationCountdown } from '@/components/partner/ReservationCountdown'
 import { VDRUploader } from '@/components/partner/VDRUploader';
 import { SharedOpportunityCard, type PoolOpportunity } from '@/components/partner/SharedOpportunityCard';
 import { InterestModal } from '@/components/partner/InterestModal';
+import { BulkUploadDialog, downloadTemplate } from '@/components/sell/BulkUploadDialog';
 import {
   Briefcase, Clock, CheckCircle2, AlertTriangle, FolderOpen,
   Calculator, ArrowRight, Loader2, Handshake, Search, Flame,
+  Upload, Download, Plus, Sparkles,
 } from 'lucide-react';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, formatCurrency } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { categories } from '@/data/mockData';
 
@@ -35,6 +37,7 @@ interface ReservationRow {
     id: string; title: string; category: string;
     city: string | null; state: string | null;
     asking_price: number | null; vdr_readiness: number | null;
+    annual_revenue: number | null; equity_score: number | null;
   } | null;
   interest_count?: number;
 }
@@ -51,6 +54,7 @@ export default function PartnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [vdrListingId, setVdrListingId] = useState<string | null>(null);
   const [vdrListingTitle, setVdrListingTitle] = useState<string>('');
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   // Pool
   const [pool, setPool] = useState<PoolOpportunity[]>([]);
@@ -76,7 +80,7 @@ export default function PartnerDashboard() {
       supabase
         .from('partner_lead_reservations')
         .select(`id, listing_id, reserved_at, expires_at, status, qualifying_action, qualified_at, commission_type,
-                 listing:listings(id, title, category, city, state, asking_price, vdr_readiness)`)
+                 listing:listings(id, title, category, city, state, asking_price, vdr_readiness, annual_revenue, equity_score)`)
         .eq('partner_user_id', user!.id)
         .order('expires_at', { ascending: true }),
       supabase
@@ -187,6 +191,39 @@ export default function PartnerDashboard() {
         </p>
       </div>
 
+      {/* Banner: Importar carteira em lote */}
+      <Card className="!bg-gradient-to-br from-accent/10 via-accent/5 to-transparent border-accent/30">
+        <CardContent className="p-5">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div className="h-10 w-10 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-accent" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-foreground">
+                  Importe sua carteira completa de uma vez
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Suba uma planilha Excel com até 200 clientes. Cada linha vira uma reserva de 45 dias automaticamente,
+                  com score calculado a partir dos dados contábeis.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button size="sm" variant="outline" className="bg-transparent" onClick={() => downloadTemplate()}>
+                <Download className="w-3.5 h-3.5 mr-1" />Baixar modelo
+              </Button>
+              <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setBulkOpen(true)}>
+                <Upload className="w-3.5 h-3.5 mr-1" />Importar planilha
+              </Button>
+              <Button size="sm" variant="outline" className="bg-transparent" onClick={() => navigate('/vender')}>
+                <Plus className="w-3.5 h-3.5 mr-1" />1 cliente
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={<Clock className="w-5 h-5" />} label="Reservados" value={reserved.length} color="text-blue-400" />
@@ -236,6 +273,15 @@ export default function PartnerDashboard() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-foreground break-words">{r.listing?.title ?? 'Anúncio removido'}</h3>
                             <Badge variant="outline" className="bg-transparent text-xs">{r.listing?.category}</Badge>
+                            {r.listing?.equity_score != null && (
+                              <Badge className={`text-xs border ${
+                                r.listing.equity_score >= 70 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
+                                r.listing.equity_score >= 40 ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' :
+                                'bg-red-500/15 text-red-400 border-red-500/30'
+                              }`}>
+                                Score {r.listing.equity_score}/100
+                              </Badge>
+                            )}
                             {r.commission_type === 'full' && <Badge className="bg-accent/15 text-accent border-accent/30 text-xs">20% comissão</Badge>}
                             {r.commission_type === 'discovery_fee' && <Badge className="bg-muted text-muted-foreground text-xs">Taxa de descoberta</Badge>}
                             {!!r.interest_count && r.interest_count > 0 && (
@@ -248,6 +294,19 @@ export default function PartnerDashboard() {
                             {r.listing?.city && r.listing?.state ? `${r.listing.city}/${r.listing.state} · ` : ''}
                             Reservado em {formatDate(r.reserved_at)}
                           </p>
+                          {(() => {
+                            const potential = r.listing?.asking_price && r.listing.asking_price > 0
+                              ? r.listing.asking_price
+                              : (r.listing?.annual_revenue ?? 0) * 1.5;
+                            return potential > 0 ? (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Potencial: <span className="text-accent font-medium">{formatCurrency(potential)}</span>
+                                {(!r.listing?.asking_price || r.listing.asking_price === 0) && (
+                                  <span className="text-[10px] ml-1">(estimado)</span>
+                                )}
+                              </p>
+                            ) : null;
+                          })()}
                           {r.listing?.vdr_readiness != null && r.listing.vdr_readiness > 0 && (
                             <p className="text-xs text-muted-foreground mt-1">
                               VDR: <span className="text-accent font-medium">{r.listing.vdr_readiness}%</span>
@@ -375,6 +434,13 @@ export default function PartnerDashboard() {
         onConfirm={async (desc) => {
           if (interestModalOpp) await expressInterest(interestModalOpp, desc);
         }}
+      />
+
+      {/* Bulk Upload Dialog */}
+      <BulkUploadDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        onSuccess={() => { setBulkOpen(false); loadAll(); }}
       />
     </div>
   );
