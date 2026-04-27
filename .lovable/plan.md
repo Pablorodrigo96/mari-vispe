@@ -1,75 +1,129 @@
+
 ## Diagnóstico
 
-- `public.listings` tem **84 anúncios ativos** (10 categorias, 18 UFs).
-- `equity_brain.companies` está com **0 registros** — por isso o cockpit (Empresas, Oportunidades, Mapa, Grafo) aparece vazio mesmo após todo o trabalho das fases anteriores.
-- Apenas **1 listing tem CNPJ preenchido** (`31.526.112/0001-04`). A `companies` usa `cnpj` como chave natural, então precisamos de uma estratégia para os 83 sem CNPJ.
-- Já existe a coluna `companies.has_listing` + `companies.listing_id` — o vínculo está previsto, só não foi populado.
+Hoje, mesmo após login, o usuário vê:
+- **O mesmo `<Header />` público** com "Comprar Empresa / Vender Empresa / Valuation / Investidores / Captação / Matching" — idêntico a um visitante.
+- O CTA dourado "**Anunciar Grátis**" continua visível (só some quando o admin troca para outra persona) — para o usuário comum logado, o componente atualmente mostra `Meu Painel`, mas o resto do header é igual ao público.
+- O `/painel` usa esse mesmo header público e renderiza apenas três cards de contadores + grid de ações pequenas. Não parece um software, parece uma landing page autenticada.
+- Não existe um "app shell" (sidebar + topbar + breadcrumb + área de conteúdo) próprio do usuário final como já existe para `/admin` e `/equity-brain`.
 
-## O que será feito
+A visão de visitante e a de logado precisam ser **dois produtos visuais distintos**:
+- **Visitante** = site institucional/marketing (mantém-se intacto).
+- **Logado** = plataforma SaaS (sidebar à esquerda, topbar enxuta, módulos em boxes, contexto da conta sempre visível).
 
-### 1. Edge function `sync-listings-to-equity-brain`
+---
 
-Nova função (admin-only) que:
+## O que será feito (sem remover nada que já funciona)
 
-1. Lê todas as listings ativas (`status='active'` ou `'pending'`).
-2. Para cada uma:
-   - Se tem CNPJ → usa o CNPJ real (formato só-dígitos, 14 chars).
-   - Se **não** tem CNPJ → gera um CNPJ sintético determinístico no formato `LST` + 11 dígitos derivados do `listing.id` (ex.: `LST00012345678`). Isso permite chave única, vínculo estável e fácil identificação visual de "originado de listing".
-3. Faz `UPSERT` em `equity_brain.companies` (`onConflict: cnpj`) preenchendo:
-   - `razao_social` ← `title`
-   - `nome_fantasia` ← `title`
-   - `setor_ma` / `subsetor_ma` ← derivado de `category` via mapa fixo (telecom→telecom, tech→saas, health→saude, education→educacao, services→servicos_b2b, agro→agro, energy→energia, commerce→varejo, food→varejo, construction→industria, industry→industria)
-   - `cnae_principal` ← primeiro CNAE do mapa de verticais para a categoria
-   - `uf` ← `state`, `municipio` ← `city`
-   - `data_abertura` ← `make_date(foundation_year, 1, 1)` quando existir
-   - `faturamento_estimado` ← `annual_revenue`
-   - `ebitda_estimado` ← `annual_profit` (proxy)
-   - `situacao_cadastral` ← `'ATIVA'`
-   - `porte` ← derivado do faturamento (ME/EPP/MEDIA/GRANDE)
-   - `has_listing = true`, `listing_id = listing.id`
-   - `source = 'marketplace_listing'`
-   - `raw_data` ← snapshot do listing
-4. Retorna `{ inserted, updated, skipped, errors }`.
+### 1. Criar um App Shell para usuários logados — `AppShell`
 
-### 2. Disparo automático em cascata
+Novo componente `src/components/layout/AppShell.tsx` que envolve **todas as rotas privadas do usuário final** (não-admin, não-equity-brain). Estrutura:
 
-Após o sync, a função chama (via `supabase.functions.invoke`) na ordem:
+- **Sidebar fixa à esquerda** (`AppSidebar`, baseada em `@/components/ui/sidebar` com `collapsible="icon"`):
+  - **Visão geral** → `/painel`
+  - **Marketplace** (sub-itens: Buscar empresas, Mapa)
+  - **Vender** (sub-itens: Meus Anúncios, Anunciar Empresa, Bulk Upload se elegível)
+  - **Comprar** (sub-itens: Cadastrar Comprador, Matching, Resultados)
+  - **Valuation** (sub-itens: Novo Valuation, Meus Valuations, Múltiplos, DCF, Certificador)
+  - **Capital** (sub-itens: Solicitar, Minhas Captações)
+  - **Parcerias** (visível só para advisor/parceiro: Potencial da Carteira, Painel do Parceiro)
+  - **Cockpit Interno** (visível só para admin/advisor: Equity Brain, Admin)
+  - Rodapé da sidebar: avatar + nome + e-mail + botão "Sair"
+- **Topbar** enxuta (`AppTopbar`):
+  - `SidebarTrigger` à esquerda
+  - Breadcrumb dinâmico baseado na rota
+  - Busca rápida global (input com `Cmd+K` futuro — placeholder agora)
+  - `NotificationDropdown` (já existe)
+  - `ViewAsSwitcher` (apenas para admin real)
+  - Avatar com dropdown reduzido (Meu Perfil, Configurações, Sair)
+- **Área de conteúdo** com padding consistente e `bg-muted/20`.
 
-1. `compute-signals` com `{ filter: { source: 'marketplace_listing' } }` — gera todos os signals determinísticos, incluindo `intencao_venda_explicita` (peso 50) que toda listing dispara via `has_listing=true`.
-2. `calculate-scores` — popula `company_scores` com a versão `v1.0`.
-3. `refresh-opportunities` — atualiza `opportunities_ready`.
+Memória `mem://style/dark-mode-contrast-standards` e `mem://constraints/published-vs-preview-url` permanecem respeitadas.
 
-### 3. Trigger automático em `public.listings`
+### 2. Refatorar `/painel` (`Painel.tsx`) como dashboard de software real
 
-Migration cria trigger `AFTER INSERT OR UPDATE` em `public.listings` que chama um pequeno wrapper SQL (SECURITY DEFINER) responsável por fazer o UPSERT mínimo em `equity_brain.companies` (apenas vínculo + flag `has_listing`). Assim, daqui pra frente, **todo novo anúncio entra automaticamente no Equity Brain**.
+Substituir o layout atual por uma estrutura em **boxes/widgets** dentro do `AppShell`:
 
-A pipeline pesada (signals/scores/oportunidades) continua sendo disparada por cron / manual, não no trigger — para não bloquear o cadastro do usuário.
+- **Hero compacto**: saudação + chips de papel + barra de progresso "Complete seu perfil" (se faltar dado).
+- **KPIs em 4 cards** (não 3): Anúncios ativos, Valuations, Captações, Visualizações 30d.
+- **Grid 2×2 de "módulos"** (boxes grandes, com ícone, descrição e CTA primário):
+  - **Marketplace & Mapa** — buscar empresas
+  - **Vender uma empresa** — wizard novo + atalho para Meus Anúncios
+  - **Avaliar uma empresa** — Valuation, atalhos para múltiplos/DCF/certificador
+  - **Captar capital** — solicitar funding + minhas captações
+- **Seção "Para o seu perfil"**: boxes condicionais por papel (advisor/partner → Potencial da Carteira; franchisee → Mapa de Leads; admin/advisor → Equity Brain destaque).
+- **Atividade recente** (últimas notificações, últimos anúncios, últimas captações) em uma coluna lateral.
+- **Onboarding card**: passos pendentes (cadastrar comprador, completar perfil, anunciar primeira empresa).
 
-### 4. Botão "Sincronizar marketplace" no cockpit
+### 3. Tornar o `<Header />` público **estritamente público**
 
-Em `src/pages/equity-brain/DashboardPage.tsx` adicionar um botão (visível só para `admin`/`advisor`) que chama a edge function e mostra o resultado em toast. Útil para reprocessar a qualquer momento.
+Modificar `src/components/layout/Header.tsx`:
+- Quando `user && !simulateLoggedOut` → o componente **retorna `null`** (não renderiza nada). O usuário logado nunca verá esse header de marketing.
+- Páginas privadas usarão o `AppShell` (com seu próprio topbar). Páginas públicas (Index, Marketplace público, Valuation público, Capital, Investors, Auth, Terms, BlindTeaser) continuam com o `<Header />` público — mas, como elas redirecionam logados, o impacto é nulo.
+- Mantemos o caminho de impersonação: admin em `viewAs='visitante'` continua vendo o header público (necessário para QA).
 
-### 5. Documentação
+### 4. Aplicar o `AppShell` às rotas privadas do usuário final
 
-Atualiza `docs/EQUITY_BRAIN_README.md` explicando:
-- A regra `marketplace alimenta o Equity Brain` agora está implementada de fato.
-- CNPJs sintéticos `LST...` representam empresas originadas de listings sem CNPJ real e devem ser substituídos quando o usuário preencher o CNPJ.
+No `src/App.tsx`, agrupar as seguintes rotas dentro de uma rota pai com `AppShell` (mantendo todas as URLs e componentes existentes — apenas adicionando o wrapper de layout):
 
-## Resultado esperado
+- `/painel`
+- `/meus-anuncios`, `/editar-anuncio/:id`
+- `/meu-perfil`
+- `/meus-valuations`
+- `/cadastrar-comprador`
+- `/minhas-captacoes`, `/minhas-captacoes/:id`
+- `/matching`, `/matching/resultados`
+- `/potencial-carteira`
+- `/parceiro`
+- `/matching-compradores/:listingId`
 
-- **84 empresas** aparecem em `equity_brain.companies` (1 real + 83 sintéticas).
-- Cada uma com signal `intencao_venda_explicita` (peso 50) → score alto garantido.
-- Cockpit (`/equity-brain`, `/equity-brain/oportunidades`, `/equity-brain/mapa`, `/equity-brain/grafo`) deixa de estar vazio.
-- Matches com os ~80 buyers já cadastrados começam a ser gerados pelo `match-batch` quando rodar.
+As rotas públicas (`/`, `/marketplace`, `/mapa`, `/vender`, `/valuation*`, `/investors`, `/capital*`, `/auth`, `/terms`, `/teaser/:ticker`, `/anuncio/:id`, `/payment-success`) **permanecem como estão** e continuam usando o `<Header />` público — mas internamente, se o usuário estiver logado e acessar `/marketplace`, `/valuation` etc., elas vão renderizar **dentro do `AppShell`** automaticamente (ver item 5).
 
-## Arquivos afetados
+### 5. Páginas "duplas" (públicas + autenticadas)
 
-- **Novo:** `supabase/functions/sync-listings-to-equity-brain/index.ts`
-- **Nova migration:** trigger `AFTER INSERT OR UPDATE` em `public.listings` + função SQL auxiliar
-- **Editado:** `src/pages/equity-brain/DashboardPage.tsx` (botão de sync)
-- **Editado:** `docs/EQUITY_BRAIN_README.md`
+`/marketplace`, `/mapa`, `/valuation`, `/vender`, `/capital`, `/investors` são acessíveis tanto a visitantes quanto a logados. Para esses casos:
 
-## Não faz parte deste passo
+- Criar um wrapper leve `PublicOrShell` que decide em runtime: se há `user && !simulateLoggedOut`, envolve o conteúdo no `AppShell` e remove o `<Header />` público interno; caso contrário, renderiza igual a hoje.
+- Para minimizar refactor, alterar cada uma dessas páginas para **não importar `<Header />` diretamente** e sim usar `<PageChrome>` (novo componente de 1 linha) que aplica o header certo conforme contexto. As páginas continuam funcionando para visitantes exatamente como hoje.
 
-- Enriquecimento via base nacional de CNPJs (sócios reais, idades, etc.) — fica para o sync de prospecção fria, fora das listings.
-- Substituição automática do CNPJ sintético quando o usuário editar o anúncio e preencher o CNPJ real — pode ser adicionado depois, se necessário.
+### 6. Remover CTAs de visitante quando logado
+
+- `<Header />` (público) deixa de ser renderizado para logados (item 3).
+- `Index.tsx` — sem alteração (já redireciona).
+- `Footer.tsx` — manter, mas no `AppShell` o footer não aparece (padrão SaaS); fica apenas nas páginas públicas.
+- Em páginas de marketing (`/valuation`, `/capital`, `/investors`) acessadas por logados, o conteúdo continua disponível (não excluímos nada), mas os CTAs "Anunciar Grátis / Cadastre-se / Entrar" são suprimidos via `useAuth()` — substituídos por CTAs contextuais ("Avaliar agora", "Solicitar captação", "Falar com consultor").
+
+### 7. ViewAsSwitcher e RequireRole continuam funcionando
+
+- O switcher migra do `<Header />` público para o `AppTopbar` (somente admin real vê).
+- `viewAs='visitante'` força o usuário a ver o `<Header />` público + landing pages, exatamente como hoje (caminho de QA preservado).
+- Nada muda em `RequireRole`, `AdminRoute`, RLS ou edge functions.
+
+---
+
+## Arquivos a criar
+- `src/components/layout/AppShell.tsx`
+- `src/components/layout/AppSidebar.tsx`
+- `src/components/layout/AppTopbar.tsx`
+- `src/components/layout/PageChrome.tsx`
+- `src/components/painel/PainelHero.tsx`
+- `src/components/painel/PainelKPIs.tsx`
+- `src/components/painel/PainelModules.tsx` (boxes grandes 2×2)
+- `src/components/painel/PainelActivity.tsx`
+- `src/components/painel/PainelOnboarding.tsx`
+
+## Arquivos a editar
+- `src/App.tsx` — agrupar rotas privadas dentro do `AppShell`.
+- `src/components/layout/Header.tsx` — retornar `null` para usuário logado (exceto persona "visitante").
+- `src/pages/Painel.tsx` — refatorar para usar os novos widgets dentro do `AppShell`.
+- `src/pages/Marketplace.tsx`, `MapView.tsx`, `Valuation.tsx`, `ValuationMultiplos.tsx`, `ValuationDCF.tsx`, `ValuationCertifier.tsx`, `Vender.tsx`, `Sell.tsx`, `Capital.tsx`, `Investors.tsx`, `ListingDetail.tsx` — trocar `<Header />` por `<PageChrome />` para que sejam embutidas no `AppShell` quando o usuário estiver logado.
+- `mem://index.md` — adicionar referência à nova memória abaixo.
+
+## Memória a salvar
+- `mem://features/logged-in-app-shell` — descreve a separação visitante vs logado, o `AppShell` com sidebar + topbar e a regra de o `<Header />` público não renderizar para logados (exceto persona "visitante").
+
+## Garantias
+- **Nada é removido**: todas as rotas, edge functions, RLS, planos, paywalls, wizards, valuations e fluxos continuam idênticos.
+- **Apenas dinâmica de página, layout, design e estrutura mudam**, conforme pedido.
+- O caminho de impersonação `viewAs='visitante'` continua permitindo que admins testem a UX pública.
+- Mobile: a sidebar usa `collapsible="offcanvas"` no breakpoint `md` (já é padrão do `@/components/ui/sidebar`), com `SidebarTrigger` sempre visível no topbar.
