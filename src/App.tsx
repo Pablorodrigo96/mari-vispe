@@ -127,9 +127,7 @@ const App = () => (
             <Route path="/admin/capital" element={<AdminCapital />} />
             <Route path="/admin/capital/providers" element={<AdminCapitalProviders />} />
             <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />
-            
-            <Route path="/potencial-carteira" element={<PortfolioPotential />} />
-            <Route path="/parceiro" element={<PartnerDashboard />} />
+
             
             {/* Capital SEO Pages */}
             <Route path="/capital/case/:slug" element={<CapitalCase />} />
