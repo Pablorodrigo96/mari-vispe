@@ -321,20 +321,49 @@ export function StrategicGraph() {
     degreeMapRef.current = degreeMap;
   }, [degreeMap]);
 
-  // ---------- Idle edges: só top-80 mais fortes renderizam sem hover ----------
-  const idleEdgeIds = useMemo(() => {
-    const sorted = [...edges]
-      .filter((e) => (e.weight ?? 0) >= 0.55)
-      .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
-      .slice(0, 80);
-    return new Set(sorted.map((e) => `${(e.source as any).id ?? e.source}__${(e.target as any).id ?? e.target}__${e.edge_type}`));
-  }, [edges]);
-
   const edgeKey = (l: any) => {
     const sId = l.source.id ?? l.source;
     const tId = l.target.id ?? l.target;
     return `${sId}__${tId}__${l.edge_type}`;
   };
+
+  // ---------- Idle edges: só top-60 mais fortes renderizam sem foco ----------
+  const idleEdgeIds = useMemo(() => {
+    const sorted = [...edges]
+      .filter((e) => (e.weight ?? 0) >= 0.55)
+      .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
+      .slice(0, 60);
+    return new Set(sorted.map((e) => `${(e.source as any).id ?? e.source}__${(e.target as any).id ?? e.target}__${e.edge_type}`));
+  }, [edges]);
+
+  // ---------- FOCUS MODE: top-12 conexões mais fortes do nó selecionado ----------
+  const TOP_FOCUS_EDGES = 12;
+  const focusedEdgeIds = useMemo(() => {
+    if (!selectedNode) return null;
+    const focusId = selectedNode.id;
+    const incident = edges.filter((e) => {
+      const sId = (e.source as any).id ?? e.source;
+      const tId = (e.target as any).id ?? e.target;
+      return sId === focusId || tId === focusId;
+    });
+    const sorted = [...incident].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
+    const top = sorted.slice(0, TOP_FOCUS_EDGES);
+    return new Set(top.map(edgeKey));
+  }, [selectedNode, edges]);
+
+  // Vizinhos visíveis no modo foco (apenas os que ainda têm aresta visível)
+  const focusedNeighborIds = useMemo(() => {
+    if (!focusedEdgeIds || !selectedNode) return null;
+    const set = new Set<string>([selectedNode.id]);
+    edges.forEach((e) => {
+      if (!focusedEdgeIds.has(edgeKey(e))) return;
+      const sId = (e.source as any).id ?? e.source;
+      const tId = (e.target as any).id ?? e.target;
+      set.add(sId);
+      set.add(tId);
+    });
+    return set;
+  }, [focusedEdgeIds, selectedNode, edges]);
 
   const handleReset = () => {
     setSelectedVerticals(new Set());
