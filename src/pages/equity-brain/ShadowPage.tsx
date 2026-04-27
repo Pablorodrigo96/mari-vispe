@@ -227,6 +227,29 @@ export default function EBShadowPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="decision" className="mt-4">
+          <div className="mb-3">
+            <p className="text-sm text-muted-foreground">
+              Cards de decisão para BDRs: bandas de preço (p10/p50/p90), probabilidade de fechamento com IC,
+              top contribuições e botões para registrar feedback (rejeição, NDA, fechado). Cada evento alimenta
+              o motor adaptativo da Fase 4.
+            </p>
+          </div>
+          {v2.length === 0 ? (
+            <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-800">
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                Nenhum match v2 disponível. Rode o motor v2 primeiro.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {v2.slice(0, 24).map((m) => (
+                <MatchDecisionCard key={m.id} match={m} onLogged={load} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
