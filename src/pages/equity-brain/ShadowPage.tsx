@@ -4,24 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target } from "lucide-react";
+import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel } from "lucide-react";
 import { toast } from "sonner";
+import { MatchDecisionCard, type MatchDecisionRow } from "@/components/equity-brain/MatchDecisionCard";
 
-type MatchRow = {
-  id: string;
-  cnpj: string;
-  buyer_id: string;
-  thesis_key: string;
-  match_score: number;
-  p_close_12m: number | null;
-  ev_p50: number | null;
-  data_confidence: number | null;
-  abstain: boolean | null;
-  buyer_archetype: string | null;
-  feature_contributions: any;
-  reasons: any;
-  engine_version: string;
-};
+type MatchRow = MatchDecisionRow;
 
 const fmtPct = (n: number | null) => (n == null ? "—" : `${(n * 100).toFixed(1)}%`);
 const fmtBRL = (n: number | null) =>
