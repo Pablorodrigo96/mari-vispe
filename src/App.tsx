@@ -82,26 +82,29 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
 
-            {/* Public-only routes (visitor experience kept intact) */}
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/mapa" element={<MapView />} />
-            <Route path="/sell" element={<Sell />} />
-            <Route path="/vender" element={<Vender />} />
-            <Route path="/anuncio/:id" element={<ListingDetail />} />
-            <Route path="/valuation" element={<Valuation />} />
-            <Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
-            <Route path="/valuation/dcf" element={<ValuationDCF />} />
-            <Route path="/valuation/certificador" element={<ValuationCertifier />} />
-            <Route path="/investors" element={<Investors />} />
-            <Route path="/capital" element={<Capital />} />
+            {/* Pure public-only routes — no shell wrapping */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
-            <Route path="/matching" element={<Matching />} />
-            <Route path="/teaser/:ticker" element={<BlindTeaser />} />
+            <Route path="/investors" element={<Investors />} />
 
-            {/* Authenticated end-user routes — wrapped in AppShell (sidebar + topbar) */}
+            {/* Hybrid routes: AppShell wraps them; for visitors AppShell renders the page raw */}
             <Route element={<AppShell />}>
+              {/* Tools (work for both visitors and logged-in users) */}
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/mapa" element={<MapView />} />
+              <Route path="/sell" element={<Sell />} />
+              <Route path="/vender" element={<Vender />} />
+              <Route path="/anuncio/:id" element={<ListingDetail />} />
+              <Route path="/valuation" element={<Valuation />} />
+              <Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
+              <Route path="/valuation/dcf" element={<ValuationDCF />} />
+              <Route path="/valuation/certificador" element={<ValuationCertifier />} />
+              <Route path="/capital" element={<Capital />} />
+              <Route path="/matching" element={<Matching />} />
+              <Route path="/teaser/:ticker" element={<BlindTeaser />} />
+
+              {/* Authenticated-only routes (AppShell will redirect to /auth via the page itself) */}
               <Route path="/painel" element={<Painel />} />
               <Route path="/meus-anuncios" element={<MyListings />} />
               <Route path="/editar-anuncio/:id" element={<EditListing />} />
