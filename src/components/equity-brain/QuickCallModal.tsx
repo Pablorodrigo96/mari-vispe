@@ -224,11 +224,13 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
             <div className="text-[10px] text-zinc-600 mt-1 text-right tabular-nums">{notes.length} chars</div>
           </div>
         </div>
+        )}
 
+        {!nextPitch && (
         <DialogFooter>
           <Button
             variant="ghost"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleClose(false)}
             className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
           >
             Cancelar
@@ -241,6 +243,7 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
             {m.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Registrar feedback"}
           </Button>
         </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
