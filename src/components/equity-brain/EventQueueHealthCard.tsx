@@ -58,7 +58,7 @@ export function EventQueueHealthCard() {
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
-      return (data ?? []) as EventRow[];
+      return (data ?? []) as unknown as EventRow[];
     },
     refetchInterval: 60_000,
   });
