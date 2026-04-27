@@ -205,8 +205,46 @@ serve(async (req) => {
       }
     }
 
-    // 6) Aceleração: dispara process-event (fire-and-forget) para não esperar o cron de 1 min
-    //    Não usa await — não queremos travar o response. Em caso de falha, o cron pega depois.
+    // 6) Fase 7 — se outcome quente, gera próximo pitch via Claude (não bloqueia se falhar)
+    let nextPitch: any = null;
+    const HOT_OUTCOMES = new Set(["qualified", "interested_later", "meeting_scheduled"]);
+    if (HOT_OUTCOMES.has(data.outcome)) {
+      try {
+        const pitchResp = await fetch(`${supabaseUrl}/functions/v1/claude-generate-pitch`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            cnpj: data.cnpj,
+            context_call_id: feedback_id,
+            ai_extracted: aiParsed,
+            interest_level: data.interest_level,
+            timing_estimado: data.timing_estimado,
+            dor_principal: data.dor_principal,
+          }),
+        });
+        if (pitchResp.ok) {
+          const pj = await pitchResp.json();
+          nextPitch = pj?.pitch ?? pj ?? null;
+          if (nextPitch) {
+            await supabase
+              .schema("equity_brain" as any)
+              .from("call_feedback")
+              .update({ next_pitch: nextPitch })
+              .eq("id", feedback_id);
+          }
+        } else {
+          const t = await pitchResp.text();
+          console.log(`[feedback-from-call] claude-generate-pitch ${pitchResp.status}: ${t.slice(0, 200)}`);
+        }
+      } catch (e) {
+        console.log("[feedback-from-call] pitch generation crashed:", e);
+      }
+    }
+
+    // 7) Aceleração: dispara process-event (fire-and-forget)
     fetch(`${supabaseUrl}/functions/v1/process-event`, {
       method: "POST",
       headers: {
@@ -222,6 +260,7 @@ serve(async (req) => {
       ai_summary: aiSummary,
       signals_added: signalsAdded,
       ai_parsed: aiParsed,
+      next_pitch: nextPitch,
       score_will_recompute: true,
       hint: "Score e matches serão atualizados em ~5-10s. Consulte equity_brain.opportunities_ready ou companies_scored.",
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
