@@ -19,6 +19,9 @@ async function checkAuth(req: Request, supabaseUrl: string, serviceKey: string) 
     global: { headers: { Authorization: authHeader } },
   });
   const token = authHeader.replace("Bearer ", "");
+  // Fast-path: inter-function calls authenticate with the legacy service-role JWT.
+  // getClaims may not validate it against the current JWKS, so fall back to a direct match.
+  if (token === serviceKey) return { ok: true };
   const { data: claimsData } = await supabaseUser.auth.getClaims(token);
   const isServiceRole = claimsData?.claims?.role === "service_role";
   const userId = claimsData?.claims?.sub ?? null;

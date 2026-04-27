@@ -43,9 +43,10 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData } = await supabaseUser.auth.getClaims(token);
+    const isServiceRoleByToken = token === serviceKey;
+    const { data: claimsData } = isServiceRoleByToken ? { data: null } as any : await supabaseUser.auth.getClaims(token);
     const userId = claimsData?.claims?.sub;
-    const isServiceRole = claimsData?.claims?.role === "service_role";
+    const isServiceRole = isServiceRoleByToken || claimsData?.claims?.role === "service_role";
 
     if (!isServiceRole) {
       if (!userId) {

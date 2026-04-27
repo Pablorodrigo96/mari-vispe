@@ -186,6 +186,7 @@ async function checkAuth(req: Request, supabaseUrl: string, serviceKey: string):
     global: { headers: { Authorization: authHeader } },
   });
   const token = authHeader.replace("Bearer ", "");
+  if (token === serviceKey) return { ok: true };
   const { data: claimsData } = await supabaseUser.auth.getClaims(token);
   const userId = claimsData?.claims?.sub;
   const isServiceRole = claimsData?.claims?.role === "service_role";
