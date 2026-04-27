@@ -104,7 +104,7 @@ export const RF_MUNICIPIOS: Record<string, string> = {
 
   // MINAS GERAIS (MG)
   "4123": "Belo Horizonte", "4119": "Betim", "4769": "Contagem", "4741": "Juiz de Fora",
-  "4723": "Montes Claros", "4769": "Contagem", "4853": "Uberlândia", "4787": "Ribeirão das Neves",
+  "4723": "Montes Claros", "4853": "Uberlândia", "4787": "Ribeirão das Neves",
   "4867": "Uberaba", "4733": "Governador Valadares", "4873": "Varginha", "4757": "Poços de Caldas",
   "4117": "Araxá", "4707": "Divinópolis", "4785": "Poços de Caldas", "4765": "Patos de Minas",
   "4751": "Muriaé", "4701": "Alfenas", "4703": "Almenara", "4709": "Formiga",
