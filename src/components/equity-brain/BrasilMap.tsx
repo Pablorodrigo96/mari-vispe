@@ -87,7 +87,7 @@ export function BrasilMap({ filters, onSelectCompany }: BrasilMapProps) {
         .from("eb_v_opportunities_by_uf" as any)
         .select("uf,total,premium_count,strong_count,avg_ma_score,top_setor");
       if (error) throw error;
-      return data as Array<{
+      return (data ?? []) as unknown as Array<{
         uf: string;
         total: number;
         premium_count: number;
@@ -174,9 +174,14 @@ export function BrasilMap({ filters, onSelectCompany }: BrasilMapProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("eb_buyers" as any)
-        .select("id,name,buyer_type,uf");
+        .select("id,nome,tipo,ufs_interesse");
       if (error) throw error;
-      return data as Array<{ id: string; name: string; buyer_type: string | null; uf: string | null }>;
+      // Adapta o shape (eb_buyers usa nome/tipo/ufs_interesse) para o que o mapa espera
+      const rows = ((data ?? []) as unknown as Array<any>).flatMap((b) => {
+        const ufs: string[] = Array.isArray(b.ufs_interesse) && b.ufs_interesse.length > 0 ? b.ufs_interesse : [null];
+        return ufs.map((uf) => ({ id: b.id, name: b.nome, buyer_type: b.tipo ?? null, uf }));
+      });
+      return rows as Array<{ id: string; name: string; buyer_type: string | null; uf: string | null }>;
     },
   });
 
