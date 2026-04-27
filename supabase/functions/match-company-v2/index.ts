@@ -207,7 +207,7 @@ serve(async (req) => {
 
     // Carrega dados
     let cQuery = supabase.schema("equity_brain" as any).from("companies")
-      .select("cnpj, razao_social, uf, municipio, setor_ma, subsetor_ma, porte, situacao_cadastral, faturamento_estimado, ebitda_estimado, ma_score").limit(limitCompanies);
+      .select("cnpj, razao_social, uf, municipio, setor_ma, subsetor_ma, porte, situacao_cadastral, faturamento_estimado, ebitda_estimado").limit(limitCompanies);
     if (cnpjs?.length) cQuery = cQuery.in("cnpj", cnpjs);
     const { data: companies, error: cErr } = await cQuery;
     if (cErr) throw cErr;
