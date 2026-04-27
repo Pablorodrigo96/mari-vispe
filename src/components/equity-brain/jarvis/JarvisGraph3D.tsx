@@ -373,13 +373,15 @@ export function JarvisGraph3D() {
     // Label
     const isFocused = focusId === n.id;
     if (n.showLabel || isFocused) {
-      const label = new SpriteText(n.label.length > 26 ? n.label.slice(0, 26) + "…" : n.label);
+      const label = new SpriteText(
+        n.label.length > 26 ? n.label.slice(0, 26) + "…" : n.label,
+      );
       label.color = isFocused ? "#a7f3d0" : "#e5e7eb";
       label.textHeight = isFocused ? 6 : 4.2;
       label.backgroundColor = "rgba(9,9,11,0.6)";
       label.padding = 1.5;
       label.borderRadius = 2;
-      label.position.y = radius + 7;
+      (label as unknown as THREE.Object3D).position.y = radius + 7;
       group.add(label);
     }
 
@@ -479,7 +481,7 @@ export function JarvisGraph3D() {
       <div className="absolute top-0 left-0 h-full z-10">
         <GraphFilterSidebar
           collapsed={filterCollapsed}
-          onToggleCollapsed={() => setFilterCollapsed((c) => !c)}
+          onToggleCollapse={() => setFilterCollapsed((c) => !c)}
           verticalsList={verticalsList}
           ufsList={ufsList}
           thesesList={(thesesQ.data ?? []) as any[]}
