@@ -97,21 +97,10 @@ export function StrategicGraph() {
     };
   }, []);
 
-  // ---------- Pulse animation tick (30fps p/ economizar) ----------
-  useEffect(() => {
-    if (isMobile) return;
-    let raf: number;
-    let last = 0;
-    const tick = (t: number) => {
-      if (t - last > 33) {
-        setPulse((p) => (p + 0.06) % (Math.PI * 2));
-        last = t;
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [isMobile]);
+  // ---------- Pulso visual ESTÁTICO ----------
+  // Removido o requestAnimationFrame contínuo que causava vibração visual.
+  // pulse fica em valor fixo; halos/glow agora são estáticos.
+  // (mantido para compatibilidade com o canvas painter)
 
   // Degree map (preenchido após edges existirem) — ref mutável p/ getBaseRadius
   const degreeMapRef = useRef<Map<string, number>>(new Map());
