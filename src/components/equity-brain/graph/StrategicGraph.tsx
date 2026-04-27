@@ -478,7 +478,9 @@ export function StrategicGraph() {
         }}
         nodePointerAreaPaint={(node: any, color, ctx) => {
           const n = node as GraphNode;
-          const baseR = 4 + (n.strategic_score / 100) * 12 + 4;
+          if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+          const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
+          const baseR = Math.max(2, 4 + (score / 100) * 12 + 4);
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(node.x, node.y, baseR, 0, 2 * Math.PI);
