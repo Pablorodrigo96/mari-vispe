@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { PublicChrome as Header } from '@/components/layout/PublicChrome';
-import { Footer } from '@/components/layout/Footer';
+import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

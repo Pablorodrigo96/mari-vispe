@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { PublicChrome as Header } from '@/components/layout/PublicChrome';
-import { Footer } from '@/components/layout/Footer';
+import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
 import { FilterSidebar, FilterState, defaultFilters } from '@/components/marketplace/FilterSidebar';

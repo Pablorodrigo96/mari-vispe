@@ -1,5 +1,5 @@
 import { PublicChrome as Header } from '@/components/layout/PublicChrome';
-import { Footer } from '@/components/layout/Footer';
+import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { MatchingHero } from '@/components/matching/MatchingHero';
 import { CompanySearchCard } from '@/components/matching/CompanySearchCard';
 import { NationalSearchPanel } from '@/components/matching/NationalSearchPanel';

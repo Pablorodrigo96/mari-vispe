@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PublicChrome as Header } from '@/components/layout/PublicChrome';
-import { Footer } from '@/components/layout/Footer';
+import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { supabase } from '@/integrations/supabase/client';
