@@ -352,26 +352,28 @@ export function StrategicGraph() {
     const fg = fgRef.current;
     if (!fg || !nodes.length) return;
 
-    // Repulsão muito forte — explode o aglomerado
-    const chargeStrength = -700 - Math.min(400, nodes.length * 2);
-    fg.d3Force("charge", forceManyBody().strength(chargeStrength).distanceMax(1400));
+    setStabilized(false);
+
+    // Repulsão muito forte — explode o aglomerado inicial
+    const chargeStrength = -900 - Math.min(600, nodes.length * 3);
+    fg.d3Force("charge", forceManyBody().strength(chargeStrength).distanceMax(1800));
 
     // Anti-overlap escala com o raio (hubs grandes empurram mais)
     fg.d3Force(
       "collide",
-      forceCollide<GraphNode>().radius((n) => getBaseRadius(n) * 2.2 + 18).strength(0.95),
+      forceCollide<GraphNode>().radius((n) => getBaseRadius(n) * 2.6 + 24).strength(1),
     );
 
-    // Links: fracos = longe e quase sem puxar; fortes = perto e ancoram clusters
+    // Links: fracos = longe; fortes = perto e ancoram clusters
     const linkForce: any = fg.d3Force("link");
     if (linkForce) {
       linkForce
-        .distance((l: any) => 140 + (1 - (l.weight ?? 0.3)) * 240)
-        .strength((l: any) => Math.max(0.05, (l.weight ?? 0.3) * 0.8));
+        .distance((l: any) => 180 + (1 - (l.weight ?? 0.3)) * 320)
+        .strength((l: any) => Math.max(0.05, (l.weight ?? 0.3) * 0.7));
     }
 
     // Força radial leve mantém o grafo enquadrado no viewport
-    fg.d3Force("radial", forceRadial(0, 0, 0).strength(0.02));
+    fg.d3Force("radial", forceRadial(0, 0, 0).strength(0.025));
 
     // Liberar fixações antigas (caso filtros tenham mudado o dataset)
     nodes.forEach((n: any) => {
@@ -380,6 +382,54 @@ export function StrategicGraph() {
     });
     fg.d3ReheatSimulation();
   }, [nodes, edges]);
+
+  // ---------- Pulso programado: a cada 10s libera + reaquece levemente ----------
+  useEffect(() => {
+    if (!stabilized) return;
+    let freezeTimer: ReturnType<typeof setTimeout> | null = null;
+    const interval = setInterval(() => {
+      // Não mexer se usuário está interagindo
+      if (hoveredRef.current || selectedRef.current) return;
+      const fg = fgRef.current;
+      if (!fg || !nodes.length) return;
+
+      setRecalculating(true);
+      // Solta os nodes
+      nodes.forEach((n: any) => {
+        n.fx = undefined;
+        n.fy = undefined;
+      });
+      // Reaquece BEM levemente (alpha pequeno)
+      try {
+        (fg as any).d3Force("charge")?.strength?.(-300);
+      } catch {}
+      try {
+        const sim: any = (fg as any).d3ReheatSimulation;
+        sim?.call(fg);
+      } catch {}
+
+      // Após ~900ms congela de novo
+      freezeTimer = setTimeout(() => {
+        nodes.forEach((n: any) => {
+          if (Number.isFinite(n.x) && Number.isFinite(n.y)) {
+            n.fx = n.x;
+            n.fy = n.y;
+          }
+        });
+        // Restaura charge forte para o próximo ciclo
+        try {
+          const chargeStrength = -900 - Math.min(600, nodes.length * 3);
+          (fg as any).d3Force("charge")?.strength?.(chargeStrength);
+        } catch {}
+        setRecalculating(false);
+      }, 900);
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+      if (freezeTimer) clearTimeout(freezeTimer);
+    };
+  }, [stabilized, nodes]);
 
   // ---------- Mobile fallback ----------
   if (isMobile) {
