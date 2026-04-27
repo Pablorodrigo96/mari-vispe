@@ -4,11 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel } from "lucide-react";
+import { Loader2, Play, RefreshCw, TrendingUp, Sparkles, Target, Gavel, Brain } from "lucide-react";
 import { toast } from "sonner";
 import { MatchDecisionCard, type MatchDecisionRow } from "@/components/equity-brain/MatchDecisionCard";
 
 type MatchRow = MatchDecisionRow;
+
+type DealEvent = {
+  id: string;
+  match_id: string | null;
+  buyer_id: string | null;
+  event_type: string;
+  rejection_reason: string | null;
+  event_ts: string;
+  notes: string | null;
+};
+
+type Theta = {
+  buyer_id: string;
+  feature_name: string;
+  posterior_mean: number;
+  posterior_std: number;
+  n_observations: number;
+  last_updated: string;
+};
 
 const fmtPct = (n: number | null) => (n == null ? "—" : `${(n * 100).toFixed(1)}%`);
 const fmtBRL = (n: number | null) =>
@@ -19,7 +38,9 @@ export default function EBShadowPage() {
   const [running, setRunning] = useState<string | null>(null);
   const [v1, setV1] = useState<MatchRow[]>([]);
   const [v2, setV2] = useState<MatchRow[]>([]);
-  const [tab, setTab] = useState<"summary" | "diff" | "decision">("summary");
+  const [tab, setTab] = useState<"summary" | "diff" | "decision" | "learning">("summary");
+  const [events, setEvents] = useState<DealEvent[]>([]);
+  const [thetas, setThetas] = useState<Theta[]>([]);
 
   async function load() {
     setLoading(true);
@@ -33,6 +54,19 @@ export default function EBShadowPage() {
       .eq("engine_version", "v2").eq("is_current", true).order("match_score", { ascending: false }).limit(500);
     setV1((v1Data ?? []) as any);
     setV2((v2Data ?? []) as any);
+
+    const { data: evData } = await (supabase as any)
+      .schema("equity_brain")
+      .from("deal_events").select("*")
+      .order("event_ts", { ascending: false }).limit(20);
+    setEvents((evData ?? []) as any);
+
+    const { data: thData } = await (supabase as any)
+      .schema("equity_brain")
+      .from("buyer_revealed_thetas").select("*")
+      .order("n_observations", { ascending: false }).limit(50);
+    setThetas((thData ?? []) as any);
+
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -42,7 +76,11 @@ export default function EBShadowPage() {
     try {
       const { data, error } = await supabase.functions.invoke(name, { body });
       if (error) throw error;
-      toast.success(`${label} concluído`, { description: `Processados: ${(data as any)?.processed ?? "—"}` });
+      const d: any = data ?? {};
+      const desc = d.processed != null ? `Processados: ${d.processed}`
+        : d.events_processed != null ? `Eventos: ${d.events_processed} · Buyers: ${d.buyers_updated} · Thetas: ${d.thetas_upserted}`
+        : "OK";
+      toast.success(`${label} concluído`, { description: desc });
       await load();
     } catch (e: any) {
       toast.error(`Falha em ${label}`, { description: e.message ?? String(e) });
@@ -143,6 +181,7 @@ export default function EBShadowPage() {
           <TabsTrigger value="summary"><Target className="h-4 w-4 mr-1" />Top v2 Matches</TabsTrigger>
           <TabsTrigger value="diff"><TrendingUp className="h-4 w-4 mr-1" />Divergências v1↔v2</TabsTrigger>
           <TabsTrigger value="decision"><Gavel className="h-4 w-4 mr-1" />Decisão & Feedback</TabsTrigger>
+          <TabsTrigger value="learning"><Brain className="h-4 w-4 mr-1" />Aprendizado</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
@@ -249,6 +288,129 @@ export default function EBShadowPage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="learning" className="mt-4">
+          <div className="space-y-4">
+            <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-foreground flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-emerald-400" />
+                  Loop adaptativo
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cada deal_event ajusta os pesos por buyer em <code>buyer_revealed_thetas</code> via
+                  Bayesian update com decay temporal (90d half-life). O <code>match-company-v2</code> consome
+                  esses thetas via shrinkage no próximo run.
+                </p>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" className="bg-transparent"
+                  disabled={!!running}
+                  onClick={() => runFn("update-buyer-revealed-thetas", { dry_run: true, since_days: 365 }, "Dry-run aprendizado")}>
+                  {running === "update-buyer-revealed-thetas" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
+                  Dry-run (preview)
+                </Button>
+                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  disabled={!!running}
+                  onClick={() => runFn("update-buyer-revealed-thetas", { dry_run: false, since_days: 365 }, "Treinar buyers")}>
+                  {running === "update-buyer-revealed-thetas" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Brain className="h-4 w-4 mr-1" />}
+                  Treinar buyers
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-800">
+                <CardHeader>
+                  <CardTitle className="text-sm text-foreground">Eventos recentes ({events.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {events.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">
+                      Nenhum evento registrado ainda. Use a aba "Decisão & Feedback" para gerar eventos.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                      {events.map((ev) => {
+                        const isPositive = ["closed", "term_sheet", "loi_received", "nda_signed"].includes(ev.event_type);
+                        const isNegative = ["rejected", "dropped"].includes(ev.event_type);
+                        const colorClass = isPositive ? "text-emerald-400 border-emerald-500/30"
+                          : isNegative ? "text-rose-400 border-rose-500/30"
+                          : "text-foreground border-slate-700";
+                        return (
+                          <div key={ev.id} className="text-xs border border-slate-800 rounded-md p-2 bg-slate-800/20">
+                            <div className="flex items-center justify-between gap-2">
+                              <Badge variant="outline" className={`text-[10px] bg-transparent ${colorClass} break-words`}>
+                                {ev.event_type}
+                              </Badge>
+                              <span className="text-muted-foreground text-[10px]">
+                                {new Date(ev.event_ts).toLocaleString("pt-BR")}
+                              </span>
+                            </div>
+                            {ev.rejection_reason && (
+                              <p className="text-[11px] text-rose-300 mt-1 break-words">
+                                Motivo: {ev.rejection_reason}
+                              </p>
+                            )}
+                            {ev.notes && (
+                              <p className="text-[11px] text-muted-foreground mt-1 break-words">{ev.notes}</p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
+                              buyer: {ev.buyer_id?.slice(0, 8) ?? "—"}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-800">
+                <CardHeader>
+                  <CardTitle className="text-sm text-foreground">Top thetas aprendidos ({thetas.length})</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Pesos revelados por buyer × feature. Mean &gt; 0 = aprendeu que importa, &lt; 0 = aprendeu que não importa.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {thetas.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">
+                      Nenhum theta aprendido ainda. Rode "Treinar buyers" após registrar eventos.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto max-h-[400px]">
+                      <table className="w-full text-xs">
+                        <thead className="text-[10px] text-muted-foreground border-b border-slate-800 sticky top-0 bg-slate-900">
+                          <tr>
+                            <th className="text-left py-1 px-2">Buyer</th>
+                            <th className="text-left py-1 px-2">Feature</th>
+                            <th className="text-right py-1 px-2">Mean</th>
+                            <th className="text-right py-1 px-2">Std</th>
+                            <th className="text-right py-1 px-2">N</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {thetas.map((t, i) => (
+                            <tr key={i} className="border-b border-slate-800/50">
+                              <td className="py-1 px-2 font-mono text-[10px] break-all">{t.buyer_id.slice(0, 8)}</td>
+                              <td className="py-1 px-2 break-words">{t.feature_name}</td>
+                              <td className={`py-1 px-2 text-right font-semibold ${t.posterior_mean > 0.1 ? "text-emerald-400" : t.posterior_mean < -0.1 ? "text-rose-400" : "text-foreground"}`}>
+                                {t.posterior_mean.toFixed(2)}
+                              </td>
+                              <td className="py-1 px-2 text-right text-muted-foreground">{t.posterior_std.toFixed(2)}</td>
+                              <td className="py-1 px-2 text-right">{t.n_observations}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
