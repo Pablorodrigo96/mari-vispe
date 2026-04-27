@@ -132,9 +132,10 @@ serve(async (req) => {
     if (evErr) throw evErr;
 
     if (!events?.length) {
+      await finishRun("success", 0);
       return new Response(JSON.stringify({
         ok: true, buyers_updated: 0, events_processed: 0,
-        message: "Sem eventos novos para aprender",
+        message: "Sem eventos novos para aprender", run_id: runId,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
