@@ -24,6 +24,8 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
   const [timing, setTiming] = useState("6m");
   const [dor, setDor] = useState("crescimento");
   const [notes, setNotes] = useState("");
+  const [nextPitch, setNextPitch] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
 
   const m = useMutation({
     mutationFn: async () => {
@@ -46,12 +48,38 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
       });
       setNotes("");
       onSubmitted?.();
-      onOpenChange(false);
+      // Se a IA gerou um próximo pitch, mantém o modal aberto pra mostrar
+      if (data?.next_pitch) {
+        setNextPitch(data.next_pitch);
+      } else {
+        onOpenChange(false);
+      }
     },
     onError: (e: any) => {
       toast.error("Falha ao registrar", { description: e?.message ?? "Erro desconhecido" });
     },
   });
+
+  const handleClose = (v: boolean) => {
+    if (!v) {
+      setNextPitch(null);
+      setCopied(false);
+    }
+    onOpenChange(v);
+  };
+
+  const copyPitch = async () => {
+    if (!nextPitch) return;
+    const text = nextPitch.pitch ?? nextPitch.abertura_curta ?? JSON.stringify(nextPitch);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Pitch copiado");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Falha ao copiar");
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
