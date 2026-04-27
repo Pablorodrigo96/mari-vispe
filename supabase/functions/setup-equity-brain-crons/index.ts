@@ -62,6 +62,13 @@ function buildJobs(supabaseUrl: string, serviceKey: string) {
       fn: "compute-drift-snapshot",
       body: { sample_companies: 50, top_n: 100 },
     },
+    // ───── Fase 7 — limpeza de eventos processados (não chama edge, apenas SQL inline) ─────
+    {
+      name: "eb-event-cleanup-hourly",
+      schedule: "30 * * * *", // a cada hora, no minuto 30
+      fn: "__inline_sql__",
+      body: { sql: "DELETE FROM equity_brain.events WHERE processed_status IN ('success','skipped') AND processed_at < now() - interval '7 days'" },
+    },
   ].map((j) => ({
     ...j,
     sql: `
