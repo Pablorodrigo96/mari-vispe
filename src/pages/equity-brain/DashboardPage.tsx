@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Building2, Target, Flame, PhoneCall, Sheet as SheetIcon, Download } from "lucide-react";
+import { Building2, Target, Flame, PhoneCall, Sheet as SheetIcon, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useVertical } from "@/hooks/useVertical";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { EBFunnel } from "@/components/equity-brain/EBFunnel";
 import { DealCard } from "@/components/equity-brain/DealCard";
@@ -19,8 +20,31 @@ const REFRESH_MS = 60_000;
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { cnaeFilter, isIsp } = useVertical();
+  const { isAdmin, isAdvisor } = useUserRoles();
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  async function syncMarketplace() {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-listings-to-equity-brain", {
+        body: { run_pipeline: true },
+      });
+      if (error) throw error;
+      const synced = (data as any)?.synced ?? 0;
+      const total = (data as any)?.total_listings ?? 0;
+      toast.success(`${synced} de ${total} anúncios sincronizados`, {
+        description: "Sinais, scores e oportunidades foram recalculados.",
+      });
+      // refetch dashboard
+      kpis.refetch(); funnel.refetch(); top.refetch(); events.refetch();
+    } catch (e: any) {
+      toast.error("Falha ao sincronizar marketplace", { description: e?.message });
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const kpis = useQuery({
     queryKey: ["eb", "dashboard-kpis", cnaeFilter.join(",")],
@@ -140,15 +164,28 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-zinc-100">Dashboard{isIsp && <span className="text-emerald-400 text-base font-medium ml-2">· Vertical ISP</span>}</h1>
           <p className="text-sm text-zinc-500 mt-1">Visão consolidada do funil de M&A · auto-refresh 60s</p>
         </div>
-        <Button
-          variant="outline" size="sm"
-          onClick={exportTop100Isp}
-          disabled={exporting}
-          className="bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:text-emerald-300"
-        >
-          <Download className="h-3.5 w-3.5 mr-1.5" />
-          {exporting ? "Exportando…" : "Exportar Top 100 ISP CSV"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {(isAdmin || isAdvisor) && (
+            <Button
+              variant="outline" size="sm"
+              onClick={syncMarketplace}
+              disabled={syncing}
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:text-emerald-300"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", syncing && "animate-spin")} />
+              {syncing ? "Sincronizando…" : "Sincronizar marketplace"}
+            </Button>
+          )}
+          <Button
+            variant="outline" size="sm"
+            onClick={exportTop100Isp}
+            disabled={exporting}
+            className="bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:text-emerald-300"
+          >
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            {exporting ? "Exportando…" : "Exportar Top 100 ISP CSV"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
