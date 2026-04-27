@@ -38,7 +38,9 @@ export default function EBShadowPage() {
   const [running, setRunning] = useState<string | null>(null);
   const [v1, setV1] = useState<MatchRow[]>([]);
   const [v2, setV2] = useState<MatchRow[]>([]);
-  const [tab, setTab] = useState<"summary" | "diff" | "decision">("summary");
+  const [tab, setTab] = useState<"summary" | "diff" | "decision" | "learning">("summary");
+  const [events, setEvents] = useState<DealEvent[]>([]);
+  const [thetas, setThetas] = useState<Theta[]>([]);
 
   async function load() {
     setLoading(true);
@@ -52,6 +54,19 @@ export default function EBShadowPage() {
       .eq("engine_version", "v2").eq("is_current", true).order("match_score", { ascending: false }).limit(500);
     setV1((v1Data ?? []) as any);
     setV2((v2Data ?? []) as any);
+
+    const { data: evData } = await (supabase as any)
+      .schema("equity_brain")
+      .from("deal_events").select("*")
+      .order("event_ts", { ascending: false }).limit(20);
+    setEvents((evData ?? []) as any);
+
+    const { data: thData } = await (supabase as any)
+      .schema("equity_brain")
+      .from("buyer_revealed_thetas").select("*")
+      .order("n_observations", { ascending: false }).limit(50);
+    setThetas((thData ?? []) as any);
+
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
