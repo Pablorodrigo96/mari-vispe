@@ -528,11 +528,11 @@ export function StrategicGraph() {
           <span className="ml-2 flex items-center gap-1">
             <span
               className={`h-1.5 w-1.5 rounded-full ${
-                recalculating ? "bg-amber-400 animate-pulse" : stabilized ? "bg-emerald-400" : "bg-cyan-400 animate-pulse"
+                stabilized ? "bg-emerald-400" : "bg-cyan-400 animate-pulse"
               }`}
             />
             <span className="text-[9px] uppercase tracking-wider text-zinc-500">
-              {recalculating ? "Recalculando malha…" : stabilized ? "Rede estabilizada" : "Tecendo rede…"}
+              {stabilized ? "Rede congelada" : "Tecendo rede…"}
             </span>
           </span>
         </div>
