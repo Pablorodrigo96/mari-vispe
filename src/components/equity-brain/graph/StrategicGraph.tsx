@@ -70,6 +70,13 @@ export function StrategicGraph() {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [pulse, setPulse] = useState(0);
+  const [stabilized, setStabilized] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
+  // Refs estáveis (sem causar re-render dos handlers)
+  const hoveredRef = useRef<string | null>(null);
+  const selectedRef = useRef<string | null>(null);
+  useEffect(() => { hoveredRef.current = hoveredNodeId; }, [hoveredNodeId]);
+  useEffect(() => { selectedRef.current = selectedNode?.id ?? null; }, [selectedNode]);
 
   // ---------- Container size ----------
   useEffect(() => {
@@ -345,26 +352,28 @@ export function StrategicGraph() {
     const fg = fgRef.current;
     if (!fg || !nodes.length) return;
 
-    // Repulsão muito forte — explode o aglomerado
-    const chargeStrength = -700 - Math.min(400, nodes.length * 2);
-    fg.d3Force("charge", forceManyBody().strength(chargeStrength).distanceMax(1400));
+    setStabilized(false);
+
+    // Repulsão muito forte — explode o aglomerado inicial
+    const chargeStrength = -900 - Math.min(600, nodes.length * 3);
+    fg.d3Force("charge", forceManyBody().strength(chargeStrength).distanceMax(1800));
 
     // Anti-overlap escala com o raio (hubs grandes empurram mais)
     fg.d3Force(
       "collide",
-      forceCollide<GraphNode>().radius((n) => getBaseRadius(n) * 2.2 + 18).strength(0.95),
+      forceCollide<GraphNode>().radius((n) => getBaseRadius(n) * 2.6 + 24).strength(1),
     );
 
-    // Links: fracos = longe e quase sem puxar; fortes = perto e ancoram clusters
+    // Links: fracos = longe; fortes = perto e ancoram clusters
     const linkForce: any = fg.d3Force("link");
     if (linkForce) {
       linkForce
-        .distance((l: any) => 140 + (1 - (l.weight ?? 0.3)) * 240)
-        .strength((l: any) => Math.max(0.05, (l.weight ?? 0.3) * 0.8));
+        .distance((l: any) => 180 + (1 - (l.weight ?? 0.3)) * 320)
+        .strength((l: any) => Math.max(0.05, (l.weight ?? 0.3) * 0.7));
     }
 
     // Força radial leve mantém o grafo enquadrado no viewport
-    fg.d3Force("radial", forceRadial(0, 0, 0).strength(0.02));
+    fg.d3Force("radial", forceRadial(0, 0, 0).strength(0.025));
 
     // Liberar fixações antigas (caso filtros tenham mudado o dataset)
     nodes.forEach((n: any) => {
@@ -373,6 +382,54 @@ export function StrategicGraph() {
     });
     fg.d3ReheatSimulation();
   }, [nodes, edges]);
+
+  // ---------- Pulso programado: a cada 10s libera + reaquece levemente ----------
+  useEffect(() => {
+    if (!stabilized) return;
+    let freezeTimer: ReturnType<typeof setTimeout> | null = null;
+    const interval = setInterval(() => {
+      // Não mexer se usuário está interagindo
+      if (hoveredRef.current || selectedRef.current) return;
+      const fg = fgRef.current;
+      if (!fg || !nodes.length) return;
+
+      setRecalculating(true);
+      // Solta os nodes
+      nodes.forEach((n: any) => {
+        n.fx = undefined;
+        n.fy = undefined;
+      });
+      // Reaquece BEM levemente (alpha pequeno)
+      try {
+        (fg as any).d3Force("charge")?.strength?.(-300);
+      } catch {}
+      try {
+        const sim: any = (fg as any).d3ReheatSimulation;
+        sim?.call(fg);
+      } catch {}
+
+      // Após ~900ms congela de novo
+      freezeTimer = setTimeout(() => {
+        nodes.forEach((n: any) => {
+          if (Number.isFinite(n.x) && Number.isFinite(n.y)) {
+            n.fx = n.x;
+            n.fy = n.y;
+          }
+        });
+        // Restaura charge forte para o próximo ciclo
+        try {
+          const chargeStrength = -900 - Math.min(600, nodes.length * 3);
+          (fg as any).d3Force("charge")?.strength?.(chargeStrength);
+        } catch {}
+        setRecalculating(false);
+      }, 900);
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+      if (freezeTimer) clearTimeout(freezeTimer);
+    };
+  }, [stabilized, nodes]);
 
   // ---------- Mobile fallback ----------
   if (isMobile) {
@@ -410,13 +467,35 @@ export function StrategicGraph() {
       />
       {/* Grid sutil estilo HUD */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        className="absolute inset-0 pointer-events-none opacity-[0.05]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
+            "linear-gradient(rgba(56,189,248,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.5) 1px, transparent 1px)",
+          backgroundSize: "56px 56px",
         }}
       />
+      {/* HUD: anéis concêntricos centrais estilo Jarvis */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.10]">
+        <defs>
+          <radialGradient id="hud-ring" cx="50%" cy="50%" r="50%">
+            <stop offset="60%" stopColor="rgba(56,189,248,0)" />
+            <stop offset="100%" stopColor="rgba(56,189,248,0.6)" />
+          </radialGradient>
+        </defs>
+        <g style={{ transform: "translate(50%, 50%)" }}>
+          <circle r="120" fill="none" stroke="rgba(56,189,248,0.5)" strokeDasharray="2 6" strokeWidth="0.6" />
+          <circle r="240" fill="none" stroke="rgba(16,185,129,0.4)" strokeDasharray="3 10" strokeWidth="0.6" />
+          <circle r="380" fill="none" stroke="rgba(56,189,248,0.3)" strokeDasharray="1 4" strokeWidth="0.5" />
+          <circle r="540" fill="none" stroke="rgba(168,85,247,0.25)" strokeDasharray="4 14" strokeWidth="0.5" />
+          <line x1="-700" y1="0" x2="700" y2="0" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+          <line x1="0" y1="-700" x2="0" y2="700" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+        </g>
+      </svg>
+      {/* Cantos HUD */}
+      <div className="absolute top-2 left-2 w-6 h-6 border-l border-t border-cyan-500/30 pointer-events-none" />
+      <div className="absolute top-2 right-2 w-6 h-6 border-r border-t border-cyan-500/30 pointer-events-none" />
+      <div className="absolute bottom-2 left-2 w-6 h-6 border-l border-b border-cyan-500/30 pointer-events-none" />
+      <div className="absolute bottom-2 right-2 w-6 h-6 border-r border-b border-cyan-500/30 pointer-events-none" />
 
       {isLoading && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-zinc-950/80">
@@ -456,12 +535,22 @@ export function StrategicGraph() {
         onReset={handleReset}
       />
 
-      {/* Stats badge */}
-      <div className="absolute top-3 right-3 z-10 bg-zinc-950/90 border border-zinc-800 rounded-md px-3 py-1.5 backdrop-blur">
-        <div className="text-[10px] text-zinc-400 font-mono">
+      {/* Stats badge + status */}
+      <div className="absolute top-3 right-3 z-10 bg-zinc-950/90 border border-cyan-900/40 rounded-md px-3 py-1.5 backdrop-blur shadow-[0_0_20px_rgba(56,189,248,0.08)]">
+        <div className="text-[10px] text-zinc-400 font-mono flex items-center gap-2">
           <span className="text-emerald-400 font-bold">{nodes.length}</span> nodes ·{" "}
           <span className="text-cyan-400 font-bold">{edges.length}</span> edges ·{" "}
           <span className="text-rose-400 font-bold">{clusters.length}</span> clusters
+          <span className="ml-2 flex items-center gap-1">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                recalculating ? "bg-amber-400 animate-pulse" : stabilized ? "bg-emerald-400" : "bg-cyan-400 animate-pulse"
+              }`}
+            />
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500">
+              {recalculating ? "Recalculando malha…" : stabilized ? "Rede estabilizada" : "Tecendo rede…"}
+            </span>
+          </span>
         </div>
       </div>
 
@@ -471,11 +560,11 @@ export function StrategicGraph() {
         width={size.w}
         height={size.h}
         backgroundColor="rgba(0,0,0,0)"
-        cooldownTicks={150}
-        cooldownTime={5000}
-        d3AlphaDecay={0.04}
-        d3VelocityDecay={0.55}
-        warmupTicks={80}
+        cooldownTicks={120}
+        cooldownTime={3500}
+        d3AlphaDecay={0.06}
+        d3VelocityDecay={0.7}
+        warmupTicks={60}
         onEngineStop={() => {
           // Fixar nodes na posição final (sem mais drift)
           nodes.forEach((n: any) => {
@@ -486,6 +575,8 @@ export function StrategicGraph() {
           });
           // Enquadrar todo o grafo já parado
           fgRef.current?.zoomToFit(500, 80);
+          setStabilized(true);
+          setRecalculating(false);
         }}
         enableNodeDrag={false}
         linkCurvature={(l: any) => 0.18 + (l.weight ?? 0) * 0.1}
@@ -528,10 +619,9 @@ export function StrategicGraph() {
         }}
         onNodeClick={(n: any) => {
           setSelectedNode(n as GraphNode);
-          // Center on node
-          if (fgRef.current) {
-            fgRef.current.centerAt((n as any).x, (n as any).y, 600);
-            fgRef.current.zoom(2.2, 600);
+          // Center suavemente, sem zoom agressivo
+          if (fgRef.current && Number.isFinite(n.x) && Number.isFinite(n.y)) {
+            fgRef.current.centerAt(n.x, n.y, 700);
           }
         }}
         onNodeHover={(n: any) => setHoveredNodeId((n as any)?.id ?? null)}
@@ -637,8 +727,8 @@ export function StrategicGraph() {
         nodePointerAreaPaint={(node: any, color, ctx) => {
           const n = node as GraphNode;
           if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-          const score = Number.isFinite(n.strategic_score) ? n.strategic_score : 0;
-          const baseR = Math.max(2, 4 + (score / 100) * 12 + 4);
+          // Área de clique ampla baseada no raio real + folga
+          const baseR = Math.max(10, getBaseRadius(n) + 8);
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(node.x, node.y, baseR, 0, 2 * Math.PI);
