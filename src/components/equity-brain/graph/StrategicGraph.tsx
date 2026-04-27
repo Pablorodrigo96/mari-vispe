@@ -399,13 +399,22 @@ export function StrategicGraph() {
 
   // ---------- Render ----------
   return (
-    <div ref={containerRef} className="w-full h-full bg-zinc-950 relative overflow-hidden">
-      {/* Background sutil radial */}
+    <div ref={containerRef} className="w-full h-full relative overflow-hidden" style={{ background: "#08090b" }}>
+      {/* Background neural — múltiplos gradientes radiais sutis */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle at 50% 50%, rgba(16,185,129,0.05) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(56,189,248,0.04) 0%, transparent 50%)",
+            "radial-gradient(circle at 20% 30%, rgba(16,185,129,0.07) 0%, transparent 45%), radial-gradient(circle at 80% 20%, rgba(56,189,248,0.06) 0%, transparent 50%), radial-gradient(circle at 65% 80%, rgba(244,63,94,0.05) 0%, transparent 45%), radial-gradient(circle at 30% 75%, rgba(168,85,247,0.04) 0%, transparent 50%)",
+        }}
+      />
+      {/* Grid sutil estilo HUD */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
         }}
       />
 
