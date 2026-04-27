@@ -538,6 +538,25 @@ export function StrategicGraph() {
         </div>
       </div>
 
+      {/* Badge de modo foco — só quando há nó selecionado */}
+      {selectedNode && focusedEdgeIds && (
+        <div className="absolute top-14 right-3 z-10 bg-emerald-950/80 border border-emerald-700/60 rounded-md px-3 py-1.5 backdrop-blur shadow-[0_0_18px_rgba(16,185,129,0.18)] flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] uppercase tracking-wider text-emerald-300 font-bold">
+            Modo foco
+          </span>
+          <span className="text-[10px] text-zinc-300 font-mono">
+            {focusedEdgeIds.size} conexões fortes
+          </span>
+          <button
+            onClick={() => setSelectedNode(null)}
+            className="ml-1 text-[10px] text-zinc-400 hover:text-emerald-300 underline-offset-2 hover:underline"
+          >
+            limpar
+          </button>
+        </div>
+      )}
+
       <ForceGraph2D
         ref={fgRef as any}
         graphData={{ nodes: nodes as any, links: edges as any }}
