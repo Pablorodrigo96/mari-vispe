@@ -1,94 +1,211 @@
-# Plano: Seed Realista da Unidade de Parcerias
+# Plano — Grafo Estratégico do Equity Brain (Knowledge Graph)
 
-## Diagnóstico atual (já confirmado no banco)
-- ✅ 2 contadores parceiros ativos: **Pablo Constantino** e **Vitor dos Santos Rosa** (`is_partner_accountant = true`)
-- ✅ 84 listings ativos (a maioria do Vitor — bom volume para testar carteira grande)
-- ❌ 0 reservas em `partner_lead_reservations`
-- ❌ 0 documentos em `vdr_documents`
-- ❌ 0 atividades em `partner_activities`
-- ❌ 0 interesses no pool compartilhado
+## Diagnóstico atual
 
-**Causa**: as 84 listings foram criadas antes do trigger `auto_create_partner_reservation` existir (ou antes de Pablo/Vitor terem a flag de parceiro), então não geraram reservas automaticamente.
+- `/equity-brain/grafo` usa **ReactFlow + Dagre** com layout `LR` (esquerda → direita) → parece um **organograma hierárquico**, não um cérebro.
+- Apenas **3 tipos de node** (`company`, `thesis`, `buyer`) e **1 lógica de edge** (cnpj→tese→buyer + direct).
+- Sem peso real, sem confidence, sem painel lateral, sem clusters, sem layers.
+- Banco hoje: 86 companies · 105 buyers · 29 theses · 114 buyer_theses · **0 matches** (precisa popular).
+- Dados ricos disponíveis em `equity_brain.*`: `setor_ma`, `uf`, `municipio`, `faturamento_estimado`, `ebitda_estimado`, `ma_score`, `setores_interesse[]`, `ufs_interesse[]`, `sinergias_chave[]`, `ticket_min/max`, `tipo` (PE/strategic), etc.
 
 ---
 
-## O que será populado (via migration de seed)
+## 1. Modelo de dados (camada lógica, sem migrations destrutivas)
 
-### 1. Reservas de leads (≈ 30 registros em `partner_lead_reservations`)
-Para cada listing existente do Vitor e do Pablo, criar reserva nos 4 status do funil para popular o Kanban do Sérgio:
+Usar **uma view materializada virtual no front** (montada client-side) que normaliza os dados existentes em **nodes + edges tipadas** — sem mexer no schema do equity_brain.
 
-| Status | Quantidade | Lógica |
-|---|---|---|
-| `reserved` (em andamento) | 12 | `expires_at` entre +5 e +40 dias (mistura urgentes e folgados) |
-| `reserved` urgente (≤7 dias) | 4 | `expires_at` entre +1 e +6 dias → testa filtro "expirando em 7 dias" |
-| `exclusive` (qualificadas) | 8 | `qualified_at` recente, `qualifying_action = 'vdr_doc_uploaded'` ou `'valuation_generated'`, `commission_type = 'full'` |
-| `expired` (perdidas) | 4 | `expires_at` no passado, `commission_type = 'discovery_fee'` |
-| `closed_by_matrix` | 2 | Marcadas como fechadas pela PME.B3 |
+### 1.1 Tipos de Node (7)
+| type | origem | label | size por |
+|---|---|---|---|
+| `seller` | `eb_companies` (empresas alvo) | razão social | `ma_score` |
+| `buyer_strategic` | `eb_buyers` WHERE tipo='strategic' | nome | deals_realizados + score |
+| `buyer_financial` | `eb_buyers` WHERE tipo IN ('pe','vc','family_office') | nome | ticket_max |
+| `thesis` | `eb_investment_theses` | display_name | nº de matches |
+| `platform` | derivado: buyers com >=3 deals_realizados na mesma vertical | nome+vertical | deals |
+| `asset` | derivado de `sinergias_chave[]` + `cnae_descricao` (ex: "Base 30k clientes SP", "Licença ANATEL", "ERP próprio") | label do ativo | frequência |
+| `strategy` | derivado das `theses.category` (rollup, vertical_consolidation, etc) | nome estratégia | nº edges |
 
-### 2. Equity scores e métricas financeiras nas listings (UPDATE)
-Atualizar `equity_score`, `annual_profit`, `vdr_readiness` para as listings que entrarão nas reservas — assim o Painel do Parceiro mostra Score badges coloridos e a métrica "Potencial M&A" deixa de ser zero.
+Cada node carrega: `id, label, type, vertical, uf, municipio, valuation_band, strategic_score (0-100), opportunity_stage, metadata{}`.
 
-- Scores variados: 35, 48, 55, 62, 71, 78, 85, 91 (testa todas as faixas de cor)
-- `vdr_readiness`: 0%, 20%, 40%, 60%, 80%, 100% (cobre o badge VDR)
+### 1.2 Tipos de Edge (14)
+Calculadas client-side a partir de cruzamentos:
+- **buyer_acquires_seller** — buyer.setores_interesse ∩ seller.setor_ma + ufs_interesse ∩ uf + ticket fit
+- **seller_acquires_seller** — mesma vertical + mesma região + um com receita 3x+ do outro
+- **seller_merges_with_seller** — mesma vertical + receita comparável (±30%) + UFs adjacentes
+- **buyer_funds_seller** — buyer financial + seller com ma_score>60
+- **platform_addon** — platform-node + seller mesma vertical e região
+- **strategic_synergy** — sellers que compartilham sinergia_chave
+- **cross_sell** — sellers de verticais complementares (mapeado por CNAE)
+- **cost_synergy** — mesma vertical + mesma UF (overhead compartilhável)
+- **geographic_expansion** — buyer sem presença na UF + seller na UF
+- **tech_stack_match** — sellers com mesmo asset técnico (ERP/tecnologia)
+- **channel_synergy** — sellers com mesmo asset de canal (ex: "Canal indireto B2B")
+- **valuation_arbitrage** — seller com EBITDA>0 e ma_score alto mas sem listagem ativa
+- **capital_match** — buyer financial + seller dentro do ticket_min/max
+- **thesis_fit** — seller atende `required_signals` da thesis
 
-### 3. Documentos VDR (≈ 25 registros em `vdr_documents`)
-Para as 8 listings `exclusive` + 6 `reserved`, popular as 5 categorias obrigatórias (`balanco`, `dre`, `contrato`, `fluxo_caixa`, `impostos`):
+Cada edge: `{source, target, edge_type, strategy, weight (0-1), confidence (0-1), explanation, scores{rollup, cross_sell, cost_synergy, valuation_arbitrage, execution_risk, ...}}`.
 
-- 10 docs `validated` (testa cálculo automático do `vdr_readiness`)
-- 8 docs `pending` (popula a aba "Cofre Digital" do Sérgio com fila de aprovação)
-- 4 docs `rejected` com `rejection_reason` ("Documento ilegível", "Faltam páginas 3-5", "Versão desatualizada", "Assinatura ausente")
-- 3 docs adicionais para um listing chegar a 100% (dispara notificação "VDR Pronto")
-
-### 4. Atividades do parceiro (≈ 15 registros em `partner_activities`)
-Histórico para o drill-down do Sérgio (painel lateral por parceiro):
-
-- 5 reuniões (`activity_type = 'meeting'`) — algumas concluídas, outras agendadas
-- 4 ligações (`activity_type = 'call'`)
-- 4 follow-ups (`activity_type = 'follow_up'`)
-- 2 tarefas (`activity_type = 'task'`)
-
-Distribuídas entre Pablo e Vitor com `notes` realistas ("Parceiro pediu material institucional", "Combinado treinamento dia 30", etc.).
-
-### 5. Interesses no Pool Compartilhado (≈ 5 registros em `partner_opportunity_interests`)
-Para validar o fluxo "Tenho comprador":
-- 2 interesses `expressed` (aguardando resposta)
-- 1 `accepted` (originador aceitou — match 50/50)
-- 1 `rejected`
-- 1 `closed` (deal fechado)
-
-Cruzando Pablo ↔ Vitor (um como originador, outro como interessado).
-
-### 6. Notificações de teste (≈ 10 registros em `notifications`)
-Algumas notificações realistas para Pablo, Vitor e os admins (Rafael/Pablo) — mistura de tipos: "Lead reservado", "Sua reserva expira em 7 dias", "VDR Pronto", "Outro parceiro tem comprador para seu lead".
+### 1.3 Fórmula de peso final (configurável)
+```ts
+final_weight =
+  0.25 * strategic_fit      // ma_score + setor match
++ 0.20 * revenue_synergy    // complementaridade
++ 0.15 * cost_synergy       // overlap geográfico/operacional
++ 0.15 * financial_capacity // ticket fit / receita do adquirente
++ 0.10 * execution_ease     // mesma UF, mesmo porte
++ 0.10 * deal_urgency       // listing ativo, expiração reserva
++ 0.05 * valuation_arbitrage
+```
+Pesos expostos em `src/lib/equityGraphScoring.ts` para tuning futuro.
 
 ---
 
-## Ferramenta usada
-- 1 migration SQL (insert tool) com todos os INSERTs e UPDATEs encadeados em transação.
-- IDs determinísticos via `gen_random_uuid()` capturados em CTEs para manter relacionamentos consistentes (reserva → docs → atividades).
+## 2. Render visual — força-direcionado (cérebro)
 
-## Como validar depois do seed
-1. **Como Vitor / Pablo** (login parceiro) → `/parceiro`:
-   - Ver banner de bulk upload + lista de leads com countdown, scores coloridos e potencial M&A
-   - Aba "Pool da Rede" mostrando oportunidades anonimizadas
-   - `/potencial-carteira` com receita agregada, comissão potencial e top 5
+**Substituir ReactFlow + Dagre por `react-force-graph-2d`** (Canvas, GPU-friendly, orgânico, suporta milhares de nodes com pulse/glow).
 
-2. **Como Admin** (Rafael ou Pablo) → `/admin/parcerias`:
-   - **Aba Visão Geral**: KPIs preenchidos + ranking Pablo vs Vitor + drill-down com atividades
-   - **Aba Reservas**: Kanban com 4 colunas populadas, filtro "expirando em 7 dias" mostra os 4 urgentes
-   - **Aba Cofre Digital**: 8 docs `pending` para validar, 4 rejeitados, 10 validados
+### Por que trocar:
+- ReactFlow é DOM/SVG → trava com >300 elementos e força grid hierárquico.
+- `react-force-graph-2d` (baseado em d3-force) faz simulação física natural → **clusters emergem sozinhos**, linhas curvas, pan/zoom suave, glow nativo.
 
-3. **Smoke tests funcionais**:
-   - Validar 1 doc `pending` → conferir se `vdr_readiness` recalcula
-   - Forçar exclusividade em 1 reserva `reserved`
-   - Marcar 1 reserva como `closed_by_matrix`
-   - Registrar nova atividade no drill-down do Vitor
+### Características visuais:
+- **Background**: gradiente radial `from-zinc-950 via-black to-zinc-950` + grid sutil.
+- **Nodes**:
+  - Tamanho proporcional ao `strategic_score` (raio 4–18 px).
+  - Cor por type: seller=emerald, buyer_strategic=cyan, buyer_financial=blue, thesis=violet, platform=amber, asset=zinc, strategy=rose.
+  - **Glow pulsante** nos top-10 (oportunidades quentes) usando `requestAnimationFrame` + canvas shadowBlur animado.
+  - Halo branco quando hover.
+- **Edges**:
+  - **Linhas curvas Bezier** (`linkCurvature: 0.15`).
+  - **Espessura** = `weight * 4 + 0.3`.
+  - **Opacidade** = `confidence * 0.8 + 0.1`.
+  - **Cor por edge_type** (paleta de 14 cores HSL distintas, todas com alpha).
+  - **Animação de partícula** (`linkDirectionalParticles`) nas top-30 edges (>0.7 weight).
+- **Forças d3**: `forceManyBody(-80)`, `forceLink(distance ∝ 1/weight)`, `forceCollide(radius+2)`, `forceCenter`.
 
-## Arquivos
-- **Criar**: `supabase/migrations/{timestamp}_seed_partnerships_realistic.sql`
+---
 
-## Não-objetivos
-- Não cria novos usuários (usa Pablo e Vitor que já existem)
-- Não popula edge functions / cron (apenas dados estáticos)
-- Não modifica componentes React — apenas dados para validar UI já existente
-- Migration de seed é idempotente onde possível (usa `ON CONFLICT DO NOTHING` em chaves naturais)
+## 3. Interações
+
+### Click em node → painel lateral direito (Sheet de 380px):
+- Header: avatar/cor do type, label, vertical, UF, score grande.
+- Tabs: **Conexões** | **Estratégias** | **Top Matches** | **Por que importa**.
+- Botão "Focar" (centraliza + isola subgrafo) e "Abrir no detalhe" (rota /equity-brain/deal/:cnpj).
+
+### Click em edge → popover central:
+- Tipo + estratégia + scores radar (mini gráfico) + explanation + CTA "Gerar tese de M&A com IA" (futuro).
+
+### Hover:
+- Highlight dos vizinhos diretos, dim dos demais (`opacity 0.12`).
+- Tooltip com label + type + score.
+
+---
+
+## 4. Filtros (sidebar esquerda colapsável, 240px)
+
+- **Verticais** (chips multi-select dos `setor_ma` distintos)
+- **UF** (chips)
+- **Tipo de node** (toggles)
+- **Tipo de edge** (toggles, agrupados por categoria: M&A direto / Synergias / Capital / Tese)
+- **Peso mínimo** (slider 0–1)
+- **Confidence mínima** (slider 0–1)
+- **Tese** (select)
+- **Buyer** (select)
+- **Layers** (toggles) — atalhos:
+  - 🎯 M&A direto
+  - 🔄 Roll-up seller-seller
+  - ⚙️ Sinergia operacional
+  - 💼 Sinergia comercial
+  - 💸 Arbitragem de valuation
+  - 💰 Capital/funding
+  - 🧠 Fit com tese
+
+Filtros aplicam à simulação em tempo real (re-roda d3-force).
+
+---
+
+## 5. Clusters
+
+Detecção via **community detection leve** (Louvain ou simples por modularidade de edge_type+vertical). Renderizar cada cluster como **convex hull translúcido** atrás dos nodes (cores: `from-emerald-950/20 via-transparent`).
+
+5 clusters predefinidos:
+- 🌎 Consolidação regional (mesma UF + vertical)
+- 🏢 Buyer estratégico + addons
+- 💡 Por tese
+- 🏷️ Por vertical
+- 🔥 Hotspots (nodes com >5 edges de weight>0.6)
+
+Cada cluster: expandir / colapsar (vira super-node) / destacar.
+
+---
+
+## 6. Toolbar superior
+
+- Toggle: **Grafo / Mapa** (mantém botão atual)
+- **Modo apresentação** (mantém)
+- **Snapshot PNG** (canvas → blob)
+- **Reset layout** (re-runa simulação)
+- Indicador: `N nodes · M edges · X clusters`
+
+---
+
+## 7. Seed mínimo para o grafo ter o que mostrar
+
+Como `eb_matches` está com 0 hoje, vou:
+1. Rodar `compute-signals` + `match-batch` (edge functions já existem) **OU**
+2. Inserir seed direto: ~150 matches sintéticos cruzando companies × buyers × theses com scores variados (40–95) para validar visualmente.
+
+Recomendo (2) para teste imediato, depois rodar (1) para dados reais.
+
+---
+
+## 8. Arquivos a criar / editar
+
+### Novos:
+- `src/components/equity-brain/graph/StrategicGraph.tsx` — render principal com react-force-graph-2d
+- `src/components/equity-brain/graph/GraphFilterSidebar.tsx`
+- `src/components/equity-brain/graph/NodeDetailPanel.tsx` (Sheet lateral)
+- `src/components/equity-brain/graph/EdgeDetailPopover.tsx`
+- `src/components/equity-brain/graph/GraphLegend.tsx` (canto inferior esquerdo)
+- `src/lib/equityGraphBuilder.ts` — transforma dados Supabase em `{nodes, edges}`
+- `src/lib/equityGraphScoring.ts` — fórmulas de peso e confidence
+- `src/lib/equityGraphClusters.ts` — detecção de clusters
+
+### Editar:
+- `src/pages/equity-brain/GrafoPage.tsx` — trocar `<DealGraph>` por `<StrategicGraph>`, manter modo apresentação
+- `package.json` — add `react-force-graph-2d` + `d3-force`
+
+### Migration (única, leve):
+- Seed de ~150 `eb_matches` para o grafo nascer "vivo" (scripts INSERT ... SELECT com cruzamento real entre companies/buyers existentes).
+
+### Manter intacto:
+- `DealGraph.tsx` (deletar depois que novo estiver validado, ou manter como `LegacyDealGraph` para fallback)
+- Layout `EquityBrainLayout` e sidebar
+- Rota `/equity-brain/grafo`
+
+---
+
+## 9. Performance
+
+- `react-force-graph-2d` em Canvas: aguenta 1000+ nodes a 60fps.
+- Filtros aplicam memoizados (`useMemo` sobre dataset bruto).
+- Simulação re-roda só quando dataset muda (não em hover).
+- Mobile: continua mostrando tela "apenas desktop" (limite mantido).
+
+---
+
+## 10. Fora de escopo desta entrega (futuro)
+
+- Geração de tese de M&A via IA ao clicar numa edge (placeholder com CTA).
+- Export para PDF / pitch deck.
+- Histórico de snapshots (versionamento do grafo).
+- Salvar layout customizado por usuário.
+
+---
+
+## Resultado esperado
+
+Ao abrir `/equity-brain/grafo` o usuário vê uma **rede orgânica pulsante** — sellers, buyers, teses e ativos flutuando, conectados por linhas coloridas de espessuras variadas, com clusters formando-se naturalmente em "regiões" do canvas. Clicando num node, painel lateral revela conexões, estratégias e top matches. Filtros à esquerda permitem alternar entre "ver tudo" e "só roll-up regional", "só arbitragem de valuation", etc.
+
+**Frase do produto** entregue: deixa de ser um CRM visual hierárquico → vira um **motor de construção de equity** onde cada conexão é uma rota possível de criação de valor.
