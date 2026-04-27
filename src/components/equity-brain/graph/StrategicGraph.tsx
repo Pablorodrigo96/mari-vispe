@@ -297,6 +297,32 @@ export function StrategicGraph() {
     setBuyerFilter(null);
   };
 
+  // ---------- Configurar forças d3 (espaçar nodes) e liberar fixação ao mudar dataset ----------
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || !nodes.length) return;
+
+    // Repulsão forte para espaçar
+    fg.d3Force("charge", forceManyBody().strength(-450).distanceMax(700));
+    // Anti-overlap baseado em raio + folga
+    fg.d3Force(
+      "collide",
+      forceCollide<GraphNode>().radius((n) => getBaseRadius(n) + 14).strength(0.9),
+    );
+    // Distância dos links: links fracos = nodes mais distantes
+    const linkForce: any = fg.d3Force("link");
+    if (linkForce) {
+      linkForce.distance((l: any) => 80 + (1 - (l.weight ?? 0.3)) * 120).strength(0.5);
+    }
+
+    // Liberar fixações antigas (caso filtros tenham mudado o dataset)
+    nodes.forEach((n: any) => {
+      n.fx = undefined;
+      n.fy = undefined;
+    });
+    fg.d3ReheatSimulation();
+  }, [nodes, edges]);
+
   // ---------- Mobile fallback ----------
   if (isMobile) {
     return (
