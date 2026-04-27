@@ -119,3 +119,69 @@ SELECT * FROM cron.job_run_details
     );
   $$);
   ```
+
+---
+
+# Fase 7 — Consumidor de eventos (`process-event` a cada 1 min)
+
+A Fase 7 é event-driven: triggers em `company_signals`, `call_feedback` e
+`buyer_theses` empilham linhas em `equity_brain.events`. O consumidor
+`process-event` deve rodar a cada 1 minuto para drenar a fila e disparar
+recompute incremental de scores e matches só das entidades afetadas.
+
+`feedback-from-call` já dispara `process-event` em fire-and-forget após cada
+call, mas o cron garante que nada fica preso (eventos manuais via SQL,
+falhas de rede, etc.).
+
+## Snippet
+
+Substitua `<SERVICE_ROLE_KEY>` pela `SUPABASE_SERVICE_ROLE_KEY` real:
+
+```sql
+SELECT cron.schedule(
+  'process-events-every-minute',
+  '* * * * *',  -- toda minuto
+  $$
+  SELECT net.http_post(
+    url     := 'https://eiprjgotjruiutztjavp.functions.supabase.co/process-event',
+    headers := '{"Content-Type":"application/json","Authorization":"Bearer <SERVICE_ROLE_KEY>"}'::jsonb,
+    body    := '{}'::jsonb
+  );
+  $$
+);
+```
+
+## Para desativar
+
+```sql
+SELECT cron.unschedule('process-events-every-minute');
+```
+
+## Monitoramento de backlog
+
+```sql
+-- Quantos eventos ainda na fila?
+SELECT count(*) AS unprocessed FROM equity_brain.events WHERE processed_at IS NULL;
+
+-- Distribuição por status
+SELECT processed_status, count(*)
+FROM equity_brain.events
+GROUP BY 1;
+
+-- Erros recentes (a investigar)
+SELECT id, event_type, entity_id, retry_count, error_message, created_at
+FROM equity_brain.events
+WHERE processed_status = 'error'
+ORDER BY created_at DESC LIMIT 20;
+
+-- Eventos que estão presos com retry_count > 0 mas ainda não dropados
+SELECT id, event_type, entity_id, retry_count, error_message
+FROM equity_brain.events
+WHERE processed_at IS NULL AND retry_count > 0
+ORDER BY retry_count DESC LIMIT 20;
+```
+
+**Alerta sugerido**: se `unprocessed > 1000`, algo está travado — investigue
+logs do `process-event`, verifique se `calculate-scores` / `match-company` /
+`match-buyer` estão respondendo.
+
