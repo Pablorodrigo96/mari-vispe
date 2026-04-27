@@ -37,6 +37,7 @@ interface ReservationRow {
     id: string; title: string; category: string;
     city: string | null; state: string | null;
     asking_price: number | null; vdr_readiness: number | null;
+    annual_revenue: number | null; equity_score: number | null;
   } | null;
   interest_count?: number;
 }
