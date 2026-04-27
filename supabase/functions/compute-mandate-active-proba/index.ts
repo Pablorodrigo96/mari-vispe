@@ -132,7 +132,8 @@ serve(async (req) => {
 
     const targetCnpjs = (companies ?? []).map((c: any) => c.cnpj);
     if (targetCnpjs.length === 0) {
-      return new Response(JSON.stringify({ ok: true, processed: 0, results: [] }), {
+      await finishRun("success", 0);
+      return new Response(JSON.stringify({ ok: true, processed: 0, results: [], run_id: runId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
