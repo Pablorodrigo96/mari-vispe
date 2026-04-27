@@ -412,53 +412,8 @@ export function StrategicGraph() {
     fg.d3ReheatSimulation();
   }, [nodes, edges]);
 
-  // ---------- Pulso programado: a cada 10s libera + reaquece levemente ----------
-  useEffect(() => {
-    if (!stabilized) return;
-    let freezeTimer: ReturnType<typeof setTimeout> | null = null;
-    const interval = setInterval(() => {
-      // Não mexer se usuário está interagindo
-      if (hoveredRef.current || selectedRef.current) return;
-      const fg = fgRef.current;
-      if (!fg || !nodes.length) return;
-
-      setRecalculating(true);
-      // Solta os nodes
-      nodes.forEach((n: any) => {
-        n.fx = undefined;
-        n.fy = undefined;
-      });
-      // Reaquece BEM levemente (alpha pequeno)
-      try {
-        (fg as any).d3Force("charge")?.strength?.(-300);
-      } catch {}
-      try {
-        const sim: any = (fg as any).d3ReheatSimulation;
-        sim?.call(fg);
-      } catch {}
-
-      // Após ~900ms congela de novo
-      freezeTimer = setTimeout(() => {
-        nodes.forEach((n: any) => {
-          if (Number.isFinite(n.x) && Number.isFinite(n.y)) {
-            n.fx = n.x;
-            n.fy = n.y;
-          }
-        });
-        // Restaura charge forte para o próximo ciclo
-        try {
-          const chargeStrength = -900 - Math.min(600, nodes.length * 3);
-          (fg as any).d3Force("charge")?.strength?.(chargeStrength);
-        } catch {}
-        setRecalculating(false);
-      }, 900);
-    }, 10000);
-
-    return () => {
-      clearInterval(interval);
-      if (freezeTimer) clearTimeout(freezeTimer);
-    };
-  }, [stabilized, nodes]);
+  // ---------- Pulso de movimento removido: o grafo permanece congelado após estabilizar.
+  // Toda sensação de "vida" é puramente visual (glow, partículas, anéis HUD). ----------
 
   // ---------- Mobile fallback ----------
   if (isMobile) {
