@@ -49,6 +49,18 @@ import CapitalByCity from "./pages/CapitalByCity";
 import PortfolioPotential from "./pages/PortfolioPotential";
 import PartnerDashboard from "./pages/PartnerDashboard";
 
+// Equity Brain (cockpit interno)
+import { RequireRole } from "@/components/auth/RequireRole";
+import { EquityBrainLayout } from "@/components/equity-brain/EquityBrainLayout";
+import EBDashboardPage from "./pages/equity-brain/DashboardPage";
+import EBOportunidadesPage from "./pages/equity-brain/OportunidadesPage";
+import EBBuyersPage from "./pages/equity-brain/BuyersPage";
+import EBTesesPage from "./pages/equity-brain/TesesPage";
+import EBCallsPage from "./pages/equity-brain/CallsPage";
+import EBDealDetailPage from "./pages/equity-brain/DealDetailPage";
+import EBMapaPage from "./pages/equity-brain/MapaPage";
+import EBGrafoPage from "./pages/equity-brain/GrafoPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -105,6 +117,25 @@ const App = () => (
             <Route path="/capital/setor/:slug" element={<CapitalBySegment />} />
             <Route path="/capital/cidade/:slug" element={<CapitalByCity />} />
             
+            {/* Equity Brain — cockpit M&A interno */}
+            <Route
+              path="/equity-brain"
+              element={
+                <RequireRole roles={["admin", "advisor"]}>
+                  <EquityBrainLayout />
+                </RequireRole>
+              }
+            >
+              <Route index               element={<EBDashboardPage />} />
+              <Route path="oportunidades" element={<EBOportunidadesPage />} />
+              <Route path="mapa"          element={<EBMapaPage />} />
+              <Route path="grafo"         element={<EBGrafoPage />} />
+              <Route path="buyers"        element={<EBBuyersPage />} />
+              <Route path="teses"         element={<EBTesesPage />} />
+              <Route path="calls"         element={<EBCallsPage />} />
+              <Route path="empresa/:cnpj" element={<EBDealDetailPage />} />
+            </Route>
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
