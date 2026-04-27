@@ -63,7 +63,7 @@ export const RF_MUNICIPIOS: Record<string, string> = {
   "3849": "Salvador", "3413": "Camaçari", "3515": "Feira de Santana", "3597": "Itabuna",
   "3629": "Itapetinga", "3807": "Porto Seguro", "3901": "Senhor do Bonfim", "3965": "Vitória da Conquista",
   "3669": "Juazeiro", "3721": "Mata de São João", "3781": "Paulo Afonso", "3651": "Jacobina",
-  "3663": "Jeremoabo", "3661": "Jequié", "3573": "Ilhéus", "3901": "Senhor do Bonfim",
+  "3663": "Jeremoabo", "3661": "Jequié", "3573": "Ilhéus",
 
   // CEARA (CE)
   "1389": "Fortaleza", "1373": "Caucaia", "1585": "Maracanaú", "1447": "Juazeiro do Norte",
