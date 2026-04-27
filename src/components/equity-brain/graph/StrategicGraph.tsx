@@ -583,8 +583,6 @@ export function StrategicGraph() {
           });
           // Enquadrar todo o grafo já parado
           fgRef.current?.zoomToFit(500, 80);
-          // Pausar a animação completamente — sem mais ticks visuais
-          try { (fgRef.current as any)?.pauseAnimation?.(); } catch {}
           setStabilized(true);
           setRecalculating(false);
         }}
