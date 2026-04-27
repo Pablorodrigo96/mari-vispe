@@ -1,24 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Building2, Target, Flame, PhoneCall, Sheet as SheetIcon } from "lucide-react";
+import { Building2, Target, Flame, PhoneCall, Sheet as SheetIcon, Download } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useVertical } from "@/hooks/useVertical";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { EBFunnel } from "@/components/equity-brain/EBFunnel";
 import { DealCard } from "@/components/equity-brain/DealCard";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { formatNumber, relativeTime, eventIcon, scoreColor } from "@/lib/equityBrain";
+import { rowsToCsv, downloadCsv } from "@/lib/exportCsv";
 import { cn } from "@/lib/utils";
 
 const REFRESH_MS = 60_000;
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { cnaeFilter, isIsp } = useVertical();
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const kpis = useQuery({
-    queryKey: ["eb", "dashboard-kpis"],
+    queryKey: ["eb", "dashboard-kpis", cnaeFilter.join(",")],
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
       const [companies, scored, premium, callsWeek] = await Promise.all([
