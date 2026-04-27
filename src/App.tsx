@@ -4,7 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ViewAsProvider } from "@/contexts/ViewAsContext";
+import { ViewAsBanner } from "@/components/layout/ViewAsSwitcher";
 import { CookieConsentBanner } from "@/components/cookies/CookieConsentBanner";
+import Painel from "./pages/Painel";
 import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import Sell from "./pages/Sell";
@@ -60,18 +63,22 @@ import EBCallsPage from "./pages/equity-brain/CallsPage";
 import EBDealDetailPage from "./pages/equity-brain/DealDetailPage";
 import EBMapaPage from "./pages/equity-brain/MapaPage";
 import EBGrafoPage from "./pages/equity-brain/GrafoPage";
+import EBBoardPage from "./pages/equity-brain/BoardPage";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <ViewAsProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ViewAsBanner />
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/painel" element={<Painel />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/mapa" element={<MapView />} />
             <Route path="/sell" element={<Sell />} />
@@ -134,6 +141,7 @@ const App = () => (
               <Route path="teses"         element={<EBTesesPage />} />
               <Route path="calls"         element={<EBCallsPage />} />
               <Route path="empresa/:cnpj" element={<EBDealDetailPage />} />
+              <Route path="board"         element={<EBBoardPage />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
@@ -142,6 +150,7 @@ const App = () => (
           <CookieConsentBanner />
         </BrowserRouter>
       </TooltipProvider>
+      </ViewAsProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
