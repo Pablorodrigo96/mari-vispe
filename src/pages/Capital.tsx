@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Header } from '@/components/layout/Header';
+import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { Footer } from '@/components/layout/Footer';
 import { CapitalSimulator } from '@/components/capital/CapitalSimulator';
 import { CapitalSocialProof } from '@/components/capital/CapitalSocialProof';

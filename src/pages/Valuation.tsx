@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Header } from '@/components/layout/Header';
+import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { ValuationTypeSelector } from '@/components/valuation/ValuationTypeSelector';
 import { ValuationWhySection } from '@/components/valuation/ValuationWhySection';
 import { ValuationHowItWorks } from '@/components/valuation/ValuationHowItWorks';

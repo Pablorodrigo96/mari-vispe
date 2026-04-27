@@ -1,4 +1,4 @@
-import { Header } from '@/components/layout/Header';
+import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { Footer } from '@/components/layout/Footer';
 import { MatchingHero } from '@/components/matching/MatchingHero';
 import { CompanySearchCard } from '@/components/matching/CompanySearchCard';
