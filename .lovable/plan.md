@@ -1,44 +1,70 @@
-Vou corrigir o comportamento do grafo para priorizar uso analítico: nós parados, clique fácil e conexões filtradas automaticamente ao selecionar um nó.
+Vou atacar os dois pontos na origem: o movimento contínuo do canvas e o bug de comparação de IDs que faz o painel lateral mostrar 0 conexões.
+
+## Diagnóstico encontrado
+
+1. **A vibração não vem mais de um “pulso físico” de 10 segundos**, mas ainda existe movimento visual contínuo em duas partes:
+   - `pulse` com `requestAnimationFrame` atualizando a cada ~33ms.
+   - partículas direcionais nas conexões (`linkDirectionalParticles`) durante foco/hover.
+
+2. **O painel lateral provavelmente mostra “0 conexões” por incompatibilidade de formato de edge**:
+   - Depois que o `react-force-graph-2d` processa o grafo, `edge.source` e `edge.target` podem deixar de ser strings e virar objetos de node.
+   - O `NodeDetailPanel` compara hoje `e.source === node.id || e.target === node.id`, então quando `source/target` viram objetos, a comparação falha e aparece “Nenhuma conexão neste node ainda.”
+
+3. **A simulação ainda pode continuar reagindo após renderização/filtro/seleção**:
+   - O código libera `fx/fy` e chama `d3ReheatSimulation()` quando o dataset muda.
+   - O congelamento acontece no `onEngineStop`, mas se o grafo é reaquecido ou se o engine demora a parar, os nós seguem se mexendo.
 
 ## O que será implementado
 
-1. **Parar o movimento frenético de vez**
-   - Remover o pulso físico de 10 segundos que hoje solta os nós e reaquece a simulação.
-   - Trocar esse efeito por um “pulso visual” apenas: brilho, partículas e HUD continuam dando sensação de IA viva, mas sem mover as bolinhas.
-   - Após o primeiro layout estabilizar, todos os nós serão fixados com `fx/fy` e a simulação será parada explicitamente.
+1. **Modo totalmente estático para análise**
+   - Remover o `requestAnimationFrame` que atualiza `pulse` continuamente.
+   - Substituir brilhos “respirando” por halos estáticos, sem animação frame a frame.
+   - Desativar partículas móveis nas conexões por padrão; em foco/hover, usar linhas luminosas estáticas em vez de partículas correndo.
 
-2. **Modo foco automático ao selecionar um nó**
-   - Ao clicar em qualquer nó, o grafo entrará em modo de foco.
-   - Todas as conexões que não pertencem ao nó selecionado ficarão ocultas.
-   - Apenas os links do nó selecionado serão exibidos, com destaque nos mais fortes.
-   - Os nós sem relação direta serão escurecidos para reduzir poluição visual.
+2. **Congelamento agressivo e imediato dos nós**
+   - Manter a simulação apenas para calcular o layout inicial.
+   - Após alguns ticks/engine stop, fixar todos os nós com `fx/fy`.
+   - Chamar `pauseAnimation()`/interromper o engine quando possível para impedir drift residual.
+   - Ao selecionar ou focar um nó, reforçar novamente o freeze antes de centralizar a câmera.
 
-3. **Mostrar só os links mais relevantes**
-   - Para evitar travamento e poluição visual, o modo foco exibirá apenas as conexões mais fortes do nó selecionado.
-   - Critério proposto: top 12 conexões por peso, priorizando `weight >= 0.55`; se houver poucas, mostra as melhores disponíveis.
-   - Links fortes terão brilho/partículas discretas; links mais fracos ficam ocultos nesse modo.
+3. **Corrigir o painel lateral de conexões**
+   - Criar helper seguro para extrair ID de endpoint:
+     - se `source/target` for string, usa string;
+     - se for objeto, usa `.id`.
+   - Usar esse helper em `NodeDetailPanel` para:
+     - calcular `directEdges`;
+     - encontrar vizinhos;
+     - trocar seleção ao clicar numa conexão.
+   - Isso deve fazer o painel exibir corretamente conexões, estratégias, top 5 e explicações.
 
-4. **Melhorar usabilidade de clique**
-   - Aumentar ainda mais a área invisível de clique dos nós.
-   - Ao selecionar, centralizar o nó sem aplicar zoom agressivo.
-   - Adicionar um pequeno badge/controle no topo: “Modo foco ativo: X conexões fortes”, com botão para limpar foco.
+4. **Foco limpo no grafo ao selecionar um nó**
+   - Manter o modo foco, mas garantir que apenas as top conexões do nó selecionado sejam visíveis.
+   - Ocultar completamente edges não relacionadas, não apenas reduzir opacidade.
+   - Diminuir nós sem relação direta para leitura mais limpa.
 
-5. **Manter visual tecnológico sem sacrificar performance**
-   - Preservar o visual Jarvis/IA: fundo HUD, glow, anéis e partículas.
-   - Remover efeitos baseados em movimento físico contínuo.
-   - Renderizar partículas somente em conexões fortes do nó selecionado ou hovered.
+5. **Design tecnológico sem movimento que atrapalha**
+   - Preservar o visual “Jarvis/IA” com fundo HUD, grid, halos, cores neon e anéis.
+   - Remover qualquer efeito que pareça “estrelas se mexendo” ou “água viva”.
+   - Usar destaque visual estático no hover/seleção: glow, borda, linha neon e label.
 
 ## Arquivos que serão alterados
 
 - `src/components/equity-brain/graph/StrategicGraph.tsx`
-  - Ajustar simulação, congelamento, seleção, renderização de links e estado de foco.
+  - Remover animação contínua e partículas móveis.
+  - Forçar freeze/pause do motor físico.
+  - Melhorar visibilidade/ocultação das conexões em foco.
+
+- `src/components/equity-brain/graph/NodeDetailPanel.tsx`
+  - Corrigir comparação de conexões quando `source/target` são objetos.
+  - Garantir que a lateral mostre as conexões reais do nó selecionado.
 
 - `src/components/equity-brain/graph/GraphLegend.tsx`
-  - Atualizar a legenda para explicar que o grafo fica congelado e que as conexões aparecem por foco/hover.
+  - Ajustar textos para explicar que o grafo é estático e que conexões aparecem por seleção/hover.
 
 ## Resultado esperado
 
-- O grafo deixa de se mover freneticamente.
-- Você consegue clicar nos nós com precisão.
-- Ao selecionar uma empresa/comprador/tese, o gráfico limpa automaticamente o excesso e mostra apenas as relações mais fortes daquele nó.
-- A experiência continua visualmente impactante, mas fica realmente utilizável para análise.
+- As bolinhas ficam paradas, sem vibração contínua.
+- As conexões não ficam animando como estrelas.
+- Clicar em um nó fica mais fácil e previsível.
+- Ao selecionar um nó, o grafo mostra só as conexões relevantes dele.
+- A lateral passa a listar as conexões, estratégias e top matches corretamente.

@@ -97,21 +97,10 @@ export function StrategicGraph() {
     };
   }, []);
 
-  // ---------- Pulse animation tick (30fps p/ economizar) ----------
-  useEffect(() => {
-    if (isMobile) return;
-    let raf: number;
-    let last = 0;
-    const tick = (t: number) => {
-      if (t - last > 33) {
-        setPulse((p) => (p + 0.06) % (Math.PI * 2));
-        last = t;
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [isMobile]);
+  // ---------- Pulso visual ESTÁTICO ----------
+  // Removido o requestAnimationFrame contínuo que causava vibração visual.
+  // pulse fica em valor fixo; halos/glow agora são estáticos.
+  // (mantido para compatibilidade com o canvas painter)
 
   // Degree map (preenchido após edges existirem) — ref mutável p/ getBaseRadius
   const degreeMapRef = useRef<Map<string, number>>(new Map());
@@ -376,7 +365,8 @@ export function StrategicGraph() {
     setBuyerFilter(null);
   };
 
-  // ---------- Configurar forças d3 (espaçar nodes) e liberar fixação ao mudar dataset ----------
+  // ---------- Configurar forças d3 (espaçar nodes) ----------
+  // Só roda 1x quando o dataset muda. Logo após o engine parar, congelamos os nós.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || !nodes.length) return;
@@ -410,6 +400,21 @@ export function StrategicGraph() {
       n.fy = undefined;
     });
     fg.d3ReheatSimulation();
+
+    // Hard freeze de segurança após 4s — caso o engine não pare sozinho
+    const safety = window.setTimeout(() => {
+      try {
+        nodes.forEach((n: any) => {
+          if (Number.isFinite(n.x) && Number.isFinite(n.y)) {
+            n.fx = n.x;
+            n.fy = n.y;
+          }
+        });
+        (fgRef.current as any)?.pauseAnimation?.();
+        setStabilized(true);
+      } catch {}
+    }, 4000);
+    return () => window.clearTimeout(safety);
   }, [nodes, edges]);
 
   // ---------- Pulso de movimento removido: o grafo permanece congelado após estabilizar.
@@ -578,27 +583,17 @@ export function StrategicGraph() {
           });
           // Enquadrar todo o grafo já parado
           fgRef.current?.zoomToFit(500, 80);
+          // Pausar a animação completamente — sem mais ticks visuais
+          try { (fgRef.current as any)?.pauseAnimation?.(); } catch {}
           setStabilized(true);
           setRecalculating(false);
         }}
         enableNodeDrag={false}
         linkCurvature={(l: any) => 0.18 + (l.weight ?? 0) * 0.1}
-        linkDirectionalParticles={(l: any) => {
-          // Modo foco (selecionado): partículas só nas top-N
-          if (focusedEdgeIds) {
-            return focusedEdgeIds.has(edgeKey(l)) ? (l.weight >= 0.7 ? 3 : 2) : 0;
-          }
-          // Hover sem seleção: partículas em links que tocam o hover
-          if (hoveredNodeId) {
-            const sId = l.source.id ?? l.source;
-            const tId = l.target.id ?? l.target;
-            if (sId !== hoveredNodeId && tId !== hoveredNodeId) return 0;
-            return l.weight >= 0.7 ? 3 : l.weight >= 0.5 ? 2 : 0;
-          }
-          return 0;
-        }}
-        linkDirectionalParticleWidth={(l: any) => 1.5 + (l.weight ?? 0) * 1.8}
-        linkDirectionalParticleSpeed={() => 0.006}
+        // Partículas móveis DESATIVADAS — causavam efeito "estrelas vibrando"
+        linkDirectionalParticles={() => 0}
+        linkDirectionalParticleWidth={() => 0}
+        linkDirectionalParticleSpeed={() => 0}
         linkDirectionalParticleColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#52525b"}
         linkWidth={(l: any) => {
           const sId = l.source.id ?? l.source;

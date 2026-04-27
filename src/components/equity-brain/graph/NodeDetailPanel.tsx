@@ -25,10 +25,18 @@ interface Props {
 export function NodeDetailPanel({ node, allNodes, allEdges, onClose, onFocus, onSelectNode }: Props) {
   if (!node) return null;
 
-  const directEdges = allEdges.filter((e) => e.source === node.id || e.target === node.id);
+  // react-force-graph muta source/target para virar objetos node — extrair id de forma segura
+  const endpointId = (v: any): string =>
+    typeof v === "string" ? v : v?.id ?? String(v ?? "");
+
+  const directEdges = allEdges.filter(
+    (e) => endpointId(e.source) === node.id || endpointId(e.target) === node.id,
+  );
   const directNeighbors = directEdges
     .map((e) => {
-      const otherId = e.source === node.id ? e.target : e.source;
+      const sId = endpointId(e.source);
+      const tId = endpointId(e.target);
+      const otherId = sId === node.id ? tId : sId;
       const other = allNodes.find((n) => n.id === otherId);
       return other ? { node: other, edge: e } : null;
     })
