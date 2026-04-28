@@ -13,6 +13,8 @@ import { BackfillHistoryCard } from "@/components/equity-brain/BackfillHistoryCa
 import { EventQueueHealthCard } from "@/components/equity-brain/EventQueueHealthCard";
 import { SellerIntentMonitorCard } from "@/components/equity-brain/SellerIntentMonitorCard";
 import { SemanticEmbeddingsCard } from "@/components/equity-brain/SemanticEmbeddingsCard";
+import { MarketWavesCard } from "@/components/equity-brain/MarketWavesCard";
+import { MatchExplainabilityCard } from "@/components/equity-brain/MatchExplainabilityCard";
 
 type MatchRow = MatchDecisionRow;
 
@@ -192,7 +194,9 @@ export default function EBShadowPage() {
           <TabsTrigger value="health"><Activity className="h-4 w-4 mr-1" />Saúde</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="summary" className="mt-4">
+        <TabsContent value="summary" className="mt-4 space-y-4">
+          <MatchExplainabilityCard />
+          <MarketWavesCard />
           <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-800">
             <CardHeader><CardTitle className="text-base text-foreground">Top 30 matches v2 por score</CardTitle></CardHeader>
             <CardContent>

@@ -66,6 +66,7 @@ function computeFeatures(
   mandateProba: number,
   sigNumeric: Map<string, number>,
   semanticFit: number,
+  wavePressure: number,
 ) {
   // Setor
   let setor = 0;
@@ -136,7 +137,7 @@ function computeFeatures(
 
   // Etapa 2 (Oráculo v3): semantic_fit substitui placeholder sinergia_movel.
   // 0.5 quando algum lado não tem embedding (preserva neutralidade).
-  const sinergia_movel = semanticFit;
+  const semantic_fit = semanticFit;
 
   // Horizonte (Etapa 1.5): empresas com tempo_atividade >= 8 anos têm horizonte mais maduro
   const tempoForHorizonte = sigNumeric.get("tempo_atividade_anos") ?? null;
@@ -148,10 +149,16 @@ function computeFeatures(
   // NOVA FEATURE Etapa 1.5: seller_intent — sinal direto da empresa querer/precisar vender
   const seller_intent = sigNumeric.get("seller_intent_score") ?? 0.3;
 
+  // NOVA FEATURE Etapa 3: wave_pressure — tensão estrutural da célula (setor, UF) da empresa
+  // Quando a célula tem alta concentração de sellers + alta densidade de demanda compatível,
+  // o match recebe um boost — sinal de que estamos numa janela de "onda" de mercado.
+  const wave_pressure = wavePressure;
+
   return {
     setor, geografia, densidade_local, tamanho, timing, financeiro, tese, recorrencia,
     cross_sell, governanca, sponsor_age, vertical_fit, marca_regional, vagas_medicina,
-    contratos_longos, verticalizacao, regulatorio, sinergia_movel, horizonte, seller_intent,
+    contratos_longos, verticalizacao, regulatorio, semantic_fit, horizonte, seller_intent,
+    wave_pressure,
   };
 }
 
@@ -341,6 +348,14 @@ serve(async (req) => {
     const buyerEmbByBuyer = new Map<string, number[] | null>();
     for (const b of buyers ?? []) buyerEmbByBuyer.set(b.id, parseEmbedding((b as any).embedding));
 
+    // Etapa 3: carrega market_waves para boost por (setor, uf)
+    const { data: wavesData } = await supabase.schema("equity_brain" as any)
+      .from("market_waves").select("setor, uf, wave_score");
+    const waveByCell = new Map<string, number>();
+    for (const w of wavesData ?? []) {
+      waveByCell.set(`${w.setor}::${w.uf}`, Number(w.wave_score ?? 0));
+    }
+
     const newMatches: any[] = [];
 
     for (const company of companies) {
@@ -348,22 +363,24 @@ serve(async (req) => {
       const sigNumeric = numericByCnpj.get(company.cnpj) ?? new Map<string, number>();
       const mandateProba = mandateByCnpj.get(company.cnpj) ?? 0.04;
       const companyEmb = parseEmbedding((company as any).embedding);
+      // Etapa 3: wave pressure da célula da empresa
+      const wavePressure = waveByCell.get(`${company.setor_ma}::${company.uf}`) ?? 0;
 
       for (const buyer of buyers ?? []) {
         const archetype = buyer.archetype_id;
         const archetypeData = archetype ? archetypeIdx.get(archetype) : null;
         const buyerEmb = buyerEmbByBuyer.get(buyer.id) ?? null;
         const semanticFit = (companyEmb && buyerEmb) ? cosineSimilarity(companyEmb, buyerEmb) : 0.5;
-        const features = computeFeatures(company, buyer, sigSet, mandateProba, sigNumeric, semanticFit);
+        const features = computeFeatures(company, buyer, sigSet, mandateProba, sigNumeric, semanticFit, wavePressure);
         const hard = applyHardFilters(company, buyer, archetype, features);
 
         if (hard.excluded) continue;
 
         // Mistura pesos: arquétipo × revealed thetas
-        // Etapas 1.5 + 2: incluímos seller_intent (0.10) e sinergia_movel/semantic (0.05) nos defaults.
+        // Etapas 1.5 + 2 + 3: seller_intent (0.10), semantic_fit (0.05), wave_pressure (0.05).
         // O blend normaliza no final, então a soma não precisa ser 1.0.
         const baseDefaults = archetypeData?.default_weights ?? { setor: 0.3, geografia: 0.2, tese: 0.2, tamanho: 0.15, financeiro: 0.15 };
-        const defaults = { ...baseDefaults, seller_intent: 0.10, sinergia_movel: 0.05 };
+        const defaults = { ...baseDefaults, seller_intent: 0.10, semantic_fit: 0.05, wave_pressure: 0.05 };
         const revealed = revealedByBuyer.get(buyer.id) ?? {};
         const weights = blendWeights(defaults, revealed);
 
