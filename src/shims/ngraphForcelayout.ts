@@ -1,18 +1,39 @@
 /**
- * Browser-safe ESM shim for three-forcegraph's optional ngraph engine.
+ * Browser-safe ESM shim for ngraph.forcelayout.
  *
- * The Jarvis graph uses the default D3 force engine. three-forcegraph still
- * imports ngraph.forcelayout at module evaluation time, but that package is
- * CommonJS-only and Vite can serve it raw in dev, causing a missing default
- * export SyntaxError before the app renders. This shim satisfies the static
- * import without pulling the optional engine into the browser bundle.
+ * three-forcegraph faz import estático de `ngraph.forcelayout` em module
+ * evaluation time, mas o pacote é CommonJS-only e quebra o ESM do Vite.
+ * Como usamos forceEngine="d3" (default), o engine ngraph nunca é usado de
+ * fato — o shim só precisa existir e ser chamável sem explodir.
+ *
+ * IMPORTANTE: NÃO joga erro. Retorna um layout no-op com a mesma shape mínima
+ * que three-forcegraph espera, caso por acidente seja chamado.
  */
-const createLayout = () => {
-  throw new Error("ngraph force engine is disabled; use the D3 force engine.");
-};
 
-(createLayout as typeof createLayout & { simulator?: () => never }).simulator = () => {
-  throw new Error("ngraph force engine is disabled; use the D3 force engine.");
-};
+const ZERO = { x: 0, y: 0, z: 0 };
+const ZERO_LINK = { from: ZERO, to: ZERO };
+
+function createNoopLayout(graph?: any) {
+  return {
+    step: () => true, // true = stable
+    getNodePosition: () => ZERO,
+    getLinkPosition: () => ZERO_LINK,
+    setNodePosition: () => {},
+    pinNode: () => {},
+    isNodePinned: () => false,
+    dispose: () => {},
+    graph:
+      graph ?? {
+        getLink: () => null,
+        forEachNode: () => {},
+        forEachLink: () => {},
+      },
+    simulator: { settings: {} },
+  };
+}
+
+const createLayout = (graph?: any) => createNoopLayout(graph);
+
+(createLayout as any).simulator = () => ({ settings: {} });
 
 export default createLayout;
