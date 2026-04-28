@@ -103,19 +103,31 @@ function computeFeatures(
   // Vertical fit (SaaS vertical specialists)
   const vertical_fit = setor;
 
-  // Marca regional / vagas medicina / contratos longos / verticalizacao / regulatorio / sinergia_movel — placeholders
+  // Placeholders restantes (não há substituto fiel ainda — manter constante para não injetar ruído)
   const marca_regional = 0.5;
   const vagas_medicina = sigSet.has("possui_vagas_medicina") ? 1.0 : 0.0;
   const contratos_longos = sigSet.has("contratos_longo_prazo") ? 1.0 : 0.4;
   const verticalizacao = 0.5;
   const regulatorio = 0.5;
-  const sinergia_movel = 0.5;
-  const horizonte = 0.6;
+
+  // Etapa 2 (Oráculo v3): semantic_fit substitui placeholder sinergia_movel.
+  // 0.5 quando algum lado não tem embedding (preserva neutralidade).
+  const sinergia_movel = semanticFit;
+
+  // Horizonte (Etapa 1.5): empresas com tempo_atividade >= 8 anos têm horizonte mais maduro
+  const tempoForHorizonte = sigNumeric.get("tempo_atividade_anos") ?? null;
+  const horizonte = tempoForHorizonte === null ? 0.6
+    : tempoForHorizonte >= 8 ? 0.85
+    : tempoForHorizonte >= 4 ? 0.6
+    : 0.35;
+
+  // NOVA FEATURE Etapa 1.5: seller_intent — sinal direto da empresa querer/precisar vender
+  const seller_intent = sigNumeric.get("seller_intent_score") ?? 0.3;
 
   return {
     setor, geografia, densidade_local, tamanho, timing, financeiro, tese, recorrencia,
     cross_sell, governanca, sponsor_age, vertical_fit, marca_regional, vagas_medicina,
-    contratos_longos, verticalizacao, regulatorio, sinergia_movel, horizonte,
+    contratos_longos, verticalizacao, regulatorio, sinergia_movel, horizonte, seller_intent,
   };
 }
 
