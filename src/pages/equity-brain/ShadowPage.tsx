@@ -12,6 +12,7 @@ import { DriftAnalyticsCard } from "@/components/equity-brain/DriftAnalyticsCard
 import { BackfillHistoryCard } from "@/components/equity-brain/BackfillHistoryCard";
 import { EventQueueHealthCard } from "@/components/equity-brain/EventQueueHealthCard";
 import { SellerIntentMonitorCard } from "@/components/equity-brain/SellerIntentMonitorCard";
+import { SemanticEmbeddingsCard } from "@/components/equity-brain/SemanticEmbeddingsCard";
 
 type MatchRow = MatchDecisionRow;
 
@@ -427,6 +428,7 @@ export default function EBShadowPage() {
         <TabsContent value="health" className="mt-4">
           <div className="space-y-4">
             <SellerIntentMonitorCard />
+            <SemanticEmbeddingsCard />
             <EventQueueHealthCard />
             <EngineHealthCard />
             <BackfillHistoryCard />

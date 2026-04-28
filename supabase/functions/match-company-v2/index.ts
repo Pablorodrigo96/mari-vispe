@@ -31,7 +31,42 @@ const PORTE_ORDER = ["ME", "EPP", "MEDIA", "GRANDE"];
 
 function sigmoid(x: number) { return 1 / (1 + Math.exp(-x)); }
 
-function computeFeatures(company: any, buyer: any, sigSet: Set<string>, mandateProba: number) {
+// Etapa 2: pgvector retorna embedding como string "[0.1,0.2,...]" via PostgREST.
+function parseEmbedding(raw: any): number[] | null {
+  if (!raw) return null;
+  if (Array.isArray(raw)) return raw.map(Number);
+  if (typeof raw === "string") {
+    try {
+      const trimmed = raw.trim().replace(/^\[|\]$/g, "");
+      if (!trimmed) return null;
+      return trimmed.split(",").map(Number);
+    } catch { return null; }
+  }
+  return null;
+}
+
+function cosineSimilarity(a: number[] | null, b: number[] | null): number {
+  if (!a || !b || a.length !== b.length) return 0.5; // neutro quando não há embedding
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  if (denom === 0) return 0.5;
+  // cosine similarity ∈ [-1, 1] — normaliza para [0, 1]
+  return Math.max(0, Math.min(1, (dot / denom + 1) / 2));
+}
+
+// Etapa 1.5 (Oráculo v3): assinatura estendida com sinais numéricos por CNPJ.
+// `numericByCnpj`: Map<cnpj, Map<signal_key, signal_value>> permite ler valores reais
+// (seller_intent_score, sweet_spot_fadiga, tempo_atividade_anos) sem queries extras.
+// `semanticFit`: passado pelo loop principal a partir do cosseno entre embeddings (Etapa 2).
+function computeFeatures(
+  company: any,
+  buyer: any,
+  sigSet: Set<string>,
+  mandateProba: number,
+  sigNumeric: Map<string, number>,
+  semanticFit: number,
+) {
   // Setor
   let setor = 0;
   if (buyer.setores_interesse?.includes(company.setor_ma)) setor = 1.0;
@@ -58,7 +93,8 @@ function computeFeatures(company: any, buyer: any, sigSet: Set<string>, mandateP
   // Timing (= prob mandato ativo)
   const timing = mandateProba;
 
-  // Financeiro (proxy: ticket dentro da faixa do buyer)
+  // Financeiro (Etapa 1.5): combina faixa de ticket COM "fadiga do fundador".
+  // Empresas no sweet spot 8-20a + bom ticket performam melhor em M&A.
   let financeiro = 0.5;
   const fat = Number(company.faturamento_estimado ?? 0);
   if (fat > 0 && buyer.ticket_min && buyer.ticket_max) {
@@ -66,6 +102,12 @@ function computeFeatures(company: any, buyer: any, sigSet: Set<string>, mandateP
     else if (fat >= buyer.ticket_min * 0.6 && fat <= buyer.ticket_max * 1.4) financeiro = 0.6;
     else financeiro = 0.2;
   }
+  // Boost por sweet spot (idade da empresa 8-20a) — sinal forte de janela ideal
+  const sweet = sigNumeric.get("sweet_spot_fadiga") ?? null;
+  if (sweet === 1) financeiro = Math.min(1.0, financeiro + 0.15);
+  // Penalidade leve para empresas muito jovens
+  const tempo = sigNumeric.get("tempo_atividade_anos") ?? null;
+  if (tempo !== null && tempo < 3) financeiro = Math.max(0.1, financeiro - 0.2);
 
   // Tese fit (sinais)
   const tese = sigSet.size >= 3 ? 0.8 : sigSet.size >= 1 ? 0.5 : 0.2;
@@ -85,19 +127,31 @@ function computeFeatures(company: any, buyer: any, sigSet: Set<string>, mandateP
   // Vertical fit (SaaS vertical specialists)
   const vertical_fit = setor;
 
-  // Marca regional / vagas medicina / contratos longos / verticalizacao / regulatorio / sinergia_movel — placeholders
+  // Placeholders restantes (não há substituto fiel ainda — manter constante para não injetar ruído)
   const marca_regional = 0.5;
   const vagas_medicina = sigSet.has("possui_vagas_medicina") ? 1.0 : 0.0;
   const contratos_longos = sigSet.has("contratos_longo_prazo") ? 1.0 : 0.4;
   const verticalizacao = 0.5;
   const regulatorio = 0.5;
-  const sinergia_movel = 0.5;
-  const horizonte = 0.6;
+
+  // Etapa 2 (Oráculo v3): semantic_fit substitui placeholder sinergia_movel.
+  // 0.5 quando algum lado não tem embedding (preserva neutralidade).
+  const sinergia_movel = semanticFit;
+
+  // Horizonte (Etapa 1.5): empresas com tempo_atividade >= 8 anos têm horizonte mais maduro
+  const tempoForHorizonte = sigNumeric.get("tempo_atividade_anos") ?? null;
+  const horizonte = tempoForHorizonte === null ? 0.6
+    : tempoForHorizonte >= 8 ? 0.85
+    : tempoForHorizonte >= 4 ? 0.6
+    : 0.35;
+
+  // NOVA FEATURE Etapa 1.5: seller_intent — sinal direto da empresa querer/precisar vender
+  const seller_intent = sigNumeric.get("seller_intent_score") ?? 0.3;
 
   return {
     setor, geografia, densidade_local, tamanho, timing, financeiro, tese, recorrencia,
     cross_sell, governanca, sponsor_age, vertical_fit, marca_regional, vagas_medicina,
-    contratos_longos, verticalizacao, regulatorio, sinergia_movel, horizonte,
+    contratos_longos, verticalizacao, regulatorio, sinergia_movel, horizonte, seller_intent,
   };
 }
 
@@ -227,9 +281,9 @@ serve(async (req) => {
     }
 
     try {
-    // Carrega dados
+    // Carrega dados (Etapa 2: inclui embedding)
     let cQuery = supabase.schema("equity_brain" as any).from("companies")
-      .select("cnpj, razao_social, uf, municipio, setor_ma, subsetor_ma, porte, situacao_cadastral, faturamento_estimado, ebitda_estimado").limit(limitCompanies);
+      .select("cnpj, razao_social, uf, municipio, setor_ma, subsetor_ma, porte, situacao_cadastral, faturamento_estimado, ebitda_estimado, embedding").limit(limitCompanies);
     if (cnpjs?.length) cQuery = cQuery.in("cnpj", cnpjs);
     const { data: companies, error: cErr } = await cQuery;
     if (cErr) throw cErr;
@@ -238,7 +292,7 @@ serve(async (req) => {
     }
 
     let bQuery = supabase.schema("equity_brain" as any).from("buyers")
-      .select("id, nome, archetype_id, ufs_interesse, setores_interesse, subsetores_interesse, porte_alvo, ticket_min, ticket_max, pause_signal, pe_sponsor_name");
+      .select("id, nome, archetype_id, ufs_interesse, setores_interesse, subsetores_interesse, porte_alvo, ticket_min, ticket_max, pause_signal, pe_sponsor_name, embedding");
     if (buyerIds?.length) bQuery = bQuery.in("id", buyerIds);
     const { data: buyers, error: bErr } = await bQuery;
     if (bErr) throw bErr;
@@ -247,13 +301,17 @@ serve(async (req) => {
     const archetypeIdx = new Map<string, any>();
     (archetypes ?? []).forEach((a: any) => archetypeIdx.set(a.id, a));
 
+    // Etapa 1.5: agora puxa também signal_value (para seller_intent_score, sweet_spot_fadiga, tempo_atividade_anos)
     const { data: signals } = await supabase.schema("equity_brain" as any)
-      .from("company_signals").select("cnpj, signal_key, p_true").in("cnpj", companies.map((c:any)=>c.cnpj));
+      .from("company_signals").select("cnpj, signal_key, signal_value, p_true").in("cnpj", companies.map((c:any)=>c.cnpj));
     const sigByCnpj = new Map<string, Set<string>>();
+    const numericByCnpj = new Map<string, Map<string, number>>();
     const mandateByCnpj = new Map<string, number>();
     for (const s of signals ?? []) {
       if (!sigByCnpj.has(s.cnpj)) sigByCnpj.set(s.cnpj, new Set());
       sigByCnpj.get(s.cnpj)!.add(s.signal_key);
+      if (!numericByCnpj.has(s.cnpj)) numericByCnpj.set(s.cnpj, new Map());
+      if (s.signal_value != null) numericByCnpj.get(s.cnpj)!.set(s.signal_key, Number(s.signal_value));
       if (s.signal_key === "mandate_active_proba_v2" && s.p_true != null) {
         mandateByCnpj.set(s.cnpj, Number(s.p_true));
       }
@@ -279,22 +337,33 @@ serve(async (req) => {
     const maScoreByCnpj = new Map<string, number>();
     for (const s of scoresRows ?? []) maScoreByCnpj.set(s.cnpj, Number(s.ma_score ?? 0));
 
+    // Etapa 2: pré-parse de embeddings buyers (uma vez)
+    const buyerEmbByBuyer = new Map<string, number[] | null>();
+    for (const b of buyers ?? []) buyerEmbByBuyer.set(b.id, parseEmbedding((b as any).embedding));
+
     const newMatches: any[] = [];
 
     for (const company of companies) {
       const sigSet = sigByCnpj.get(company.cnpj) ?? new Set<string>();
+      const sigNumeric = numericByCnpj.get(company.cnpj) ?? new Map<string, number>();
       const mandateProba = mandateByCnpj.get(company.cnpj) ?? 0.04;
+      const companyEmb = parseEmbedding((company as any).embedding);
 
       for (const buyer of buyers ?? []) {
         const archetype = buyer.archetype_id;
         const archetypeData = archetype ? archetypeIdx.get(archetype) : null;
-        const features = computeFeatures(company, buyer, sigSet, mandateProba);
+        const buyerEmb = buyerEmbByBuyer.get(buyer.id) ?? null;
+        const semanticFit = (companyEmb && buyerEmb) ? cosineSimilarity(companyEmb, buyerEmb) : 0.5;
+        const features = computeFeatures(company, buyer, sigSet, mandateProba, sigNumeric, semanticFit);
         const hard = applyHardFilters(company, buyer, archetype, features);
 
         if (hard.excluded) continue;
 
         // Mistura pesos: arquétipo × revealed thetas
-        const defaults = archetypeData?.default_weights ?? { setor: 0.3, geografia: 0.2, tese: 0.2, tamanho: 0.15, financeiro: 0.15 };
+        // Etapas 1.5 + 2: incluímos seller_intent (0.10) e sinergia_movel/semantic (0.05) nos defaults.
+        // O blend normaliza no final, então a soma não precisa ser 1.0.
+        const baseDefaults = archetypeData?.default_weights ?? { setor: 0.3, geografia: 0.2, tese: 0.2, tamanho: 0.15, financeiro: 0.15 };
+        const defaults = { ...baseDefaults, seller_intent: 0.10, sinergia_movel: 0.05 };
         const revealed = revealedByBuyer.get(buyer.id) ?? {};
         const weights = blendWeights(defaults, revealed);
 
