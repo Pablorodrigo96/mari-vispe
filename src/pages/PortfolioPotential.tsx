@@ -106,6 +106,8 @@ export default function PortfolioPotential() {
   }, [portfolio]);
 
   const top5 = portfolio.slice(0, 5);
+  const analysis = useMemo(() => analyzePortfolio(portfolio), [portfolio]);
+  const services: ServiceKey[] = ['cfo', 'ac', 'tributario', 'ma', 'capital'];
 
   const [clients, setClients] = useState<number>(5);
   const effectiveClients = clients || 1;
