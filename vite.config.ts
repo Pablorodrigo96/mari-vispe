@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "ngraph.forcelayout": path.resolve(__dirname, "./src/shims/ngraphForcelayout.ts"),
     },
     dedupe: ["react", "react-dom"],
   },
@@ -26,10 +27,6 @@ export default defineConfig(({ mode }) => ({
       "react/jsx-runtime",
       "reactflow",
       "dagre",
-      "ngraph.forcelayout",
-      "ngraph.events",
-      "ngraph.merge",
-      "ngraph.random",
     ],
     // 3D libs são lazy-loaded apenas em /equity-brain/grafo-jarvis e quebram o
     // pre-bundle do esbuild (Timer / ./webgpu). Excluí-las mantém o resto do
