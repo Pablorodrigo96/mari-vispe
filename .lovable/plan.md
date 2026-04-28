@@ -1,70 +1,90 @@
-# Plano: Conectar TODOS os cadastros ao Equity Brain (Brain + Motor de Matching)
-
 ## Diagnóstico
 
-Auditei o banco e descobri o seguinte:
+Auditei o banco e o front. O problema não é "falta de cadastro" — é **descasamento de fonte de dados + falta de anonimização**:
 
-- ✅ As tabelas-mestre seguem intactas em `public.*` (86 listings, 1 buyer_profile, 29 valuations, etc.). Nada foi deletado.
-- ✅ O schema `equity_brain` tem 86 companies e 105 buyers (importações externas + cópia das 86 listings).
-- ❌ **Os triggers de sincronização foram desanexados** em algum momento. As funções `public.sync_listing_bootstrap_eb()` e `equity_brain.trg_sync_listing_to_eb()` existem, mas **nenhum trigger está apontando para elas em `public.listings`**. Hoje a sincronização só acontece quando alguém chama manualmente a Edge Function `sync-listings-to-equity-brain` (admin only).
-- ❌ Não existe trigger nenhum que copie `public.buyer_profiles`, `public.capital_requests`, `public.valuation_history` ou `public.profiles` para o Brain.
+**1. Os 106 compradores existem, mas em outra base e com outro `status`:**
+- `equity_brain.buyers`: **106 buyers** (`ativo` = 69, `ativo_seletivo` = 37). Nenhum com `status='active'`.
+- `public.buyer_profiles`: apenas **1 buyer** com `status='active'` — é a única fonte que o **mapa público (`/mapa`)**, o **marketplace** e os matches do front consomem hoje.
+- O Brain foi populado com importações estratégicas (Telecom, Saúde, Retail, PE, Family Offices…) usando o vocabulário interno (`ativo`, `ativo_seletivo`), mas **nada disso reflui** para a base que alimenta a UI pública.
 
-**Resultado prático:** novos cadastros feitos por usuários, parceiros, assessores, contadores ou leads NÃO chegam ao Brain em tempo real — só entram se um admin rodar o sync manualmente. Isso explica porque o motor de matching parece "cego" para cadastros recentes.
+**2. No cockpit do Brain (`/equity-brain/mapa`, grafo, jarvis), os buyers existem mas só aparecem com zoom ≥ 7** e **sem filtro por status** — então mesmo lá o catálogo de 106 fica "escondido" até o usuário aproximar muito o mapa.
+
+**3. PII exposta:** hoje qualquer usuário autenticado (e até anônimo) consegue ler `nome`, `cnpj`, `website`, `observacoes` dos buyers via a view `public.eb_buyers` e nomes/CNPJs reais dos sellers em `public.listings`. Não há mascaramento server-side — só formatação cosmética em `maskCnpj` que um usuário pode burlar batendo direto na tabela.
 
 ## O que vou construir
 
-Princípio: **copiar, nunca recortar**. O dado mestre fica em `public.*` (frontend continua usando isso). O Brain recebe um espelho automático em `equity_brain.*` para correlação e matching.
+Princípio: **uma única base mestre (Brain) + views anonimizadas para o front**. Continuamos copiando, nunca recortando.
 
-### 1. Reconectar trigger de listings → companies
-Anexar trigger `AFTER INSERT OR UPDATE` em `public.listings` chamando `public.sync_listing_bootstrap_eb()` (que já existe e roda toda a cascata: upsert company → recalcula signals → recalcula scores). Faz backfill de quaisquer listings que estejam fora de sincronia.
+### 1. Espelhar os 106 buyers do Brain → `public.buyer_profiles` (com anonimização)
 
-### 2. Novo trigger buyer_profiles → equity_brain.buyers
-Criar função `equity_brain.upsert_buyer_from_profile(buyer_profile_id)` que mapeia:
-- `buyer_name/company_name` → `nome`
-- `categories` → `setores_interesse` (via `category_to_setor`)
-- `state` → `ufs_interesse`
-- `city` → `municipios_interesse`
-- `min_budget/max_budget` → `ticket_min/ticket_max`
-- `description` → `observacoes`
-- `source = 'marketplace_buyer_profile'`
-- `status = 'active' | 'paused'` conforme o profile
+- Migration que faz backfill: para cada `equity_brain.buyers` insere/atualiza um `public.buyer_profiles` correspondente, com:
+  - `buyer_name` = pseudônimo determinístico tipo `"Comprador Estratégico #A47"` ou `"Fundo PE #F12"` (gerado a partir do hash do `id` + `tipo`).
+  - `company_name` = NULL (escondido).
+  - `categories` = mapeado de `setores_interesse` para o vocabulário do marketplace (reutiliza `category_to_setor` invertido).
+  - `state/city` = primeira UF/município de interesse (ou NULL).
+  - `min_budget/max_budget` = `ticket_min/ticket_max`.
+  - `description` = texto neutro tipo `"Tese: Telecom/ISP · Ticket R$ 5–30M · Foco SP, MG"`.
+  - `status='active'` (todos os `ativo` e `ativo_seletivo`).
+  - `email/whatsapp` = NULL.
+  - `user_id` = um usuário-bot do sistema (criado se não existir) para satisfazer NOT NULL e RLS.
 
-Anexar trigger `AFTER INSERT OR UPDATE` em `public.buyer_profiles`. Backfill imediato do buyer existente.
+- Trigger `equity_brain.buyers → public.buyer_profiles` (`AFTER INSERT OR UPDATE`) para manter o espelho vivo.
 
-### 3. Novo trigger capital_requests → company_signals
-Toda solicitação de captação vira sinal de "intenção" no Brain:
-- Função `equity_brain.ingest_capital_request(request_id)` que faz upsert em `equity_brain.companies` (gerando CNPJ sintético via `cnpj_for_listing` se necessário) e insere signals (`intencao_captacao`, `porte_atrativo_ma`, `geografia_premium`).
-- Trigger `AFTER INSERT OR UPDATE` em `public.capital_requests`.
+- Resultado: marketplace e mapa público passam a mostrar **todos os 106 compradores anonimizados** automaticamente.
 
-### 4. Novo trigger valuation_history → company_signals
-Cada valuation gerado é evidência de interesse/preparo:
-- Função `equity_brain.ingest_valuation(valuation_id)` que extrai `inputs->>cnpj` ou `inputs->>company_name`, faz upsert em companies e adiciona signal `valuation_realizado` (peso 8) com o múltiplo/valor calculado em `signal_value`.
-- Trigger `AFTER INSERT` em `public.valuation_history`.
+### 2. Anonimização real e centralizada (server-side)
 
-### 5. Trigger profiles/user_roles → buyer/advisor enriquecimento
-Quando um usuário com role `buyer`, `advisor`, `franchisee` ou `seller` for criado/atualizado, registrar metadata mínima no Brain (sem PII) para o motor saber que existe um ator naquela região/setor. Implementação leve: trigger em `public.user_roles` que apenas garante a entrada do `responsavel_id` correto em `equity_brain.buyers` quando role = `buyer`.
+- Criar **view `public.listings_public`** (com `security_invoker=on`) que expõe listings sem PII: esconde `cnpj`, `street`, `neighborhood`, `cep`, `additional_info` e troca `title` por um ticker pseudônimo (`OPP-XXXX`). Ajustar políticas: leitura pública/autenticada **só pela view**; `public.listings.SELECT` permanece, mas o front passa a consumir `listings_public` em todas as telas não-admin.
+- Criar **view `public.buyer_profiles_public`** análoga: expõe só `id, buyer_name (pseudônimo), categories, state, city, min_budget, max_budget, description, status, created_at`. Esconde `email, whatsapp, company_name, user_id`.
+- Criar **view `public.eb_buyers_public`** que substitui o uso atual de `public.eb_buyers` no front: apenas campos não-sensíveis (`id, pseudônimo, tipo, ufs_interesse, ticket_min/max, vertical_principal, status`). A view atual `eb_buyers` passa a exigir admin/advisor.
+- Função SECURITY DEFINER `public.unmask_buyer(buyer_id)` e `public.unmask_listing(listing_id)` que retornam o registro completo **somente se** `has_role(auth.uid(),'admin') OR has_role(auth.uid(),'advisor')`. Usado pelo cockpit do Brain e pelo painel do advisor para ver o nome real quando há match.
 
-### 6. Backfill único
-Após anexar os triggers, rodar uma migration de backfill que invoca:
-- `equity_brain.bootstrap_all_listings()` (já existe)
-- Loop em `buyer_profiles`, `capital_requests` e `valuation_history` para popular tudo que ficou fora.
+### 3. Acesso desmascarado restrito a Vispe (admin + advisor)
 
-### 7. Painel de saúde no Equity Brain (admin)
-Adicionar card no painel admin do Brain mostrando: contagem `public.listings` vs `equity_brain.companies`, `buyer_profiles` vs `eb_buyers`, última sincronização, e botão "Forçar resync" — para nunca mais ter divergência silenciosa.
+- Hoje `BuyersPage`, `JarvisGraph3D`, `StrategicGraph`, `BrasilMap` consultam `eb_buyers` direto. Vou trocar por `eb_buyers_public` por padrão e usar `eb_buyers` (full) só quando `useUserRoles().isAdmin || isAdvisor`.
+- `DealCard` / `MatchDecisionCard` continuam mostrando dados completos, mas só quando o usuário for admin/advisor (já existe o check; vou reforçar).
+- Para sellers/buyers comuns, qualquer card de match exibe pseudônimo + tese + ticket + região, e CTA "Solicitar apresentação via Vispe" (gera notificação para admin) em vez de contato direto.
 
-## Garantias
+### 4. Mostrar buyers no cockpit do Brain desde o zoom inicial
 
-- **Nenhum dado é movido**: triggers fazem `INSERT … ON CONFLICT DO UPDATE` no schema `equity_brain` mantendo o registro original em `public`.
-- **Marketplace e mapa continuam puxando de `public.listings`** (sem mudanças no front).
-- **RLS preservada**: triggers rodam com `SECURITY DEFINER` e não alteram permissões das tabelas públicas.
-- **Idempotente**: backfill pode rodar quantas vezes for necessário.
+- `BrasilMap.tsx`: remover o `zoom >= 7` da query de buyers e renderizar agregado por UF (badge com contagem) nos zooms baixos; pins individuais a partir do zoom 7. Default do toggle "Mostrar buyers" passa a `true` no `MapaPage`.
+- Garantir que o filtro lateral conta corretamente o total ("106 compradores ativos") em vez de aparecer vazio.
+
+### 5. RLS e segurança
+
+- `public.buyer_profiles`: a policy "Public can view active buyer profiles" passa a ser servida pela view anonimizada; a tabela direta exige `auth.uid() = user_id OR has_role(admin) OR has_role(advisor)`.
+- `public.listings`: idem — leitura pública passa pela view; tabela direta restringe a dono/admin/advisor.
+- `equity_brain.buyers`: já é schema interno, vou garantir que não tem grant para `anon`/`authenticated`. Acesso vem só pela view pública mascarada ou pelas funções `unmask_*`.
+
+### 6. Painel admin: card "Sync & Privacidade"
+
+Pequeno card no painel do Brain mostrando:
+- `eb_buyers` total vs `buyer_profiles` espelhados.
+- `listings` vs `listings_public` (sanity check da view).
+- Contador de chamadas a `unmask_*` nas últimas 24h (auditoria).
+- Botão "Forçar resync de buyers".
 
 ## Arquivos previstos
 
-- 1 migration SQL: cria as 4 funções de ingestão novas + 5 triggers + backfill final.
-- `src/components/equity-brain/SyncHealthCard.tsx`: card de saúde no painel admin do Brain.
-- Pequena edição no `EquityBrainAdmin` (ou painel equivalente) para incluir o card.
+- 1 migration SQL: views anonimizadas, função pseudônimo, trigger Brain→buyer_profiles, backfill dos 106, ajustes de RLS, função `unmask_*`.
+- `src/components/equity-brain/BrasilMap.tsx`: remover gate de zoom, trocar fonte para `eb_buyers_public` quando não-admin.
+- `src/pages/equity-brain/MapaPage.tsx`: `showBuyers` default `true`.
+- `src/pages/equity-brain/BuyersPage.tsx`, `JarvisGraph3D.tsx`, `graph/StrategicGraph.tsx`: usar `eb_buyers_public` por padrão; consumir `eb_buyers` (full) só com `isAdmin || isAdvisor`.
+- `src/pages/MapView.tsx`, `Marketplace.tsx`, `ListingCard.tsx`, `BusinessMap.tsx`: trocar `listings` por `listings_public` e `buyer_profiles` por `buyer_profiles_public` em todas as leituras não-admin.
+- `src/lib/equityBrain.ts`: helper `pseudonymFor(id, tipo)` para usar no front quando precisar gerar pseudônimo localmente.
+- `src/components/equity-brain/SyncHealthCard.tsx`: incluir métricas de privacidade.
+
+## Garantias
+
+- **Zero recorte**: a base mestre dos buyers continua sendo `equity_brain.buyers`; `buyer_profiles` recebe espelho.
+- **Anonimização server-side**: nenhum cliente recebe nome/CNPJ/contato sem ser admin ou advisor da Vispe.
+- **Marketplace e mapa voltam a mostrar 106 compradores** (anonimizados) imediatamente após o backfill.
+- **Cockpit do Brain (admin/advisor)** continua vendo tudo, com nomes reais e contatos para fechar match.
 
 ## Pergunta antes de implementar
 
-Posso prosseguir com este plano, ou você quer ajustar a lista de fontes (por exemplo: incluir/excluir `messages`, `interest_logs`, ou tratar `capital_requests` apenas quando lead_score ≥ X)?
+Confirma estes três pontos?
+
+1. **Pseudônimo** dos buyers: prefere `"Comprador Estratégico #A47"` (estilo bolsa, anônimo total) ou `"Grupo Telecom #12 (SP)"` (mostra setor + UF, ainda anônimo)?
+2. **Pseudônimo dos listings** no marketplace público: manter o `ticker` atual quando existir, ou forçar `OPP-XXXX` em tudo?
+3. Além de **admin** e **advisor**, o **franqueado** Vispe da região também pode desmascarar matches da sua praça, ou só admin/advisor mesmo?
