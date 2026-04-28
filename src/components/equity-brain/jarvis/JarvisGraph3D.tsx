@@ -25,6 +25,7 @@ import {
 import { forceCollide, forceManyBody } from "d3-force-3d";
 import SpriteText from "three-spritetext";
 import { useGhostSynapses } from "./useGhostSynapses";
+import { useSolarFlares } from "./useSolarFlares";
 import { useQueries } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -391,6 +392,9 @@ export function JarvisGraph3D() {
 
   // ---------- Sinapses fantasmas (10% dos nós marcados como neurônios) ----------
   useGhostSynapses(fgRef, graphData.nodes, !isLoading && graphData.nodes.length > 0);
+
+  // ---------- Solar flare (explosão solar a cada ~10s) ----------
+  useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2);
 
 
   // ---------- Vizinhos do hovered/selected ----------
