@@ -114,6 +114,42 @@ export function NodeDetailPanel({ node, allNodes, allEdges, onClose, onFocus, on
               {node.uf && <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">{node.uf}</span>}
               {node.municipio && <span className="text-zinc-500 truncate">{node.municipio}</span>}
             </div>
+            <p className="text-[11px] text-zinc-500 leading-relaxed">
+              {NODE_DESCRIPTIONS[node.type]}
+            </p>
+
+            {/* Badges contextuais de papel no grafo */}
+            {(isPotentialConsolidator || isFusionCandidate || isAvailableAddon) && (
+              <div className="flex flex-wrap gap-1.5">
+                {isPotentialConsolidator && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/60 border border-amber-800/60 text-amber-300 font-semibold">
+                    🏛️ Consolidador potencial
+                  </span>
+                )}
+                {isFusionCandidate && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-950/60 border border-yellow-800/60 text-yellow-300 font-semibold">
+                    🔀 Candidato a fusão
+                  </span>
+                )}
+                {isAvailableAddon && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-950/60 border border-blue-800/60 text-blue-300 font-semibold">
+                    🧩 Add-on disponível
+                  </span>
+                )}
+              </div>
+            )}
+
+            {node.type === "thesis" && thesisTargets.length > 0 && (
+              <div className="rounded-md p-2.5 bg-violet-950/40 border border-violet-900/60">
+                <div className="text-[10px] uppercase tracking-wider text-violet-300 font-bold">
+                  🧠 Tese de Investimento
+                </div>
+                <div className="text-[11px] text-zinc-300 mt-0.5">
+                  Atrai <span className="text-violet-200 font-bold">{thesisTargets.length}</span> empresa{thesisTargets.length > 1 ? "s" : ""}-alvo no marketplace.
+                </div>
+              </div>
+            )}
+
             <div className="flex items-end gap-3">
               <div>
                 <div className="text-[9px] uppercase tracking-wider text-zinc-500">Strategic Score</div>
