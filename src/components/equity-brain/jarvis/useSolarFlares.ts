@@ -116,6 +116,7 @@ export function useSolarFlares(
       activeGroup = null;
       activeCoreMat = null;
       activeHaloMat = null;
+      try { onActiveChange?.(false); } catch {}
     };
 
     const fire = () => {
