@@ -13,6 +13,8 @@ import { BackfillHistoryCard } from "@/components/equity-brain/BackfillHistoryCa
 import { EventQueueHealthCard } from "@/components/equity-brain/EventQueueHealthCard";
 import { SellerIntentMonitorCard } from "@/components/equity-brain/SellerIntentMonitorCard";
 import { SemanticEmbeddingsCard } from "@/components/equity-brain/SemanticEmbeddingsCard";
+import { MarketWavesCard } from "@/components/equity-brain/MarketWavesCard";
+import { MatchExplainabilityCard } from "@/components/equity-brain/MatchExplainabilityCard";
 
 type MatchRow = MatchDecisionRow;
 
