@@ -530,11 +530,11 @@ export function JarvisGraph3D() {
       !dimmed &&
       (n.type === "buyer_strategic" || n.type === "platform" || n.type === "strategy")
     ) {
-      const ringGeo = new RingGeometry(radius * 2.2, radius * 2.4, 64);
+      const ringGeo = new RingGeometry(radius * 2.05, radius * 2.2, 64);
       const ringMat = new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: 0.32 * glowFactor,
+        opacity: 0.22 * glowFactor,
         side: DoubleSide,
         blending: AdditiveBlending,
         depthWrite: false,
