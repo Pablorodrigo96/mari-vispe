@@ -16,29 +16,28 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Shim do engine ngraph (CommonJS sem default export) — não usamos, mas
+      // three-forcegraph faz import estático. Ver src/shims/ngraphForcelayout.ts
       "ngraph.forcelayout": path.resolve(__dirname, "./src/shims/ngraphForcelayout.ts"),
     },
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "three"],
   },
   optimizeDeps: {
+    // IMPORTANTE: as libs 3D PRECISAM ser pre-bundled em dev. Sem isso o Vite
+    // serve ~1500 módulos do `three` individualmente e o servidor estoura com
+    // 504 timeouts → tela branca em /equity-brain/grafo-jarvis.
     include: [
       "react",
       "react-dom",
       "react/jsx-runtime",
       "reactflow",
       "dagre",
-    ],
-    // 3D libs são lazy-loaded apenas em /equity-brain/grafo-jarvis e quebram o
-    // pre-bundle do esbuild (Timer / ./webgpu). Excluí-las mantém o resto do
-    // app funcionando no dev — Rollup ainda as resolve corretamente no build.
-    exclude: [
-      "react-force-graph-3d",
-      "three-render-objects",
-      "three-forcegraph",
       "three",
       "three-spritetext",
+      "react-force-graph-3d",
       "d3-force-3d",
     ],
+    exclude: [],
   },
   build: {
     rollupOptions: {
