@@ -348,6 +348,14 @@ serve(async (req) => {
     const buyerEmbByBuyer = new Map<string, number[] | null>();
     for (const b of buyers ?? []) buyerEmbByBuyer.set(b.id, parseEmbedding((b as any).embedding));
 
+    // Etapa 3: carrega market_waves para boost por (setor, uf)
+    const { data: wavesData } = await supabase.schema("equity_brain" as any)
+      .from("market_waves").select("setor, uf, wave_score");
+    const waveByCell = new Map<string, number>();
+    for (const w of wavesData ?? []) {
+      waveByCell.set(`${w.setor}::${w.uf}`, Number(w.wave_score ?? 0));
+    }
+
     const newMatches: any[] = [];
 
     for (const company of companies) {
