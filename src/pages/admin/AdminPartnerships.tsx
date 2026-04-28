@@ -31,6 +31,8 @@ interface PartnerData {
   active_reservations: number;
   exclusive_reservations: number;
   avg_vdr_readiness: number | null;
+  partner_status: PartnerStatus;
+  is_partner_accountant: boolean;
 }
 
 interface Reservation {
