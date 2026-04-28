@@ -9,8 +9,20 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph3D, { type ForceGraphMethods } from "react-force-graph-3d";
-import * as THREE from "three";
+import {
+  Group,
+  Mesh,
+  SphereGeometry,
+  RingGeometry,
+  MeshBasicMaterial,
+  Color,
+  AdditiveBlending,
+  DoubleSide,
+  type Object3D,
+} from "three";
+import { forceCollide, forceManyBody } from "d3-force-3d";
 import SpriteText from "three-spritetext";
+import { useGhostSynapses } from "./useGhostSynapses";
 import { useQueries } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
