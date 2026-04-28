@@ -409,7 +409,11 @@ export function JarvisGraph3D() {
       new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: dimmed ? 0.02 : 0.08 + n.heat * 0.28,
+        opacity: dimmed ? 0.02 : (0.08 + n.heat * 0.28) * glowFactor,
+        blending: AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
         blending: AdditiveBlending,
         depthWrite: false,
       }),
