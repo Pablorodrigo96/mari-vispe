@@ -28,6 +28,49 @@ export interface JarvisNode extends GraphNode {
   showLabel: boolean;
   strategicRole: StrategicRole;
   isNeuron: boolean; // marca visual: dispara sinapses fantasmas
+  displayColor?: string; // sobrescreve NODE_COLORS quando definido (sellers por porte+setor)
+  bigSellerRing?: boolean; // sellers R$50M+ ganham anel orbital dourado
+}
+
+// ---------- Cor de seller por SETOR (matiz) + PORTE (saturação/luminância) ----------
+const SECTOR_HUE: Record<string, number> = {
+  "tech": 160, "saas": 160, "tecnologia": 160, "software": 160,
+  "saude": 175, "saúde": 175, "health": 175, "clinica": 175, "clínica": 175,
+  "industria": 25, "indústria": 25, "manufatura": 25,
+  "varejo": 320, "comercio": 320, "comércio": 320, "retail": 320, "ecommerce": 320, "e-commerce": 320,
+  "servico": 200, "serviço": 200, "servicos": 200, "serviços": 200, "services": 200,
+  "alimenta": 15, "food": 15, "restaurante": 15,
+  "educa": 270, "education": 270, "ensino": 270,
+  "logistica": 45, "logística": 45, "transporte": 45,
+  "telecom": 220, "isp": 220, "telecomunic": 220,
+  "energia": 60, "utilities": 60,
+  "constru": 30, "engenharia": 30,
+  "agro": 100, "agronegocio": 100, "agronegócio": 100, "rural": 100,
+};
+
+function hueForSector(sector?: string | null): number {
+  if (!sector) return 240;
+  const s = sector.toLowerCase();
+  for (const key of Object.keys(SECTOR_HUE)) {
+    if (s.includes(key)) return SECTOR_HUE[key];
+  }
+  return 240;
+}
+
+interface SizeBand { sat: number; lum: number; ring: boolean; }
+function bandFromRevenue(rev?: number | null): SizeBand {
+  const v = Number(rev ?? 0);
+  if (v >= 50_000_000) return { sat: 100, lum: 65, ring: true };
+  if (v >= 10_000_000) return { sat: 90,  lum: 60, ring: false };
+  if (v >= 5_000_000)  return { sat: 80,  lum: 55, ring: false };
+  if (v >= 1_000_000)  return { sat: 65,  lum: 45, ring: false };
+  return { sat: 50, lum: 35, ring: false };
+}
+
+function sellerColor(node: GraphNode): { color: string; ring: boolean } {
+  const hue = hueForSector(node.vertical);
+  const band = bandFromRevenue(node.metadata?.faturamento);
+  return { color: `hsl(${hue}, ${band.sat}%, ${band.lum}%)`, ring: band.ring };
 }
 
 export interface JarvisLink extends GraphEdge {
@@ -151,6 +194,8 @@ export function adaptToJarvisGraph(
     // 10% dos elegíveis (hash estável → mesmo nó sempre é/ou-não neurônio)
     const isNeuron = neuronEligible && hashId(node.id) % 10 === 0;
 
+    const sellerVisual = node.type === "seller" ? sellerColor(node) : null;
+
     return {
       ...node,
       degree,
@@ -161,6 +206,8 @@ export function adaptToJarvisGraph(
       showLabel,
       strategicRole: inferStrategicRole(node),
       isNeuron,
+      displayColor: sellerVisual?.color,
+      bigSellerRing: sellerVisual?.ring ?? false,
     };
   });
 
