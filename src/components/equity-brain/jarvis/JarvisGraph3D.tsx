@@ -627,8 +627,9 @@ export function JarvisGraph3D() {
     const sId = endpointId(link.source);
     const tId = endpointId(link.target);
     const focused = focusId && (sId === focusId || tId === focusId);
-    let base = 0.4 + w * 3;
-    if (isGoldLink(link)) base *= 1.6; // gold mais grosso → sustenta neon
+    // Restaurado para valores "magros" anteriores
+    let base = 0.25 + w * 1.6;
+    if (isGoldLink(link)) base *= 1.4;
     return focused ? base * 2.2 : base;
   };
 
