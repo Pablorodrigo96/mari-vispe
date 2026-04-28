@@ -455,10 +455,15 @@ export default function PartnerDashboard() {
 
 function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
   return (
-    <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-700/50">
+    <Card className="!bg-slate-900/70 backdrop-blur-md border-slate-700/50 hover:border-accent/40 hover:shadow-[0_0_24px_-8px_hsl(38,92%,50%,0.4)] transition-all">
       <CardContent className="p-4">
-        <div className={`flex items-center gap-2 ${color} mb-2`}>{icon}<span className="text-xs uppercase tracking-wide">{label}</span></div>
-        <div className="text-2xl font-bold text-foreground">{value}</div>
+        <div className={`flex items-center gap-2 ${color} mb-2`}>
+          <div className={`h-8 w-8 rounded-lg bg-current/10 flex items-center justify-center`}>
+            {icon}
+          </div>
+          <span className="text-[10px] uppercase tracking-wider font-semibold">{label}</span>
+        </div>
+        <div className="text-3xl font-bold text-foreground tabular-nums">{value}</div>
       </CardContent>
     </Card>
   );
