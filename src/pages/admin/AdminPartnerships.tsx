@@ -349,12 +349,94 @@ const AdminPartnerships = () => {
       <div className="space-y-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Painel de Parcerias</h1>
 
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="cockpit" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="cockpit">Cockpit Head</TabsTrigger>
+            <TabsTrigger value="manage">Gestão</TabsTrigger>
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="reservations">Reservas de Leads</TabsTrigger>
-            <TabsTrigger value="vdr">Cofre Digital (VDR)</TabsTrigger>
+            <TabsTrigger value="reservations">Reservas</TabsTrigger>
+            <TabsTrigger value="vdr">VDR</TabsTrigger>
           </TabsList>
+
+          {/* ===== TAB 0: COCKPIT HEAD ===== */}
+          <TabsContent value="cockpit" className="space-y-6">
+            <CockpitHeadPanel
+              partners={partners}
+              activities={activities}
+              listings={allListings}
+              onRegisterActivity={(pid) => {
+                setSelectedPartner(pid);
+                setShowActivityDialog(true);
+              }}
+              onMarkMeetingDone={async (id) => {
+                const { error } = await supabase
+                  .from('partner_activities')
+                  .update({ activity_type: 'reuniao_realizada', completed_at: new Date().toISOString() })
+                  .eq('id', id);
+                if (error) { toast.error('Erro'); return; }
+                toast.success('Reunião marcada como realizada');
+                fetchData();
+              }}
+              onDisqualify={async (p) => {
+                const reason = window.prompt(`Motivo para desqualificar ${p.full_name}?`) || 'Inativo > 90 dias';
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({
+                    partner_status: 'disqualified',
+                    partner_disqualified_at: new Date().toISOString(),
+                    partner_disqualified_reason: reason,
+                  })
+                  .eq('user_id', p.user_id);
+                if (error) { toast.error('Erro'); return; }
+                await supabase.from('user_roles').delete().eq('user_id', p.user_id).eq('role', 'advisor');
+                toast.success('Parceiro desqualificado');
+                fetchData();
+              }}
+            />
+
+            {/* Activity dialog reused */}
+            <Dialog open={showActivityDialog} onOpenChange={setShowActivityDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    Registrar Atividade — {partners.find((p) => p.user_id === selectedPartner)?.full_name}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Select value={activityForm.type} onValueChange={(v) => setActivityForm((prev) => ({ ...prev, type: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="evento">Evento</SelectItem>
+                      <SelectItem value="reuniao_agendada">Reunião Agendada</SelectItem>
+                      <SelectItem value="reuniao_realizada">Reunião Realizada</SelectItem>
+                      <SelectItem value="followup">Follow-up</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Textarea placeholder="Notas..." value={activityForm.notes} onChange={(e) => setActivityForm((prev) => ({ ...prev, notes: e.target.value }))} />
+                  <Input type="datetime-local" value={activityForm.scheduled_at} onChange={(e) => setActivityForm((prev) => ({ ...prev, scheduled_at: e.target.value }))} />
+                  <Button onClick={handleCreateActivity} className="w-full">Registrar</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          {/* ===== TAB: GESTÃO DE PARCEIROS ===== */}
+          <TabsContent value="manage" className="space-y-6">
+            <PartnerManagementTable
+              partners={partners.map((p) => ({
+                user_id: p.user_id,
+                full_name: p.full_name,
+                company_name: p.company_name,
+                phone: p.phone,
+                created_at: p.created_at,
+                partner_status: p.partner_status,
+                is_partner_accountant: p.is_partner_accountant,
+                listing_count: p.listing_count,
+                last_listing_date: p.last_listing_date,
+              }))}
+              onChanged={fetchData}
+            />
+          </TabsContent>
 
           {/* ===== TAB 1: OVERVIEW ===== */}
           <TabsContent value="overview" className="space-y-6">
