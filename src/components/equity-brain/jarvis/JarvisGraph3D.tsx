@@ -743,6 +743,70 @@ export function JarvisGraph3D() {
         />
       </div>
 
+      {/* Painel de ajustes visuais — calibra glow/scanlines/vinheta/brilho do fundo */}
+      <div className="absolute bottom-3 right-3 z-20">
+        {!visualPanelOpen ? (
+          <button
+            onClick={() => setVisualPanelOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-950/85 backdrop-blur-md border border-emerald-900/50 hover:border-emerald-500/70 text-emerald-300 text-[10px] uppercase tracking-wider font-mono transition-colors"
+            title="Ajustes visuais do fundo"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            Ajustes
+          </button>
+        ) : (
+          <div className="relative w-64 bg-zinc-950/90 backdrop-blur-md border border-emerald-900/50 p-3 font-mono">
+            <span className="absolute -top-px -left-px w-2.5 h-2.5 border-t border-l border-emerald-400" />
+            <span className="absolute -top-px -right-px w-2.5 h-2.5 border-t border-r border-emerald-400" />
+            <span className="absolute -bottom-px -left-px w-2.5 h-2.5 border-b border-l border-emerald-400" />
+            <span className="absolute -bottom-px -right-px w-2.5 h-2.5 border-b border-r border-emerald-400" />
+
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5 text-emerald-300 text-[10px] uppercase tracking-[0.2em] font-bold">
+                <Settings2 className="h-3 w-3" />
+                Ajustes visuais
+              </div>
+              <button
+                onClick={() => setVisualPanelOpen(false)}
+                className="text-zinc-500 hover:text-emerald-300 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {[
+              { key: "glow" as const, label: "Glow nós" },
+              { key: "scanlines" as const, label: "Scanlines" },
+              { key: "vignette" as const, label: "Vinheta" },
+              { key: "brightness" as const, label: "Brilho vídeo" },
+            ].map(({ key, label }) => (
+              <div key={key} className="mb-2.5 last:mb-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] uppercase tracking-wider text-zinc-400">{label}</span>
+                  <span className="text-[10px] text-emerald-300 tabular-nums">{visualPrefs[key]}</span>
+                </div>
+                <Slider
+                  value={[visualPrefs[key]]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  onValueChange={(v) => setVisualPrefs((p) => ({ ...p, [key]: v[0] }))}
+                  className="[&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [&_[role=slider]]:border-emerald-400 [&_.bg-primary]:bg-emerald-500 [&_.bg-secondary]:bg-zinc-800"
+                />
+              </div>
+            ))}
+
+            <button
+              onClick={() => setVisualPrefs(VISUAL_DEFAULTS)}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 px-2 py-1 bg-transparent border border-emerald-900/50 hover:border-emerald-500/70 text-emerald-300 text-[9px] uppercase tracking-wider transition-colors"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Restaurar padrões
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Legenda inferior */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
         <GraphLegend />
