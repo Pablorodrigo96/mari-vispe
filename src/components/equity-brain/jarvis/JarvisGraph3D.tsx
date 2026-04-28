@@ -584,10 +584,30 @@ export function JarvisGraph3D() {
         linkDirectionalParticles={(l: any) => (shouldShowParticles(l) ? 3 : 0)}
         linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
         linkDirectionalParticleSpeed={(l: any) => 0.002 + (l.weight ?? 0.5) * 0.006}
-        linkCurvature={(l: any) => 0.18 + (l.weight ?? 0.5) * 0.08}
-        // Render manual cuida de opacity por link via material — usamos linkOpacity
-        // como base e diminuímos via linkColor só seria HEX. Contornamos delegando ao
-        // shader interno: passamos opacidade dinâmica via linkVisibility implícito.
+        linkCurvature={(l: any) => {
+          const s: any = l.source;
+          const t: any = l.target;
+          if (!s || !t || typeof s !== "object" || typeof t !== "object") {
+            return 0.3;
+          }
+          const dx = (s.x ?? 0) - (t.x ?? 0);
+          const dy = (s.y ?? 0) - (t.y ?? 0);
+          const dz = (s.z ?? 0) - (t.z ?? 0);
+          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          // Quanto mais distante, mais arqueada (até 0.55)
+          return Math.min(0.55, 0.25 + dist / 1800);
+        }}
+        linkCurveRotation={(l: any) => {
+          // Hash determinístico do par → cada aresta gira em um plano diferente,
+          // evitando arcos sobrepostos no mesmo cluster.
+          const sId = endpointId((l as any).source);
+          const tId = endpointId((l as any).target);
+          let h = 0;
+          const k = sId + "|" + tId;
+          for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+          return ((h % 360) / 360) * Math.PI * 2;
+        }}
+        linkResolution={12}
         onNodeHover={(n: any) => setHoveredId(n?.id ?? null)}
         onNodeClick={(n: any) => {
           setSelectedNode(n as JarvisNode);
