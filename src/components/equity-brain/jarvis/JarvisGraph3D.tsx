@@ -82,7 +82,7 @@ export function JarvisGraph3D() {
   const [selectedUfs, setSelectedUfs] = useState<Set<string>>(new Set());
   const [selectedNodeTypes, setSelectedNodeTypes] = useState<Set<string>>(DEFAULT_NODE_TYPES);
   const [enabledLayers, setEnabledLayers] = useState<Set<LayerKey>>(DEFAULT_LAYERS);
-  const [minWeight, setMinWeight] = useState(0.15);
+  const [minWeight, setMinWeight] = useState(0.35);
   const [minConfidence, setMinConfidence] = useState(0.0);
   const [thesisFilter, setThesisFilter] = useState<string | null>(null);
   const [buyerFilter, setBuyerFilter] = useState<string | null>(null);
@@ -303,13 +303,13 @@ export function JarvisGraph3D() {
             .distanceMax(320);
           fgNow.d3Force?.("seller-spread", sellerSpread);
 
-          // Centering mais suave: deixa o grafo expandir sem ser puxado ao centro
+          // Centering moderado: mantém o grafo visível e centralizado
           const centerForce: any = fgNow.d3Force?.("center");
           if (centerForce && typeof centerForce.strength === "function") {
-            centerForce.strength(0.03);
+            centerForce.strength(0.08);
           }
 
-          fgNow.cameraPosition?.({ x: 0, y: 0, z: 2200 }, undefined, 1200);
+          fgNow.cameraPosition?.({ x: 0, y: 0, z: 2800 }, undefined, 1200);
           fgNow.d3ReheatSimulation?.();
         } catch (e) {
           console.warn("[JarvisGraph3D] força não aplicada:", e);
@@ -319,6 +319,8 @@ export function JarvisGraph3D() {
 
     const safety = window.setTimeout(() => {
       try {
+        // Enquadrar tudo no viewport antes de congelar
+        (fgRef.current as any)?.zoomToFit?.(900, 120);
         const alpha = (fgRef.current as any)?.d3Alpha?.() ?? 0;
         if (alpha > 0.05) return;
         graphData.nodes.forEach((n: any) => {
@@ -383,7 +385,7 @@ export function JarvisGraph3D() {
       new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: dimmed ? 0.02 : 0.05 + n.heat * 0.18,
+        opacity: dimmed ? 0.02 : 0.08 + n.heat * 0.28,
         blending: AdditiveBlending,
         depthWrite: false,
       }),
@@ -443,8 +445,10 @@ export function JarvisGraph3D() {
       );
       label.color = isFocused ? "#a7f3d0" : "#e5e7eb";
       label.textHeight = isFocused ? 6 : 4.2;
-      label.backgroundColor = "rgba(9,9,11,0.6)";
-      label.padding = 1.5;
+      label.backgroundColor = "rgba(0,0,0,0.85)";
+      label.borderColor = isFocused ? "#10b981" : "rgba(16,185,129,0.35)";
+      label.borderWidth = 0.4;
+      label.padding = 2;
       label.borderRadius = 2;
       (label as unknown as Object3D).position.y = radius + 7;
       group.add(label);
@@ -459,9 +463,9 @@ export function JarvisGraph3D() {
     const tId = endpointId(link.target);
     if (focusId) {
       const involved = sId === focusId || tId === focusId;
-      return involved ? 0.95 : 0.04;
+      return involved ? 0.95 : 0.025;
     }
-    return (link.weight ?? 0) >= 0.55 ? 0.22 : 0.05;
+    return (link.weight ?? 0) >= 0.55 ? 0.45 : 0.025;
   };
 
   const linkWidthFn = (link: any) => {
@@ -523,8 +527,8 @@ export function JarvisGraph3D() {
       ref={containerRef}
       className="w-full h-full relative overflow-hidden bg-zinc-950"
     >
-      {/* Vídeo de fundo cinematográfico — fixo, em loop, desacoplado da câmera 3D.
-          Zoom/rotação afetam apenas o canvas WebGL acima; este vídeo permanece estático. */}
+      {/* Vídeo de fundo cinematográfico — atmosfera, não conteúdo.
+          Filtros agressivos + blend luminosity fazem ele assumir paleta verde/cyan do grafo. */}
       <video
         className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
         src="/videos/jarvis-bg.mp4"
@@ -534,14 +538,33 @@ export function JarvisGraph3D() {
         muted
         playsInline
         preload="auto"
-        style={{ filter: "brightness(0.55) saturate(0.85)" }}
+        style={{
+          filter: "brightness(0.3) saturate(0.5) blur(1px) hue-rotate(60deg)",
+          mixBlendMode: "luminosity",
+        }}
       />
-      {/* Nebulosa radial — atenuada para não competir com o vídeo */}
+      {/* Vinheta radial — escurece bordas, mantém centro respirando */}
       <div
-        className="absolute inset-0 pointer-events-none z-[1] opacity-40"
+        className="absolute inset-0 pointer-events-none z-[1]"
         style={{
           background:
-            "radial-gradient(circle at 20% 30%, rgba(16,185,129,0.10) 0%, transparent 45%), radial-gradient(circle at 80% 20%, rgba(56,189,248,0.08) 0%, transparent 50%), radial-gradient(circle at 65% 80%, rgba(244,63,94,0.07) 0%, transparent 45%), radial-gradient(circle at 30% 75%, rgba(168,85,247,0.06) 0%, transparent 50%)",
+            "radial-gradient(ellipse at center, rgba(6,7,10,0.35) 0%, rgba(6,7,10,0.65) 55%, rgba(6,7,10,0.92) 100%)",
+        }}
+      />
+      {/* Nebulosa radial — sutil, dá profundidade */}
+      <div
+        className="absolute inset-0 pointer-events-none z-[1] opacity-50"
+        style={{
+          background:
+            "radial-gradient(circle at 25% 35%, rgba(16,185,129,0.12) 0%, transparent 45%), radial-gradient(circle at 78% 25%, rgba(56,189,248,0.10) 0%, transparent 50%), radial-gradient(circle at 65% 80%, rgba(244,63,94,0.06) 0%, transparent 45%), radial-gradient(circle at 30% 75%, rgba(168,85,247,0.07) 0%, transparent 50%)",
+        }}
+      />
+      {/* Scanlines horizontais — textura de monitor cockpit */}
+      <div
+        className="absolute inset-0 pointer-events-none z-[1] opacity-[0.05]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, rgba(16,185,129,0.6) 0px, rgba(16,185,129,0.6) 1px, transparent 1px, transparent 3px)",
         }}
       />
       {/* Grid HUD */}
@@ -553,6 +576,14 @@ export function JarvisGraph3D() {
           backgroundSize: "64px 64px",
         }}
       />
+
+      {/* Corner brackets ao estilo Jarvis/HUD militar */}
+      <div className="absolute inset-0 pointer-events-none z-[5]">
+        <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-emerald-400/70" />
+        <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-emerald-400/70" />
+        <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-emerald-400/70" />
+        <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-emerald-400/70" />
+      </div>
 
       {/* Sidebar de filtros (mesmo componente do 2D) */}
       <div className="absolute top-0 left-0 h-full z-10">
@@ -597,15 +628,34 @@ export function JarvisGraph3D() {
         </div>
       )}
 
-      {/* HUD topo direito */}
-      <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-1.5 pointer-events-none">
-        <div className="px-2.5 py-1 rounded bg-zinc-950/70 border border-emerald-900/50 backdrop-blur-sm">
-          <span className="text-[9px] uppercase tracking-widest text-emerald-400 font-bold">
-            Equity Brain · Jarvis 3D
-          </span>
+      {/* HUD topo direito — estilo Iron Man com brackets em L */}
+      <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-2 pointer-events-none">
+        <div className="relative px-3 py-1.5 bg-zinc-950/80 backdrop-blur-md">
+          {/* L brackets */}
+          <span className="absolute -top-px -left-px w-2.5 h-2.5 border-t border-l border-emerald-400" />
+          <span className="absolute -top-px -right-px w-2.5 h-2.5 border-t border-r border-emerald-400" />
+          <span className="absolute -bottom-px -left-px w-2.5 h-2.5 border-b border-l border-emerald-400" />
+          <span className="absolute -bottom-px -right-px w-2.5 h-2.5 border-b border-r border-emerald-400" />
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+            </span>
+            <span className="text-[10px] uppercase tracking-[0.25em] text-emerald-300 font-bold font-mono">
+              Equity Brain · Jarvis
+            </span>
+          </div>
         </div>
-        <div className="px-2 py-0.5 rounded bg-zinc-950/60 border border-zinc-800/60 backdrop-blur-sm text-[10px] text-zinc-400 font-mono">
-          {graphData.nodes.length} nós · {graphData.links.length} conexões
+        <div className="flex gap-1.5 text-[9px] font-mono uppercase tracking-wider">
+          <div className="px-2 py-0.5 bg-zinc-950/70 border border-emerald-900/40 backdrop-blur-sm text-emerald-300">
+            <span className="text-zinc-500">N</span> {graphData.nodes.length}
+          </div>
+          <div className="px-2 py-0.5 bg-zinc-950/70 border border-emerald-900/40 backdrop-blur-sm text-cyan-300">
+            <span className="text-zinc-500">E</span> {graphData.links.length}
+          </div>
+          <div className="px-2 py-0.5 bg-zinc-950/70 border border-emerald-900/40 backdrop-blur-sm text-amber-300">
+            <span className="text-zinc-500">SIG</span> {Math.round((graphData.links.filter(l => (l.weight ?? 0) >= 0.55).length / Math.max(1, graphData.links.length)) * 100)}%
+          </div>
         </div>
       </div>
 
@@ -625,7 +675,7 @@ export function JarvisGraph3D() {
             `${n.label} · score ${Math.round(n.strategic_score ?? 0)} · ${n.degree ?? 0} conexões`
           }
           linkColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#71717a"}
-          linkOpacity={0.6}
+          linkOpacity={0.35}
           linkWidth={linkWidthFn}
           linkDirectionalParticles={(l: any) => (shouldShowParticles(l) ? 3 : 0)}
           linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
