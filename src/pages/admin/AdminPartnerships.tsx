@@ -123,10 +123,12 @@ const AdminPartnerships = () => {
       ]);
 
       const profiles = profilesRes.data || [];
-      const allListings = listingsRes.data || [];
+      const allListingsData = listingsRes.data || [];
       const allReservations = reservationsRes.data || [];
       const allVdr = vdrRes.data || [];
       const allActs = actsRes.data || [];
+      setAllListings(allListingsData);
+      const allListings = allListingsData;
 
       if (profiles.length === 0) { setLoading(false); return; }
 
