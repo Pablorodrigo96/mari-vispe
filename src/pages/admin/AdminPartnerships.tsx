@@ -83,6 +83,7 @@ const AdminPartnerships = () => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [vdrDocs, setVdrDocs] = useState<VdrDoc[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [allListings, setAllListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
