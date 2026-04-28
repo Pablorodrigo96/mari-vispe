@@ -980,6 +980,46 @@ export function JarvisGraph3D() {
               </div>
             ))}
 
+            {/* Controles de arco */}
+            <div className="mt-3 pt-2.5 border-t border-emerald-900/40">
+              <div className="text-[9px] uppercase tracking-wider text-emerald-400/80 mb-2 font-bold">Arcos</div>
+              {[
+                { key: "curvatureMin" as const, label: "Curvatura min", min: 0, max: 80 },
+                { key: "curvatureRange" as const, label: "Amplitude", min: 0, max: 60 },
+                { key: "linkSegments" as const, label: "Segmentos", min: 4, max: 24 },
+              ].map(({ key, label, min, max }) => (
+                <div key={key} className="mb-2 last:mb-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] uppercase tracking-wider text-zinc-400">{label}</span>
+                    <span className="text-[10px] text-emerald-300 tabular-nums">{visualPrefs[key] as number}</span>
+                  </div>
+                  <Slider
+                    value={[visualPrefs[key] as number]}
+                    min={min}
+                    max={max}
+                    step={1}
+                    onValueChange={(v) => setVisualPrefs((p: any) => ({ ...p, [key]: v[0] }))}
+                    className="[&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [&_[role=slider]]:border-emerald-400 [&_.bg-primary]:bg-emerald-500 [&_.bg-secondary]:bg-zinc-800"
+                  />
+                </div>
+              ))}
+              <div className="flex gap-1 mt-2">
+                {(["quad", "sine"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setVisualPrefs((p: any) => ({ ...p, arcStyle: s }))}
+                    className={`flex-1 px-2 py-1 text-[9px] uppercase tracking-wider transition-colors border ${
+                      visualPrefs.arcStyle === s
+                        ? "bg-emerald-900/40 border-emerald-500/70 text-emerald-200"
+                        : "bg-transparent border-emerald-900/50 text-zinc-400 hover:text-emerald-300"
+                    }`}
+                  >
+                    {s === "quad" ? "Quadrática" : "Senoidal"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button
               onClick={() => setVisualPrefs(VISUAL_DEFAULTS)}
               className="mt-3 w-full flex items-center justify-center gap-1.5 px-2 py-1 bg-transparent border border-emerald-900/50 hover:border-emerald-500/70 text-emerald-300 text-[9px] uppercase tracking-wider transition-colors"
