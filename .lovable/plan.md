@@ -1,90 +1,104 @@
-## Diagnóstico
 
-Auditei o banco e o front. O problema não é "falta de cadastro" — é **descasamento de fonte de dados + falta de anonimização**:
+# Plano — 4 ajustes em paralelo
 
-**1. Os 106 compradores existem, mas em outra base e com outro `status`:**
-- `equity_brain.buyers`: **106 buyers** (`ativo` = 69, `ativo_seletivo` = 37). Nenhum com `status='active'`.
-- `public.buyer_profiles`: apenas **1 buyer** com `status='active'` — é a única fonte que o **mapa público (`/mapa`)**, o **marketplace** e os matches do front consomem hoje.
-- O Brain foi populado com importações estratégicas (Telecom, Saúde, Retail, PE, Family Offices…) usando o vocabulário interno (`ativo`, `ativo_seletivo`), mas **nada disso reflui** para a base que alimenta a UI pública.
+## 1. Renomear e clarificar conceitos do Grafo Jarvis
 
-**2. No cockpit do Brain (`/equity-brain/mapa`, grafo, jarvis), os buyers existem mas só aparecem com zoom ≥ 7** e **sem filtro por status** — então mesmo lá o catálogo de 106 fica "escondido" até o usuário aproximar muito o mapa.
+Edits em `src/lib/equityGraphScoring.ts` (labels) e nos componentes da Legenda/Sidebar/NodeDetail para que cada conceito fique auto-explicativo, sem precisar abrir guia.
 
-**3. PII exposta:** hoje qualquer usuário autenticado (e até anônimo) consegue ler `nome`, `cnpj`, `website`, `observacoes` dos buyers via a view `public.eb_buyers` e nomes/CNPJs reais dos sellers em `public.listings`. Não há mascaramento server-side — só formatação cosmética em `maskCnpj` que um usuário pode burlar batendo direto na tabela.
+**Renomeações de edges (EDGE_LABELS):**
+- `seller_acquires_seller`: "Roll-up Seller→Seller" → **"Possível Fusão (PME ↔ PME)"** + sub-label "Duas empresas que valem mais juntas"
+- `seller_merges_with_seller`: "Fusão Seller↔Seller" → **"Fusão Estratégica (mesmo porte)"**
+- `platform_addon`: "Add-on de Plataforma" → **"Add-on → Consolidador"** + sub-label "Empresa pequena absorvida por uma maior"
 
-## O que vou construir
+**Renomeações de nodes (NODE_LABELS):**
+- `platform`: "Plataforma" → **"Consolidador (Plataforma)"** + tooltip: "Empresa âncora premium que adquire add-ons menores. Pense numa rede que está comprando concorrentes para crescer."
 
-Princípio: **uma única base mestre (Brain) + views anonimizadas para o front**. Continuamos copiando, nunca recortando.
+**Sinergia Comercial — definir critério prático.** Adicionar tooltip e descrição em `EDGE_LAYERS.commercial`:
+> "Quando duas empresas vendem para o mesmo perfil de cliente (mesmo ICP) ou usam o mesmo canal (B2B distribuidor, varejo físico, e-commerce). Critério: setor_ma compatível + sobreposição geográfica ≥ 50% + ticket médio na mesma faixa."
 
-### 1. Espelhar os 106 buyers do Brain → `public.buyer_profiles` (com anonimização)
+**Tese (violeta) com vários sellers ao redor — clarificar visualmente.**
+No `NodeDetailPanel.tsx`, quando o node clicado for `type === "thesis"`, mostrar header destacado:
+> "🧠 Tese de Investimento — atrai N empresas-alvo"
+e listar os sellers conectados como "Targets desta tese".
 
-- Migration que faz backfill: para cada `equity_brain.buyers` insere/atualiza um `public.buyer_profiles` correspondente, com:
-  - `buyer_name` = pseudônimo determinístico tipo `"Comprador Estratégico #A47"` ou `"Fundo PE #F12"` (gerado a partir do hash do `id` + `tipo`).
-  - `company_name` = NULL (escondido).
-  - `categories` = mapeado de `setores_interesse` para o vocabulário do marketplace (reutiliza `category_to_setor` invertido).
-  - `state/city` = primeira UF/município de interesse (ou NULL).
-  - `min_budget/max_budget` = `ticket_min/ticket_max`.
-  - `description` = texto neutro tipo `"Tese: Telecom/ISP · Ticket R$ 5–30M · Foco SP, MG"`.
-  - `status='active'` (todos os `ativo` e `ativo_seletivo`).
-  - `email/whatsapp` = NULL.
-  - `user_id` = um usuário-bot do sistema (criado se não existir) para satisfazer NOT NULL e RLS.
+Adicionar **badges de "papel no grafo"** dinâmicos ao clicar em qualquer node:
+- Seller premium com 3+ edges `platform_addon` saindo dele → badge **"Consolidador potencial"**
+- Seller verde ligado a outro seller verde → badge **"Candidato a fusão"**
+- Seller pequeno ligado a um consolidador → badge **"Add-on disponível"**
 
-- Trigger `equity_brain.buyers → public.buyer_profiles` (`AFTER INSERT OR UPDATE`) para manter o espelho vivo.
+## 2. Página `/equity-brain/grafo-jarvis/guia`
 
-- Resultado: marketplace e mapa público passam a mostrar **todos os 106 compradores anonimizados** automaticamente.
+Nova rota com guia visual do grafo, baseado no que expliquei na resposta anterior.
 
-### 2. Anonimização real e centralizada (server-side)
+**Estrutura (`src/pages/equity-brain/GrafoJarvisGuiaPage.tsx`):**
+- Hero: "Como ler o Grafo Jarvis"
+- Seção 1: **Tipos de Nodes** — cards coloridos com bolinha de exemplo, label, "o que é" e "quando aparece"
+  - Seller (verde), Buyer Estratégico (cyan), Buyer Financeiro (azul), Tese (violeta), Consolidador/Plataforma (âmbar)
+- Seção 2: **Tipos de Edges** — agrupados pelos 7 layers (M&A Direto, Possível Fusão/Roll-up, Operacional, Comercial, Arbitragem, Capital, Tese), cada um com:
+  - Linha colorida de exemplo
+  - "O que significa"
+  - "Como usar na prática" (1 frase acionável)
+- Seção 3: **Padrões visuais** — 3 thumbnails ilustrativos:
+  - Verde+Verde ligados → "Possível Fusão"
+  - Verde+Âmbar → "Add-on + Consolidador" (com seta indicando quem compra quem)
+  - Violeta central com vários verdes → "Tese atraindo targets"
+- Seção 4: **Receitas de uso** — 4 botões "Aplicar este preset":
+  - "Originar roll-up" (filtra layers: rollup + operational, minWeight 0.5)
+  - "Abordar mandato" (layers: ma_direct + capital)
+  - "Defender prêmio" (layers: arbitrage + thesis)
+  - "Mapear consolidadores da minha vertical" (filtra por vertical + layers rollup)
+- Link "Voltar ao Grafo" no topbar
 
-- Criar **view `public.listings_public`** (com `security_invoker=on`) que expõe listings sem PII: esconde `cnpj`, `street`, `neighborhood`, `cep`, `additional_info` e troca `title` por um ticker pseudônimo (`OPP-XXXX`). Ajustar políticas: leitura pública/autenticada **só pela view**; `public.listings.SELECT` permanece, mas o front passa a consumir `listings_public` em todas as telas não-admin.
-- Criar **view `public.buyer_profiles_public`** análoga: expõe só `id, buyer_name (pseudônimo), categories, state, city, min_budget, max_budget, description, status, created_at`. Esconde `email, whatsapp, company_name, user_id`.
-- Criar **view `public.eb_buyers_public`** que substitui o uso atual de `public.eb_buyers` no front: apenas campos não-sensíveis (`id, pseudônimo, tipo, ufs_interesse, ticket_min/max, vertical_principal, status`). A view atual `eb_buyers` passa a exigir admin/advisor.
-- Função SECURITY DEFINER `public.unmask_buyer(buyer_id)` e `public.unmask_listing(listing_id)` que retornam o registro completo **somente se** `has_role(auth.uid(),'admin') OR has_role(auth.uid(),'advisor')`. Usado pelo cockpit do Brain e pelo painel do advisor para ver o nome real quando há match.
+Adicionar link "📖 Guia" no topbar de `GrafoJarvisPage.tsx` ao lado de "Modo 2D"/"Mapa".
 
-### 3. Acesso desmascarado restrito a Vispe (admin + advisor)
+## 3. Painel do Parceiro — redesign visual
 
-- Hoje `BuyersPage`, `JarvisGraph3D`, `StrategicGraph`, `BrasilMap` consultam `eb_buyers` direto. Vou trocar por `eb_buyers_public` por padrão e usar `eb_buyers` (full) só quando `useUserRoles().isAdmin || isAdvisor`.
-- `DealCard` / `MatchDecisionCard` continuam mostrando dados completos, mas só quando o usuário for admin/advisor (já existe o check; vou reforçar).
-- Para sellers/buyers comuns, qualquer card de match exibe pseudônimo + tese + ticket + região, e CTA "Solicitar apresentação via Vispe" (gera notificação para admin) em vez de contato direto.
+Arquivo: `src/pages/PartnerDashboard.tsx`. Manter toda a lógica; reformar UI.
 
-### 4. Mostrar buyers no cockpit do Brain desde o zoom inicial
+**Mudanças:**
+- Trocar fundo cinza por gradient sutil `bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950` no container raiz
+- Header com badge "PARCERIAS" dourado e ícone animado
+- StatCards: trocar do estilo cinza atual para cards com glow colorido por categoria (azul/verde/vermelho/dourado), número grande tabular, ícone em círculo translúcido. Padrão idêntico aos cards do `EBStatCard` mas com accent dourado.
+- Tabs: estilizar com underline dourado no ativo (em vez do estilo padrão shadcn)
+- Cards de reservas (`!bg-slate-900/60`): adicionar borda lateral colorida de 3px que muda por status (azul=reservado, verde=exclusivo, vermelho=expirando)
+- Banner "Importar carteira" já está bom — só ajustar copy e dar mais destaque ao CTA principal
+- Pool da Rede: cards com hover lift + glow dourado sutil
+- Espaçamento mais arejado (gap-6 → gap-8 nas seções principais)
 
-- `BrasilMap.tsx`: remover o `zoom >= 7` da query de buyers e renderizar agregado por UF (badge com contagem) nos zooms baixos; pins individuais a partir do zoom 7. Default do toggle "Mostrar buyers" passa a `true` no `MapaPage`.
-- Garantir que o filtro lateral conta corretamente o total ("106 compradores ativos") em vez de aparecer vazio.
+Sem mudança funcional.
 
-### 5. RLS e segurança
+## 4. Potencial da Carteira — análise por cliente, não simulação genérica
 
-- `public.buyer_profiles`: a policy "Public can view active buyer profiles" passa a ser servida pela view anonimizada; a tabela direta exige `auth.uid() = user_id OR has_role(admin) OR has_role(advisor)`.
-- `public.listings`: idem — leitura pública passa pela view; tabela direta restringe a dono/admin/advisor.
-- `equity_brain.buyers`: já é schema interno, vou garantir que não tem grant para `anon`/`authenticated`. Acesso vem só pela view pública mascarada ou pelas funções `unmask_*`.
+Arquivo: `src/pages/PortfolioPotential.tsx`. Hoje é um slider genérico ("escolha N clientes, veja receita"). Trocar por análise **por cliente real** da carteira.
 
-### 6. Painel admin: card "Sync & Privacidade"
+### Lógica nova
 
-Pequeno card no painel do Brain mostrando:
-- `eb_buyers` total vs `buyer_profiles` espelhados.
-- `listings` vs `listings_public` (sanity check da view).
-- Contador de chamadas a `unmask_*` nas últimas 24h (auditoria).
-- Botão "Forçar resync de buyers".
+Para cada listing da carteira do parceiro, calcular **score de propensão (0-100) por serviço**:
 
-## Arquivos previstos
+| Serviço | Heurística |
+|---|---|
+| **CFO as a Service** | Alto se `equity_score < 60` OU `vdr_readiness < 50%` OU sem dados financeiros completos. Empresas desorganizadas precisam de CFO. |
+| **Aceleração Comercial** | Alto se `annual_revenue` entre 2M–30M E `equity_score >= 50` (tem produto, falta crescer). |
+| **Tributário** | Alto se `category` em setores intensivos (indústria, saúde, varejo) E `annual_revenue >= 5M`. |
+| **M&A (sell-side)** | Alto se `equity_score >= 70` OU `vdr_readiness >= 70%` OU `asking_price > 0`. Pronto para vender. |
+| **Cross-sell (capital/dívida)** | Alto se `annual_revenue >= 3M` E setor com necessidade de capital de giro. |
 
-- 1 migration SQL: views anonimizadas, função pseudônimo, trigger Brain→buyer_profiles, backfill dos 106, ajustes de RLS, função `unmask_*`.
-- `src/components/equity-brain/BrasilMap.tsx`: remover gate de zoom, trocar fonte para `eb_buyers_public` quando não-admin.
-- `src/pages/equity-brain/MapaPage.tsx`: `showBuyers` default `true`.
-- `src/pages/equity-brain/BuyersPage.tsx`, `JarvisGraph3D.tsx`, `graph/StrategicGraph.tsx`: usar `eb_buyers_public` por padrão; consumir `eb_buyers` (full) só com `isAdmin || isAdvisor`.
-- `src/pages/MapView.tsx`, `Marketplace.tsx`, `ListingCard.tsx`, `BusinessMap.tsx`: trocar `listings` por `listings_public` e `buyer_profiles` por `buyer_profiles_public` em todas as leituras não-admin.
-- `src/lib/equityBrain.ts`: helper `pseudonymFor(id, tipo)` para usar no front quando precisar gerar pseudônimo localmente.
-- `src/components/equity-brain/SyncHealthCard.tsx`: incluir métricas de privacidade.
+Receita esperada por serviço (BRL/ano):
+- CFO: R$ 36k · AC: R$ 60k · Tributário: R$ 24k · M&A success fee: 5% × valor potencial · Capital: R$ 15k consultoria + 1% sucesso
 
-## Garantias
+### UI nova
 
-- **Zero recorte**: a base mestre dos buyers continua sendo `equity_brain.buyers`; `buyer_profiles` recebe espelho.
-- **Anonimização server-side**: nenhum cliente recebe nome/CNPJ/contato sem ser admin ou advisor da Vispe.
-- **Marketplace e mapa voltam a mostrar 106 compradores** (anonimizados) imediatamente após o backfill.
-- **Cockpit do Brain (admin/advisor)** continua vendo tudo, com nomes reais e contatos para fechar match.
+- **Tabela "Análise da Carteira por Cliente"** substitui o "Top 5". Colunas: Empresa | Receita | Score | **CFO** | **AC** | **Tributário** | **M&A** | **Capital** | Receita potencial total/ano
+  - Cada coluna de serviço mostra um badge: 🔥 Alto / 🟡 Médio / ⚪ Baixo
+  - Última coluna soma a receita esperada ponderada pelo score (ex: 80% × R$ 36k = R$ 28.8k)
+- **Card-resumo no topo:** "Sua carteira tem potencial de **R$ X/ano** em honorários recorrentes + **R$ Y** em success fees de M&A" — calculado somando a receita ponderada de todos os clientes
+- **Breakdown por serviço:** gráfico de barras horizontais mostrando quanto cada serviço contribui no total
+- **Top oportunidades imediatas:** lista os 3 clientes com maior `score × receita_potencial` e botão "Falar com cliente sobre [serviço]" (abre WhatsApp pré-preenchido com pitch)
+- Manter o simulador de cenário (Pessimista/Realista/Otimista) **abaixo**, mas reposicionado como "E se você triplicar sua carteira?"
 
-## Pergunta antes de implementar
+### Arquivos novos
+- `src/lib/portfolioPotentialScoring.ts` — funções `scoreCfoFit(listing)`, `scoreAcFit(listing)`, etc., e `analyzePortfolio(listings)` que devolve `{ totalRecurring, totalSuccessFee, byService, topOpportunities }`
 
-Confirma estes três pontos?
+---
 
-1. **Pseudônimo** dos buyers: prefere `"Comprador Estratégico #A47"` (estilo bolsa, anônimo total) ou `"Grupo Telecom #12 (SP)"` (mostra setor + UF, ainda anônimo)?
-2. **Pseudônimo dos listings** no marketplace público: manter o `ticker` atual quando existir, ou forçar `OPP-XXXX` em tudo?
-3. Além de **admin** e **advisor**, o **franqueado** Vispe da região também pode desmascarar matches da sua praça, ou só admin/advisor mesmo?
+**Sem mudanças de banco** em nenhum dos 4 itens. Tudo é UI/labels/cálculo client-side sobre dados já existentes.
