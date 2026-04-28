@@ -26,6 +26,7 @@ export type Database = {
           id: string
           max_budget: number | null
           min_budget: number | null
+          source_eb_buyer_id: string | null
           state: string | null
           status: string
           user_id: string
@@ -42,6 +43,7 @@ export type Database = {
           id?: string
           max_budget?: number | null
           min_budget?: number | null
+          source_eb_buyer_id?: string | null
           state?: string | null
           status?: string
           user_id: string
@@ -58,6 +60,7 @@ export type Database = {
           id?: string
           max_budget?: number | null
           min_budget?: number | null
+          source_eb_buyer_id?: string | null
           state?: string | null
           status?: string
           user_id?: string
@@ -1023,6 +1026,24 @@ export type Database = {
           stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      system_bots: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -2183,6 +2204,16 @@ export type Database = {
       }
     }
     Functions: {
+      buyer_neutral_description: {
+        Args: {
+          _setores: string[]
+          _tmax: number
+          _tmin: number
+          _ufs: string[]
+        }
+        Returns: string
+      }
+      buyer_pseudonym: { Args: { _id: string; _tipo: string }; Returns: string }
       calculate_vdr_readiness: {
         Args: { p_listing_id: string }
         Returns: number
