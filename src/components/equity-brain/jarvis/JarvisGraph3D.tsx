@@ -425,7 +425,7 @@ export function JarvisGraph3D() {
       const ringMat = new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: 0.32,
+        opacity: 0.32 * glowFactor,
         side: DoubleSide,
         blending: AdditiveBlending,
         depthWrite: false,
