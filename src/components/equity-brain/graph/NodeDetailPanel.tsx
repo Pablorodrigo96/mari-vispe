@@ -340,7 +340,15 @@ export function NodeDetailPanel({ node, allNodes, allEdges, onClose, onFocus, on
                 text="Buyer já fez múltiplos deals nesta vertical — tese de buy-and-build comprovada."
               />
             )}
-            {!isCentralHub && !isUndervalued && !isStrategicTarget && node.type !== "platform" && (
+            {isPotentialConsolidator && (
+              <Reason color="amber" title="Consolidador potencial"
+                text={`Este seller tem ${platformAddonEdges.length} conexões de add-on — está em posição de virar plataforma e absorver concorrentes menores.`} />
+            )}
+            {isFusionCandidate && (
+              <Reason color="emerald" title="Candidato a fusão"
+                text={`${sellerToSellerEdges.length} conexão(ões) com outras PMEs do marketplace. Avalie roll-up ou fusão de iguais.`} />
+            )}
+            {!isCentralHub && !isUndervalued && !isStrategicTarget && !isPotentialConsolidator && !isFusionCandidate && node.type !== "platform" && (
               <div className="text-xs text-zinc-500 italic px-1">
                 Node em construção — adicione mais conexões para qualificar a importância estratégica.
               </div>
