@@ -463,9 +463,9 @@ export function JarvisGraph3D() {
     const tId = endpointId(link.target);
     if (focusId) {
       const involved = sId === focusId || tId === focusId;
-      return involved ? 0.95 : 0.04;
+      return involved ? 0.95 : 0.025;
     }
-    return (link.weight ?? 0) >= 0.55 ? 0.22 : 0.05;
+    return (link.weight ?? 0) >= 0.55 ? 0.45 : 0.025;
   };
 
   const linkWidthFn = (link: any) => {
