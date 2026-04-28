@@ -654,9 +654,9 @@ export function JarvisGraph3D() {
           );
         }}
         onBackgroundClick={() => setSelectedNode(null)}
-        cooldownTicks={140}
-        d3VelocityDecay={0.35}
-        warmupTicks={20}
+        cooldownTicks={220}
+        d3VelocityDecay={0.28}
+        warmupTicks={40}
       />
 
       {/* Legenda inferior */}
