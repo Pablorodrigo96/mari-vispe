@@ -71,6 +71,21 @@ export function NodeDetailPanel({ node, allNodes, allEdges, onClose, onFocus, on
   const isUndervalued = node.type === "seller" && node.strategic_score >= 60 && node.opportunity_stage === "prospect";
   const isStrategicTarget = node.type === "seller" && hotConnections >= 3;
 
+  // Papéis dinâmicos no grafo (badges contextuais)
+  const platformAddonEdges = directEdges.filter((e) => e.edge_type === "platform_addon");
+  const sellerToSellerEdges = directEdges.filter(
+    (e) => e.edge_type === "seller_acquires_seller" || e.edge_type === "seller_merges_with_seller"
+  );
+  const isPotentialConsolidator = node.type === "seller" && platformAddonEdges.length >= 3;
+  const isFusionCandidate = node.type === "seller" && sellerToSellerEdges.length >= 1;
+  const isAvailableAddon = node.type === "seller" && platformAddonEdges.some((e) => {
+    const sId = endpointId(e.source);
+    const otherId = sId === node.id ? endpointId(e.target) : sId;
+    const other = allNodes.find((n) => n.id === otherId);
+    return other?.type === "platform";
+  });
+  const thesisTargets = node.type === "thesis" ? directNeighbors.filter((n) => n.node.type === "seller") : [];
+
   return (
     <Sheet open={!!node} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
