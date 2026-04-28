@@ -226,9 +226,19 @@ serve(async (req) => {
         });
       }
 
+      // Dedupe por (cnpj, buyer_id, thesis_key) — mantém o de maior match_score
+      // (defesa contra unique index uniq_matches_current quando scoreBatch gera duplicatas)
+      const dedupeMap = new Map<string, any>();
+      for (const m of newMatches) {
+        const k = `${m.cnpj}|${m.buyer_id}|${m.thesis_key}`;
+        const prev = dedupeMap.get(k);
+        if (!prev || (m.match_score ?? 0) > (prev.match_score ?? 0)) dedupeMap.set(k, m);
+      }
+      const deduped = Array.from(dedupeMap.values());
+
       // Insere novos do chunk
-      for (let j = 0; j < newMatches.length; j += 1000) {
-        const ins = newMatches.slice(j, j + 1000);
+      for (let j = 0; j < deduped.length; j += 1000) {
+        const ins = deduped.slice(j, j + 1000);
         const { error: insErr } = await supabase
           .schema("equity_brain" as any)
           .from("matches")
