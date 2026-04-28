@@ -620,5 +620,59 @@ export function buildStrategicGraph(
     }
   }
 
-  return { nodes, edges };
+  // ============================================================
+  // PÓS-PROCESSAMENTO: dedup pares buyer↔seller + top-K por nó
+  // ============================================================
+
+  // (1) Dedup buyer↔seller: se já existe buyer_acquires_seller (ou buyer_funds_seller)
+  // entre o par, descartar geographic_expansion e capital_match redundantes.
+  const PRIMARY_BUYER_EDGES: ReadonlySet<EdgeType> = new Set([
+    "buyer_acquires_seller",
+    "buyer_funds_seller",
+  ]);
+  const REDUNDANT_BUYER_EDGES: ReadonlySet<EdgeType> = new Set([
+    "geographic_expansion",
+    "capital_match",
+  ]);
+  const primaryPairs = new Set<string>();
+  for (const e of edges) {
+    if (PRIMARY_BUYER_EDGES.has(e.edge_type)) {
+      primaryPairs.add(`${e.source}|${e.target}`);
+      primaryPairs.add(`${e.target}|${e.source}`);
+    }
+  }
+  let deduped = edges.filter((e) => {
+    if (!REDUNDANT_BUYER_EDGES.has(e.edge_type)) return true;
+    return !primaryPairs.has(`${e.source}|${e.target}`);
+  });
+
+  // (2) Top-K por nó (sellers/buyers): mantém só as N arestas mais fortes
+  // por endpoint (score = weight × confidence). Plataformas/teses são hubs e
+  // ficam sem teto.
+  const SELLER_K = 8;
+  const BUYER_K = 15;
+  const nodeBudget = new Map<string, number>();
+  for (const n of nodes) {
+    if (n.type === "seller") nodeBudget.set(n.id, SELLER_K);
+    else if (n.type === "buyer_strategic" || n.type === "buyer_financial") {
+      nodeBudget.set(n.id, BUYER_K);
+    }
+    // platform/thesis/asset/strategy = sem teto (Infinity por omissão)
+  }
+  // Ordena por força desc; aresta sobrevive se AMBOS os endpoints ainda têm orçamento
+  // (ou são hubs sem teto).
+  deduped.sort((a, b) => (b.weight * b.confidence) - (a.weight * a.confidence));
+  const survivors: GraphEdge[] = [];
+  for (const e of deduped) {
+    const sBudget = nodeBudget.get(e.source as string);
+    const tBudget = nodeBudget.get(e.target as string);
+    const sOk = sBudget === undefined || sBudget > 0;
+    const tOk = tBudget === undefined || tBudget > 0;
+    if (!sOk || !tOk) continue;
+    survivors.push(e);
+    if (sBudget !== undefined) nodeBudget.set(e.source as string, sBudget - 1);
+    if (tBudget !== undefined) nodeBudget.set(e.target as string, tBudget - 1);
+  }
+
+  return { nodes, edges: survivors };
 }
