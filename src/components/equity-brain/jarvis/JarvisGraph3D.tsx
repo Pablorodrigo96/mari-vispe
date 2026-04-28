@@ -521,12 +521,24 @@ export function JarvisGraph3D() {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full relative overflow-hidden"
-      style={{ background: "#06070a" }}
+      className="w-full h-full relative overflow-hidden bg-zinc-950"
     >
-      {/* Nebulosa radial de fundo */}
+      {/* Vídeo de fundo cinematográfico — fixo, em loop, desacoplado da câmera 3D.
+          Zoom/rotação afetam apenas o canvas WebGL acima; este vídeo permanece estático. */}
+      <video
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
+        src="/videos/jarvis-bg.mp4"
+        poster="/videos/jarvis-bg-poster.jpg"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        style={{ filter: "brightness(0.55) saturate(0.85)" }}
+      />
+      {/* Nebulosa radial — atenuada para não competir com o vídeo */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none z-[1] opacity-40"
         style={{
           background:
             "radial-gradient(circle at 20% 30%, rgba(16,185,129,0.10) 0%, transparent 45%), radial-gradient(circle at 80% 20%, rgba(56,189,248,0.08) 0%, transparent 50%), radial-gradient(circle at 65% 80%, rgba(244,63,94,0.07) 0%, transparent 45%), radial-gradient(circle at 30% 75%, rgba(168,85,247,0.06) 0%, transparent 50%)",
@@ -534,7 +546,7 @@ export function JarvisGraph3D() {
       />
       {/* Grid HUD */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        className="absolute inset-0 pointer-events-none z-[1] opacity-[0.025]"
         style={{
           backgroundImage:
             "linear-gradient(rgba(56,189,248,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.6) 1px, transparent 1px)",
@@ -597,67 +609,65 @@ export function JarvisGraph3D() {
         </div>
       </div>
 
-      {/* Grafo 3D */}
-      <ForceGraph3D
-        ref={fgRef as any}
-        width={size.w}
-        height={size.h}
-        graphData={graphData as any}
-        backgroundColor="#06070a"
-        showNavInfo={false}
-        nodeRelSize={1}
-        nodeThreeObject={buildNodeObject}
-        nodeLabel={(n: any) =>
-          `${n.label} · score ${Math.round(n.strategic_score ?? 0)} · ${n.degree ?? 0} conexões`
-        }
-        linkColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#71717a"}
-        linkOpacity={0.6}
-        linkWidth={linkWidthFn}
-        linkDirectionalParticles={(l: any) => (shouldShowParticles(l) ? 3 : 0)}
-        linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
-        linkDirectionalParticleSpeed={(l: any) => 0.002 + (l.weight ?? 0.5) * 0.006}
-        linkCurvature={(l: any) => {
-          // Curvatura estável por par (hash determinístico). Não depende de
-          // coordenadas — evita o efeito "fragmentado" antes da simulação rodar
-          // e mantém arcos circulares no zoom out.
-          const k = endpointId((l as any).source) + "|" + endpointId((l as any).target);
-          let h = 0;
-          for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
-          return 0.25 + (Math.abs(h) % 30) / 100; // 0.25 .. 0.54
-        }}
-        linkCurveRotation={(l: any) => {
-          // Hash determinístico do par → cada aresta gira em um plano diferente,
-          // evitando arcos sobrepostos no mesmo cluster.
-          const sId = endpointId((l as any).source);
-          const tId = endpointId((l as any).target);
-          let h = 0;
-          const k = sId + "|" + tId;
-          for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
-          return ((h % 360) / 360) * Math.PI * 2;
-        }}
-        linkResolution={12}
-        onNodeHover={(n: any) => setHoveredId(n?.id ?? null)}
-        onNodeClick={(n: any) => {
-          setSelectedNode(n as JarvisNode);
-          const fg = fgRef.current;
-          if (!fg) return;
-          const dist = 240;
-          const distRatio = 1 + dist / Math.hypot(n.x ?? 1, n.y ?? 1, n.z ?? 1);
-          fg.cameraPosition(
-            {
-              x: (n.x ?? 0) * distRatio,
-              y: (n.y ?? 0) * distRatio,
-              z: (n.z ?? 0) * distRatio,
-            },
-            n,
-            900,
-          );
-        }}
-        onBackgroundClick={() => setSelectedNode(null)}
-        cooldownTicks={220}
-        d3VelocityDecay={0.28}
-        warmupTicks={40}
-      />
+      {/* Grafo 3D — canvas WebGL transparente sobre o vídeo de fundo.
+          Apenas este canvas é afetado por zoom/rotação da câmera. */}
+      <div className="absolute inset-0 z-[2]">
+        <ForceGraph3D
+          ref={fgRef as any}
+          width={size.w}
+          height={size.h}
+          graphData={graphData as any}
+          backgroundColor="rgba(0,0,0,0)"
+          showNavInfo={false}
+          nodeRelSize={1}
+          nodeThreeObject={buildNodeObject}
+          nodeLabel={(n: any) =>
+            `${n.label} · score ${Math.round(n.strategic_score ?? 0)} · ${n.degree ?? 0} conexões`
+          }
+          linkColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#71717a"}
+          linkOpacity={0.6}
+          linkWidth={linkWidthFn}
+          linkDirectionalParticles={(l: any) => (shouldShowParticles(l) ? 3 : 0)}
+          linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
+          linkDirectionalParticleSpeed={(l: any) => 0.002 + (l.weight ?? 0.5) * 0.006}
+          linkCurvature={(l: any) => {
+            const k = endpointId((l as any).source) + "|" + endpointId((l as any).target);
+            let h = 0;
+            for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+            return 0.25 + (Math.abs(h) % 30) / 100;
+          }}
+          linkCurveRotation={(l: any) => {
+            const sId = endpointId((l as any).source);
+            const tId = endpointId((l as any).target);
+            let h = 0;
+            const k = sId + "|" + tId;
+            for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+            return ((h % 360) / 360) * Math.PI * 2;
+          }}
+          linkResolution={12}
+          onNodeHover={(n: any) => setHoveredId(n?.id ?? null)}
+          onNodeClick={(n: any) => {
+            setSelectedNode(n as JarvisNode);
+            const fg = fgRef.current;
+            if (!fg) return;
+            const dist = 240;
+            const distRatio = 1 + dist / Math.hypot(n.x ?? 1, n.y ?? 1, n.z ?? 1);
+            fg.cameraPosition(
+              {
+                x: (n.x ?? 0) * distRatio,
+                y: (n.y ?? 0) * distRatio,
+                z: (n.z ?? 0) * distRatio,
+              },
+              n,
+              900,
+            );
+          }}
+          onBackgroundClick={() => setSelectedNode(null)}
+          cooldownTicks={220}
+          d3VelocityDecay={0.28}
+          warmupTicks={40}
+        />
+      </div>
 
       {/* Legenda inferior */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
