@@ -527,8 +527,8 @@ export function JarvisGraph3D() {
       ref={containerRef}
       className="w-full h-full relative overflow-hidden bg-zinc-950"
     >
-      {/* Vídeo de fundo cinematográfico — fixo, em loop, desacoplado da câmera 3D.
-          Zoom/rotação afetam apenas o canvas WebGL acima; este vídeo permanece estático. */}
+      {/* Vídeo de fundo cinematográfico — atmosfera, não conteúdo.
+          Filtros agressivos + blend luminosity fazem ele assumir paleta verde/cyan do grafo. */}
       <video
         className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
         src="/videos/jarvis-bg.mp4"
@@ -538,14 +538,33 @@ export function JarvisGraph3D() {
         muted
         playsInline
         preload="auto"
-        style={{ filter: "brightness(0.55) saturate(0.85)" }}
+        style={{
+          filter: "brightness(0.3) saturate(0.5) blur(1px) hue-rotate(60deg)",
+          mixBlendMode: "luminosity",
+        }}
       />
-      {/* Nebulosa radial — atenuada para não competir com o vídeo */}
+      {/* Vinheta radial — escurece bordas, mantém centro respirando */}
       <div
-        className="absolute inset-0 pointer-events-none z-[1] opacity-40"
+        className="absolute inset-0 pointer-events-none z-[1]"
         style={{
           background:
-            "radial-gradient(circle at 20% 30%, rgba(16,185,129,0.10) 0%, transparent 45%), radial-gradient(circle at 80% 20%, rgba(56,189,248,0.08) 0%, transparent 50%), radial-gradient(circle at 65% 80%, rgba(244,63,94,0.07) 0%, transparent 45%), radial-gradient(circle at 30% 75%, rgba(168,85,247,0.06) 0%, transparent 50%)",
+            "radial-gradient(ellipse at center, rgba(6,7,10,0.35) 0%, rgba(6,7,10,0.65) 55%, rgba(6,7,10,0.92) 100%)",
+        }}
+      />
+      {/* Nebulosa radial — sutil, dá profundidade */}
+      <div
+        className="absolute inset-0 pointer-events-none z-[1] opacity-50"
+        style={{
+          background:
+            "radial-gradient(circle at 25% 35%, rgba(16,185,129,0.12) 0%, transparent 45%), radial-gradient(circle at 78% 25%, rgba(56,189,248,0.10) 0%, transparent 50%), radial-gradient(circle at 65% 80%, rgba(244,63,94,0.06) 0%, transparent 45%), radial-gradient(circle at 30% 75%, rgba(168,85,247,0.07) 0%, transparent 50%)",
+        }}
+      />
+      {/* Scanlines horizontais — textura de monitor cockpit */}
+      <div
+        className="absolute inset-0 pointer-events-none z-[1] opacity-[0.05]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, rgba(16,185,129,0.6) 0px, rgba(16,185,129,0.6) 1px, transparent 1px, transparent 3px)",
         }}
       />
       {/* Grid HUD */}
@@ -557,6 +576,14 @@ export function JarvisGraph3D() {
           backgroundSize: "64px 64px",
         }}
       />
+
+      {/* Corner brackets ao estilo Jarvis/HUD militar */}
+      <div className="absolute inset-0 pointer-events-none z-[5]">
+        <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-emerald-400/70" />
+        <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-emerald-400/70" />
+        <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-emerald-400/70" />
+        <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-emerald-400/70" />
+      </div>
 
       {/* Sidebar de filtros (mesmo componente do 2D) */}
       <div className="absolute top-0 left-0 h-full z-10">
