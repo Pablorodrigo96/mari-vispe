@@ -733,6 +733,15 @@ export function JarvisGraph3D() {
           linkDirectionalParticles={(l: any) => (shouldShowParticles(l) ? 3 : 0)}
           linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
           linkDirectionalParticleSpeed={(l: any) => 0.002 + (l.weight ?? 0.5) * 0.006}
+          linkDirectionalParticleColor={(l: any) => {
+            if (l.edge_type === "seller_acquires_seller" || l.edge_type === "seller_merges_with_seller") {
+              return "#fde047"; // ouro reluzente
+            }
+            if (l.edge_type === "buyer_acquires_seller" || l.edge_type === "platform_addon") {
+              return "#60a5fa"; // azul Jarvis
+            }
+            return EDGE_COLORS[l.edge_type] ?? "#a3e635";
+          }}
           linkCurvature={(l: any) => {
             const k = endpointId((l as any).source) + "|" + endpointId((l as any).target);
             let h = 0;
