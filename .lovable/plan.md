@@ -1,72 +1,49 @@
-## Auditoria do Grafo 3D — diagnóstico
+## Diagnóstico
 
-Naveguei até `/equity-brain/grafo-jarvis` no preview e a tela está **100% em branco**. Causa raiz confirmada nos logs do navegador:
+Erro runtime: `Cannot read properties of undefined (reading 'tick')` em `react-force-graph-3d.js:1914` dentro de `layoutTick`. A linha é `state.layout[isD3Sim ? "tick" : "step"]()` — significa que `state.layout` está `undefined` quando o ciclo de animação roda.
 
-```
-504 () /node_modules/.vite/deps/chunk-JLMLWGGE.js
-504 () /node_modules/.vite/deps/chunk-FFODJARL.js
-```
+**Causa raiz:** o `useEffect` em `JarvisGraph3D` chama `fg.d3Force(...)` e `fg.d3ReheatSimulation()` imediatamente após `graphData` chegar. Esse `useEffect` roda **antes** de o react-force-graph internamente executar `_updateProps` (que cria `state.layout = state.d3ForceLayout`). A primeira chamada a `d3ReheatSimulation` força um tick com layout ainda não definido → exception.
 
-O `vite.config.ts` está com `three`, `three-spritetext`, `three-render-objects`, `three-forcegraph`, `react-force-graph-3d` e `d3-force-3d` em `optimizeDeps.exclude`. Sem pre-bundle, o Vite tenta servir cada arquivo do `three` (~1.500 módulos) individualmente em dev — o servidor estoura e devolve 504 → o React nunca monta. O build de produção funciona porque o Rollup faz o bundling, mas o **preview que o usuário vê está quebrado**.
-
-Além disso, encontrei mais 4 bugs ativos no componente.
+Bônus: meu shim de `ngraph.forcelayout` joga erro se chamado. Embora o engine seja `d3` (default), três-forcegraph chama `simulator()` em pontos de inicialização defensiva — quero um shim no-op que não exploda.
 
 ## Correções
 
-### 1. Tela branca em dev (causa raiz)
-- `vite.config.ts`: voltar `three`, `three-spritetext`, `three-render-objects`, `three-forcegraph`, `react-force-graph-3d`, `d3-force-3d` para `optimizeDeps.include`.
-- Manter o alias do shim `ngraph.forcelayout` (resolveu o erro de export default antes).
-- Adicionar shims minimalistas para `ngraph.events`, `ngraph.merge`, `ngraph.random` (mesmo padrão) caso o pre-bundle reclame de novo.
-- Limpar `node_modules/.vite` para forçar re-otimização limpa.
+### 1. Shim de ngraph que NÃO joga erro
+Reescrever `src/shims/ngraphForcelayout.ts` retornando um layout no-op (`step()→true`, `getNodePosition→{0,0,0}`, etc.) com a shape mínima esperada pelo three-forcegraph. Mesmo que seja chamado por engano, não derruba a renderização.
 
-### 2. Forças de repulsão não aplicadas em grafos já estabilizados
-No `useEffect` que configura `charge`/`collide`/`link`, chamar `fg.d3ReheatSimulation()` no fim para garantir que as novas forças (distância mínima entre empresas) realmente atuem mesmo após mudanças de filtro.
+### 2. Diferir configuração de forças para depois do mount do react-force-graph
+No `useEffect` de forças do `JarvisGraph3D`, envolver as chamadas a `fg.d3Force(...)`, `fg.cameraPosition(...)` e `fg.d3ReheatSimulation()` em dois `requestAnimationFrame` aninhados. Isso garante que o react-force-graph já rodou seu `_updateProps` interno e populou `state.layout` com o `d3ForceLayout` antes de tocarmos nele. Adicionar `try/catch` defensivo e cleanup que cancela os RAFs.
 
-### 3. `useGhostSynapses` — leak e ghosts órfãos
-- Remover qualquer grupo `ghost-synapses` pré-existente da cena antes de adicionar o novo (defesa contra dupla montagem em StrictMode/HMR).
-- Buscar o nó atual via `fgRef.current.graphData()` em vez do snapshot capturado, para sempre ter coordenadas vivas mesmo após re-render.
-
-### 4. Curvatura colapsando em arestas sem coordenada inicial
-Antes da simulação rodar, `source.x`/`target.x` são `undefined`. Trocar o cálculo para usar `linkCurvature` constante por par (hash determinístico → 0.25–0.55) em vez de depender de distância 3D. Isso elimina o efeito "fragmentado" no primeiro frame e mantém o arco circular mesmo no zoom out.
-
-### 5. Freeze prematuro do layout
-Aumentar o timeout de freeze de 7s → 12s e só congelar se a simulação realmente parou (`fg.d3AlphaTarget() === 0` e `fg.d3Alpha() < 0.05`). Caso contrário, deixar a física continuar.
+### 3. Manter o shim com `simulator` callable
+Adicionar a propriedade `simulator` como função no objeto exportado, retornando `{ settings: {} }` — three-forcegraph chama isso em alguns paths.
 
 ## Detalhes técnicos
 
-**vite.config.ts** — `optimizeDeps`:
+**`src/shims/ngraphForcelayout.ts`** — substituir conteúdo por:
 ```ts
-include: [
-  "react", "react-dom", "react/jsx-runtime", "reactflow", "dagre",
-  "three", "three-spritetext", "three-render-objects",
-  "three-forcegraph", "react-force-graph-3d", "d3-force-3d",
-],
-exclude: [],
+const ZERO = { x: 0, y: 0, z: 0 };
+const ZERO_LINK = { from: ZERO, to: ZERO };
+function createNoopLayout(graph?: any) {
+  return {
+    step: () => true,
+    getNodePosition: () => ZERO,
+    getLinkPosition: () => ZERO_LINK,
+    setNodePosition: () => {},
+    pinNode: () => {},
+    isNodePinned: () => false,
+    dispose: () => {},
+    graph: graph ?? { getLink: () => null, forEachNode: () => {}, forEachLink: () => {} },
+    simulator: { settings: {} },
+  };
+}
+const createLayout = (graph?: any) => createNoopLayout(graph);
+(createLayout as any).simulator = () => ({ settings: {} });
+export default createLayout;
 ```
 
-**JarvisGraph3D.tsx** — após configurar forças:
-```ts
-fg.d3ReheatSimulation();
-```
-
-**JarvisGraph3D.tsx** — `linkCurvature`:
-```ts
-linkCurvature={(l: any) => {
-  const k = endpointId(l.source) + "|" + endpointId(l.target);
-  let h = 0; for (let i=0;i<k.length;i++) h = (h*31 + k.charCodeAt(i))|0;
-  return 0.25 + (Math.abs(h) % 30) / 100; // 0.25 .. 0.54 estável
-}}
-```
-
-**useGhostSynapses.ts** — antes de `scene.add(group)`:
-```ts
-const prev = scene.getObjectByName("ghost-synapses");
-if (prev) scene.remove(prev);
-```
-e dentro do `tick`, usar `fgRef.current?.graphData().nodes` para coordenadas.
+**`JarvisGraph3D.tsx`** — substituir o `useEffect` de forças (linhas 263–322) por uma versão com double-RAF defer + try/catch, mantendo a mesma lógica de forças/freeze. Cleanup cancela RAFs e timeout.
 
 ## Validação
-1. `rm -rf node_modules/.vite` e aguardar Vite reotimizar.
-2. Navegar até `/equity-brain/grafo-jarvis` com `browser--navigate_to_sandbox` e capturar screenshot — deve mostrar o grafo 3D.
-3. Conferir console do navegador: zero erros 504, zero SyntaxError de ngraph.
-4. Rodar `bun run build:dev` para garantir que produção segue OK.
+1. Recarregar `/equity-brain/grafo-jarvis`.
+2. Console: zero `Cannot read properties of undefined (reading 'tick')`.
+3. Screenshot: grafo renderiza com 240+ nós e simulação rodando.

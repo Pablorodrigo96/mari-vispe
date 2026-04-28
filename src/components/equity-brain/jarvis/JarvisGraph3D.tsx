@@ -265,50 +265,56 @@ export function JarvisGraph3D() {
     const fg = fgRef.current;
     if (!fg || !graphData.nodes.length) return;
 
-    // Repulsão global mais forte + distância mínima — tira o amontoado
-    const charge: any = fg.d3Force("charge");
-    if (charge) {
-      charge.strength(-650);
-      if (typeof charge.distanceMin === "function") charge.distanceMin(40);
-      if (typeof charge.distanceMax === "function") charge.distanceMax(2000);
-    }
+    // Defer p/ próximo frame: garante que react-force-graph já inicializou
+    // state.layout (d3ForceLayout). Chamar d3Force/d3ReheatSimulation antes
+    // disso causa "Cannot read properties of undefined (reading 'tick')".
+    let raf1 = 0;
+    let raf2 = 0;
+    let cancelled = false;
 
-    const linkForce: any = fg.d3Force("link");
-    if (linkForce) {
-      linkForce
-        .distance((l: any) => 140 + (1 - (l.weight ?? 0.5)) * 200)
-        .strength((l: any) => Math.max(0.04, (l.weight ?? 0.3) * 0.45));
-    }
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (cancelled || !fgRef.current) return;
+        const fgNow = fgRef.current as any;
+        try {
+          const charge: any = fgNow.d3Force?.("charge");
+          if (charge) {
+            charge.strength(-650);
+            if (typeof charge.distanceMin === "function") charge.distanceMin(40);
+            if (typeof charge.distanceMax === "function") charge.distanceMax(2000);
+          }
 
-    // Colisão 3D real: garante que cada nó respeita ~2.4× seu raio visual
-    fg.d3Force(
-      "collide",
-      forceCollide((n: any) => (n.visualRadius ?? 6) * 2.4)
-        .strength(0.9)
-        .iterations(2),
-    );
+          const linkForce: any = fgNow.d3Force?.("link");
+          if (linkForce) {
+            linkForce
+              .distance((l: any) => 140 + (1 - (l.weight ?? 0.5)) * 200)
+              .strength((l: any) => Math.max(0.04, (l.weight ?? 0.3) * 0.45));
+          }
 
-    // Repulsão extra entre sellers (curto alcance) — evita colapso de clusters
-    // de empresas conectadas ao mesmo buyer
-    const sellerSpread = forceManyBody()
-      .strength((n: any) => (n.type === "seller" ? -180 : 0))
-      .distanceMax(160);
-    fg.d3Force("seller-spread", sellerSpread as any);
+          fgNow.d3Force?.(
+            "collide",
+            forceCollide((n: any) => (n.visualRadius ?? 6) * 2.4)
+              .strength(0.9)
+              .iterations(2),
+          );
 
-    fg.cameraPosition({ x: 0, y: 0, z: 1100 }, undefined, 1200);
+          const sellerSpread = forceManyBody()
+            .strength((n: any) => (n.type === "seller" ? -180 : 0))
+            .distanceMax(160);
+          fgNow.d3Force?.("seller-spread", sellerSpread);
 
-    // Reaquecer simulação para que as novas forças (collide / repulsão) realmente
-    // atuem mesmo se o grafo já estava parado (ex: troca de filtro).
-    try {
-      (fg as any).d3ReheatSimulation?.();
-    } catch {}
+          fgNow.cameraPosition?.({ x: 0, y: 0, z: 1100 }, undefined, 1200);
+          fgNow.d3ReheatSimulation?.();
+        } catch (e) {
+          console.warn("[JarvisGraph3D] força não aplicada:", e);
+        }
+      });
+    });
 
-    // Freeze: só congela se a simulação realmente convergiu. Em grafos grandes
-    // (350 nós) 7s era pouco e travava em estado intermediário ruim.
     const safety = window.setTimeout(() => {
       try {
-        const alpha = (fg as any).d3Alpha?.() ?? 0;
-        if (alpha > 0.05) return; // ainda mexendo, não congela
+        const alpha = (fgRef.current as any)?.d3Alpha?.() ?? 0;
+        if (alpha > 0.05) return;
         graphData.nodes.forEach((n: any) => {
           if (Number.isFinite(n.x) && Number.isFinite(n.y) && Number.isFinite(n.z)) {
             n.fx = n.x;
@@ -318,7 +324,13 @@ export function JarvisGraph3D() {
         });
       } catch {}
     }, 12000);
-    return () => window.clearTimeout(safety);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      window.clearTimeout(safety);
+    };
   }, [graphData]);
 
   // ---------- Sinapses fantasmas (10% dos nós marcados como neurônios) ----------
