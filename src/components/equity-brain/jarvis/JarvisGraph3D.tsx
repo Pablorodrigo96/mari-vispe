@@ -272,6 +272,13 @@ export function JarvisGraph3D() {
     selectedNodeTypes, selectedUfs, selectedVerticals, thesisFilter, buyerFilter,
   ]);
 
+  // [DIAG] log para diagnosticar tela branca — remover depois de validado
+  console.log("[Jarvis3D] render", {
+    isLoading, isError,
+    nodes: graphData.nodes.length, links: graphData.links.length,
+    isMobile, size,
+  });
+
   const verticalsList = useMemo(() => {
     const set = new Set<string>();
     (companiesQ.data ?? []).forEach((c: any) => c.setor_ma && set.add(c.setor_ma));
@@ -333,11 +340,16 @@ export function JarvisGraph3D() {
               .iterations(2),
           );
 
-          // Repulsão extra entre sellers — ~5x mais forte que antes
-          const sellerSpread = forceManyBody()
-            .strength((n: any) => (n.type === "seller" ? -2200 : 0))
-            .distanceMax(1600);
-          fgNow.d3Force?.("seller-spread", sellerSpread);
+          // Repulsão extra entre sellers — só aplica se houver sellers no grafo
+          const hasSellers = graphData.nodes.some((nn: any) => nn.type === "seller");
+          if (hasSellers) {
+            const sellerSpread = forceManyBody()
+              .strength((n: any) => (n.type === "seller" ? -2200 : 0))
+              .distanceMax(1600);
+            fgNow.d3Force?.("seller-spread", sellerSpread);
+          } else {
+            fgNow.d3Force?.("seller-spread", null);
+          }
 
           // Centering moderado: mantém o grafo visível e centralizado
           const centerForce: any = fgNow.d3Force?.("center");
@@ -348,7 +360,7 @@ export function JarvisGraph3D() {
           fgNow.cameraPosition?.({ x: 0, y: 0, z: 2800 }, undefined, 1200);
           fgNow.d3ReheatSimulation?.();
         } catch (e) {
-          console.warn("[JarvisGraph3D] força não aplicada:", e);
+          console.error("[JarvisGraph3D] força não aplicada:", e);
         }
       });
     });
@@ -399,7 +411,17 @@ export function JarvisGraph3D() {
   const buildNodeObject = (node: any): Object3D => {
     const n = node as JarvisNode;
     const group = new Group();
-    const baseColor = new Color(n.displayColor ?? NODE_COLORS[n.type] ?? "#71717a");
+    const fallback = NODE_COLORS[n.type] ?? "#71717a";
+    let baseColor: Color;
+    try {
+      baseColor = new Color(n.displayColor ?? fallback);
+      // Detecta NaN no resultado do parse
+      if (!Number.isFinite(baseColor.r) || !Number.isFinite(baseColor.g) || !Number.isFinite(baseColor.b)) {
+        baseColor = new Color(fallback);
+      }
+    } catch {
+      baseColor = new Color(fallback);
+    }
     const radius = n.visualRadius ?? 6;
     const dimmed =
       focusId !== null && focusNeighborIds && !focusNeighborIds.has(n.id);
@@ -571,6 +593,17 @@ export function JarvisGraph3D() {
     return (
       <div className="w-full h-full flex items-center justify-center bg-zinc-950">
         <div className="text-rose-400 text-sm">Erro ao carregar dados do grafo.</div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-zinc-950">
+        <div className="flex flex-col items-center gap-3 text-emerald-300 text-xs font-mono uppercase tracking-widest">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          Sincronizando cérebro…
+        </div>
       </div>
     );
   }
