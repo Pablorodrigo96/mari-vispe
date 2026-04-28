@@ -521,12 +521,24 @@ export function JarvisGraph3D() {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full relative overflow-hidden"
-      style={{ background: "#06070a" }}
+      className="w-full h-full relative overflow-hidden bg-zinc-950"
     >
-      {/* Nebulosa radial de fundo */}
+      {/* Vídeo de fundo cinematográfico — fixo, em loop, desacoplado da câmera 3D.
+          Zoom/rotação afetam apenas o canvas WebGL acima; este vídeo permanece estático. */}
+      <video
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
+        src="/videos/jarvis-bg.mp4"
+        poster="/videos/jarvis-bg-poster.jpg"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        style={{ filter: "brightness(0.55) saturate(0.85)" }}
+      />
+      {/* Nebulosa radial — atenuada para não competir com o vídeo */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none z-[1] opacity-40"
         style={{
           background:
             "radial-gradient(circle at 20% 30%, rgba(16,185,129,0.10) 0%, transparent 45%), radial-gradient(circle at 80% 20%, rgba(56,189,248,0.08) 0%, transparent 50%), radial-gradient(circle at 65% 80%, rgba(244,63,94,0.07) 0%, transparent 45%), radial-gradient(circle at 30% 75%, rgba(168,85,247,0.06) 0%, transparent 50%)",
@@ -534,7 +546,7 @@ export function JarvisGraph3D() {
       />
       {/* Grid HUD */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        className="absolute inset-0 pointer-events-none z-[1] opacity-[0.025]"
         style={{
           backgroundImage:
             "linear-gradient(rgba(56,189,248,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.6) 1px, transparent 1px)",
