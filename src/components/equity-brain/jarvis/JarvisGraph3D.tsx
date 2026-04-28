@@ -771,14 +771,33 @@ export function JarvisGraph3D() {
             `${n.label} · score ${Math.round(n.strategic_score ?? 0)} · ${n.degree ?? 0} conexões`
           }
           linkColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#71717a"}
-          linkOpacity={0.35}
+          linkOpacity={0.55}
           linkWidth={linkWidthFn}
-          linkDirectionalParticles={(l: any) => (shouldShowParticles(l) ? 3 : 0)}
-          linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
+          linkMaterial={(l: any) => {
+            // Halo neon dourado para edges seller↔seller (blending aditivo)
+            if (isGoldLink(l)) {
+              return new MeshBasicMaterial({
+                color: new Color("hsl(45, 100%, 65%)"),
+                transparent: true,
+                opacity: 0.92,
+                blending: AdditiveBlending,
+                depthWrite: false,
+              });
+            }
+            return null as any; // usa material padrão
+          }}
+          linkDirectionalParticles={(l: any) => {
+            if (isGoldLink(l)) return 5;
+            return shouldShowParticles(l) ? 3 : 0;
+          }}
+          linkDirectionalParticleWidth={(l: any) => {
+            const base = 1 + (l.weight ?? 0.5) * 3;
+            return isGoldLink(l) ? base * 2 : base;
+          }}
           linkDirectionalParticleSpeed={(l: any) => 0.002 + (l.weight ?? 0.5) * 0.006}
           linkDirectionalParticleColor={(l: any) => {
-            if (l.edge_type === "seller_acquires_seller" || l.edge_type === "seller_merges_with_seller") {
-              return "#fde047"; // ouro reluzente
+            if (isGoldLink(l)) {
+              return "#fde68a"; // ouro brilhante neon
             }
             if (l.edge_type === "buyer_acquires_seller" || l.edge_type === "platform_addon") {
               return "#60a5fa"; // azul Jarvis
@@ -789,7 +808,8 @@ export function JarvisGraph3D() {
             const k = endpointId((l as any).source) + "|" + endpointId((l as any).target);
             let h = 0;
             for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
-            return 0.25 + (Math.abs(h) % 30) / 100;
+            // Arcos pronunciados: 0.4 a 0.8
+            return 0.4 + (Math.abs(h) % 40) / 100;
           }}
           linkCurveRotation={(l: any) => {
             const sId = endpointId((l as any).source);
