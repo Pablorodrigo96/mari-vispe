@@ -23,31 +23,40 @@ async function sha1(text: string): Promise<string> {
 }
 
 async function generateEmbedding(text: string, apiKey: string): Promise<number[] | null> {
-  try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/text-embedding-004",
-        input: text.slice(0, 4000),
-      }),
-    });
-    if (!resp.ok) {
-      const t = await resp.text();
-      console.error(`[embed] gateway ${resp.status}: ${t.slice(0, 200)}`);
-      return null;
+  // Tenta múltiplos modelos de embedding (Lovable Gateway pode mudar disponibilidade)
+  const models = [
+    "openai/text-embedding-3-small",
+    "google/text-embedding-004",
+    "text-embedding-3-small",
+  ];
+  for (const model of models) {
+    try {
+      const resp = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model, input: text.slice(0, 4000) }),
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        if (resp.status === 400 && t.includes("invalid model")) continue; // tenta próximo
+        console.error(`[embed] ${model} ${resp.status}: ${t.slice(0, 200)}`);
+        continue;
+      }
+      const json = await resp.json();
+      const vec = json?.data?.[0]?.embedding;
+      if (Array.isArray(vec) && vec.length > 0) {
+        // pgvector aceita qualquer dim — mas a coluna é vector(768). Se vier diferente, trunca/pad.
+        if (vec.length === EMBEDDING_DIMS) return vec as number[];
+        if (vec.length > EMBEDDING_DIMS) return (vec as number[]).slice(0, EMBEDDING_DIMS);
+        const padded = vec.slice() as number[];
+        while (padded.length < EMBEDDING_DIMS) padded.push(0);
+        return padded;
+      }
+    } catch (e) {
+      console.error(`[embed] ${model} crash:`, e);
     }
-    const json = await resp.json();
-    const vec = json?.data?.[0]?.embedding;
-    if (!Array.isArray(vec) || vec.length !== EMBEDDING_DIMS) {
-      console.error(`[embed] bad shape: ${vec?.length}`);
-      return null;
-    }
-    return vec as number[];
-  } catch (e) {
-    console.error("[embed] crash:", e);
-    return null;
   }
+  return null;
 }
 
 function buildCompanyText(c: any): string {
