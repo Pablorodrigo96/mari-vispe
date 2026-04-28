@@ -27,6 +27,7 @@ export interface JarvisNode extends GraphNode {
   visualRadius: number; // px no espaço 3D
   showLabel: boolean;
   strategicRole: StrategicRole;
+  isNeuron: boolean; // marca visual: dispara sinapses fantasmas
 }
 
 export interface JarvisLink extends GraphEdge {
@@ -121,6 +122,14 @@ export function adaptToJarvisGraph(
     }
   }
 
+  // Hash determinístico simples → 10% dos nós marcados como "neurônios" (preferindo
+  // sellers e buyers, que são os disparadores naturais de atividade no cérebro).
+  const hashId = (s: string) => {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  };
+
   const jarvisNodes: JarvisNode[] = nodes.map((node) => {
     const degree = degreeMap.get(node.id) ?? 0;
     const strongDegree = strongDegreeMap.get(node.id) ?? 0;
@@ -135,6 +144,13 @@ export function adaptToJarvisGraph(
       node.type === "thesis" ||
       node.type === "platform";
 
+    const neuronEligible =
+      node.type === "seller" ||
+      node.type === "buyer_strategic" ||
+      node.type === "buyer_financial";
+    // 10% dos elegíveis (hash estável → mesmo nó sempre é/ou-não neurônio)
+    const isNeuron = neuronEligible && hashId(node.id) % 10 === 0;
+
     return {
       ...node,
       degree,
@@ -144,6 +160,7 @@ export function adaptToJarvisGraph(
       visualRadius,
       showLabel,
       strategicRole: inferStrategicRole(node),
+      isNeuron,
     };
   });
 

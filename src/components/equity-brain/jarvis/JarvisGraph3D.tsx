@@ -9,8 +9,20 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph3D, { type ForceGraphMethods } from "react-force-graph-3d";
-import * as THREE from "three";
+import {
+  Group,
+  Mesh,
+  SphereGeometry,
+  RingGeometry,
+  MeshBasicMaterial,
+  Color,
+  AdditiveBlending,
+  DoubleSide,
+  type Object3D,
+} from "three";
+import { forceCollide, forceManyBody } from "d3-force-3d";
 import SpriteText from "three-spritetext";
+import { useGhostSynapses } from "./useGhostSynapses";
 import { useQueries } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -253,16 +265,37 @@ export function JarvisGraph3D() {
     const fg = fgRef.current;
     if (!fg || !graphData.nodes.length) return;
 
-    // Espalha
-    fg.d3Force("charge")?.strength(-380);
+    // Repulsão global mais forte + distância mínima — tira o amontoado
+    const charge: any = fg.d3Force("charge");
+    if (charge) {
+      charge.strength(-650);
+      if (typeof charge.distanceMin === "function") charge.distanceMin(40);
+      if (typeof charge.distanceMax === "function") charge.distanceMax(2000);
+    }
+
     const linkForce: any = fg.d3Force("link");
     if (linkForce) {
       linkForce
-        .distance((l: any) => 90 + (1 - (l.weight ?? 0.5)) * 160)
-        .strength((l: any) => Math.max(0.05, (l.weight ?? 0.3) * 0.7));
+        .distance((l: any) => 140 + (1 - (l.weight ?? 0.5)) * 200)
+        .strength((l: any) => Math.max(0.04, (l.weight ?? 0.3) * 0.45));
     }
 
-    fg.cameraPosition({ x: 0, y: 0, z: 900 }, undefined, 1200);
+    // Colisão 3D real: garante que cada nó respeita ~2.4× seu raio visual
+    fg.d3Force(
+      "collide",
+      forceCollide((n: any) => (n.visualRadius ?? 6) * 2.4)
+        .strength(0.9)
+        .iterations(2),
+    );
+
+    // Repulsão extra entre sellers (curto alcance) — evita colapso de clusters
+    // de empresas conectadas ao mesmo buyer
+    const sellerSpread = forceManyBody()
+      .strength((n: any) => (n.type === "seller" ? -180 : 0))
+      .distanceMax(160);
+    fg.d3Force("seller-spread", sellerSpread as any);
+
+    fg.cameraPosition({ x: 0, y: 0, z: 1100 }, undefined, 1200);
 
     const safety = window.setTimeout(() => {
       try {
@@ -277,6 +310,10 @@ export function JarvisGraph3D() {
     }, 7000);
     return () => window.clearTimeout(safety);
   }, [graphData]);
+
+  // ---------- Sinapses fantasmas (10% dos nós marcados como neurônios) ----------
+  useGhostSynapses(fgRef, graphData.nodes, !isLoading && graphData.nodes.length > 0);
+
 
   // ---------- Vizinhos do hovered/selected ----------
   const focusId = selectedNode?.id ?? hoveredId ?? null;
@@ -293,18 +330,18 @@ export function JarvisGraph3D() {
   }, [focusId, graphData.links]);
 
   // ---------- Node visual ----------
-  const buildNodeObject = (node: any): THREE.Object3D => {
+  const buildNodeObject = (node: any): Object3D => {
     const n = node as JarvisNode;
-    const group = new THREE.Group();
-    const baseColor = new THREE.Color(NODE_COLORS[n.type] ?? "#71717a");
+    const group = new Group();
+    const baseColor = new Color(NODE_COLORS[n.type] ?? "#71717a");
     const radius = n.visualRadius ?? 6;
     const dimmed =
       focusId !== null && focusNeighborIds && !focusNeighborIds.has(n.id);
 
     // Núcleo
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(radius, 24, 24),
-      new THREE.MeshBasicMaterial({
+    const sphere = new Mesh(
+      new SphereGeometry(radius, 24, 24),
+      new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
         opacity: dimmed ? 0.18 : 0.95,
@@ -313,13 +350,13 @@ export function JarvisGraph3D() {
     group.add(sphere);
 
     // Glow aditivo
-    const glow = new THREE.Mesh(
-      new THREE.SphereGeometry(radius * 1.9, 24, 24),
-      new THREE.MeshBasicMaterial({
+    const glow = new Mesh(
+      new SphereGeometry(radius * 1.9, 24, 24),
+      new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
         opacity: dimmed ? 0.02 : 0.05 + n.heat * 0.18,
-        blending: THREE.AdditiveBlending,
+        blending: AdditiveBlending,
         depthWrite: false,
       }),
     );
@@ -330,23 +367,23 @@ export function JarvisGraph3D() {
       !dimmed &&
       (n.type === "buyer_strategic" || n.type === "platform" || n.type === "strategy")
     ) {
-      const ringGeo = new THREE.RingGeometry(radius * 2.2, radius * 2.4, 64);
-      const ringMat = new THREE.MeshBasicMaterial({
+      const ringGeo = new RingGeometry(radius * 2.2, radius * 2.4, 64);
+      const ringMat = new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
         opacity: 0.32,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending,
+        side: DoubleSide,
+        blending: AdditiveBlending,
         depthWrite: false,
       });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
+      const ring = new Mesh(ringGeo, ringMat);
       ring.rotation.x = Math.PI / 2;
       group.add(ring);
 
       // Segundo anel (platform tem dois)
       if (n.type === "platform") {
-        const ring2 = new THREE.Mesh(
-          new THREE.RingGeometry(radius * 2.7, radius * 2.85, 64),
+        const ring2 = new Mesh(
+          new RingGeometry(radius * 2.7, radius * 2.85, 64),
           ringMat.clone(),
         );
         ring2.rotation.x = Math.PI / 2.4;
@@ -357,13 +394,13 @@ export function JarvisGraph3D() {
 
     // Halo capital para buyer financial
     if (!dimmed && n.type === "buyer_financial") {
-      const halo = new THREE.Mesh(
-        new THREE.SphereGeometry(radius * 2.4, 16, 16),
-        new THREE.MeshBasicMaterial({
+      const halo = new Mesh(
+        new SphereGeometry(radius * 2.4, 16, 16),
+        new MeshBasicMaterial({
           color: baseColor,
           transparent: true,
           opacity: 0.06,
-          blending: THREE.AdditiveBlending,
+          blending: AdditiveBlending,
           depthWrite: false,
         }),
       );
@@ -381,7 +418,7 @@ export function JarvisGraph3D() {
       label.backgroundColor = "rgba(9,9,11,0.6)";
       label.padding = 1.5;
       label.borderRadius = 2;
-      (label as unknown as THREE.Object3D).position.y = radius + 7;
+      (label as unknown as Object3D).position.y = radius + 7;
       group.add(label);
     }
 
@@ -551,10 +588,30 @@ export function JarvisGraph3D() {
         linkDirectionalParticles={(l: any) => (shouldShowParticles(l) ? 3 : 0)}
         linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
         linkDirectionalParticleSpeed={(l: any) => 0.002 + (l.weight ?? 0.5) * 0.006}
-        linkCurvature={(l: any) => 0.18 + (l.weight ?? 0.5) * 0.08}
-        // Render manual cuida de opacity por link via material — usamos linkOpacity
-        // como base e diminuímos via linkColor só seria HEX. Contornamos delegando ao
-        // shader interno: passamos opacidade dinâmica via linkVisibility implícito.
+        linkCurvature={(l: any) => {
+          const s: any = l.source;
+          const t: any = l.target;
+          if (!s || !t || typeof s !== "object" || typeof t !== "object") {
+            return 0.3;
+          }
+          const dx = (s.x ?? 0) - (t.x ?? 0);
+          const dy = (s.y ?? 0) - (t.y ?? 0);
+          const dz = (s.z ?? 0) - (t.z ?? 0);
+          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          // Quanto mais distante, mais arqueada (até 0.55)
+          return Math.min(0.55, 0.25 + dist / 1800);
+        }}
+        linkCurveRotation={(l: any) => {
+          // Hash determinístico do par → cada aresta gira em um plano diferente,
+          // evitando arcos sobrepostos no mesmo cluster.
+          const sId = endpointId((l as any).source);
+          const tId = endpointId((l as any).target);
+          let h = 0;
+          const k = sId + "|" + tId;
+          for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+          return ((h % 360) / 360) * Math.PI * 2;
+        }}
+        linkResolution={12}
         onNodeHover={(n: any) => setHoveredId(n?.id ?? null)}
         onNodeClick={(n: any) => {
           setSelectedNode(n as JarvisNode);
