@@ -597,6 +597,17 @@ export function JarvisGraph3D() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-zinc-950">
+        <div className="flex flex-col items-center gap-3 text-emerald-300 text-xs font-mono uppercase tracking-widest">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          Sincronizando cérebro…
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
