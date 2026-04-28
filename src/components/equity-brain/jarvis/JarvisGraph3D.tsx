@@ -445,8 +445,10 @@ export function JarvisGraph3D() {
       );
       label.color = isFocused ? "#a7f3d0" : "#e5e7eb";
       label.textHeight = isFocused ? 6 : 4.2;
-      label.backgroundColor = "rgba(9,9,11,0.6)";
-      label.padding = 1.5;
+      label.backgroundColor = "rgba(0,0,0,0.85)";
+      label.borderColor = isFocused ? "#10b981" : "rgba(16,185,129,0.35)";
+      label.borderWidth = 0.4;
+      label.padding = 2;
       label.borderRadius = 2;
       (label as unknown as Object3D).position.y = radius + 7;
       group.add(label);
