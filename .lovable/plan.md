@@ -1,106 +1,72 @@
-## Objetivo
+## Auditoria do Grafo 3D — diagnóstico
 
-Refinar o `JarvisGraph3D` em quatro frentes: bundle menor com import dinâmico granular, espaçamento mínimo entre empresas (anti-amontoamento), 10% dos nós com "conexões fantasmas" que aparecem/desaparecem (efeito de cérebro vivo) e arestas curvas reais visíveis no zoom out.
+Naveguei até `/equity-brain/grafo-jarvis` no preview e a tela está **100% em branco**. Causa raiz confirmada nos logs do navegador:
 
----
+```
+504 () /node_modules/.vite/deps/chunk-JLMLWGGE.js
+504 () /node_modules/.vite/deps/chunk-FFODJARL.js
+```
 
-## 1. Bundle: import dinâmico por partes + tree-shake
+O `vite.config.ts` está com `three`, `three-spritetext`, `three-render-objects`, `three-forcegraph`, `react-force-graph-3d` e `d3-force-3d` em `optimizeDeps.exclude`. Sem pre-bundle, o Vite tenta servir cada arquivo do `three` (~1.500 módulos) individualmente em dev — o servidor estoura e devolve 504 → o React nunca monta. O build de produção funciona porque o Rollup faz o bundling, mas o **preview que o usuário vê está quebrado**.
 
-**Problema atual**: `JarvisGraph3D.tsx` faz `import * as THREE from "three"` no topo, puxando o pacote inteiro (~600KB). `SpriteText` também é estático.
+Além disso, encontrei mais 4 bugs ativos no componente.
 
-**Mudanças em `src/components/equity-brain/jarvis/JarvisGraph3D.tsx`**:
-- Trocar `import * as THREE from "three"` por imports nomeados:
-  ```ts
-  import {
-    Group, Mesh, SphereGeometry, RingGeometry,
-    MeshBasicMaterial, Color, AdditiveBlending, DoubleSide,
-  } from "three";
-  ```
-  Isso permite tree-shake real do three.js, removendo loaders, cameras, renderers, audio, animation, etc. que não são usados (a `ForceGraph3D` traz seu próprio renderer internamente).
-- Carregar `ForceGraph3D` e `SpriteText` via `React.lazy` + dynamic `import()` dentro de um wrapper interno (`JarvisGraph3DInner`), com fallback de loading. O componente exportado vira um shell leve que só monta o inner quando o container já tem dimensões.
-- Remover o uso atual de `THREE.Color`, `THREE.SphereGeometry` etc. via namespace e usar as classes nomeadas.
+## Correções
 
-**`vite.config.ts`**:
-- Adicionar `build.rollupOptions.output.manualChunks` separando `three`, `react-force-graph-3d`, `three-spritetext` em um chunk `equity-brain-3d`. Isso garante que o chunk só seja baixado na rota `/equity-brain/grafo-jarvis`.
-- Manter o `optimizeDeps.exclude` atual (continua necessário no dev).
+### 1. Tela branca em dev (causa raiz)
+- `vite.config.ts`: voltar `three`, `three-spritetext`, `three-render-objects`, `three-forcegraph`, `react-force-graph-3d`, `d3-force-3d` para `optimizeDeps.include`.
+- Manter o alias do shim `ngraph.forcelayout` (resolveu o erro de export default antes).
+- Adicionar shims minimalistas para `ngraph.events`, `ngraph.merge`, `ngraph.random` (mesmo padrão) caso o pre-bundle reclame de novo.
+- Limpar `node_modules/.vite` para forçar re-otimização limpa.
 
-**Dependências removidas** (`package.json`): nenhuma dependência 3D extra para remover — o projeto já usa apenas `three`, `three-spritetext`, `react-force-graph-3d`. Confirmamos via grep que `d3-force-3d` é trazido transitivamente pelo `react-force-graph-3d` (não removível). Vamos garantir que `d3-force-3d` não seja importado diretamente em código nosso (não é).
+### 2. Forças de repulsão não aplicadas em grafos já estabilizados
+No `useEffect` que configura `charge`/`collide`/`link`, chamar `fg.d3ReheatSimulation()` no fim para garantir que as novas forças (distância mínima entre empresas) realmente atuem mesmo após mudanças de filtro.
 
-**Resultado esperado**: chunk inicial do app não carrega three; chunk 3D fica isolado e só baixa na rota Jarvis.
+### 3. `useGhostSynapses` — leak e ghosts órfãos
+- Remover qualquer grupo `ghost-synapses` pré-existente da cena antes de adicionar o novo (defesa contra dupla montagem em StrictMode/HMR).
+- Buscar o nó atual via `fgRef.current.graphData()` em vez do snapshot capturado, para sempre ter coordenadas vivas mesmo após re-render.
 
----
+### 4. Curvatura colapsando em arestas sem coordenada inicial
+Antes da simulação rodar, `source.x`/`target.x` são `undefined`. Trocar o cálculo para usar `linkCurvature` constante por par (hash determinístico → 0.25–0.55) em vez de depender de distância 3D. Isso elimina o efeito "fragmentado" no primeiro frame e mantém o arco circular mesmo no zoom out.
 
-## 2. Espaçamento mínimo entre empresas
+### 5. Freeze prematuro do layout
+Aumentar o timeout de freeze de 7s → 12s e só congelar se a simulação realmente parou (`fg.d3AlphaTarget() === 0` e `fg.d3Alpha() < 0.05`). Caso contrário, deixar a física continuar.
 
-**Problema**: empresas (`seller`) ficam amontoadas porque o `charge` é uniforme e não há colisão por raio visual.
+## Detalhes técnicos
 
-**Mudanças em `JarvisGraph3D.tsx` (bloco `useEffect` de forças)**:
-- Aumentar repulsão global: `charge.strength(-650)` (era -380) e `distanceMin(40)`.
-- Adicionar uma força de **colisão 3D** usando `forceCollide` de `d3-force-3d`:
-  ```ts
-  import { forceCollide } from "d3-force-3d";
-  fg.d3Force("collide", forceCollide((n: any) => (n.visualRadius ?? 6) * 2.4).strength(0.9).iterations(2));
-  ```
-  O multiplicador 2.4 garante distância mínima ≈ 2× o raio visual entre quaisquer dois nós.
-- Reforço extra para sellers: força custom `seller-spread` que aplica repulsão adicional só entre nós do tipo `seller` (curto alcance, ~120px) — evita que vários sellers conectados ao mesmo buyer colapsem em cima uns dos outros.
-- Reduzir `linkForce.strength` para `Math.max(0.04, w * 0.45)` (era 0.7) para que arestas fortes não puxem demais.
-- Aumentar `linkForce.distance` base de 90 → 140.
+**vite.config.ts** — `optimizeDeps`:
+```ts
+include: [
+  "react", "react-dom", "react/jsx-runtime", "reactflow", "dagre",
+  "three", "three-spritetext", "three-render-objects",
+  "three-forcegraph", "react-force-graph-3d", "d3-force-3d",
+],
+exclude: [],
+```
 
-**Resultado**: nós com respiração visível, sem sobreposição mesmo em clusters densos.
+**JarvisGraph3D.tsx** — após configurar forças:
+```ts
+fg.d3ReheatSimulation();
+```
 
----
+**JarvisGraph3D.tsx** — `linkCurvature`:
+```ts
+linkCurvature={(l: any) => {
+  const k = endpointId(l.source) + "|" + endpointId(l.target);
+  let h = 0; for (let i=0;i<k.length;i++) h = (h*31 + k.charCodeAt(i))|0;
+  return 0.25 + (Math.abs(h) % 30) / 100; // 0.25 .. 0.54 estável
+}}
+```
 
-## 3. Conexões fantasmas (10% dos nós)
+**useGhostSynapses.ts** — antes de `scene.add(group)`:
+```ts
+const prev = scene.getObjectByName("ghost-synapses");
+if (prev) scene.remove(prev);
+```
+e dentro do `tick`, usar `fgRef.current?.graphData().nodes` para coordenadas.
 
-**Conceito**: arestas decorativas que pulsam in/out simulando "sinapses" — não afetam física nem dados.
-
-**Implementação**:
-- No `useMemo` que constrói `graphData`, após gerar `nodes`/`links` reais, sortear 10% dos nós (priorizando `seller` e `buyer_*`) como "neurônios ativos". Para cada um, gerar 1–2 candidatos de "ghost link" para vizinhos próximos no espaço (pares aleatórios da lista, sem duplicar arestas reais).
-- Guardar essa lista em estado separado `ghostLinks` (não entra no `graphData` passado ao ForceGraph — não influencia layout).
-- Renderizar overlay via `linkThreeObjectExtend={true}` + `linkThreeObject` customizado **OU**, mais simples: usar `forceGraph.scene()` para adicionar um `Group` de linhas próprio depois do mount.
-  - Abordagem escolhida: hook `useGhostSynapses(fgRef, ghostLinks, nodesById)` que:
-    1. Cria um `Group` com `LineSegments` (BufferGeometry de posições) adicionado a `fgRef.current.scene()`.
-    2. Em cada frame (`requestAnimationFrame`), para cada ghost link calcula uma fase senoidal `phase = sin(t * speed + offset)`. Quando `phase > threshold`, a linha está "viva" — com opacidade animada `0 → 0.6 → 0` e um pequeno ponto luminoso (`Points`) viajando ao longo dela.
-    3. Atualiza posições dos endpoints lendo `node.x/y/z` (que o force-graph mantém atualizado).
-    4. Cada ghost tem ciclo de vida de 1.5–4s, depois é re-sorteado para outro par.
-- Cor dos ghosts: ciano translúcido `#22d3ee` com `AdditiveBlending`, espessura fina, sem partículas direcionais (elas já existem nas reais).
-- Limite: máx 30 ghosts simultâneos para não pesar.
-
-**Resultado**: efeito de "cérebro disparando sinapses" — conexões aparecem/desaparecem em ondas, criando movimento mesmo quando o grafo está congelado.
-
----
-
-## 4. Arestas curvas reais (arcos)
-
-**Problema atual**: `linkCurvature={0.18 + w*0.08}` produz curvatura baixa, e em zoom out as linhas viram segmentos quase retos justapostos = visual fragmentado.
-
-**Mudanças**:
-- Aumentar curvatura base e vinculá-la à distância entre os nós, não só ao peso:
-  ```ts
-  linkCurvature={(l) => {
-    const s = l.source, t = l.target;
-    const dist = Math.hypot((s.x ?? 0)-(t.x ?? 0), (s.y ?? 0)-(t.y ?? 0), (s.z ?? 0)-(t.z ?? 0));
-    return Math.min(0.55, 0.25 + dist / 1800);
-  }}
-  ```
-  Quanto mais distantes os nós, mais arqueada a conexão — gera o visual de "feixes orbitais" no zoom out.
-- Adicionar `linkCurveRotation={(l) => /* hash determinístico do par */}` para que múltiplas arestas entre o mesmo cluster não se sobreponham (cada arco em um plano diferente).
-- Definir `linkResolution={12}` (era default 2) para suavizar a curva — mais segmentos = arco contínuo em vez de quebrado. Custo trivial.
-
-**Resultado**: zoom out mostra arcos suaves e contínuos, lembrando feixes neurais; zoom in mantém legibilidade.
-
----
-
-## Arquivos afetados
-
-- `src/components/equity-brain/jarvis/JarvisGraph3D.tsx` — imports nomeados de three, lazy do ForceGraph3D/SpriteText, forças (collide + seller-spread), curvatura por distância, `linkResolution`, hook de ghosts.
-- `src/components/equity-brain/jarvis/useGhostSynapses.ts` — **novo**: gerencia ghost links via `scene()` + RAF.
-- `src/lib/equityGraphJarvisAdapter.ts` — adicionar marcação `isNeuron: boolean` em ~10% dos nós (sellers/buyers preferenciais), exposta para o hook escolher candidatos.
-- `vite.config.ts` — `manualChunks` para isolar `three` + libs 3D.
-
-## Notas técnicas
-
-- O hook de ghosts usa `cancelAnimationFrame` no cleanup e remove o `Group` da `scene()` para evitar leaks ao desmontar.
-- `forceCollide` do `d3-force-3d` opera em 3D nativo (vs. `d3-force` que é 2D) — o pacote já está nas deps via `react-force-graph-3d`, então o import direto funciona sem custo extra de bundle.
-- Tree-shake do three: confirmado que classes nomeadas removem ~60–70% do peso de three.module.js em build de produção.
-- Não há mudança de schema, RLS ou Supabase. Mudança puramente client-side de visualização.
+## Validação
+1. `rm -rf node_modules/.vite` e aguardar Vite reotimizar.
+2. Navegar até `/equity-brain/grafo-jarvis` com `browser--navigate_to_sandbox` e capturar screenshot — deve mostrar o grafo 3D.
+3. Conferir console do navegador: zero erros 504, zero SyntaxError de ngraph.
+4. Rodar `bun run build:dev` para garantir que produção segue OK.

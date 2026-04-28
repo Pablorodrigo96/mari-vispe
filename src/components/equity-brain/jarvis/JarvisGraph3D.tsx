@@ -297,8 +297,18 @@ export function JarvisGraph3D() {
 
     fg.cameraPosition({ x: 0, y: 0, z: 1100 }, undefined, 1200);
 
+    // Reaquecer simulação para que as novas forças (collide / repulsão) realmente
+    // atuem mesmo se o grafo já estava parado (ex: troca de filtro).
+    try {
+      (fg as any).d3ReheatSimulation?.();
+    } catch {}
+
+    // Freeze: só congela se a simulação realmente convergiu. Em grafos grandes
+    // (350 nós) 7s era pouco e travava em estado intermediário ruim.
     const safety = window.setTimeout(() => {
       try {
+        const alpha = (fg as any).d3Alpha?.() ?? 0;
+        if (alpha > 0.05) return; // ainda mexendo, não congela
         graphData.nodes.forEach((n: any) => {
           if (Number.isFinite(n.x) && Number.isFinite(n.y) && Number.isFinite(n.z)) {
             n.fx = n.x;
@@ -307,7 +317,7 @@ export function JarvisGraph3D() {
           }
         });
       } catch {}
-    }, 7000);
+    }, 12000);
     return () => window.clearTimeout(safety);
   }, [graphData]);
 
@@ -589,17 +599,13 @@ export function JarvisGraph3D() {
         linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
         linkDirectionalParticleSpeed={(l: any) => 0.002 + (l.weight ?? 0.5) * 0.006}
         linkCurvature={(l: any) => {
-          const s: any = l.source;
-          const t: any = l.target;
-          if (!s || !t || typeof s !== "object" || typeof t !== "object") {
-            return 0.3;
-          }
-          const dx = (s.x ?? 0) - (t.x ?? 0);
-          const dy = (s.y ?? 0) - (t.y ?? 0);
-          const dz = (s.z ?? 0) - (t.z ?? 0);
-          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-          // Quanto mais distante, mais arqueada (até 0.55)
-          return Math.min(0.55, 0.25 + dist / 1800);
+          // Curvatura estável por par (hash determinístico). Não depende de
+          // coordenadas — evita o efeito "fragmentado" antes da simulação rodar
+          // e mantém arcos circulares no zoom out.
+          const k = endpointId((l as any).source) + "|" + endpointId((l as any).target);
+          let h = 0;
+          for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+          return 0.25 + (Math.abs(h) % 30) / 100; // 0.25 .. 0.54
         }}
         linkCurveRotation={(l: any) => {
           // Hash determinístico do par → cada aresta gira em um plano diferente,

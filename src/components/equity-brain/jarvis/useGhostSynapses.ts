@@ -61,7 +61,13 @@ export function useGhostSynapses(
     const neurons = nodes.filter((n) => n.isNeuron);
     if (neurons.length === 0) return;
 
-    const nodeById = new Map(nodes.map((n) => [n.id, n]));
+    // Defesa contra HMR / StrictMode: remove qualquer grupo anterior antes de
+    // adicionar o novo (caso contrário acumulam linhas órfãs na cena).
+    try {
+      const prev = scene.getObjectByName?.("ghost-synapses");
+      if (prev) scene.remove(prev);
+    } catch {}
+
     const group = new Group();
     group.name = "ghost-synapses";
     scene.add(group);
@@ -111,6 +117,16 @@ export function useGhostSynapses(
       const now = performance.now();
       const t = now / 1000;
 
+      // Pega coordenadas vivas direto do force-graph (não do snapshot).
+      const liveNodes: any[] = (() => {
+        try {
+          return (fgRef.current as any)?.graphData?.()?.nodes ?? nodes;
+        } catch {
+          return nodes;
+        }
+      })();
+      const liveById = new Map(liveNodes.map((n: any) => [n.id, n]));
+
       for (let i = 0; i < ghosts.length; i++) {
         const g = ghosts[i];
         const line = lines[i];
@@ -124,8 +140,8 @@ export function useGhostSynapses(
           continue;
         }
 
-        const a = nodeById.get(g.aId) as any;
-        const b = nodeById.get(g.bId) as any;
+        const a = liveById.get(g.aId) as any;
+        const b = liveById.get(g.bId) as any;
         if (!a || !b || !Number.isFinite(a.x) || !Number.isFinite(b.x)) {
           (line.material as LineBasicMaterial).opacity = 0;
           continue;
