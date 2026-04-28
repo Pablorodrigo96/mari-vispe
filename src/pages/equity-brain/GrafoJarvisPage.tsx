@@ -41,6 +41,14 @@ export default function GrafoJarvisPage() {
           <div className="flex-1" />
 
           <Link
+            to="/equity-brain/grafo-jarvis/guia"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 hover:text-emerald-200 hover:bg-emerald-900/40 text-xs transition-colors"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Guia
+          </Link>
+
+          <Link
             to="/equity-brain/grafo"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-emerald-300 hover:bg-zinc-800 text-xs transition-colors"
           >
