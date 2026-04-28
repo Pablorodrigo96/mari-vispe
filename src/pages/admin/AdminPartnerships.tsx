@@ -190,6 +190,8 @@ const AdminPartnerships = () => {
           active_reservations: activeRes,
           exclusive_reservations: exclusiveRes,
           avg_vdr_readiness: vdrReadinesses.length > 0 ? Math.round(vdrReadinesses.reduce((a, b) => a + b, 0) / vdrReadinesses.length) : null,
+          partner_status: ((p as any).partner_status || 'active') as PartnerStatus,
+          is_partner_accountant: !!(p as any).is_partner_accountant,
         };
       });
 
