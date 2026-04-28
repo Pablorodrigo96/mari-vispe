@@ -180,15 +180,22 @@ export default function PartnerDashboard() {
   }, [pool, poolSearch, poolCategory]);
 
   return (
-    <div className="p-4 lg:p-8 max-w-[1400px] mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
+    <div className="p-4 lg:p-8 max-w-[1400px] mx-auto space-y-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 min-h-screen">
+      <div className="flex items-center gap-3">
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent/30 to-accent/5 border border-accent/40 flex items-center justify-center shadow-gold">
           <Briefcase className="w-6 h-6 text-accent" />
-          Painel do Parceiro
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gerencie suas reservas e descubra oportunidades de match na rede.
-        </p>
+        </div>
+        <div>
+          <Badge variant="outline" className="bg-transparent border-accent/40 text-accent text-[10px] tracking-widest mb-1">
+            PARCERIAS
+          </Badge>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+            Painel do Parceiro
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gerencie suas reservas e descubra oportunidades de match na rede.
+          </p>
+        </div>
       </div>
 
       {/* Banner: Importar carteira em lote */}
@@ -448,10 +455,15 @@ export default function PartnerDashboard() {
 
 function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
   return (
-    <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-700/50">
+    <Card className="!bg-slate-900/70 backdrop-blur-md border-slate-700/50 hover:border-accent/40 hover:shadow-[0_0_24px_-8px_hsl(38,92%,50%,0.4)] transition-all">
       <CardContent className="p-4">
-        <div className={`flex items-center gap-2 ${color} mb-2`}>{icon}<span className="text-xs uppercase tracking-wide">{label}</span></div>
-        <div className="text-2xl font-bold text-foreground">{value}</div>
+        <div className={`flex items-center gap-2 ${color} mb-2`}>
+          <div className={`h-8 w-8 rounded-lg bg-current/10 flex items-center justify-center`}>
+            {icon}
+          </div>
+          <span className="text-[10px] uppercase tracking-wider font-semibold">{label}</span>
+        </div>
+        <div className="text-3xl font-bold text-foreground tabular-nums">{value}</div>
       </CardContent>
     </Card>
   );

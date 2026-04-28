@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Target, TrendingUp, Network, Sparkles, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
-import { NODE_COLORS, NODE_LABELS, EDGE_COLORS, EDGE_LABELS } from "@/lib/equityGraphScoring";
+import { NODE_COLORS, NODE_LABELS, NODE_DESCRIPTIONS, EDGE_COLORS, EDGE_LABELS } from "@/lib/equityGraphScoring";
 import type { GraphNode, GraphEdge } from "@/lib/equityGraphBuilder";
 import { formatBRL } from "@/lib/equityBrain";
 
@@ -71,6 +71,21 @@ export function NodeDetailPanel({ node, allNodes, allEdges, onClose, onFocus, on
   const isUndervalued = node.type === "seller" && node.strategic_score >= 60 && node.opportunity_stage === "prospect";
   const isStrategicTarget = node.type === "seller" && hotConnections >= 3;
 
+  // Papéis dinâmicos no grafo (badges contextuais)
+  const platformAddonEdges = directEdges.filter((e) => e.edge_type === "platform_addon");
+  const sellerToSellerEdges = directEdges.filter(
+    (e) => e.edge_type === "seller_acquires_seller" || e.edge_type === "seller_merges_with_seller"
+  );
+  const isPotentialConsolidator = node.type === "seller" && platformAddonEdges.length >= 3;
+  const isFusionCandidate = node.type === "seller" && sellerToSellerEdges.length >= 1;
+  const isAvailableAddon = node.type === "seller" && platformAddonEdges.some((e) => {
+    const sId = endpointId(e.source);
+    const otherId = sId === node.id ? endpointId(e.target) : sId;
+    const other = allNodes.find((n) => n.id === otherId);
+    return other?.type === "platform";
+  });
+  const thesisTargets = node.type === "thesis" ? directNeighbors.filter((n) => n.node.type === "seller") : [];
+
   return (
     <Sheet open={!!node} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
@@ -99,6 +114,42 @@ export function NodeDetailPanel({ node, allNodes, allEdges, onClose, onFocus, on
               {node.uf && <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">{node.uf}</span>}
               {node.municipio && <span className="text-zinc-500 truncate">{node.municipio}</span>}
             </div>
+            <p className="text-[11px] text-zinc-500 leading-relaxed">
+              {NODE_DESCRIPTIONS[node.type]}
+            </p>
+
+            {/* Badges contextuais de papel no grafo */}
+            {(isPotentialConsolidator || isFusionCandidate || isAvailableAddon) && (
+              <div className="flex flex-wrap gap-1.5">
+                {isPotentialConsolidator && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/60 border border-amber-800/60 text-amber-300 font-semibold">
+                    🏛️ Consolidador potencial
+                  </span>
+                )}
+                {isFusionCandidate && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-950/60 border border-yellow-800/60 text-yellow-300 font-semibold">
+                    🔀 Candidato a fusão
+                  </span>
+                )}
+                {isAvailableAddon && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-950/60 border border-blue-800/60 text-blue-300 font-semibold">
+                    🧩 Add-on disponível
+                  </span>
+                )}
+              </div>
+            )}
+
+            {node.type === "thesis" && thesisTargets.length > 0 && (
+              <div className="rounded-md p-2.5 bg-violet-950/40 border border-violet-900/60">
+                <div className="text-[10px] uppercase tracking-wider text-violet-300 font-bold">
+                  🧠 Tese de Investimento
+                </div>
+                <div className="text-[11px] text-zinc-300 mt-0.5">
+                  Atrai <span className="text-violet-200 font-bold">{thesisTargets.length}</span> empresa{thesisTargets.length > 1 ? "s" : ""}-alvo no marketplace.
+                </div>
+              </div>
+            )}
+
             <div className="flex items-end gap-3">
               <div>
                 <div className="text-[9px] uppercase tracking-wider text-zinc-500">Strategic Score</div>
@@ -289,7 +340,15 @@ export function NodeDetailPanel({ node, allNodes, allEdges, onClose, onFocus, on
                 text="Buyer já fez múltiplos deals nesta vertical — tese de buy-and-build comprovada."
               />
             )}
-            {!isCentralHub && !isUndervalued && !isStrategicTarget && node.type !== "platform" && (
+            {isPotentialConsolidator && (
+              <Reason color="amber" title="Consolidador potencial"
+                text={`Este seller tem ${platformAddonEdges.length} conexões de add-on — está em posição de virar plataforma e absorver concorrentes menores.`} />
+            )}
+            {isFusionCandidate && (
+              <Reason color="emerald" title="Candidato a fusão"
+                text={`${sellerToSellerEdges.length} conexão(ões) com outras PMEs do marketplace. Avalie roll-up ou fusão de iguais.`} />
+            )}
+            {!isCentralHub && !isUndervalued && !isStrategicTarget && !isPotentialConsolidator && !isFusionCandidate && node.type !== "platform" && (
               <div className="text-xs text-zinc-500 italic px-1">
                 Node em construção — adicione mais conexões para qualificar a importância estratégica.
               </div>

@@ -66,6 +66,7 @@ import EBMapaPage from "./pages/equity-brain/MapaPage";
 import EBGrafoPage from "./pages/equity-brain/GrafoPage";
 // Lazy: 3D graph carrega three/react-force-graph-3d só quando a rota é aberta.
 const EBGrafoJarvisPage = lazy(() => import("./pages/equity-brain/GrafoJarvisPage"));
+const EBGrafoJarvisGuiaPage = lazy(() => import("./pages/equity-brain/GrafoJarvisGuiaPage"));
 import EBBoardPage from "./pages/equity-brain/BoardPage";
 import EBShadowPage from "./pages/equity-brain/ShadowPage";
 
@@ -164,6 +165,14 @@ const App = () => (
                     }
                   >
                     <EBGrafoJarvisPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="grafo-jarvis/guia"
+                element={
+                  <Suspense fallback={<div className="p-10 text-zinc-400 text-sm">Carregando guia…</div>}>
+                    <EBGrafoJarvisGuiaPage />
                   </Suspense>
                 }
               />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Map as MapIcon, Maximize2, Minimize2, Network } from "lucide-react";
+import { Map as MapIcon, Maximize2, Minimize2, Network, BookOpen } from "lucide-react";
 import { JarvisGraph3D } from "@/components/equity-brain/jarvis/JarvisGraph3D";
 import { Button } from "@/components/ui/button";
 
@@ -39,6 +39,14 @@ export default function GrafoJarvisPage() {
           </div>
 
           <div className="flex-1" />
+
+          <Link
+            to="/equity-brain/grafo-jarvis/guia"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 hover:text-emerald-200 hover:bg-emerald-900/40 text-xs transition-colors"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Guia
+          </Link>
 
           <Link
             to="/equity-brain/grafo"
