@@ -467,20 +467,25 @@ export function buildStrategicGraph(
         });
       }
 
-      // cost_synergy sempre que mesma vertical + mesma UF
+      // cost_synergy só dispara quando vertical + UF + banda de receita iguais
+      // (evita explosão O(n²) em verticais populosas)
       if (sameUf) {
-        pushEdge({
-          source: a.id,
-          target: b.id,
-          edge_type: "cost_synergy",
-          strategy: "cost_optimization",
-          explanation: `Mesma vertical (${a.vertical}) e mesma UF (${a.uf}) — overhead operacional compartilhável.`,
-          scores: {
-            cost_synergy: 0.8,
-            execution_ease: 0.7,
-            strategic_fit: 0.4,
-          },
-        });
+        const bandA = valuationBand(revA);
+        const bandB = valuationBand(revB);
+        if (bandA === bandB && bandA !== "—") {
+          pushEdge({
+            source: a.id,
+            target: b.id,
+            edge_type: "cost_synergy",
+            strategy: "cost_optimization",
+            explanation: `Mesma vertical (${a.vertical}), UF (${a.uf}) e porte (${bandA}) — overhead operacional altamente compartilhável.`,
+            scores: {
+              cost_synergy: 0.8,
+              execution_ease: 0.7,
+              strategic_fit: 0.4,
+            },
+          });
+        }
       }
     }
   }
