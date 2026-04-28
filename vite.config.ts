@@ -34,8 +34,6 @@ export default defineConfig(({ mode }) => ({
       "dagre",
       "three",
       "three-spritetext",
-      "three-render-objects",
-      "three-forcegraph",
       "react-force-graph-3d",
       "d3-force-3d",
     ],
