@@ -180,15 +180,22 @@ export default function PartnerDashboard() {
   }, [pool, poolSearch, poolCategory]);
 
   return (
-    <div className="p-4 lg:p-8 max-w-[1400px] mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
+    <div className="p-4 lg:p-8 max-w-[1400px] mx-auto space-y-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 min-h-screen">
+      <div className="flex items-center gap-3">
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent/30 to-accent/5 border border-accent/40 flex items-center justify-center shadow-gold">
           <Briefcase className="w-6 h-6 text-accent" />
-          Painel do Parceiro
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gerencie suas reservas e descubra oportunidades de match na rede.
-        </p>
+        </div>
+        <div>
+          <Badge variant="outline" className="bg-transparent border-accent/40 text-accent text-[10px] tracking-widest mb-1">
+            PARCERIAS
+          </Badge>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+            Painel do Parceiro
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gerencie suas reservas e descubra oportunidades de match na rede.
+          </p>
+        </div>
       </div>
 
       {/* Banner: Importar carteira em lote */}
