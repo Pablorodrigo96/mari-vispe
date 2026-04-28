@@ -12,7 +12,26 @@ import { toast } from "sonner";
 import {
   TrendingUp, TrendingDown, CheckCircle2, XCircle, FileSignature,
   Loader2, ChevronDown, ChevronUp, AlertTriangle, Activity, MessageCircleReply,
+  Lightbulb,
 } from "lucide-react";
+
+// Mapa estático: feature → pergunta sugerida na call do BDR
+const FEATURE_QUESTIONS: Record<string, string> = {
+  governanca: "Vocês têm conselho consultivo, auditoria externa ou contrato societário formalizado?",
+  geografia: "Em quais regiões vocês operam hoje, e onde planejam expandir nos próximos 12 meses?",
+  densidade_local: "Quantos concorrentes diretos vocês mapeiam na sua praça hoje?",
+  tamanho: "Qual o faturamento dos últimos 12 meses e o EBITDA real (não ajustado)?",
+  financeiro: "Vocês têm DRE auditado dos últimos 3 anos? Margem está estável, em alta ou em queda?",
+  setor: "O setor está consolidando? Vocês já receberam abordagem de algum comprador estratégico?",
+  vertical_fit: "Qual a sua principal vertical de receita hoje e quanto pesa no mix?",
+  timing: "O sócio fundador pretende continuar à frente após uma transação? Em que horizonte?",
+  tese: "Sucessão familiar é tema discutido? Há plano definido para os próximos 24 meses?",
+  intent: "Vocês já consideraram receber um investidor minoritário ou vender o controle?",
+  socio_idade_max: "Qual a idade dos sócios fundadores e como veem o próximo ciclo?",
+  tempo_atividade_anos: "A empresa tem mais de 10 anos — como o sócio enxerga o próximo ciclo?",
+  unipessoal_fundador_55plus: "Existe sucessor mapeado dentro da família ou da empresa?",
+  sweet_spot_fadiga: "Como vocês veem o próximo ciclo de investimento? Capital próprio ou parceiro?",
+};
 
 export type MatchDecisionRow = {
   id: string;
