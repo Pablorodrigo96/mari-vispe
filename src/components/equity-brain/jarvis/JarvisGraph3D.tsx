@@ -7,9 +7,10 @@
  * estabilização.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Settings2, X, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Settings2, X, RotateCcw, Activity, ClipboardCopy } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/hooks/use-toast";
 import ForceGraph3D, { type ForceGraphMethods } from "react-force-graph-3d";
 import {
   Group,
@@ -94,7 +95,16 @@ export function JarvisGraph3D() {
   const [selectedNode, setSelectedNode] = useState<JarvisNode | null>(null);
 
   // ---------- Visual prefs (ajustes de fundo, persistidos em localStorage) ----------
-  const VISUAL_DEFAULTS = { glow: 70, scanlines: 50, vignette: 60, brightness: 30 };
+  const VISUAL_DEFAULTS = {
+    glow: 70,
+    scanlines: 50,
+    vignette: 60,
+    brightness: 30,
+    curvatureMin: 18, // 0-80
+    curvatureRange: 24, // 0-60
+    linkSegments: 12, // 4-24
+    arcStyle: "quad" as "quad" | "sine",
+  };
   const [visualPrefs, setVisualPrefs] = useState(() => {
     try {
       const raw = localStorage.getItem("jarvis3d-visual-prefs");
@@ -114,6 +124,67 @@ export function JarvisGraph3D() {
   const vignetteFactor = visualPrefs.vignette / 60;
   const scanlineOpacity = visualPrefs.scanlines / 1000;
   const videoBrightnessVal = (visualPrefs.brightness / 100) * 0.6 + 0.05;
+
+  // ---------- Diagnóstico (FPS, flare, log buffer) ----------
+  const { toast } = useToast();
+  const [fps, setFps] = useState(0);
+  const [flareActive, setFlareActive] = useState(false);
+
+  useEffect(() => {
+    let raf = 0;
+    let frames = 0;
+    let last = performance.now();
+    const tick = () => {
+      frames++;
+      const now = performance.now();
+      if (now - last >= 1000) {
+        setFps(Math.round((frames * 1000) / (now - last)));
+        frames = 0;
+        last = now;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const logBufferRef = useRef<string[]>([]);
+  useEffect(() => {
+    const methods: Array<"log" | "info" | "warn" | "error"> = ["log", "info", "warn", "error"];
+    const originals: Record<string, (...args: any[]) => void> = {};
+    methods.forEach((m) => {
+      originals[m] = (console as any)[m].bind(console);
+      (console as any)[m] = (...args: any[]) => {
+        try {
+          const ts = new Date().toISOString().slice(11, 23);
+          const line =
+            `[${ts}] ${m.toUpperCase()} ` +
+            args
+              .map((a) => {
+                if (typeof a === "string") return a;
+                try { return JSON.stringify(a); } catch { return String(a); }
+              })
+              .join(" ");
+          logBufferRef.current.push(line);
+          if (logBufferRef.current.length > 200) logBufferRef.current.shift();
+        } catch {}
+        originals[m](...args);
+      };
+    });
+    return () => {
+      methods.forEach((m) => { (console as any)[m] = originals[m]; });
+    };
+  }, []);
+
+  const handleCopyLogs = useCallback(async () => {
+    const text = logBufferRef.current.join("\n") || "(buffer vazio)";
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Logs copiados", description: `${logBufferRef.current.length} linhas copiadas.` });
+    } catch {
+      toast({ title: "Falha ao copiar", description: "Permissão negada.", variant: "destructive" });
+    }
+  }, [toast]);
 
   // Resize
   useEffect(() => {
@@ -394,7 +465,7 @@ export function JarvisGraph3D() {
   useGhostSynapses(fgRef, graphData.nodes, !isLoading && graphData.nodes.length > 0);
 
   // ---------- Solar flare (explosão solar a cada ~10s) ----------
-  useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2);
+  useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2, setFlareActive);
 
 
   // ---------- Vizinhos do hovered/selected ----------
@@ -443,11 +514,11 @@ export function JarvisGraph3D() {
 
     // Glow aditivo
     const glow = new Mesh(
-      new SphereGeometry(radius * 1.9, 24, 24),
+      new SphereGeometry(radius * 1.55, 24, 24),
       new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: dimmed ? 0.02 : (0.08 + n.heat * 0.28) * glowFactor,
+        opacity: dimmed ? 0.02 : (0.05 + n.heat * 0.18) * glowFactor,
         blending: AdditiveBlending,
         depthWrite: false,
       }),
@@ -459,11 +530,11 @@ export function JarvisGraph3D() {
       !dimmed &&
       (n.type === "buyer_strategic" || n.type === "platform" || n.type === "strategy")
     ) {
-      const ringGeo = new RingGeometry(radius * 2.2, radius * 2.4, 64);
+      const ringGeo = new RingGeometry(radius * 2.05, radius * 2.2, 64);
       const ringMat = new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: 0.32 * glowFactor,
+        opacity: 0.22 * glowFactor,
         side: DoubleSide,
         blending: AdditiveBlending,
         depthWrite: false,
@@ -487,11 +558,11 @@ export function JarvisGraph3D() {
     // Halo capital para buyer financial
     if (!dimmed && n.type === "buyer_financial") {
       const halo = new Mesh(
-        new SphereGeometry(radius * 2.4, 16, 16),
+        new SphereGeometry(radius * 2.0, 16, 16),
         new MeshBasicMaterial({
           color: baseColor,
           transparent: true,
-          opacity: 0.06 * glowFactor,
+          opacity: 0.04 * glowFactor,
           blending: AdditiveBlending,
           depthWrite: false,
         }),
@@ -506,7 +577,7 @@ export function JarvisGraph3D() {
         new MeshBasicMaterial({
           color: new Color("hsl(45, 100%, 60%)"),
           transparent: true,
-          opacity: 0.55 * glowFactor,
+          opacity: 0.4 * glowFactor,
           side: DoubleSide,
           blending: AdditiveBlending,
           depthWrite: false,
@@ -556,8 +627,9 @@ export function JarvisGraph3D() {
     const sId = endpointId(link.source);
     const tId = endpointId(link.target);
     const focused = focusId && (sId === focusId || tId === focusId);
-    let base = 0.4 + w * 3;
-    if (isGoldLink(link)) base *= 1.6; // gold mais grosso → sustenta neon
+    // Restaurado para valores "magros" anteriores
+    let base = 0.25 + w * 1.6;
+    if (isGoldLink(link)) base *= 1.4;
     return focused ? base * 2.2 : base;
   };
 
@@ -771,36 +843,41 @@ export function JarvisGraph3D() {
             `${n.label} · score ${Math.round(n.strategic_score ?? 0)} · ${n.degree ?? 0} conexões`
           }
           linkColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#71717a"}
-          linkOpacity={0.55}
+          linkOpacity={linkOpacityFn as any}
           linkWidth={linkWidthFn}
           linkMaterial={(l: any) => {
-            // Halo neon dourado para edges seller↔seller (blending aditivo)
             if (isGoldLink(l)) {
+              const w = l.weight ?? 0.5;
+              const sId = endpointId(l.source);
+              const tId = endpointId(l.target);
+              const op = focusId
+                ? sId === focusId || tId === focusId
+                  ? 0.95
+                  : 0.4
+                : 0.5 + w * 0.45;
               return new MeshBasicMaterial({
                 color: new Color("hsl(45, 100%, 65%)"),
                 transparent: true,
-                opacity: 0.92,
+                opacity: op,
                 blending: AdditiveBlending,
                 depthWrite: false,
               });
             }
-            return null as any; // usa material padrão
+            return null as any;
           }}
           linkDirectionalParticles={(l: any) => {
-            if (isGoldLink(l)) return 5;
+            if (isGoldLink(l)) return 4;
             return shouldShowParticles(l) ? 3 : 0;
           }}
           linkDirectionalParticleWidth={(l: any) => {
-            const base = 1 + (l.weight ?? 0.5) * 3;
-            return isGoldLink(l) ? base * 2 : base;
+            const base = 0.6 + (l.weight ?? 0.5) * 1.6;
+            return isGoldLink(l) ? base * 1.6 : base;
           }}
           linkDirectionalParticleSpeed={(l: any) => 0.002 + (l.weight ?? 0.5) * 0.006}
           linkDirectionalParticleColor={(l: any) => {
-            if (isGoldLink(l)) {
-              return "#fde68a"; // ouro brilhante neon
-            }
+            if (isGoldLink(l)) return "#fde68a";
             if (l.edge_type === "buyer_acquires_seller" || l.edge_type === "platform_addon") {
-              return "#60a5fa"; // azul Jarvis
+              return "#60a5fa";
             }
             return EDGE_COLORS[l.edge_type] ?? "#a3e635";
           }}
@@ -808,8 +885,9 @@ export function JarvisGraph3D() {
             const k = endpointId((l as any).source) + "|" + endpointId((l as any).target);
             let h = 0;
             for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
-            // Arcos pronunciados: 0.4 a 0.8
-            return 0.4 + (Math.abs(h) % 40) / 100;
+            const minC = visualPrefs.curvatureMin / 100;
+            const range = visualPrefs.curvatureRange / 100;
+            return minC + ((Math.abs(h) % 100) / 100) * range;
           }}
           linkCurveRotation={(l: any) => {
             const sId = endpointId((l as any).source);
@@ -817,9 +895,14 @@ export function JarvisGraph3D() {
             let h = 0;
             const k = sId + "|" + tId;
             for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+            // Estilo "sine": modula a rotação com Math.sin no hash → padrão senoidal
+            // (aproximação visual; força-graph só suporta Bézier quadrática nativa)
+            if (visualPrefs.arcStyle === "sine") {
+              return (Math.sin(h) + 1) * Math.PI;
+            }
             return ((h % 360) / 360) * Math.PI * 2;
           }}
-          linkResolution={12}
+          linkResolution={visualPrefs.linkSegments}
           onNodeHover={(n: any) => setHoveredId(n?.id ?? null)}
           onNodeClick={(n: any) => {
             setSelectedNode(n as JarvisNode);
@@ -897,6 +980,46 @@ export function JarvisGraph3D() {
               </div>
             ))}
 
+            {/* Controles de arco */}
+            <div className="mt-3 pt-2.5 border-t border-emerald-900/40">
+              <div className="text-[9px] uppercase tracking-wider text-emerald-400/80 mb-2 font-bold">Arcos</div>
+              {[
+                { key: "curvatureMin" as const, label: "Curvatura min", min: 0, max: 80 },
+                { key: "curvatureRange" as const, label: "Amplitude", min: 0, max: 60 },
+                { key: "linkSegments" as const, label: "Segmentos", min: 4, max: 24 },
+              ].map(({ key, label, min, max }) => (
+                <div key={key} className="mb-2 last:mb-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] uppercase tracking-wider text-zinc-400">{label}</span>
+                    <span className="text-[10px] text-emerald-300 tabular-nums">{visualPrefs[key] as number}</span>
+                  </div>
+                  <Slider
+                    value={[visualPrefs[key] as number]}
+                    min={min}
+                    max={max}
+                    step={1}
+                    onValueChange={(v) => setVisualPrefs((p: any) => ({ ...p, [key]: v[0] }))}
+                    className="[&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [&_[role=slider]]:border-emerald-400 [&_.bg-primary]:bg-emerald-500 [&_.bg-secondary]:bg-zinc-800"
+                  />
+                </div>
+              ))}
+              <div className="flex gap-1 mt-2">
+                {(["quad", "sine"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setVisualPrefs((p: any) => ({ ...p, arcStyle: s }))}
+                    className={`flex-1 px-2 py-1 text-[9px] uppercase tracking-wider transition-colors border ${
+                      visualPrefs.arcStyle === s
+                        ? "bg-emerald-900/40 border-emerald-500/70 text-emerald-200"
+                        : "bg-transparent border-emerald-900/50 text-zinc-400 hover:text-emerald-300"
+                    }`}
+                  >
+                    {s === "quad" ? "Quadrática" : "Senoidal"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button
               onClick={() => setVisualPrefs(VISUAL_DEFAULTS)}
               className="mt-3 w-full flex items-center justify-center gap-1.5 px-2 py-1 bg-transparent border border-emerald-900/50 hover:border-emerald-500/70 text-emerald-300 text-[9px] uppercase tracking-wider transition-colors"
@@ -906,6 +1029,41 @@ export function JarvisGraph3D() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Overlay diagnóstico — FPS / nodes / links / flare ativo + copiar logs */}
+      <div className="absolute bottom-3 left-3 z-20 pointer-events-auto">
+        <div className="relative bg-zinc-950/85 backdrop-blur-md border border-emerald-900/50 px-2.5 py-1.5 font-mono">
+          <span className="absolute -top-px -left-px w-2 h-2 border-t border-l border-emerald-400" />
+          <span className="absolute -top-px -right-px w-2 h-2 border-t border-r border-emerald-400" />
+          <span className="absolute -bottom-px -left-px w-2 h-2 border-b border-l border-emerald-400" />
+          <span className="absolute -bottom-px -right-px w-2 h-2 border-b border-r border-emerald-400" />
+          <div className="flex items-center gap-2.5 text-[9px] uppercase tracking-wider">
+            <div className="flex items-center gap-1 text-emerald-300">
+              <Activity className="h-3 w-3" />
+              <span className="tabular-nums">{fps}</span>
+              <span className="text-zinc-500">fps</span>
+            </div>
+            <div className="text-zinc-400">
+              <span className="text-zinc-500">N</span> <span className="text-emerald-300 tabular-nums">{graphData.nodes.length}</span>
+            </div>
+            <div className="text-zinc-400">
+              <span className="text-zinc-500">E</span> <span className="text-cyan-300 tabular-nums">{graphData.links.length}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className={`h-1.5 w-1.5 rounded-full transition-colors ${flareActive ? "bg-amber-300 shadow-[0_0_6px_2px_rgba(252,211,77,0.7)]" : "bg-zinc-700"}`} />
+              <span className={flareActive ? "text-amber-300" : "text-zinc-500"}>flare</span>
+            </div>
+            <button
+              onClick={handleCopyLogs}
+              className="flex items-center gap-1 px-1.5 py-0.5 border border-emerald-900/50 hover:border-emerald-500/70 text-emerald-300 hover:text-emerald-200 transition-colors"
+              title="Copiar últimos 200 logs do console"
+            >
+              <ClipboardCopy className="h-3 w-3" />
+              Logs
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Legenda inferior */}

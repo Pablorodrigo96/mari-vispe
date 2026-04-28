@@ -76,6 +76,7 @@ export function useSolarFlares(
   fgRef: React.MutableRefObject<ForceGraphMethods | undefined>,
   nodes: JarvisNode[],
   enabled: boolean,
+  onActiveChange?: (active: boolean) => void,
 ) {
   useEffect(() => {
     if (!enabled || !fgRef.current || nodes.length < 2) return;
@@ -115,6 +116,7 @@ export function useSolarFlares(
       activeGroup = null;
       activeCoreMat = null;
       activeHaloMat = null;
+      try { onActiveChange?.(false); } catch {}
     };
 
     const fire = () => {
@@ -187,6 +189,7 @@ export function useSolarFlares(
       activeStart = performance.now();
       activeCoreMat = coreMat;
       activeHaloMat = haloMat;
+      try { onActiveChange?.(true); } catch {}
 
       console.log("[SolarFlare] fired", { from: a.id, to: b.id });
     };
