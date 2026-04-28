@@ -14,6 +14,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ReservationCountdown } from '@/components/partner/ReservationCountdown';
+import { CockpitHeadPanel } from '@/components/admin/partnerships/CockpitHeadPanel';
+import { PartnerManagementTable } from '@/components/admin/partnerships/PartnerManagementTable';
+import type { PartnerStatus } from '@/lib/partnershipsTargets';
 
 interface PartnerData {
   user_id: string;
