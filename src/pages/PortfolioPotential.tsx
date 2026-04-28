@@ -233,6 +233,141 @@ export default function PortfolioPotential() {
               </CardContent>
             </Card>
           )}
+      </section>
+      )}
+
+      {/* === SEÇÃO 1.5: ANÁLISE DE CROSS-SELL POR CLIENTE === */}
+      {user && portfolio.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-accent" />
+            <h2 className="text-lg font-semibold text-foreground">Análise da carteira por serviço</h2>
+            <Badge variant="outline" className="bg-transparent text-[10px]">Cross-sell inteligente</Badge>
+          </div>
+
+          {/* Cards-resumo */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card className="border-accent/40 bg-gradient-to-br from-accent/10 to-transparent">
+              <CardContent className="p-4">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Honorários recorrentes/ano</p>
+                <p className="text-2xl font-bold text-accent">{formatBRL(analysis.totalRecurring)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">CFO + AC + Tributário + Capital</p>
+              </CardContent>
+            </Card>
+            <Card className="border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 to-transparent">
+              <CardContent className="p-4">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Success fees potenciais</p>
+                <p className="text-2xl font-bold text-emerald-400">{formatBRL(analysis.totalSuccessFee)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">M&A (5%) + Capital (1%)</p>
+              </CardContent>
+            </Card>
+            <Card className="border-yellow-500/40 bg-gradient-to-br from-yellow-500/10 to-transparent">
+              <CardContent className="p-4">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Receita total esperada/ano</p>
+                <p className="text-2xl font-bold text-yellow-500">{formatBRL(analysis.totalRevenue)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Ponderada pela propensão de cada cliente</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tabela por cliente */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Propensão por cliente e serviço</CardTitle>
+              <CardDescription className="text-xs">
+                🔥 Alto (≥70) · 🟡 Médio (40-69) · ⚪ Baixo (&lt;40). Receita esperada já ponderada pela propensão.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="text-left py-2 px-2 font-medium">Empresa</th>
+                      {services.map(s => (
+                        <th key={s} className="text-center py-2 px-2 font-medium" title={SERVICE_META[s].label}>
+                          {SERVICE_META[s].emoji} {SERVICE_META[s].short}
+                        </th>
+                      ))}
+                      <th className="text-right py-2 px-2 font-medium text-accent">Receita/ano</th>
+                      <th className="py-2 px-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.byClient.map(c => (
+                      <tr key={c.listing.id} className="border-b border-border/40">
+                        <td className="py-2 px-2 font-medium text-foreground truncate max-w-[180px]">{c.listing.title}</td>
+                        {services.map(s => {
+                          const lvl = scoreLevel(c.scores[s]);
+                          const emoji = lvl === 'alto' ? '🔥' : lvl === 'medio' ? '🟡' : '⚪';
+                          return (
+                            <td key={s} className="py-2 px-2 text-center" title={`Score: ${c.scores[s]}/100`}>
+                              <span className="text-base">{emoji}</span>
+                              <div className="text-[9px] text-muted-foreground tabular-nums">{c.scores[s]}</div>
+                            </td>
+                          );
+                        })}
+                        <td className="py-2 px-2 text-right text-accent font-bold tabular-nums">
+                          {formatBRL(c.totalExpectedRevenue)}
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <Button
+                            size="sm" variant="outline" className="h-6 text-[10px] bg-transparent"
+                            onClick={() => openWhatsApp(SERVICE_META[c.bestService].pitch(c.listing))}
+                          >
+                            <MessageCircle className="w-3 h-3 mr-1" />
+                            {SERVICE_META[c.bestService].short}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top oportunidades imediatas */}
+          {analysis.topOpportunities.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-orange-400" />
+                  Top oportunidades imediatas
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Maior receita esperada × propensão. Aborde nesta ordem.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {analysis.topOpportunities.map((opp, i) => {
+                  const meta = SERVICE_META[opp.service];
+                  return (
+                    <div key={`${opp.listing.id}-${opp.service}`} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="text-accent font-black text-lg tabular-nums w-6">#{i + 1}</div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-sm text-foreground truncate">{opp.listing.title}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {meta.emoji} {meta.label} · score {opp.score}/100
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-accent tabular-nums">{formatBRL(opp.expectedRevenue)}</div>
+                        <Button
+                          size="sm" className="h-7 text-[11px] mt-1 bg-accent hover:bg-accent/90 text-accent-foreground"
+                          onClick={() => openWhatsApp(meta.pitch(opp.listing))}
+                        >
+                          <MessageCircle className="w-3 h-3 mr-1" />Abordar
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
         </section>
       )}
 
