@@ -414,10 +414,6 @@ export function JarvisGraph3D() {
         depthWrite: false,
       }),
     );
-        blending: AdditiveBlending,
-        depthWrite: false,
-      }),
-    );
     group.add(glow);
 
     // Anéis orbitais para buyers estratégicos / platforms / strategy
