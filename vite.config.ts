@@ -32,4 +32,23 @@ export default defineConfig(({ mode }) => ({
       "three-spritetext",
     ],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Isola tudo relacionado a 3D em um único chunk lazy carregado só na rota Jarvis.
+          if (
+            id.includes("node_modules/three/") ||
+            id.includes("node_modules/three-spritetext") ||
+            id.includes("node_modules/three-render-objects") ||
+            id.includes("node_modules/three-forcegraph") ||
+            id.includes("node_modules/react-force-graph-3d") ||
+            id.includes("node_modules/d3-force-3d")
+          ) {
+            return "equity-brain-3d";
+          }
+        },
+      },
+    },
+  },
 }));
