@@ -31,7 +31,18 @@ const PORTE_ORDER = ["ME", "EPP", "MEDIA", "GRANDE"];
 
 function sigmoid(x: number) { return 1 / (1 + Math.exp(-x)); }
 
-function computeFeatures(company: any, buyer: any, sigSet: Set<string>, mandateProba: number) {
+// Etapa 1.5 (Oráculo v3): assinatura estendida com sinais numéricos por CNPJ.
+// `numericByCnpj`: Map<cnpj, Map<signal_key, signal_value>> permite ler valores reais
+// (seller_intent_score, sweet_spot_fadiga, tempo_atividade_anos) sem queries extras.
+// `semanticFit`: passado pelo loop principal a partir do cosseno entre embeddings (Etapa 2).
+function computeFeatures(
+  company: any,
+  buyer: any,
+  sigSet: Set<string>,
+  mandateProba: number,
+  sigNumeric: Map<string, number>,
+  semanticFit: number,
+) {
   // Setor
   let setor = 0;
   if (buyer.setores_interesse?.includes(company.setor_ma)) setor = 1.0;
@@ -58,7 +69,8 @@ function computeFeatures(company: any, buyer: any, sigSet: Set<string>, mandateP
   // Timing (= prob mandato ativo)
   const timing = mandateProba;
 
-  // Financeiro (proxy: ticket dentro da faixa do buyer)
+  // Financeiro (Etapa 1.5): combina faixa de ticket COM "fadiga do fundador".
+  // Empresas no sweet spot 8-20a + bom ticket performam melhor em M&A.
   let financeiro = 0.5;
   const fat = Number(company.faturamento_estimado ?? 0);
   if (fat > 0 && buyer.ticket_min && buyer.ticket_max) {
@@ -66,6 +78,12 @@ function computeFeatures(company: any, buyer: any, sigSet: Set<string>, mandateP
     else if (fat >= buyer.ticket_min * 0.6 && fat <= buyer.ticket_max * 1.4) financeiro = 0.6;
     else financeiro = 0.2;
   }
+  // Boost por sweet spot (idade da empresa 8-20a) — sinal forte de janela ideal
+  const sweet = sigNumeric.get("sweet_spot_fadiga") ?? null;
+  if (sweet === 1) financeiro = Math.min(1.0, financeiro + 0.15);
+  // Penalidade leve para empresas muito jovens
+  const tempo = sigNumeric.get("tempo_atividade_anos") ?? null;
+  if (tempo !== null && tempo < 3) financeiro = Math.max(0.1, financeiro - 0.2);
 
   // Tese fit (sinais)
   const tese = sigSet.size >= 3 ? 0.8 : sigSet.size >= 1 ? 0.5 : 0.2;
