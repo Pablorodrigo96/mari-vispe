@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
       // three-forcegraph faz import estático. Ver src/shims/ngraphForcelayout.ts
       "ngraph.forcelayout": path.resolve(__dirname, "./src/shims/ngraphForcelayout.ts"),
     },
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "three"],
   },
   optimizeDeps: {
     // IMPORTANTE: as libs 3D PRECISAM ser pre-bundled em dev. Sem isso o Vite
