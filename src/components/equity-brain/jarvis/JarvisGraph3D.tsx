@@ -547,12 +547,17 @@ export function JarvisGraph3D() {
     return (link.weight ?? 0) >= 0.55 ? 0.45 : 0.025;
   };
 
+  const isGoldLink = (l: any): boolean =>
+    l?.edge_type === "seller_acquires_seller" ||
+    l?.edge_type === "seller_merges_with_seller";
+
   const linkWidthFn = (link: any) => {
     const w = link.weight ?? 0.5;
     const sId = endpointId(link.source);
     const tId = endpointId(link.target);
     const focused = focusId && (sId === focusId || tId === focusId);
-    const base = 0.4 + w * 3;
+    let base = 0.4 + w * 3;
+    if (isGoldLink(link)) base *= 1.6; // gold mais grosso → sustenta neon
     return focused ? base * 2.2 : base;
   };
 
@@ -560,6 +565,7 @@ export function JarvisGraph3D() {
     const sId = endpointId(link.source);
     const tId = endpointId(link.target);
     if (focusId && (sId === focusId || tId === focusId)) return true;
+    if (isGoldLink(link)) return true; // gold sempre vivo
     if ((link.weight ?? 0) >= 0.75) return true;
     return ALWAYS_LIVE_EDGE_TYPES.has(link.edge_type);
   };
