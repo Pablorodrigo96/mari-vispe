@@ -558,11 +558,11 @@ export function JarvisGraph3D() {
     // Halo capital para buyer financial
     if (!dimmed && n.type === "buyer_financial") {
       const halo = new Mesh(
-        new SphereGeometry(radius * 2.4, 16, 16),
+        new SphereGeometry(radius * 2.0, 16, 16),
         new MeshBasicMaterial({
           color: baseColor,
           transparent: true,
-          opacity: 0.06 * glowFactor,
+          opacity: 0.04 * glowFactor,
           blending: AdditiveBlending,
           depthWrite: false,
         }),
