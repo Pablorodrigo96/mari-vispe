@@ -84,7 +84,7 @@ export function MatchDecisionCard({
   match: MatchDecisionRow;
   onLogged?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState<string>("");
