@@ -311,20 +311,32 @@ export function JarvisGraph3D() {
           const linkForce: any = fgNow.d3Force?.("link");
           if (linkForce) {
             linkForce
-              .distance((l: any) => 320 + (1 - (l.weight ?? 0.5)) * 420)
+              .distance((l: any) => {
+                const sType = (l.source as any)?.type;
+                const tType = (l.target as any)?.type;
+                const base = 320 + (1 - (l.weight ?? 0.5)) * 420;
+                // seller↔seller fica 5x mais distante
+                if (sType === "seller" && tType === "seller") return base + 800;
+                return base;
+              })
               .strength((l: any) => Math.max(0.02, (l.weight ?? 0.3) * 0.25));
           }
 
           fgNow.d3Force?.(
             "collide",
-            forceCollide((n: any) => (n.visualRadius ?? 6) * 4.5)
-              .strength(0.9)
+            forceCollide((n: any) => {
+              const r = n.visualRadius ?? 6;
+              // Sellers ganham raio de colisão 8x (vs 4.5x para os outros)
+              return r * (n.type === "seller" ? 8 : 4.5);
+            })
+              .strength(0.95)
               .iterations(2),
           );
 
+          // Repulsão extra entre sellers — ~5x mais forte que antes
           const sellerSpread = forceManyBody()
-            .strength((n: any) => (n.type === "seller" ? -450 : 0))
-            .distanceMax(320);
+            .strength((n: any) => (n.type === "seller" ? -2200 : 0))
+            .distanceMax(1600);
           fgNow.d3Force?.("seller-spread", sellerSpread);
 
           // Centering moderado: mantém o grafo visível e centralizado
