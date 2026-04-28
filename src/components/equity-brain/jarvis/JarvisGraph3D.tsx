@@ -279,31 +279,37 @@ export function JarvisGraph3D() {
         try {
           const charge: any = fgNow.d3Force?.("charge");
           if (charge) {
-            charge.strength(-650);
-            if (typeof charge.distanceMin === "function") charge.distanceMin(40);
-            if (typeof charge.distanceMax === "function") charge.distanceMax(2000);
+            charge.strength(-2200);
+            if (typeof charge.distanceMin === "function") charge.distanceMin(80);
+            if (typeof charge.distanceMax === "function") charge.distanceMax(4500);
           }
 
           const linkForce: any = fgNow.d3Force?.("link");
           if (linkForce) {
             linkForce
-              .distance((l: any) => 140 + (1 - (l.weight ?? 0.5)) * 200)
-              .strength((l: any) => Math.max(0.04, (l.weight ?? 0.3) * 0.45));
+              .distance((l: any) => 320 + (1 - (l.weight ?? 0.5)) * 420)
+              .strength((l: any) => Math.max(0.02, (l.weight ?? 0.3) * 0.25));
           }
 
           fgNow.d3Force?.(
             "collide",
-            forceCollide((n: any) => (n.visualRadius ?? 6) * 2.4)
+            forceCollide((n: any) => (n.visualRadius ?? 6) * 4.5)
               .strength(0.9)
               .iterations(2),
           );
 
           const sellerSpread = forceManyBody()
-            .strength((n: any) => (n.type === "seller" ? -180 : 0))
-            .distanceMax(160);
+            .strength((n: any) => (n.type === "seller" ? -450 : 0))
+            .distanceMax(320);
           fgNow.d3Force?.("seller-spread", sellerSpread);
 
-          fgNow.cameraPosition?.({ x: 0, y: 0, z: 1100 }, undefined, 1200);
+          // Centering mais suave: deixa o grafo expandir sem ser puxado ao centro
+          const centerForce: any = fgNow.d3Force?.("center");
+          if (centerForce && typeof centerForce.strength === "function") {
+            centerForce.strength(0.03);
+          }
+
+          fgNow.cameraPosition?.({ x: 0, y: 0, z: 2200 }, undefined, 1200);
           fgNow.d3ReheatSimulation?.();
         } catch (e) {
           console.warn("[JarvisGraph3D] força não aplicada:", e);
@@ -323,7 +329,7 @@ export function JarvisGraph3D() {
           }
         });
       } catch {}
-    }, 12000);
+    }, 16000);
 
     return () => {
       cancelled = true;
@@ -648,9 +654,9 @@ export function JarvisGraph3D() {
           );
         }}
         onBackgroundClick={() => setSelectedNode(null)}
-        cooldownTicks={140}
-        d3VelocityDecay={0.35}
-        warmupTicks={20}
+        cooldownTicks={220}
+        d3VelocityDecay={0.28}
+        warmupTicks={40}
       />
 
       {/* Legenda inferior */}

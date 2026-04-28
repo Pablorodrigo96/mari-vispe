@@ -1,49 +1,40 @@
-## Diagnóstico
+# Espalhar mais os nós no Jarvis 3D
 
-Erro runtime: `Cannot read properties of undefined (reading 'tick')` em `react-force-graph-3d.js:1914` dentro de `layoutTick`. A linha é `state.layout[isD3Sim ? "tick" : "step"]()` — significa que `state.layout` está `undefined` quando o ciclo de animação roda.
+Os nós estão amontoados porque as forças de repulsão e distância de link são moderadas. Vou aumentar significativamente o "breathing room" do grafo, ajustando física, colisão e câmera.
 
-**Causa raiz:** o `useEffect` em `JarvisGraph3D` chama `fg.d3Force(...)` e `fg.d3ReheatSimulation()` imediatamente após `graphData` chegar. Esse `useEffect` roda **antes** de o react-force-graph internamente executar `_updateProps` (que cria `state.layout = state.d3ForceLayout`). A primeira chamada a `d3ReheatSimulation` força um tick com layout ainda não definido → exception.
+## Mudanças em `src/components/equity-brain/jarvis/JarvisGraph3D.tsx`
 
-Bônus: meu shim de `ngraph.forcelayout` joga erro se chamado. Embora o engine seja `d3` (default), três-forcegraph chama `simulator()` em pontos de inicialização defensiva — quero um shim no-op que não exploda.
+### 1. Força de repulsão (charge) — muito mais forte
+- `charge.strength`: `-650` → `-2200`
+- `charge.distanceMin`: `40` → `80`
+- `charge.distanceMax`: `2000` → `4500`
 
-## Correções
+### 2. Distância dos links — bem maior
+- `link.distance`: `140 + (1-w)*200` → `320 + (1-w)*420` (faixa ~320–740, antes ~140–340)
+- `link.strength`: reduzir multiplicador para `0.25` (antes `0.45`) — links menos "puxam" os nós para perto
 
-### 1. Shim de ngraph que NÃO joga erro
-Reescrever `src/shims/ngraphForcelayout.ts` retornando um layout no-op (`step()→true`, `getNodePosition→{0,0,0}`, etc.) com a shape mínima esperada pelo three-forcegraph. Mesmo que seja chamado por engano, não derruba a renderização.
+### 3. Colisão — bolha pessoal maior
+- `forceCollide` raio: `visualRadius * 2.4` → `visualRadius * 4.5`
+- Mantém `strength 0.9`, `iterations 2`
 
-### 2. Diferir configuração de forças para depois do mount do react-force-graph
-No `useEffect` de forças do `JarvisGraph3D`, envolver as chamadas a `fg.d3Force(...)`, `fg.cameraPosition(...)` e `fg.d3ReheatSimulation()` em dois `requestAnimationFrame` aninhados. Isso garante que o react-force-graph já rodou seu `_updateProps` interno e populou `state.layout` com o `d3ForceLayout` antes de tocarmos nele. Adicionar `try/catch` defensivo e cleanup que cancela os RAFs.
+### 4. Spread extra para sellers (cluster mais denso)
+- `seller-spread` strength: `-180` → `-450`
+- `distanceMax`: `160` → `320`
 
-### 3. Manter o shim com `simulator` callable
-Adicionar a propriedade `simulator` como função no objeto exportado, retornando `{ settings: {} }` — three-forcegraph chama isso em alguns paths.
+### 5. Centering mais suave (deixa expandir)
+- Adicionar `fg.d3Force("center")?.strength?.(0.03)` (default ~0.1) para o grafo não ser comprimido ao centro
 
-## Detalhes técnicos
+### 6. Câmera inicial recuada
+- `cameraPosition z`: `1100` → `2200` para acomodar o novo volume
 
-**`src/shims/ngraphForcelayout.ts`** — substituir conteúdo por:
-```ts
-const ZERO = { x: 0, y: 0, z: 0 };
-const ZERO_LINK = { from: ZERO, to: ZERO };
-function createNoopLayout(graph?: any) {
-  return {
-    step: () => true,
-    getNodePosition: () => ZERO,
-    getLinkPosition: () => ZERO_LINK,
-    setNodePosition: () => {},
-    pinNode: () => {},
-    isNodePinned: () => false,
-    dispose: () => {},
-    graph: graph ?? { getLink: () => null, forEachNode: () => {}, forEachLink: () => {} },
-    simulator: { settings: {} },
-  };
-}
-const createLayout = (graph?: any) => createNoopLayout(graph);
-(createLayout as any).simulator = () => ({ settings: {} });
-export default createLayout;
-```
+### 7. Estabilização
+- `d3VelocityDecay`: `0.35` → `0.28` (deixa nós "deslizarem" mais antes de parar)
+- `cooldownTicks`: `140` → `220` (mais tempo para a expansão acontecer)
+- `warmupTicks`: `20` → `40`
 
-**`JarvisGraph3D.tsx`** — substituir o `useEffect` de forças (linhas 263–322) por uma versão com double-RAF defer + try/catch, mantendo a mesma lógica de forças/freeze. Cleanup cancela RAFs e timeout.
+### 8. Freeze safety timeout
+- `12000ms` → `16000ms` (acompanha o cooldown maior)
 
-## Validação
-1. Recarregar `/equity-brain/grafo-jarvis`.
-2. Console: zero `Cannot read properties of undefined (reading 'tick')`.
-3. Screenshot: grafo renderiza com 240+ nós e simulação rodando.
+## Resultado esperado
+
+Nós com ~3× mais espaço entre si, clusters visivelmente separados, câmera enquadrando o volume completo já no primeiro frame. Sem mudanças visuais nas esferas, anéis, partículas ou filtros.
