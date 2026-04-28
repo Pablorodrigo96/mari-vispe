@@ -1,44 +1,46 @@
-## Background de vídeo no Jarvis 3D
+## Avaliação visual atual
 
-O vídeo enviado (8s, 1280x720, ~4.3MB com áudio) será otimizado e usado como background imersivo do `JarvisGraph3D`, preenchendo 100% da área e ficando totalmente desacoplado da câmera 3D — o zoom só movimenta nós e empresas.
+Após inspecionar o Jarvis 3D em produção, o design **não está bonito nem impressionante** — está visualmente quebrado por 4 problemas críticos:
 
-### O que será feito
+1. **Vídeo de fundo "vaza"** — o lado direito da tela mostra relógios e instrumentos de cockpit do vídeo cru, sem nenhum nó por cima. Em vez de fundo discreto, virou o protagonista.
+2. **Grafo amontoado e descentrado** — 245 nós e **5.563 conexões** sobrepostos formam uma "bola de pelo" verde no centro-esquerda. Não dá para ler nada.
+3. **Conflito de cores** — verde neon das arestas + laranja/cinza do vídeo competem. Resultado: poluição visual.
+4. **Sem hierarquia visual** — tudo brilha ao mesmo tempo, então nada se destaca. Falta o "wow" de um cockpit Jarvis real.
 
-**1. Otimizar o vídeo (sem perder qualidade visual, mas leve)**
-- Re-encode com `ffmpeg`: H.264, CRF 24, preset `slow`, sem áudio, faststart habilitado.
-- Manter resolução 1280x720 (alta o bastante para fullscreen, baixa o suficiente para não pesar).
-- Resultado esperado: ~1.0–1.5 MB (queda de ~70%).
-- Salvar em `public/videos/jarvis-bg.mp4`.
-- Também gerar um poster `.jpg` do primeiro frame (`public/videos/jarvis-bg-poster.jpg`) para exibir antes do vídeo carregar.
+## O que será feito
 
-**2. Inserir o vídeo como camada de fundo no `JarvisGraph3D.tsx`**
-- Adicionar um `<video>` HTML como **primeira camada** dentro do container, com:
-  - `autoPlay`, `loop`, `muted`, `playsInline`, `preload="auto"`
-  - `poster` apontando para o JPG
-  - Classes: `absolute inset-0 w-full h-full object-cover pointer-events-none z-0`
-  - `style={{ filter: 'brightness(0.55) saturate(0.85)' }}` para não competir com os nós/cores do grafo
-- Ajustar a nebulosa radial e o grid HUD existentes para `opacity` levemente menor (~30%) já que agora há vídeo por baixo — preserva a leitura dos nós.
+### 1. Domar o vídeo de fundo (deixar de competir)
+- Adicionar **overlay escuro com vinheta radial** por cima do vídeo: centro mais limpo (~40% escuro), bordas quase pretas (~85% escuro). Faz o vídeo virar atmosfera, não conteúdo.
+- Aumentar `filter` do vídeo para `brightness(0.3) saturate(0.6) blur(1px)` — vira textura, não imagem nítida.
+- Aplicar `mix-blend-mode: luminosity` no vídeo para ele assumir a paleta verde/cyan do grafo (em vez de laranja/cinza próprio).
 
-**3. Tornar o canvas 3D transparente**
-- `ForceGraph3D` passa a receber `backgroundColor="rgba(0,0,0,0)"` em vez de `#06070a`.
-- Remover/ajustar o `style={{ background: "#06070a" }}` do container — o vídeo vira o fundo.
-- Manter um fallback `bg-zinc-950` no container para o caso do vídeo falhar.
+### 2. Densificar menos: reduzir o caos do grafo
+- **Subir o `minWeight` default** de `0.15` para `0.35` — corta arestas fracas que hoje formam a "teia caótica". Vai cair de ~5.500 para ~1.500 conexões, sem perder o que importa.
+- Aumentar opacidade base das arestas fracas ainda mais baixa (de `0.05` para `0.025`) e fortalecer as fortes (`0.22 → 0.45`). Só o que é estratégico brilha.
+- Reduzir `linkOpacity` global de `0.6` para `0.35`.
 
-**4. Garantir que o zoom NÃO afeta o vídeo**
-- O vídeo é uma `<div>`/`<video>` HTML em layer DOM separada do canvas WebGL.
-- A câmera 3D (`fg.cameraPosition`, controles do mouse) age apenas sobre o `THREE.Scene`, ou seja, nós, links e partículas. O `<video>` em `position: absolute` permanece estático e ocupando 100% do viewport — exatamente o comportamento pedido.
+### 3. Centralizar o grafo e enquadrar a câmera
+- Ajustar `centerForce.strength` de `0.03` para `0.08` — puxa o grafo de volta ao centro sem amassar.
+- Após `cooldownTicks`, chamar `fg.zoomToFit(800, 80)` automaticamente para enquadrar tudo dentro do viewport.
+- Recuar câmera inicial de `z: 2200` para `z: 2800` para caber o grafo expandido.
 
-**5. Performance**
-- Vídeo decodificado em hardware pelo browser, ~1.5 MB carregado uma vez e em loop infinito → custo mínimo.
-- Sem `backdropFilter` (já evitamos) e sem WebGL extra.
+### 4. Acabamento cinematográfico (o "wow")
+- Adicionar **scanline horizontal sutil** (CSS gradient repeating) com `opacity: 0.04` — dá textura de monitor de cockpit.
+- HUD topo-direito: redesenhar com **bordas em L** (canto superior + inferior) ao estilo HUD militar/Iron Man, em vez de retângulo simples.
+- Adicionar 4 **marcadores de canto** (corner brackets em verde-esmeralda, ~24px) nos 4 cantos do canvas — referência visual Jarvis clássica.
+- HUD inferior central: barra fina com timestamp ao vivo + contador "NODES / EDGES / SIGNAL" em fonte mono, estilo telemetria.
+- Aumentar levemente o glow dos nós quentes (`hot === true`): `opacity 0.05+heat*0.18 → 0.08+heat*0.28`.
 
-### Arquivos afetados
-- `public/videos/jarvis-bg.mp4` (novo, otimizado)
-- `public/videos/jarvis-bg-poster.jpg` (novo)
-- `src/components/equity-brain/jarvis/JarvisGraph3D.tsx` (adiciona `<video>` de fundo, deixa canvas transparente, suaviza overlays)
+### 5. Legibilidade dos labels
+- Labels hoje têm fundo `rgba(9,9,11,0.6)` — pouco contraste sobre vídeo. Aumentar para `rgba(0,0,0,0.85)` e adicionar borda fina verde (`borderColor`).
 
-### Resultado esperado
-- Fundo cinematográfico em movimento ocupando 100% da tela do Jarvis 3D.
-- Nós (sellers, buyers, platforms, teses) e conexões continuam navegáveis com partículas e glow.
-- Zoom in/out e rotação da câmera só afetam o grafo — o vídeo de fundo permanece fixo e em loop.
-- Carga adicional: ~1.5 MB (vídeo) — sem impacto perceptível em FPS.
+## Arquivos afetados
+
+- `src/components/equity-brain/jarvis/JarvisGraph3D.tsx` — overlay vinheta, scanlines, corner brackets, HUD redesenhada, ajustes de força/câmera/opacidades, defaults de filtro.
+
+## Resultado esperado
+
+- Fundo cinematográfico mas **discreto** (atmosfera, não conteúdo).
+- Grafo **centralizado, mais limpo** (~1.500 conexões em vez de 5.500), com hierarquia clara: nós quentes brilham, arestas fortes se destacam.
+- Moldura HUD ao estilo Jarvis/Iron Man (corner brackets, scanlines, telemetria mono).
+- Sensação geral: "cockpit estratégico de bilhões em deals", não "explosão de espaguete verde".

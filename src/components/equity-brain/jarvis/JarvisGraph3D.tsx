@@ -82,7 +82,7 @@ export function JarvisGraph3D() {
   const [selectedUfs, setSelectedUfs] = useState<Set<string>>(new Set());
   const [selectedNodeTypes, setSelectedNodeTypes] = useState<Set<string>>(DEFAULT_NODE_TYPES);
   const [enabledLayers, setEnabledLayers] = useState<Set<LayerKey>>(DEFAULT_LAYERS);
-  const [minWeight, setMinWeight] = useState(0.15);
+  const [minWeight, setMinWeight] = useState(0.35);
   const [minConfidence, setMinConfidence] = useState(0.0);
   const [thesisFilter, setThesisFilter] = useState<string | null>(null);
   const [buyerFilter, setBuyerFilter] = useState<string | null>(null);
