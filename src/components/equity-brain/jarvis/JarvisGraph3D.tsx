@@ -305,18 +305,18 @@ export function JarvisGraph3D() {
   }, [focusId, graphData.links]);
 
   // ---------- Node visual ----------
-  const buildNodeObject = (node: any): THREE.Object3D => {
+  const buildNodeObject = (node: any): Object3D => {
     const n = node as JarvisNode;
-    const group = new THREE.Group();
-    const baseColor = new THREE.Color(NODE_COLORS[n.type] ?? "#71717a");
+    const group = new Group();
+    const baseColor = new Color(NODE_COLORS[n.type] ?? "#71717a");
     const radius = n.visualRadius ?? 6;
     const dimmed =
       focusId !== null && focusNeighborIds && !focusNeighborIds.has(n.id);
 
     // Núcleo
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(radius, 24, 24),
-      new THREE.MeshBasicMaterial({
+    const sphere = new Mesh(
+      new SphereGeometry(radius, 24, 24),
+      new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
         opacity: dimmed ? 0.18 : 0.95,
@@ -325,13 +325,13 @@ export function JarvisGraph3D() {
     group.add(sphere);
 
     // Glow aditivo
-    const glow = new THREE.Mesh(
-      new THREE.SphereGeometry(radius * 1.9, 24, 24),
-      new THREE.MeshBasicMaterial({
+    const glow = new Mesh(
+      new SphereGeometry(radius * 1.9, 24, 24),
+      new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
         opacity: dimmed ? 0.02 : 0.05 + n.heat * 0.18,
-        blending: THREE.AdditiveBlending,
+        blending: AdditiveBlending,
         depthWrite: false,
       }),
     );
@@ -342,23 +342,23 @@ export function JarvisGraph3D() {
       !dimmed &&
       (n.type === "buyer_strategic" || n.type === "platform" || n.type === "strategy")
     ) {
-      const ringGeo = new THREE.RingGeometry(radius * 2.2, radius * 2.4, 64);
-      const ringMat = new THREE.MeshBasicMaterial({
+      const ringGeo = new RingGeometry(radius * 2.2, radius * 2.4, 64);
+      const ringMat = new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
         opacity: 0.32,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending,
+        side: DoubleSide,
+        blending: AdditiveBlending,
         depthWrite: false,
       });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
+      const ring = new Mesh(ringGeo, ringMat);
       ring.rotation.x = Math.PI / 2;
       group.add(ring);
 
       // Segundo anel (platform tem dois)
       if (n.type === "platform") {
-        const ring2 = new THREE.Mesh(
-          new THREE.RingGeometry(radius * 2.7, radius * 2.85, 64),
+        const ring2 = new Mesh(
+          new RingGeometry(radius * 2.7, radius * 2.85, 64),
           ringMat.clone(),
         );
         ring2.rotation.x = Math.PI / 2.4;
@@ -369,13 +369,13 @@ export function JarvisGraph3D() {
 
     // Halo capital para buyer financial
     if (!dimmed && n.type === "buyer_financial") {
-      const halo = new THREE.Mesh(
-        new THREE.SphereGeometry(radius * 2.4, 16, 16),
-        new THREE.MeshBasicMaterial({
+      const halo = new Mesh(
+        new SphereGeometry(radius * 2.4, 16, 16),
+        new MeshBasicMaterial({
           color: baseColor,
           transparent: true,
           opacity: 0.06,
-          blending: THREE.AdditiveBlending,
+          blending: AdditiveBlending,
           depthWrite: false,
         }),
       );
@@ -393,7 +393,7 @@ export function JarvisGraph3D() {
       label.backgroundColor = "rgba(9,9,11,0.6)";
       label.padding = 1.5;
       label.borderRadius = 2;
-      (label as unknown as THREE.Object3D).position.y = radius + 7;
+      (label as unknown as Object3D).position.y = radius + 7;
       group.add(label);
     }
 
