@@ -329,7 +329,7 @@ export function JarvisGraph3D() {
           }
         });
       } catch {}
-    }, 12000);
+    }, 16000);
 
     return () => {
       cancelled = true;
