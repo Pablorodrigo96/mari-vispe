@@ -137,7 +137,7 @@ function computeFeatures(
 
   // Etapa 2 (Oráculo v3): semantic_fit substitui placeholder sinergia_movel.
   // 0.5 quando algum lado não tem embedding (preserva neutralidade).
-  const sinergia_movel = semanticFit;
+  const semantic_fit = semanticFit;
 
   // Horizonte (Etapa 1.5): empresas com tempo_atividade >= 8 anos têm horizonte mais maduro
   const tempoForHorizonte = sigNumeric.get("tempo_atividade_anos") ?? null;
@@ -149,10 +149,16 @@ function computeFeatures(
   // NOVA FEATURE Etapa 1.5: seller_intent — sinal direto da empresa querer/precisar vender
   const seller_intent = sigNumeric.get("seller_intent_score") ?? 0.3;
 
+  // NOVA FEATURE Etapa 3: wave_pressure — tensão estrutural da célula (setor, UF) da empresa
+  // Quando a célula tem alta concentração de sellers + alta densidade de demanda compatível,
+  // o match recebe um boost — sinal de que estamos numa janela de "onda" de mercado.
+  const wave_pressure = wavePressure;
+
   return {
     setor, geografia, densidade_local, tamanho, timing, financeiro, tese, recorrencia,
     cross_sell, governanca, sponsor_age, vertical_fit, marca_regional, vagas_medicina,
-    contratos_longos, verticalizacao, regulatorio, sinergia_movel, horizonte, seller_intent,
+    contratos_longos, verticalizacao, regulatorio, semantic_fit, horizonte, seller_intent,
+    wave_pressure,
   };
 }
 
