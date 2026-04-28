@@ -303,13 +303,13 @@ export function JarvisGraph3D() {
             .distanceMax(320);
           fgNow.d3Force?.("seller-spread", sellerSpread);
 
-          // Centering mais suave: deixa o grafo expandir sem ser puxado ao centro
+          // Centering moderado: mantém o grafo visível e centralizado
           const centerForce: any = fgNow.d3Force?.("center");
           if (centerForce && typeof centerForce.strength === "function") {
-            centerForce.strength(0.03);
+            centerForce.strength(0.08);
           }
 
-          fgNow.cameraPosition?.({ x: 0, y: 0, z: 2200 }, undefined, 1200);
+          fgNow.cameraPosition?.({ x: 0, y: 0, z: 2800 }, undefined, 1200);
           fgNow.d3ReheatSimulation?.();
         } catch (e) {
           console.warn("[JarvisGraph3D] força não aplicada:", e);
