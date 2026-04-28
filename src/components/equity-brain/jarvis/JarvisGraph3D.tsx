@@ -675,7 +675,7 @@ export function JarvisGraph3D() {
             `${n.label} · score ${Math.round(n.strategic_score ?? 0)} · ${n.degree ?? 0} conexões`
           }
           linkColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#71717a"}
-          linkOpacity={0.6}
+          linkOpacity={0.35}
           linkWidth={linkWidthFn}
           linkDirectionalParticles={(l: any) => (shouldShowParticles(l) ? 3 : 0)}
           linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
