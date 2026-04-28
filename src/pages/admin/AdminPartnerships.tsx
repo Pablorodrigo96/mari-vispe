@@ -114,11 +114,11 @@ const AdminPartnerships = () => {
     setLoading(true);
     try {
       const [profilesRes, listingsRes, reservationsRes, vdrRes, actsRes] = await Promise.all([
-        supabase.from('profiles').select('user_id, full_name, company_name, phone, created_at').eq('is_partner_accountant', true),
-        supabase.from('listings').select('id, user_id, equity_score, created_at, title, category, vdr_readiness'),
+        supabase.from('profiles').select('user_id, full_name, company_name, phone, created_at, partner_status, is_partner_accountant').or('is_partner_accountant.eq.true,partner_status.in.(pending,suspended,disqualified)'),
+        supabase.from('listings').select('id, user_id, equity_score, asking_price, created_at, title, category, vdr_readiness'),
         supabase.from('partner_lead_reservations').select('*'),
         supabase.from('vdr_documents').select('*').order('created_at', { ascending: false }),
-        supabase.from('partner_activities').select('*').order('created_at', { ascending: false }).limit(100),
+        supabase.from('partner_activities').select('*').order('created_at', { ascending: false }).limit(200),
       ]);
 
       const profiles = profilesRes.data || [];
