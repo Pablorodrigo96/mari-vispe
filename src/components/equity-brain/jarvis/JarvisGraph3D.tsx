@@ -577,7 +577,7 @@ export function JarvisGraph3D() {
         new MeshBasicMaterial({
           color: new Color("hsl(45, 100%, 60%)"),
           transparent: true,
-          opacity: 0.55 * glowFactor,
+          opacity: 0.4 * glowFactor,
           side: DoubleSide,
           blending: AdditiveBlending,
           depthWrite: false,
