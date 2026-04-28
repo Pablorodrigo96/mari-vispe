@@ -66,6 +66,7 @@ function computeFeatures(
   mandateProba: number,
   sigNumeric: Map<string, number>,
   semanticFit: number,
+  wavePressure: number,
 ) {
   // Setor
   let setor = 0;
