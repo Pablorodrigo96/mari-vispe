@@ -465,7 +465,7 @@ export function JarvisGraph3D() {
   useGhostSynapses(fgRef, graphData.nodes, !isLoading && graphData.nodes.length > 0);
 
   // ---------- Solar flare (explosão solar a cada ~10s) ----------
-  useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2);
+  useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2, setFlareActive);
 
 
   // ---------- Vizinhos do hovered/selected ----------
