@@ -94,38 +94,45 @@ export const EDGE_DESCRIPTIONS: Record<string, string> = {
 // ---------- Layers (agrupamento de edge_types) ----------
 export const EDGE_LAYERS = {
   ma_direct: {
-    label: "M&A Direto",
+    label: "M&A Direto (Buyer → Seller)",
     icon: "🎯",
+    description: "Comprador estratégico ou fundo PE com tese e ticket compatíveis para adquirir uma empresa do marketplace.",
     types: ["buyer_acquires_seller"],
   },
   rollup: {
-    label: "Roll-up Seller→Seller",
+    label: "Possível Fusão / Roll-up",
     icon: "🔄",
+    description: "Duas PMEs que podem se unir (fusão de iguais), uma adquirir a outra (roll-up), ou uma menor virar add-on de uma maior consolidadora.",
     types: ["seller_acquires_seller", "seller_merges_with_seller", "platform_addon"],
   },
   operational: {
     label: "Sinergia Operacional",
     icon: "⚙️",
+    description: "Empresas que reduzem custo unitário ao se juntarem: compartilham fornecedores, infra, backoffice ou stack tecnológica.",
     types: ["cost_synergy", "tech_stack_match"],
   },
   commercial: {
     label: "Sinergia Comercial",
     icon: "💼",
+    description: "Critério prático: vendem para o mesmo perfil de cliente (mesmo ICP) OU usam o mesmo canal (B2B distribuidor, varejo físico, e-commerce). Sobreposição geográfica ≥ 50% e ticket médio na mesma faixa.",
     types: ["cross_sell", "channel_synergy", "strategic_synergy"],
   },
   arbitrage: {
     label: "Arbitragem de Valuation",
     icon: "💸",
+    description: "Empresa boa precificada abaixo do múltiplo de mercado — janela para estruturar deal antes que o preço suba.",
     types: ["valuation_arbitrage"],
   },
   capital: {
     label: "Capital / Funding",
     icon: "💰",
+    description: "Provedores de dívida ou equity (sem aquisição de controle) com tese, ticket e setor compatíveis.",
     types: ["buyer_funds_seller", "capital_match"],
   },
   thesis: {
     label: "Fit com Tese",
     icon: "🧠",
+    description: "Empresa atende todos os critérios (sinais, métricas, geografia) de uma tese ativa de investimento.",
     types: ["thesis_fit", "geographic_expansion"],
   },
 } as const;
@@ -134,21 +141,33 @@ export type LayerKey = keyof typeof EDGE_LAYERS;
 
 // ---------- Node type → cor base ----------
 export const NODE_COLORS: Record<string, string> = {
-  seller: "hsl(160, 84%, 45%)",          // emerald
-  buyer_strategic: "hsl(190, 90%, 55%)", // cyan
-  buyer_financial: "hsl(217, 91%, 60%)", // blue
-  thesis: "hsl(280, 65%, 60%)",          // violet
-  platform: "hsl(38, 92%, 55%)",         // amber
-  asset: "hsl(240, 5%, 65%)",            // zinc
-  strategy: "hsl(345, 90%, 60%)",        // rose
+  seller: "hsl(160, 84%, 45%)",          // emerald — empresa à venda (PME)
+  buyer_strategic: "hsl(190, 90%, 55%)", // cyan — comprador estratégico (mesmo setor)
+  buyer_financial: "hsl(217, 91%, 60%)", // blue — fundo PE / family office
+  thesis: "hsl(280, 65%, 60%)",          // violet — tese de investimento
+  platform: "hsl(38, 92%, 55%)",         // amber — consolidador / plataforma de roll-up
+  asset: "hsl(240, 5%, 65%)",            // zinc — ativo isolado
+  strategy: "hsl(345, 90%, 60%)",        // rose — manobra estratégica
 };
 
 export const NODE_LABELS: Record<string, string> = {
-  seller: "Seller",
+  seller: "Seller (PME à venda)",
   buyer_strategic: "Buyer Estratégico",
-  buyer_financial: "Buyer Financeiro",
-  thesis: "Tese",
-  platform: "Plataforma",
+  buyer_financial: "Buyer Financeiro (Fundo)",
+  thesis: "Tese de Investimento",
+  platform: "Consolidador (Plataforma)",
   asset: "Ativo",
   strategy: "Estratégia",
 };
+
+// ---------- Node type → descrição prática ----------
+export const NODE_DESCRIPTIONS: Record<string, string> = {
+  seller: "PME ativa no marketplace querendo vender total ou parcialmente. Verde = pronta para deal.",
+  buyer_strategic: "Empresa do mesmo setor procurando adquirir concorrentes, fornecedores ou clientes para crescer.",
+  buyer_financial: "Fundo de Private Equity, Venture Capital ou Family Office — entra com capital esperando retorno.",
+  thesis: "Critério de investimento (ex: 'roll-up de pet shops em SP'). Atrai múltiplos sellers que se encaixam.",
+  platform: "Empresa âncora premium que está adquirindo concorrentes menores (add-ons) para virar líder de mercado. É o consolidador da vertical.",
+  asset: "Ativo isolado (imóvel, marca, carteira) sem operação completa.",
+  strategy: "Manobra recomendada (vender, captar, fazer roll-up).",
+};
+
