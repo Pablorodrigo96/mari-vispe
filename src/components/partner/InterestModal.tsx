@@ -29,7 +29,7 @@ export function InterestModal({ open, onOpenChange, opportunityTitle, onConfirm 
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!loading) onOpenChange(o); }}>
-      <DialogContent className="!bg-slate-900 border-slate-700 max-w-lg">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center gap-2">
             <Handshake className="w-5 h-5 text-accent" />
@@ -59,7 +59,7 @@ export function InterestModal({ open, onOpenChange, opportunityTitle, onConfirm 
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               placeholder="Ex: Fundo de PE focado em saúde, ticket R$ 5–20M, busca empresas no SP/RJ..."
-              className="mt-1.5 bg-slate-950 border-slate-700 text-foreground"
+              className="mt-1.5"
               rows={3}
               maxLength={500}
             />

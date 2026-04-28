@@ -21,7 +21,7 @@ export function ReservationCountdown({ expiresAt, reservedAt, status, compact }:
 
   if (status === 'exclusive') {
     return (
-      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 gap-1">
+      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1">
         <CheckCircle2 className="w-3 h-3" />
         Exclusivo
       </Badge>
@@ -39,7 +39,7 @@ export function ReservationCountdown({ expiresAt, reservedAt, status, compact }:
 
   if (status === 'closed_by_matrix') {
     return (
-      <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 gap-1">
+      <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 gap-1">
         <AlertTriangle className="w-3 h-3" />
         Fechado pela Matriz
       </Badge>
@@ -48,9 +48,9 @@ export function ReservationCountdown({ expiresAt, reservedAt, status, compact }:
 
   // status === 'reserved'
   const colorClass =
-    daysLeft > 15 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/15'
-    : daysLeft > 7 ? 'text-amber-400 border-amber-500/30 bg-amber-500/15'
-    : 'text-red-400 border-red-500/30 bg-red-500/15';
+    daysLeft > 15 ? 'text-emerald-700 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/15'
+    : daysLeft > 7 ? 'text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/15'
+    : 'text-red-700 dark:text-red-400 border-red-500/30 bg-red-500/15';
 
   const progressColor =
     daysLeft > 15 ? 'bg-emerald-500'
