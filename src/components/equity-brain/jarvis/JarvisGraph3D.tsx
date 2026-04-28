@@ -125,6 +125,67 @@ export function JarvisGraph3D() {
   const scanlineOpacity = visualPrefs.scanlines / 1000;
   const videoBrightnessVal = (visualPrefs.brightness / 100) * 0.6 + 0.05;
 
+  // ---------- Diagnóstico (FPS, flare, log buffer) ----------
+  const { toast } = useToast();
+  const [fps, setFps] = useState(0);
+  const [flareActive, setFlareActive] = useState(false);
+
+  useEffect(() => {
+    let raf = 0;
+    let frames = 0;
+    let last = performance.now();
+    const tick = () => {
+      frames++;
+      const now = performance.now();
+      if (now - last >= 1000) {
+        setFps(Math.round((frames * 1000) / (now - last)));
+        frames = 0;
+        last = now;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const logBufferRef = useRef<string[]>([]);
+  useEffect(() => {
+    const methods: Array<"log" | "info" | "warn" | "error"> = ["log", "info", "warn", "error"];
+    const originals: Record<string, (...args: any[]) => void> = {};
+    methods.forEach((m) => {
+      originals[m] = (console as any)[m].bind(console);
+      (console as any)[m] = (...args: any[]) => {
+        try {
+          const ts = new Date().toISOString().slice(11, 23);
+          const line =
+            `[${ts}] ${m.toUpperCase()} ` +
+            args
+              .map((a) => {
+                if (typeof a === "string") return a;
+                try { return JSON.stringify(a); } catch { return String(a); }
+              })
+              .join(" ");
+          logBufferRef.current.push(line);
+          if (logBufferRef.current.length > 200) logBufferRef.current.shift();
+        } catch {}
+        originals[m](...args);
+      };
+    });
+    return () => {
+      methods.forEach((m) => { (console as any)[m] = originals[m]; });
+    };
+  }, []);
+
+  const handleCopyLogs = useCallback(async () => {
+    const text = logBufferRef.current.join("\n") || "(buffer vazio)";
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Logs copiados", description: `${logBufferRef.current.length} linhas copiadas.` });
+    } catch {
+      toast({ title: "Falha ao copiar", description: "Permissão negada.", variant: "destructive" });
+    }
+  }, [toast]);
+
   // Resize
   useEffect(() => {
     const update = () => {
