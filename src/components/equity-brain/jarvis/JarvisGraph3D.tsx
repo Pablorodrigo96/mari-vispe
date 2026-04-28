@@ -272,6 +272,13 @@ export function JarvisGraph3D() {
     selectedNodeTypes, selectedUfs, selectedVerticals, thesisFilter, buyerFilter,
   ]);
 
+  // [DIAG] log para diagnosticar tela branca — remover depois de validado
+  console.log("[Jarvis3D] render", {
+    isLoading, isError,
+    nodes: graphData.nodes.length, links: graphData.links.length,
+    isMobile, size,
+  });
+
   const verticalsList = useMemo(() => {
     const set = new Set<string>();
     (companiesQ.data ?? []).forEach((c: any) => c.setor_ma && set.add(c.setor_ma));
