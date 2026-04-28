@@ -92,6 +92,28 @@ export function JarvisGraph3D() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<JarvisNode | null>(null);
 
+  // ---------- Visual prefs (ajustes de fundo, persistidos em localStorage) ----------
+  const VISUAL_DEFAULTS = { glow: 70, scanlines: 50, vignette: 60, brightness: 30 };
+  const [visualPrefs, setVisualPrefs] = useState(() => {
+    try {
+      const raw = localStorage.getItem("jarvis3d-visual-prefs");
+      if (raw) return { ...VISUAL_DEFAULTS, ...JSON.parse(raw) };
+    } catch {}
+    return VISUAL_DEFAULTS;
+  });
+  const [visualPanelOpen, setVisualPanelOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("jarvis3d-visual-prefs", JSON.stringify(visualPrefs));
+    } catch {}
+  }, [visualPrefs]);
+
+  const glowFactor = visualPrefs.glow / 70;
+  const vignetteFactor = visualPrefs.vignette / 60;
+  const scanlineOpacity = visualPrefs.scanlines / 1000;
+  const videoBrightnessVal = (visualPrefs.brightness / 100) * 0.6 + 0.05;
+
   // Resize
   useEffect(() => {
     const update = () => {
