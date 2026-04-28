@@ -615,7 +615,7 @@ export function JarvisGraph3D() {
         width={size.w}
         height={size.h}
         graphData={graphData as any}
-        backgroundColor="#06070a"
+        backgroundColor="rgba(0,0,0,0)"
         showNavInfo={false}
         nodeRelSize={1}
         nodeThreeObject={buildNodeObject}
