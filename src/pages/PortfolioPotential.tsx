@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import {
   Briefcase, TrendingUp, Crown, MessageCircle, Users, DollarSign, BarChart3,
-  Trophy, ShieldCheck, Target,
+  Trophy, ShieldCheck, Target, Flame,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList, Tooltip } from 'recharts';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { Link } from 'react-router-dom';
+import { analyzePortfolio, SERVICE_META, scoreLevel, type ServiceKey } from '@/lib/portfolioPotentialScoring';
 
 const SCENARIOS = {
   pessimistic: {
