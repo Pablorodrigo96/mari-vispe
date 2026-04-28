@@ -249,7 +249,36 @@ export function MatchDecisionCard({
           </div>
         )}
 
-        {/* Feedback BDR */}
+        {/* Counterfactual: o que mudaria o jogo */}
+        {contribs.length > 0 && (() => {
+          // Pega a feature negativa mais relevante; se todas positivas, a positiva mais fraca
+          const sorted = [...contribs].sort((a, b) => a.value - b.value);
+          const candidate = sorted[0].value < 0 ? sorted[0] : contribs[contribs.length - 1];
+          const currentScore = match.match_score;
+          // Estimativa simples: virar essa feature de negativa para positiva ≈ 2× |contribuição| pontos no score
+          const upliftPoints = Math.min(25, Math.round(Math.abs(candidate.value) * 30));
+          const projected = Math.min(100, currentScore + upliftPoints);
+          const question = FEATURE_QUESTIONS[candidate.key]
+            ?? `Confirme dados de '${candidate.key}' diretamente com o vendedor.`;
+          if (upliftPoints < 3) return null;
+          return (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-amber-300 font-semibold">
+                <Lightbulb className="h-3.5 w-3.5" /> O que mudaria o jogo
+              </div>
+              <p className="text-xs text-foreground break-words">
+                Se confirmássemos <span className="font-mono text-amber-200">{candidate.key}</span>,
+                o score subiria de <span className="font-bold">{currentScore}</span> para
+                ~<span className="font-bold text-emerald-300">{projected}</span> ({upliftPoints > 0 ? "+" : ""}{upliftPoints}).
+              </p>
+              <p className="text-[11px] text-muted-foreground break-words italic">
+                Pergunta sugerida na call: "{question}"
+              </p>
+            </div>
+          );
+        })()}
+
+
         <div className="border-t border-slate-800 pt-3 space-y-2">
           {!rejectMode ? (
             <div className="flex flex-wrap gap-2">
