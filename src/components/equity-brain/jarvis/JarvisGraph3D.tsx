@@ -25,6 +25,7 @@ import {
 import { forceCollide, forceManyBody } from "d3-force-3d";
 import SpriteText from "three-spritetext";
 import { useGhostSynapses } from "./useGhostSynapses";
+import { useSolarFlares } from "./useSolarFlares";
 import { useQueries } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -392,6 +393,9 @@ export function JarvisGraph3D() {
   // ---------- Sinapses fantasmas (10% dos nós marcados como neurônios) ----------
   useGhostSynapses(fgRef, graphData.nodes, !isLoading && graphData.nodes.length > 0);
 
+  // ---------- Solar flare (explosão solar a cada ~10s) ----------
+  useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2);
+
 
   // ---------- Vizinhos do hovered/selected ----------
   const focusId = selectedNode?.id ?? hoveredId ?? null;
@@ -543,12 +547,17 @@ export function JarvisGraph3D() {
     return (link.weight ?? 0) >= 0.55 ? 0.45 : 0.025;
   };
 
+  const isGoldLink = (l: any): boolean =>
+    l?.edge_type === "seller_acquires_seller" ||
+    l?.edge_type === "seller_merges_with_seller";
+
   const linkWidthFn = (link: any) => {
     const w = link.weight ?? 0.5;
     const sId = endpointId(link.source);
     const tId = endpointId(link.target);
     const focused = focusId && (sId === focusId || tId === focusId);
-    const base = 0.4 + w * 3;
+    let base = 0.4 + w * 3;
+    if (isGoldLink(link)) base *= 1.6; // gold mais grosso → sustenta neon
     return focused ? base * 2.2 : base;
   };
 
@@ -556,6 +565,7 @@ export function JarvisGraph3D() {
     const sId = endpointId(link.source);
     const tId = endpointId(link.target);
     if (focusId && (sId === focusId || tId === focusId)) return true;
+    if (isGoldLink(link)) return true; // gold sempre vivo
     if ((link.weight ?? 0) >= 0.75) return true;
     return ALWAYS_LIVE_EDGE_TYPES.has(link.edge_type);
   };
@@ -761,14 +771,33 @@ export function JarvisGraph3D() {
             `${n.label} · score ${Math.round(n.strategic_score ?? 0)} · ${n.degree ?? 0} conexões`
           }
           linkColor={(l: any) => EDGE_COLORS[l.edge_type] ?? "#71717a"}
-          linkOpacity={0.35}
+          linkOpacity={0.55}
           linkWidth={linkWidthFn}
-          linkDirectionalParticles={(l: any) => (shouldShowParticles(l) ? 3 : 0)}
-          linkDirectionalParticleWidth={(l: any) => 1 + (l.weight ?? 0.5) * 3}
+          linkMaterial={(l: any) => {
+            // Halo neon dourado para edges seller↔seller (blending aditivo)
+            if (isGoldLink(l)) {
+              return new MeshBasicMaterial({
+                color: new Color("hsl(45, 100%, 65%)"),
+                transparent: true,
+                opacity: 0.92,
+                blending: AdditiveBlending,
+                depthWrite: false,
+              });
+            }
+            return null as any; // usa material padrão
+          }}
+          linkDirectionalParticles={(l: any) => {
+            if (isGoldLink(l)) return 5;
+            return shouldShowParticles(l) ? 3 : 0;
+          }}
+          linkDirectionalParticleWidth={(l: any) => {
+            const base = 1 + (l.weight ?? 0.5) * 3;
+            return isGoldLink(l) ? base * 2 : base;
+          }}
           linkDirectionalParticleSpeed={(l: any) => 0.002 + (l.weight ?? 0.5) * 0.006}
           linkDirectionalParticleColor={(l: any) => {
-            if (l.edge_type === "seller_acquires_seller" || l.edge_type === "seller_merges_with_seller") {
-              return "#fde047"; // ouro reluzente
+            if (isGoldLink(l)) {
+              return "#fde68a"; // ouro brilhante neon
             }
             if (l.edge_type === "buyer_acquires_seller" || l.edge_type === "platform_addon") {
               return "#60a5fa"; // azul Jarvis
@@ -779,7 +808,8 @@ export function JarvisGraph3D() {
             const k = endpointId((l as any).source) + "|" + endpointId((l as any).target);
             let h = 0;
             for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
-            return 0.25 + (Math.abs(h) % 30) / 100;
+            // Arcos pronunciados: 0.4 a 0.8
+            return 0.4 + (Math.abs(h) % 40) / 100;
           }}
           linkCurveRotation={(l: any) => {
             const sId = endpointId((l as any).source);

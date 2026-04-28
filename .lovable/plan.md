@@ -1,42 +1,59 @@
-## Problema
+## Objetivo
 
-A rota `/equity-brain/grafo-jarvis` está em branco. O console do preview não capturou logs (snapshot vazio) e os logs do Vite mostram apenas reloads HMR normais — sem stack trace. O typecheck passa, o `vite build` compila sem erro e o chunk `equity-brain-3d` é gerado normalmente. Logo, o problema é runtime, não compilação.
+Três upgrades visuais no Jarvis 3D, sem mexer em física/dados:
 
-## Suspeitas (em ordem de probabilidade)
+1. **Explosão solar (sinapse-flare)** — a cada ~10s, um único raio assimétrico atravessa dois nós aleatórios, com pulso brilhante e fade-out (~1.5s).
+2. **Conexões dourado-neon** — links seller↔seller deixam de ser amarelo "pálido" e passam a um dourado real reluzente, com halo neon ao redor.
+3. **Arcos em vez de retas** — aumentar curvatura/visibilidade dos links para que sejam claramente arcos, não cordas retas.
 
-1. **Crash silencioso no `useEffect` de forças** após as últimas mudanças (`forceManyBody().distanceMax(1600)` aplicado a TODOS os nós com strength 0 — pode estourar custo de tick e travar a thread, ou disparar exceção dentro de `try/catch` mas deixando `react-force-graph-3d` em estado inconsistente).
-2. **Throw no `buildNodeObject`** quando `node.displayColor` vem com formato inesperado para o `Color()` do three (ex.: nó seller sem `vertical` válido → `hsl(NaN, …%, …%)`). Three aceita `hsl()` mas `NaN` quebra silenciosamente.
-3. **Loop de re-render** disparado pelo `visualPrefs` (state inicial lido de `localStorage` em cada mount + `useEffect` que regrava sempre) combinado com a mudança de chaves no objeto de defaults.
-4. Algum endpoint Supabase (`eb_*`) devolvendo erro depois das mudanças — manda o componente para `isError`, mas o usuário relata branco e não a mensagem rosa de erro, então improvável.
+---
 
-## Plano de ação
+## 1. Sinapse-flare (explosão solar a cada ~10s)
 
-### Passo 1 — Instrumentar com console.logs estratégicos (sem mexer em UI)
-Adicionar logs no `JarvisGraph3D.tsx`:
-- início do render: `[Jarvis3D] render`
-- estado das queries: `isLoading`, `isError`, contagem de nodes/links em `graphData`
-- entrada/saída do effect de forças
-- catch já existe, mas acrescentar `console.error` (hoje só `warn`) com o `e.stack`
+Novo hook `useSolarFlares` (arquivo novo: `src/components/equity-brain/jarvis/useSolarFlares.ts`), seguindo o padrão de `useGhostSynapses`:
 
-Após o user recarregar a página, os logs aparecerão no próximo snapshot e identificam exatamente o ponto de falha.
+- A cada `9000–12000 ms` aleatórios, escolhe 2 nós quaisquer com posição válida.
+- Cria **uma única curva Bézier 3D** entre eles (`THREE.QuadraticBezierCurve3`), com ponto de controle deslocado em direção **perpendicular ao vetor A→B** + componente vertical aleatória → garante **assimetria** (não passa pelo meio reto).
+- Renderiza como `Line` (32–48 segmentos) com `LineBasicMaterial` aditivo cor `#fff7c2` (núcleo) + uma segunda `Line` mais grossa cor `#fbbf24` (halo) na mesma curva.
+- Animação ~1500ms: opacidade sobe (0→1 em 200ms) e desce (1→0 em 1300ms); largura/escala do halo cresce levemente.
+- Após o fade, remove as 2 linhas. Apenas **1 flare ativo por vez** (simples e impactante, como pedido).
+- Adicionado à scene via `(fg).scene()`, com `name: "solar-flare-active"` para limpar em HMR/unmount.
+- Invocado em `JarvisGraph3D.tsx` ao lado de `useGhostSynapses(...)`.
 
-### Passo 2 — Hardening defensivo (independente do Passo 1)
-- **`equityGraphJarvisAdapter.ts` → `sellerColor`**: garantir que `hue`, `sat` e `lum` nunca sejam `NaN`/`undefined` antes de montar a string `hsl(...)`. Se `revenue` for `null/undefined`, cair em valores seguros.
-- **`JarvisGraph3D.tsx` → `buildNodeObject`**: envelopar a criação de `Color(...)` em try/catch e usar `NODE_COLORS[n.type]` como fallback.
-- **`JarvisGraph3D.tsx` → effect de forças**: limitar a aplicação da `forceManyBody("seller-spread")` a iterações curtas (`distanceMax` menor) só se houver sellers no grafo; pular se `graphData.nodes.filter(n => n.type==='seller').length === 0`.
-- **`JarvisGraph3D.tsx`**: acrescentar render de loading skeleton (spinner sobre fundo zinc-950) quando `isLoading`, em vez de renderizar `<ForceGraph3D graphData={vazio}>` direto.
+## 2. Conexões dourado-neon (seller↔seller)
 
-### Passo 3 — Verificação visual
-Tirar screenshot via browser tool da rota `/equity-brain/grafo-jarvis` autenticado como admin para confirmar que a tela voltou a renderizar e que o painel de ajustes / grafo aparecem corretamente.
+Em `src/lib/equityGraphScoring.ts`:
+- `seller_acquires_seller`: muda de `hsl(45, 100%, 60%)` para `hsl(45, 100%, 55%)` (dourado real, mais saturado/quente).
+- `seller_merges_with_seller`: idem.
 
-### Passo 4 — Cleanup
-Remover os `console.log` instrumentais do Passo 1 (manter o `console.error` no catch das forças).
+Em `JarvisGraph3D.tsx` (`<ForceGraph3D>` props):
+- **`linkWidth`**: para edges seller↔seller, multiplicar largura por 1.6 (linha mais "gorda" sustenta o glow).
+- **`linkDirectionalParticles`**: mínimo de 4 partículas em links seller↔seller (mesmo idle), cor `#fde68a` → mais brilhante e contínuo, criando sensação de "neon escorrendo".
+- **`linkDirectionalParticleWidth`**: 2x o padrão para esses links.
+- Adicionar prop **`linkOpacity`** dinâmica (já existe `linkOpacityFn` mas não está sendo passada — passar como `linkOpacity={linkOpacityFn}`); para gold links, opacidade base sobe para 0.85.
+- Para o efeito **halo neon**, usar `linkMaterial` custom: retornar uma `LineBasicMaterial` com `blending: AdditiveBlending` para edges gold (cor `hsl(45, 100%, 65%)`), o que somado ao link normal cria o glow ao redor.
+
+## 3. Arcos (curvas) em vez de retas
+
+`linkCurvature` já existe (0.25–0.55). Para arcos mais visíveis:
+- Aumentar para **0.4–0.8** (arcos pronunciados, não quase-retas).
+- Manter `linkCurveRotation` por hash → cada par tem seu próprio plano de arco.
+- Confirmar `linkResolution={12}` (já está) → curvas suaves.
+- Para evitar arcos desordenados em links super-curtos, manter mínimo de 0.4.
+
+Mudança apenas no objeto literal de `linkCurvature` em `JarvisGraph3D.tsx`.
+
+---
 
 ## Arquivos afetados
 
-- `src/components/equity-brain/jarvis/JarvisGraph3D.tsx` — instrumentação, fallback de loading, hardening de buildNodeObject e effect de forças
-- `src/lib/equityGraphJarvisAdapter.ts` — guards no `sellerColor` / `bandFromRevenue`
+- **Novo**: `src/components/equity-brain/jarvis/useSolarFlares.ts` — hook de explosão solar
+- `src/components/equity-brain/jarvis/JarvisGraph3D.tsx` — invoca o hook, ajusta `linkCurvature`, `linkOpacity={linkOpacityFn}`, `linkWidth`/`linkDirectionalParticles` com bônus para gold, `linkMaterial` custom para halo neon
+- `src/lib/equityGraphScoring.ts` — cor seller↔seller mais dourada
 
-## Observação
+## Validação (pós-implementação)
 
-Como não consigo ver o erro real (snapshot do console veio vazio), o Passo 1 é essencial: ele garante que, se a correção defensiva do Passo 2 não resolver, os logs do próximo snapshot já apontam direto pra causa.
+1. Abrir `/equity-brain/grafo-jarvis` no preview.
+2. Tirar screenshot inicial → confirmar arcos curvados e conexões douradas com halo neon.
+3. Aguardar ~12s e tirar 2º screenshot → tentar capturar uma sinapse-flare em meio fade. Se não pegar, validar via console que o hook está disparando (`[SolarFlare] fired`).
+4. Confirmar que tela continua estável (sem branco, sem warnings de three).

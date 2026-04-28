@@ -40,8 +40,8 @@ export function computeConfidence(s: Partial<ScoreBreakdown>): number {
 // ---------- Edge type → cor (HSL) ----------
 export const EDGE_COLORS: Record<string, string> = {
   buyer_acquires_seller: "hsl(210, 100%, 62%)",   // azul Jarvis — consolidador estratégico
-  seller_acquires_seller: "hsl(45, 100%, 60%)",   // ouro reluzente — roll-up seller↔seller
-  seller_merges_with_seller: "hsl(48, 95%, 65%)", // ouro claro — fusão seller↔seller
+  seller_acquires_seller: "hsl(45, 100%, 55%)",   // ouro real reluzente — roll-up seller↔seller
+  seller_merges_with_seller: "hsl(43, 100%, 52%)", // ouro intenso — fusão seller↔seller
   buyer_funds_seller: "hsl(217, 91%, 60%)",       // blue — capital
   platform_addon: "hsl(220, 95%, 65%)",           // azul-violeta — consolidação plataforma
   strategic_synergy: "hsl(330, 81%, 60%)",        // pink — sinergia
