@@ -1,109 +1,42 @@
-## Diagnóstico — por que ISP-AJCO3 está conectada a tantas coisas?
+## Problema
 
-Olhando `equityGraphBuilder.ts`, hoje cada seller pode receber **8 tipos diferentes de aresta** sem teto de quantidade. O ISP-AJCO3 (uma seller) recebe conexões por:
+A rota `/equity-brain/grafo-jarvis` está em branco. O console do preview não capturou logs (snapshot vazio) e os logs do Vite mostram apenas reloads HMR normais — sem stack trace. O typecheck passa, o `vite build` compila sem erro e o chunk `equity-brain-3d` é gerado normalmente. Logo, o problema é runtime, não compilação.
 
-1. **`buyer_acquires_seller` / `buyer_funds_seller`** — para *todo* buyer cujo `setores_interesse` inclua o setor da empresa (sem limite de quantos buyers).
-2. **`capital_match`** — replicado para cada buyer financeiro com ticket compatível.
-3. **`seller_acquires_seller`** — para *toda* outra seller da mesma vertical com receita 3x menor/maior (loop O(n²)).
-4. **`seller_merges_with_seller`** — para toda seller similar (ratio < 1.4) na mesma UF.
-5. **`cost_synergy`** — para *toda* seller na mesma vertical + UF (sempre, mesmo com peso baixo).
-6. **`platform_addon`** — para toda plataforma da mesma vertical.
-7. **`valuation_arbitrage`** — se score ≥ 60 e não listada.
-8. **`strategic_synergy`** via assets compartilhados.
-9. **`geographic_expansion`** — buyers que ainda não atuam na UF dela.
+## Suspeitas (em ordem de probabilidade)
 
-O builder não tem **teto por nó** nem dedup entre tipos. Resultado: uma única seller acumula dezenas de arestas, sendo várias redundantes (ex.: o mesmo buyer aparece em `buyer_acquires_seller` + `capital_match` + `geographic_expansion`).
+1. **Crash silencioso no `useEffect` de forças** após as últimas mudanças (`forceManyBody().distanceMax(1600)` aplicado a TODOS os nós com strength 0 — pode estourar custo de tick e travar a thread, ou disparar exceção dentro de `try/catch` mas deixando `react-force-graph-3d` em estado inconsistente).
+2. **Throw no `buildNodeObject`** quando `node.displayColor` vem com formato inesperado para o `Color()` do three (ex.: nó seller sem `vertical` válido → `hsl(NaN, …%, …%)`). Three aceita `hsl()` mas `NaN` quebra silenciosamente.
+3. **Loop de re-render** disparado pelo `visualPrefs` (state inicial lido de `localStorage` em cada mount + `useEffect` que regrava sempre) combinado com a mudança de chaves no objeto de defaults.
+4. Algum endpoint Supabase (`eb_*`) devolvendo erro depois das mudanças — manda o componente para `isError`, mas o usuário relata branco e não a mensagem rosa de erro, então improvável.
 
----
+## Plano de ação
 
-## O que vamos mudar
+### Passo 1 — Instrumentar com console.logs estratégicos (sem mexer em UI)
+Adicionar logs no `JarvisGraph3D.tsx`:
+- início do render: `[Jarvis3D] render`
+- estado das queries: `isLoading`, `isError`, contagem de nodes/links em `graphData`
+- entrada/saída do effect de forças
+- catch já existe, mas acrescentar `console.error` (hoje só `warn`) com o `e.stack`
 
-### 1. Reduzir ruído de conexões (em `equityGraphBuilder.ts`)
+Após o user recarregar a página, os logs aparecerão no próximo snapshot e identificam exatamente o ponto de falha.
 
-**Top-K por nó**: após gerar todas as arestas, manter apenas as N mais fortes (`weight × confidence`) por nó. Defaults sugeridos:
-- Sellers: até **8** arestas (priorizando buyer_acquires + roll-up + platform_addon).
-- Buyers: até **15** arestas.
-- Plataformas/teses: sem teto (são hubs naturais).
+### Passo 2 — Hardening defensivo (independente do Passo 1)
+- **`equityGraphJarvisAdapter.ts` → `sellerColor`**: garantir que `hue`, `sat` e `lum` nunca sejam `NaN`/`undefined` antes de montar a string `hsl(...)`. Se `revenue` for `null/undefined`, cair em valores seguros.
+- **`JarvisGraph3D.tsx` → `buildNodeObject`**: envelopar a criação de `Color(...)` em try/catch e usar `NODE_COLORS[n.type]` como fallback.
+- **`JarvisGraph3D.tsx` → effect de forças**: limitar a aplicação da `forceManyBody("seller-spread")` a iterações curtas (`distanceMax` menor) só se houver sellers no grafo; pular se `graphData.nodes.filter(n => n.type==='seller').length === 0`.
+- **`JarvisGraph3D.tsx`**: acrescentar render de loading skeleton (spinner sobre fundo zinc-950) quando `isLoading`, em vez de renderizar `<ForceGraph3D graphData={vazio}>` direto.
 
-**Dedup buyer↔seller**: se já existe `buyer_acquires_seller` entre o par, suprimir `geographic_expansion` e `capital_match` redundantes (manter só a aresta mais forte).
+### Passo 3 — Verificação visual
+Tirar screenshot via browser tool da rota `/equity-brain/grafo-jarvis` autenticado como admin para confirmar que a tela voltou a renderizar e que o painel de ajustes / grafo aparecem corretamente.
 
-**Custo seller↔seller mais seletivo**: `cost_synergy` só dispara se vertical+UF+banda de receita iguais (hoje basta vertical+UF, gera explosão O(n²)).
-
-### 2. Espalhar sellers 5x mais (em `JarvisGraph3D.tsx`)
-
-No bloco de forças (linha ~287):
-
-- Aumentar `seller-spread` de `-450` para **`-2200`** e `distanceMax` de 320 para **1600**.
-- `forceCollide`: para sellers, multiplicar raio por **8** (em vez do `4.5` atual aplicado a todos).
-- Link distance entre dois sellers: somar offset de **+800px** quando ambos endpoints forem sellers.
-
-Resultado esperado: empresas seller ficam visualmente isoladas, conexões entre elas viram linhas longas e legíveis.
-
-### 3. Cores de arestas (em `equityGraphScoring.ts`)
-
-Atualizar `EDGE_COLORS`:
-
-- `seller_acquires_seller` → **`hsl(45, 100%, 60%)`** (ouro reluzente Jarvis).
-- `seller_merges_with_seller` → **`hsl(48, 95%, 65%)`** (ouro mais claro).
-- `buyer_acquires_seller` (consolidador/buyer estratégico) → **`hsl(210, 100%, 62%)`** (azul Jarvis vibrante).
-- `platform_addon` (consolidação por plataforma) → **`hsl(220, 95%, 65%)`** (azul-violeta).
-- Demais (`thesis_fit`, `cost_synergy`, `geographic_expansion`, etc.) → **mantêm cores atuais**.
-
-Adicionar leve glow/pulse extra nas seller↔seller (ouro) ajustando partícula:
-```ts
-linkDirectionalParticleColor={(l) => 
-  l.edge_type === "seller_acquires_seller" ? "#fde047" : undefined}
-```
-
-### 4. Cores de nós sellers por porte/setor (em `JarvisGraph3D.tsx` + `equityGraphJarvisAdapter.ts`)
-
-Hoje todo seller é verde-esmeralda fixo. Vamos derivar cor por **porte** (faturamento) e usar **setor** para variação de matiz:
-
-**Tabela de tamanho** (luminância/saturação):
-| Banda          | HSL                      | Visual                  |
-|----------------|--------------------------|-------------------------|
-| <R$1M          | `hsl(H, 50%, 35%)`       | apagado, menor presença |
-| R$1–5M         | `hsl(H, 65%, 45%)`       | médio                   |
-| R$5–10M        | `hsl(H, 80%, 55%)`       | brilhante               |
-| R$10–50M       | `hsl(H, 90%, 60%)`       | muito brilhante         |
-| R$50M+         | `hsl(H, 100%, 65%)` + ring|destaque com anel orbital|
-
-**Matiz por setor** (mapa fixo, ~12 setores principais):
-- Tech/SaaS → 160 (esmeralda)
-- Saúde → 175 (teal)
-- Indústria → 25 (laranja)
-- Varejo/Comércio → 320 (rosa)
-- Serviços → 200 (cyan)
-- Alimentação → 15 (vermelho-quente)
-- Educação → 270 (violeta)
-- Logística → 45 (âmbar)
-- Telecom → 220 (azul)
-- Energia → 60 (amarelo)
-- Construção → 30 (laranja-terra)
-- Agro → 100 (verde-folha)
-- Outros → 240 (zinc-azul)
-
-Implementação: nova função `getSellerColor(node)` em `equityGraphJarvisAdapter.ts` ou helper inline em `JarvisGraph3D.tsx`. Adicionar campo `displayColor` em `JarvisNode` para sellers (outros tipos continuam usando `NODE_COLORS`).
-
-Sellers com banda R$50M+ ganham um **anel orbital dourado** (mesmo tratamento visual de plataformas) para destacar visualmente.
-
-### 5. Atualizar legenda (em `GraphLegend.tsx` se necessário)
-
-Acrescentar mini-paleta explicando: "Seller → cor por setor, intensidade por porte". Edge legend já reflete cores novas automaticamente.
-
----
+### Passo 4 — Cleanup
+Remover os `console.log` instrumentais do Passo 1 (manter o `console.error` no catch das forças).
 
 ## Arquivos afetados
 
-- `src/lib/equityGraphBuilder.ts` — top-K por nó, dedup, cost_synergy mais restrito.
-- `src/lib/equityGraphScoring.ts` — atualizar `EDGE_COLORS` (ouro/azul).
-- `src/lib/equityGraphJarvisAdapter.ts` — calcular `displayColor` por porte+setor; adicionar `bigSellerRing: boolean`.
-- `src/components/equity-brain/jarvis/JarvisGraph3D.tsx` — usar `displayColor`, ajustar forças (seller spread 5x), adicionar anel para mega-sellers, cor de partícula para edges ouro.
-- `src/components/equity-brain/graph/GraphLegend.tsx` — nota sobre cor de seller (opcional).
+- `src/components/equity-brain/jarvis/JarvisGraph3D.tsx` — instrumentação, fallback de loading, hardening de buildNodeObject e effect de forças
+- `src/lib/equityGraphJarvisAdapter.ts` — guards no `sellerColor` / `bandFromRevenue`
 
-## Resultado esperado
+## Observação
 
-- ISP-AJCO3 passa de ~30 conexões para ~6-8, mantendo só as estrategicamente fortes.
-- Sellers ficam visualmente espaçados, sem aglomeração.
-- Roll-ups e fusões saltam aos olhos em ouro reluzente; consolidações em azul Jarvis.
-- Tamanho/setor da empresa é lido instantaneamente pela cor da bolinha.
+Como não consigo ver o erro real (snapshot do console veio vazio), o Passo 1 é essencial: ele garante que, se a correção defensiva do Passo 2 não resolver, os logs do próximo snapshot já apontam direto pra causa.

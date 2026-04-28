@@ -49,7 +49,7 @@ const SECTOR_HUE: Record<string, number> = {
 };
 
 function hueForSector(sector?: string | null): number {
-  if (!sector) return 240;
+  if (!sector || typeof sector !== "string") return 240;
   const s = sector.toLowerCase();
   for (const key of Object.keys(SECTOR_HUE)) {
     if (s.includes(key)) return SECTOR_HUE[key];
@@ -59,7 +59,8 @@ function hueForSector(sector?: string | null): number {
 
 interface SizeBand { sat: number; lum: number; ring: boolean; }
 function bandFromRevenue(rev?: number | null): SizeBand {
-  const v = Number(rev ?? 0);
+  const raw = Number(rev ?? 0);
+  const v = Number.isFinite(raw) ? raw : 0;
   if (v >= 50_000_000) return { sat: 100, lum: 65, ring: true };
   if (v >= 10_000_000) return { sat: 90,  lum: 60, ring: false };
   if (v >= 5_000_000)  return { sat: 80,  lum: 55, ring: false };
@@ -68,9 +69,14 @@ function bandFromRevenue(rev?: number | null): SizeBand {
 }
 
 function sellerColor(node: GraphNode): { color: string; ring: boolean } {
-  const hue = hueForSector(node.vertical);
-  const band = bandFromRevenue(node.metadata?.faturamento);
-  return { color: `hsl(${hue}, ${band.sat}%, ${band.lum}%)`, ring: band.ring };
+  const hueRaw = hueForSector(node.vertical);
+  const hue = Number.isFinite(hueRaw) ? Math.max(0, Math.min(360, hueRaw)) : 240;
+  const band = bandFromRevenue(
+    node.metadata?.faturamento ?? (node as any).faturamento_estimado ?? null,
+  );
+  const sat = Number.isFinite(band.sat) ? band.sat : 60;
+  const lum = Number.isFinite(band.lum) ? band.lum : 50;
+  return { color: `hsl(${hue}, ${sat}%, ${lum}%)`, ring: band.ring };
 }
 
 export interface JarvisLink extends GraphEdge {
