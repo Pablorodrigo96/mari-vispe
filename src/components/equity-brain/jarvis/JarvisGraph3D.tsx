@@ -95,7 +95,16 @@ export function JarvisGraph3D() {
   const [selectedNode, setSelectedNode] = useState<JarvisNode | null>(null);
 
   // ---------- Visual prefs (ajustes de fundo, persistidos em localStorage) ----------
-  const VISUAL_DEFAULTS = { glow: 70, scanlines: 50, vignette: 60, brightness: 30 };
+  const VISUAL_DEFAULTS = {
+    glow: 70,
+    scanlines: 50,
+    vignette: 60,
+    brightness: 30,
+    curvatureMin: 18, // 0-80
+    curvatureRange: 24, // 0-60
+    linkSegments: 12, // 4-24
+    arcStyle: "quad" as "quad" | "sine",
+  };
   const [visualPrefs, setVisualPrefs] = useState(() => {
     try {
       const raw = localStorage.getItem("jarvis3d-visual-prefs");
