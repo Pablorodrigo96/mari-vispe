@@ -399,7 +399,7 @@ export function JarvisGraph3D() {
   const buildNodeObject = (node: any): Object3D => {
     const n = node as JarvisNode;
     const group = new Group();
-    const baseColor = new Color(NODE_COLORS[n.type] ?? "#71717a");
+    const baseColor = new Color(n.displayColor ?? NODE_COLORS[n.type] ?? "#71717a");
     const radius = n.visualRadius ?? 6;
     const dimmed =
       focusId !== null && focusNeighborIds && !focusNeighborIds.has(n.id);
@@ -471,6 +471,23 @@ export function JarvisGraph3D() {
         }),
       );
       group.add(halo);
+    }
+
+    // Anel dourado para mega-sellers (R$50M+) — destaque de porte
+    if (!dimmed && n.type === "seller" && n.bigSellerRing) {
+      const goldRing = new Mesh(
+        new RingGeometry(radius * 2.3, radius * 2.55, 64),
+        new MeshBasicMaterial({
+          color: new Color("hsl(45, 100%, 60%)"),
+          transparent: true,
+          opacity: 0.55 * glowFactor,
+          side: DoubleSide,
+          blending: AdditiveBlending,
+          depthWrite: false,
+        }),
+      );
+      goldRing.rotation.x = Math.PI / 2;
+      group.add(goldRing);
     }
 
     // Label
