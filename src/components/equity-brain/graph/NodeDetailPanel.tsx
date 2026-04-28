@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Target, TrendingUp, Network, Sparkles, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
-import { NODE_COLORS, NODE_LABELS, EDGE_COLORS, EDGE_LABELS } from "@/lib/equityGraphScoring";
+import { NODE_COLORS, NODE_LABELS, NODE_DESCRIPTIONS, EDGE_COLORS, EDGE_LABELS } from "@/lib/equityGraphScoring";
 import type { GraphNode, GraphEdge } from "@/lib/equityGraphBuilder";
 import { formatBRL } from "@/lib/equityBrain";
 
