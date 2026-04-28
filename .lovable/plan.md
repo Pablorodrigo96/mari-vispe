@@ -1,97 +1,77 @@
 
-# Avaliação do plano Oráculo v3 e proposta faseada
+# Próxima etapa — 1.5 (consertos + plug-in no scoring) + 2 (embeddings)
 
-## O que faz sentido manter, ajustar ou descartar
+Antes de avançar, a auditoria do estado atual revelou 3 pontos que precisam ser tratados juntos:
 
-| Módulo do plano original | Veredito | Razão |
-|---|---|---|
-| **M1 — Motor de Intenção (sinais estruturais Receita)** | **Executar JÁ** | 100% dos dados existem (`socios_pf`, `data_abertura`, `qtd_socios`, `company_partners.idade_estimada`). Custo zero, ROI imediato. |
-| **M6 — Loop closer (OUTCOMES → revealed_thetas)** | **Já existe parcialmente** | `update-buyer-revealed-thetas` já faz update bayesiano com decay. Falta o **trigger automático** em `deal_events` e expor no UI. Não reescrever — só plugar. |
-| **MatchDecisionCard com counterfactual exposto** | **Executar JÁ** | `feature_contributions` já são calculadas e gravadas em `matches`. É só renderizar. Componente existe (`src/components/equity-brain/MatchDecisionCard.tsx`). |
-| **M4 — Wave Detection setorial** | **Onda 2** | Depende de `canonical_transactions` ter volume mínimo. Verificar antes. |
-| **M5 — Embeddings semânticos (pgvector)** | **Onda 2** | Já existe `embed-signal` e coluna `embedding` em `company_signals`. Estender para `companies` + `buyers` é incremental. |
-| **M3 — Hazard model (Cox/heurístico)** | **Onda 3** | Heurística simples vale, mas só faz sentido depois que M1 estiver materializado e estável. |
-| **M2 — Enriquecimento externo (News, PJe, CADIN, LinkedIn)** | **Onda 3+** | Maior moat **e** maior custo (Serper/Apify/ProxyCurl + crons + auditoria). Requer decisão de orçamento. Não bloqueia ondas 1–2. |
-| **Painel "Próximos a Vender"** | **Onda 2** | Só faz sentido depois que `seller_intent_score` estiver populado (M1). |
-| **Feed "O que mudou hoje"** | **Onda 4** | Depende de M2 (enrichment_log). Cosmético até lá. |
-| **Composite `deal_quality` (motor v3)** | **Onda 3** | Substituir ranking só faz sentido com hazard + waves prontos. Manter `match_score` v2 até lá. |
+| Achado | Impacto |
+|---|---|
+| `socio_idade_max` **não foi materializado** (0 linhas em `company_signals`) | `unipessoal_fundador_55plus` ficou 100% zero — bug silencioso da Etapa 1 |
+| `seller_intent_score` médio = **0.19** (esperado ~0.35) | Score subdimensionado por causa do bug acima |
+| `current_matches = 0` | UI de counterfactual da Etapa 1 não tem o que renderizar até rodar `match-batch` |
+| `canonical_transactions = 21` | **Confirma**: Wave Detection (Onda 3) ainda não tem volume — não fazer agora |
 
-### Premissas que rejeito do plano original
-- **"Reescrever update-buyer-revealed-thetas"** — não. A função atual já implementa o loop bayesiano com decay e penalização por rejeição. Basta automatizar o disparo.
-- **"Substituir os 5 placeholders 0.5 já no Sprint 1"** — fazer só os que têm substituto real **na mesma sprint** (ex.: `horizonte` ← `tempo_atividade`). Os demais ficam para quando a feature substituta existir, senão troca-se ruído por ruído.
+A Etapa 2 do plano original (embeddings) faz sentido executar **agora** porque:
+- `embed-signal` já existe e funciona.
+- Lovable AI Gateway provê `text-embedding-3-small` sem API key extra.
+- Dá para preencher 1 dos placeholders restantes do `match-company-v2` (`sinergia_movel` → `semantic_fit`).
 
 ---
 
-## Etapa 1 — Despertar dados dormentes (esta execução)
+## Escopo desta execução
 
-Escopo enxuto, 100% executável com dados já existentes em `equity_brain.companies` + `equity_brain.company_partners`. Sem APIs externas, sem custo.
+### Bloco A — Conserto da Etapa 1 (obrigatório, 30min)
 
-### Estado atual confirmado
-- `equity_brain.companies`: 116 empresas, 81 com `data_abertura`, 116 com `socios_pf`.
-- `equity_brain.company_partners` já tem `idade_estimada` e `is_provavel_fundador` populados.
-- `company_signals` hoje só tem 5 sinais ativos (`intencao_venda_explicita`, `geografia_premium`, `idade_empresa_10_a_15`, `porte_atrativo_ma`, `empresa_ativa_situacao_regular`) — todos derivados de listing, não de Receita.
+**A1.** Edge function `compute-seller-intent`: corrigir o cálculo de `socio_idade_max` para escrever a linha em `company_signals` (hoje só calcula em memória mas não faz upsert do próprio sinal). Re-rodar para as 116 empresas.
 
-### Entregas da Etapa 1
+**A2.** Após A1, recalcular `unipessoal_fundador_55plus` e `seller_intent_score` (que dependem dele). Validar: distribuição esperada ≥ 5% das empresas com `unipessoal_fundador_55plus=1`.
 
-**1. Migration: 4 sinais novos materializados em `company_signals`**
+**A3.** Disparar `match-batch` 1x para popular `matches.is_current=true` com `feature_contributions`, para o UI de counterfactual ter dados reais.
 
-```text
-socio_idade_max          ← max(idade_estimada) dos sócios PF com qualificação de admin/sócio
-tempo_atividade_anos     ← extract(year from age(data_abertura))
-unipessoal_fundador_55+  ← qtd_socios=1 AND socio_idade_max>=55  (binário)
-sweet_spot_fadiga        ← tempo_atividade entre 8 e 20 anos       (binário)
-```
+### Bloco B — Etapa 1.5: Plug-in de 2 features reais no `match-company-v2`
 
-Cada um vira linha em `company_signals` com `signal_key`, `signal_value`, `weight`, `confidence`, `p_true`, `evidence_strength='strong'` (são fatos da Receita, não inferência).
+Substituir 2 dos 5 placeholders constantes (0.5) por features derivadas de sinais reais. Os outros 3 (`marca_regional`, `verticalizacao`, `regulatorio`) permanecem em 0.5 — não há substituto fiel ainda, trocar por ruído pioraria.
 
-**2. Edge Function nova: `compute-seller-intent-signals`**
-- Admin-only (mesmo padrão das demais).
-- Lê `companies` + `company_partners`, calcula os 4 sinais, faz upsert em `company_signals`.
-- Calcula um agregado `seller_intent_score ∈ [0,1]` = soma ponderada (idade 0.35, tempo 0.25, unipessoal+idade 0.25, sweet spot 0.15) — também gravado como sinal.
-- Registra execução em `engine_runs`.
-- Suporta `dry_run` e batch por UF/setor.
+| Linha atual em `match-company-v2/index.ts` | Substituir por |
+|---|---|
+| `let financeiro = 0.5;` (linha 62) | Derivar de `sweet_spot_fadiga` + `tempo_atividade_anos` normalizado: empresas no sweet spot 8-20a recebem 0.7; <3a → 0.3; >25a → 0.4 |
+| `const sinergia_movel = 0.5;` (linha 94) | **Será preenchido pelo Bloco C** (embeddings) — placeholder mantido até Bloco C entregar |
 
-**3. Cron diário** (via `setup-equity-brain-crons` ou pg_cron direto): roda 1x/dia às 04:00.
+Adicionar feature **nova** ao vetor de scoring:
+- `seller_intent` (peso 0.10, redistribuído de `match_score`): lê direto `seller_intent_score` da company. Empresas com intent > 0.5 ganham boost; < 0.2 sofrem leve penalidade.
 
-**4. Trigger automático: `deal_events` → `update-buyer-revealed-thetas`**
-- Trigger SQL `AFTER INSERT ON equity_brain.deal_events` que faz `pg_net.http_post` chamando a edge function existente com `{ buyer_id }`.
-- A função já existe e funciona — só estamos plugando o disparo automático que faltava.
-- Idempotente (a função tolera re-execução).
+Ajuste de pesos será documentado em comentário no arquivo. Recalcular matches (`match-batch`) ao final.
 
-**5. UI: counterfactual + feature contributions no MatchDecisionCard**
-- Ler `matches.feature_contributions` (já gravado).
-- Renderizar:
-  - Top 5 features que contribuíram (barras horizontais com sinal +/−).
-  - Bloco "O que mudaria o jogo": pega a feature com maior `gap = peso − contribuição_atual` e mostra "Se confirmássemos `<feature>`, o score subiria de X para Y" + pergunta sugerida (mapa estático `feature → pergunta`).
+### Bloco C — Etapa 2: Embeddings semânticos (`semantic_fit`)
 
-**6. Card de monitoramento no `/equity-brain`**
-- Reusa padrão do `BackfillHistoryCard`: status do último run de `compute-seller-intent-signals`, contagem de sinais materializados, botão "Recalcular agora".
+**C1.** Migration: adicionar coluna `embedding vector(1536)` em `equity_brain.companies` e `equity_brain.buyers` (se ainda não existir). Index HNSW em ambas.
 
-### O que NÃO faz parte da Etapa 1
-- Painel "Próximos a Vender" (depende de score estável + price_bands — Onda 2).
-- Substituição dos 5 placeholders no scoring do `match-company-v2` (faremos em Etapa 1.5 só os 2 que têm substituto direto: `horizonte` ← `tempo_atividade_anos`, `marca_regional` ← `unipessoal_fundador_55+`). Adiei pra não misturar duas mudanças sensíveis na mesma execução.
-- Hazard predictions, embeddings novos, wave detection.
-- Qualquer enriquecimento externo.
+**C2.** Edge function nova: `compute-semantic-embeddings`
+- Admin-only.
+- Para `companies`: gera embedding de `concat(razao_social, cnae_descricao, setor_ma, subsetor_ma)`.
+- Para `buyers`: gera embedding de `concat(nome, sinergias_chave, tese_descricao)`.
+- Usa Lovable AI Gateway (`google/text-embedding-004` ou `openai/text-embedding-3-small` — verificar qual está disponível; fallback para o que `embed-signal` já usa).
+- Batch de 50, idempotente (só recalcula se `updated_at > embedding_computed_at`).
+- Registra em `engine_runs`.
 
-### Critério de aceite da Etapa 1
-- 116 empresas com `seller_intent_score` em `company_signals`.
-- Distribuição do score visível no card de monitoramento (histograma simples top 10/median/bottom 10).
-- 1 `deal_event` de teste dispara update em `buyer_revealed_thetas` automaticamente.
-- MatchDecisionCard de qualquer match real mostra contribuições + counterfactual.
+**C3.** Plugar no `match-company-v2`:
+- Substituir `sinergia_movel = 0.5` por `semantic_fit = 1 - cosine_distance(company.embedding, buyer.embedding)`.
+- Quando algum dos lados não tiver embedding, fallback para 0.5 (preserva comportamento atual).
 
-### Detalhes técnicos
-- **Schema**: zero alterações estruturais. Tudo cabe no schema atual de `company_signals` (que já tem `signal_value`, `weight`, `p_true`, `evidence_strength`, `confidence`).
-- **Backfill**: a edge function processa todas as 116 empresas no primeiro run (lote de 50, sequencial — volume baixo).
-- **Trigger pg_net**: requer extensão `pg_net` (verificar; se ausente, fallback é cron de 5 min varrendo eventos novos — menos elegante mas funciona).
-- **Frontend**: alterações isoladas em `src/components/equity-brain/MatchDecisionCard.tsx` + 1 componente novo `SellerIntentMonitorCard.tsx` em `src/components/equity-brain/`.
+**C4.** Card UI no `/equity-brain` (ShadowPage): `SemanticEmbeddingsCard` — total de companies/buyers com embedding, último run, botão "Recalcular".
 
-### Próximas etapas (após validação da 1)
-- **Etapa 1.5** (mesma onda, 1 dia): substituir os 2 placeholders no scoring v2 e calibrar.
-- **Etapa 2**: pgvector + embeddings de `companies.cnae_descricao` e `buyers.sinergias_chave` → feature `semantic_fit`.
-- **Etapa 3**: Wave detection (depende de validar volume de `canonical_transactions`).
-- **Etapa 4**: Hazard heurístico (Fase A do M3).
-- **Etapa 5+**: discutir orçamento de enriquecimento externo (Serper, PJe, CADIN, LinkedIn).
+### Critério de aceite
+
+- Bloco A: `unipessoal_fundador_55plus` com pelo menos 5 empresas marcadas; `current_matches > 0`.
+- Bloco B: Feature `seller_intent` aparece em `feature_contributions` de matches recém-gerados; `financeiro` tem variância (não é mais constante 0.5).
+- Bloco C: ≥ 100 companies e ≥ 200 buyers com embedding; pelo menos 1 match com `semantic_fit ≠ 0.5`.
+
+### Fora desta etapa (para discutir depois)
+
+- **Wave Detection** (canonical_transactions = 21, volume insuficiente — adiar até atingir ≥ 100 deals).
+- **Hazard model** (depende de Bloco B estabilizado por ≥ 2 semanas com dados de `deal_events`).
+- **Enriquecimento externo** (News/PJe/LinkedIn — requer decisão de orçamento Serper/Apify/ProxyCurl).
+- **Substituir os outros 3 placeholders** (`marca_regional`, `verticalizacao`, `regulatorio`) — sem substituto fiel hoje.
 
 ---
 
-Aprovando, executo apenas a **Etapa 1** acima. As demais ficam aguardando validação antes de iniciar.
+Aprovando, executo os 3 blocos sequencialmente em uma única passagem.
