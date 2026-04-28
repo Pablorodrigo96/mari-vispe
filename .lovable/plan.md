@@ -1,127 +1,97 @@
 
-# Cockpit do Head de Parcerias + Gestão de Acessos
+# Avaliação do plano Oráculo v3 e proposta faseada
 
-Adicionar uma nova aba **"Cockpit Head"** (default) em `/admin/parcerias` com KPIs/rotinas de monitoramento, **mais** ações de gestão do ciclo de vida do parceiro: criar, aprovar, suspender, desqualificar e reativar — tudo em um só lugar.
+## O que faz sentido manter, ajustar ou descartar
 
-A página já existe em `src/pages/admin/AdminPartnerships.tsx` e já lê `profiles`, `listings`, `partner_lead_reservations`, `vdr_documents`, `partner_activities`. Vamos reaproveitar `fetchData` e estendê-lo.
+| Módulo do plano original | Veredito | Razão |
+|---|---|---|
+| **M1 — Motor de Intenção (sinais estruturais Receita)** | **Executar JÁ** | 100% dos dados existem (`socios_pf`, `data_abertura`, `qtd_socios`, `company_partners.idade_estimada`). Custo zero, ROI imediato. |
+| **M6 — Loop closer (OUTCOMES → revealed_thetas)** | **Já existe parcialmente** | `update-buyer-revealed-thetas` já faz update bayesiano com decay. Falta o **trigger automático** em `deal_events` e expor no UI. Não reescrever — só plugar. |
+| **MatchDecisionCard com counterfactual exposto** | **Executar JÁ** | `feature_contributions` já são calculadas e gravadas em `matches`. É só renderizar. Componente existe (`src/components/equity-brain/MatchDecisionCard.tsx`). |
+| **M4 — Wave Detection setorial** | **Onda 2** | Depende de `canonical_transactions` ter volume mínimo. Verificar antes. |
+| **M5 — Embeddings semânticos (pgvector)** | **Onda 2** | Já existe `embed-signal` e coluna `embedding` em `company_signals`. Estender para `companies` + `buyers` é incremental. |
+| **M3 — Hazard model (Cox/heurístico)** | **Onda 3** | Heurística simples vale, mas só faz sentido depois que M1 estiver materializado e estável. |
+| **M2 — Enriquecimento externo (News, PJe, CADIN, LinkedIn)** | **Onda 3+** | Maior moat **e** maior custo (Serper/Apify/ProxyCurl + crons + auditoria). Requer decisão de orçamento. Não bloqueia ondas 1–2. |
+| **Painel "Próximos a Vender"** | **Onda 2** | Só faz sentido depois que `seller_intent_score` estiver populado (M1). |
+| **Feed "O que mudou hoje"** | **Onda 4** | Depende de M2 (enrichment_log). Cosmético até lá. |
+| **Composite `deal_quality` (motor v3)** | **Onda 3** | Substituir ranking só faz sentido com hazard + waves prontos. Manter `match_score` v2 até lá. |
+
+### Premissas que rejeito do plano original
+- **"Reescrever update-buyer-revealed-thetas"** — não. A função atual já implementa o loop bayesiano com decay e penalização por rejeição. Basta automatizar o disparo.
+- **"Substituir os 5 placeholders 0.5 já no Sprint 1"** — fazer só os que têm substituto real **na mesma sprint** (ex.: `horizonte` ← `tempo_atividade`). Os demais ficam para quando a feature substituta existir, senão troca-se ruído por ruído.
 
 ---
 
-## 1. Aba "Cockpit Head" (monitoramento)
+## Etapa 1 — Despertar dados dormentes (esta execução)
+
+Escopo enxuto, 100% executável com dados já existentes em `equity_brain.companies` + `equity_brain.company_partners`. Sem APIs externas, sem custo.
+
+### Estado atual confirmado
+- `equity_brain.companies`: 116 empresas, 81 com `data_abertura`, 116 com `socios_pf`.
+- `equity_brain.company_partners` já tem `idade_estimada` e `is_provavel_fundador` populados.
+- `company_signals` hoje só tem 5 sinais ativos (`intencao_venda_explicita`, `geografia_premium`, `idade_empresa_10_a_15`, `porte_atrativo_ma`, `empresa_ativa_situacao_regular`) — todos derivados de listing, não de Receita.
+
+### Entregas da Etapa 1
+
+**1. Migration: 4 sinais novos materializados em `company_signals`**
 
 ```text
-┌─ KPIs (8 cards, grid 4 cols) ────────────────────────────────────┐
-│ Novos parceiros (30d) │ Engajados/Total │ Inativos (>60d) │ ICP%│
-│ Leads no mês          │ Eventos no mês  │ Reuniões R/A    │ Receita vs Estimativa │
-└──────────────────────────────────────────────────────────────────┘
-
-┌─ Rotinas do Dia ────────────────────────┬─ Top performers ───────────┐
-│ ▸ Follow-ups pendentes (X)              │ Score = leads × ICP × conv │
-│ ▸ Reuniões agendadas hoje/semana (X)    │ Top 10 + sparkline         │
-│ ▸ Pipeline a bater por parceiro         │                            │
-│ ▸ Parceiros sem interação 30/60/90d     │                            │
-│ ▸ Sugestão de corte (>90d inativos)     │                            │
-└─────────────────────────────────────────┴────────────────────────────┘
-
-┌─ Parceiros em risco / a cortar ─────────────────────────────────────┐
-│ Nome │ Última indicação │ Última atividade │ Leads 90d │ Ações       │
-└──────────────────────────────────────────────────────────────────────┘
-
-┌─ Reuniões: agendadas vs realizadas (90d) ───────────────────────────┐
-│ Parceiro │ Agendadas │ Realizadas │ Taxa │ Próxima reunião          │
-└──────────────────────────────────────────────────────────────────────┘
+socio_idade_max          ← max(idade_estimada) dos sócios PF com qualificação de admin/sócio
+tempo_atividade_anos     ← extract(year from age(data_abertura))
+unipessoal_fundador_55+  ← qtd_socios=1 AND socio_idade_max>=55  (binário)
+sweet_spot_fadiga        ← tempo_atividade entre 8 e 20 anos       (binário)
 ```
 
-### KPI → fonte
-| KPI | Cálculo |
-|---|---|
-| Novos parceiros (30d) | `profiles.is_partner_accountant=true AND created_at >= now()-30d` |
-| Engajados/Total | já existe (`is_active` = última listing < 60d) |
-| Leads cadastrados / parceiro | `listings` agrupado por `user_id` |
-| Eventos realizados | `partner_activities` tipo `evento` com `completed_at` (30d) |
-| Reuniões agendadas vs realizadas | counts `reuniao_agendada` vs `reuniao_realizada` |
-| Receita / parceiro vs estimativa | `Σ asking_price × success_fee` vs meta constante (R$ 50k/mês/parceiro ativo) |
-| Leads dentro do ICP Vispe | `listings.equity_score >= 60` por parceiro |
-| Sem interagir | sem `partner_activities` E sem nova `listing` em 30/60/90d |
+Cada um vira linha em `company_signals` com `signal_key`, `signal_value`, `weight`, `confidence`, `p_true`, `evidence_strength='strong'` (são fatos da Receita, não inferência).
 
-### Rotinas → ação na UI
-| Rotina | Implementação |
-|---|---|
-| Follow-up parceiros ativos | Lista parceiros sem `followup` em 14d → botão abre Dialog de atividade existente |
-| Bater Pipeline / parceiro | Card por parceiro: meta vs realizado (barra) |
-| Revisar eventos agendados | `scheduled_at >= today AND completed_at IS NULL` → "Marcar realizada"/"Reagendar" |
-| Ranking top performers | Score `leads_mes×1 + icp×2 + exclusivos×5` |
-| Corte parceiros inativos | Inativos >90d → botão "Desqualificar" (ver §2) |
+**2. Edge Function nova: `compute-seller-intent-signals`**
+- Admin-only (mesmo padrão das demais).
+- Lê `companies` + `company_partners`, calcula os 4 sinais, faz upsert em `company_signals`.
+- Calcula um agregado `seller_intent_score ∈ [0,1]` = soma ponderada (idade 0.35, tempo 0.25, unipessoal+idade 0.25, sweet spot 0.15) — também gravado como sinal.
+- Registra execução em `engine_runs`.
+- Suporta `dry_run` e batch por UF/setor.
 
----
+**3. Cron diário** (via `setup-equity-brain-crons` ou pg_cron direto): roda 1x/dia às 04:00.
 
-## 2. Aba "Gestão de Parceiros" (ciclo de vida)
+**4. Trigger automático: `deal_events` → `update-buyer-revealed-thetas`**
+- Trigger SQL `AFTER INSERT ON equity_brain.deal_events` que faz `pg_net.http_post` chamando a edge function existente com `{ buyer_id }`.
+- A função já existe e funciona — só estamos plugando o disparo automático que faltava.
+- Idempotente (a função tolera re-execução).
 
-Nova aba com tabela única de **todos os parceiros** + ações administrativas.
+**5. UI: counterfactual + feature contributions no MatchDecisionCard**
+- Ler `matches.feature_contributions` (já gravado).
+- Renderizar:
+  - Top 5 features que contribuíram (barras horizontais com sinal +/−).
+  - Bloco "O que mudaria o jogo": pega a feature com maior `gap = peso − contribuição_atual` e mostra "Se confirmássemos `<feature>`, o score subiria de X para Y" + pergunta sugerida (mapa estático `feature → pergunta`).
 
-```text
-┌─ Header ──────────────────────────────────────────────────────────┐
-│ [+ Criar parceiro]   [Aprovar pendentes (3)]   filtros / busca    │
-└───────────────────────────────────────────────────────────────────┘
+**6. Card de monitoramento no `/equity-brain`**
+- Reusa padrão do `BackfillHistoryCard`: status do último run de `compute-seller-intent-signals`, contagem de sinais materializados, botão "Recalcular agora".
 
-┌─ Tabela ──────────────────────────────────────────────────────────┐
-│ Nome │ Email │ Empresa │ Status │ Origem │ Leads │ Última ação │ ⋮ │
-└───────────────────────────────────────────────────────────────────┘
-```
+### O que NÃO faz parte da Etapa 1
+- Painel "Próximos a Vender" (depende de score estável + price_bands — Onda 2).
+- Substituição dos 5 placeholders no scoring do `match-company-v2` (faremos em Etapa 1.5 só os 2 que têm substituto direto: `horizonte` ← `tempo_atividade_anos`, `marca_regional` ← `unipessoal_fundador_55+`). Adiei pra não misturar duas mudanças sensíveis na mesma execução.
+- Hazard predictions, embeddings novos, wave detection.
+- Qualquer enriquecimento externo.
 
-**Status do parceiro** (derivado em UI, persistido em `profiles`):
-- `pending` — pediu acesso (já existe `franchisee_requests`; criar fluxo equivalente para parceiro)
-- `active` — `is_partner_accountant=true`
-- `suspended` — flag nova `partner_status='suspended'`
-- `disqualified` — flag nova `partner_status='disqualified'` (mantém histórico, não pode logar como parceiro)
+### Critério de aceite da Etapa 1
+- 116 empresas com `seller_intent_score` em `company_signals`.
+- Distribuição do score visível no card de monitoramento (histograma simples top 10/median/bottom 10).
+- 1 `deal_event` de teste dispara update em `buyer_revealed_thetas` automaticamente.
+- MatchDecisionCard de qualquer match real mostra contribuições + counterfactual.
 
-### Ações no menu ⋮ por linha
+### Detalhes técnicos
+- **Schema**: zero alterações estruturais. Tudo cabe no schema atual de `company_signals` (que já tem `signal_value`, `weight`, `p_true`, `evidence_strength`, `confidence`).
+- **Backfill**: a edge function processa todas as 116 empresas no primeiro run (lote de 50, sequencial — volume baixo).
+- **Trigger pg_net**: requer extensão `pg_net` (verificar; se ausente, fallback é cron de 5 min varrendo eventos novos — menos elegante mas funciona).
+- **Frontend**: alterações isoladas em `src/components/equity-brain/MatchDecisionCard.tsx` + 1 componente novo `SellerIntentMonitorCard.tsx` em `src/components/equity-brain/`.
 
-| Ação | Efeito |
-|---|---|
-| **Criar parceiro** | Modal: nome, email, telefone, empresa → Edge Function `create-partner` cria user em `auth.users` (admin API), marca `is_partner_accountant=true`, dispara magic link de boas-vindas |
-| **Aprovar acesso** | Set `is_partner_accountant=true` + insere role `advisor` em `user_roles` |
-| **Suspender** | `partner_status='suspended'` (UI bloqueia, login mantido) |
-| **Reativar** | `partner_status='active'` |
-| **Desqualificar** | `partner_status='disqualified'`, remove role `advisor`, registra `partner_activities` tipo `corte` com motivo |
-| **Editar dados** | Atualiza `profiles` (nome, telefone, empresa) |
-| **Registrar atividade** | Reusa Dialog existente |
-| **Ver drill-down** | Sheet existente (reservas, VDR, atividades) |
+### Próximas etapas (após validação da 1)
+- **Etapa 1.5** (mesma onda, 1 dia): substituir os 2 placeholders no scoring v2 e calibrar.
+- **Etapa 2**: pgvector + embeddings de `companies.cnae_descricao` e `buyers.sinergias_chave` → feature `semantic_fit`.
+- **Etapa 3**: Wave detection (depende de validar volume de `canonical_transactions`).
+- **Etapa 4**: Hazard heurístico (Fase A do M3).
+- **Etapa 5+**: discutir orçamento de enriquecimento externo (Serper, PJe, CADIN, LinkedIn).
 
 ---
 
-## 3. Mudanças técnicas
-
-### Banco (migration)
-1. `ALTER TABLE public.profiles ADD COLUMN partner_status text DEFAULT 'active' CHECK (partner_status IN ('pending','active','suspended','disqualified'));`
-2. `ALTER TABLE public.profiles ADD COLUMN partner_disqualified_reason text;`
-3. `ALTER TABLE public.profiles ADD COLUMN partner_disqualified_at timestamptz;`
-4. Permitir nova `activity_type='corte'` (texto livre, não há CHECK).
-
-### Edge Function nova: `create-partner`
-- Valida JWT do chamador e checa role `admin` via `has_role`.
-- Body: `{ email, full_name, phone?, company_name? }` (Zod).
-- Usa `supabase.auth.admin.createUser({ email, email_confirm: true })`.
-- `INSERT INTO profiles (user_id, full_name, phone, company_name, is_partner_accountant=true, partner_status='active')`.
-- `INSERT INTO user_roles (user_id, role='advisor')`.
-- Dispara `supabase.auth.admin.generateLink({ type:'magiclink', email })` e retorna o link (admin envia manualmente ou integramos email depois).
-
-### Frontend
-- **`src/pages/admin/AdminPartnerships.tsx`**: adicionar 2 abas novas — `cockpit` (default) e `manage`. Estender `fetchData` com `interest_logs` por parceiro e cálculos derivados (leads_30d, eventos_30d, reuniões_R/A, dias_sem_interacao).
-- **Novos componentes em `src/components/admin/partnerships/`**:
-  - `CockpitKPIs.tsx`, `RotinasPanel.tsx`, `TopPerformersList.tsx`, `PartnersAtRiskTable.tsx`, `MeetingsScoreboard.tsx`
-  - `PartnerManagementTable.tsx` — tabela + dropdown de ações
-  - `CreatePartnerDialog.tsx` — formulário de criação (chama `create-partner`)
-  - `DisqualifyPartnerDialog.tsx` — confirma + captura motivo
-- **`src/lib/partnershipsTargets.ts`**: constantes (`MONTHLY_REVENUE_TARGET_PER_PARTNER=50000`, `SUCCESS_FEE_PCT=0.03`, `INACTIVE_DAYS=60`, `CUT_DAYS=90`).
-
-### Permissões
-- Todas as ações já são protegidas pela RLS atual (`has_role(auth.uid(),'admin')` na update de `profiles` e `user_roles`).
-- A criação de usuário **só** acontece via Edge Function (service role) — admin frontend nunca tem `service_role`.
-
----
-
-## Fora de escopo
-- Tabela `partnership_targets` (metas customizáveis por parceiro/mês) — usaremos constante.
-- Email transacional de boas-vindas com template — por enquanto retornamos magic link no toast para o admin compartilhar.
-- Webhook automático de aviso de inatividade (>30d).
+Aprovando, executo apenas a **Etapa 1** acima. As demais ficam aguardando validação antes de iniciar.
