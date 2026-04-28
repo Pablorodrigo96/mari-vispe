@@ -514,11 +514,11 @@ export function JarvisGraph3D() {
 
     // Glow aditivo
     const glow = new Mesh(
-      new SphereGeometry(radius * 1.9, 24, 24),
+      new SphereGeometry(radius * 1.55, 24, 24),
       new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: dimmed ? 0.02 : (0.08 + n.heat * 0.28) * glowFactor,
+        opacity: dimmed ? 0.02 : (0.05 + n.heat * 0.18) * glowFactor,
         blending: AdditiveBlending,
         depthWrite: false,
       }),
