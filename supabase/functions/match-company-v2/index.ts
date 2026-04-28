@@ -360,7 +360,10 @@ serve(async (req) => {
         if (hard.excluded) continue;
 
         // Mistura pesos: arquétipo × revealed thetas
-        const defaults = archetypeData?.default_weights ?? { setor: 0.3, geografia: 0.2, tese: 0.2, tamanho: 0.15, financeiro: 0.15 };
+        // Etapas 1.5 + 2: incluímos seller_intent (0.10) e sinergia_movel/semantic (0.05) nos defaults.
+        // O blend normaliza no final, então a soma não precisa ser 1.0.
+        const baseDefaults = archetypeData?.default_weights ?? { setor: 0.3, geografia: 0.2, tese: 0.2, tamanho: 0.15, financeiro: 0.15 };
+        const defaults = { ...baseDefaults, seller_intent: 0.10, sinergia_movel: 0.05 };
         const revealed = revealedByBuyer.get(buyer.id) ?? {};
         const weights = blendWeights(defaults, revealed);
 
