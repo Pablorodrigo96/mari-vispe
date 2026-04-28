@@ -7,9 +7,10 @@
  * estabilização.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Settings2, X, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Settings2, X, RotateCcw, Activity, ClipboardCopy } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/hooks/use-toast";
 import ForceGraph3D, { type ForceGraphMethods } from "react-force-graph-3d";
 import {
   Group,
