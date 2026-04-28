@@ -58,12 +58,12 @@ export const EDGE_COLORS: Record<string, string> = {
 // ---------- Edge type → label PT-BR ----------
 export const EDGE_LABELS: Record<string, string> = {
   buyer_acquires_seller: "Buyer adquire Seller",
-  seller_acquires_seller: "Roll-up Seller→Seller",
-  seller_merges_with_seller: "Fusão Seller↔Seller",
+  seller_acquires_seller: "Possível Fusão (PME ↔ PME)",
+  seller_merges_with_seller: "Fusão Estratégica (mesmo porte)",
   buyer_funds_seller: "Capital (Funding)",
-  platform_addon: "Add-on de Plataforma",
+  platform_addon: "Add-on → Consolidador",
   strategic_synergy: "Sinergia Estratégica",
-  cross_sell: "Cross-sell",
+  cross_sell: "Cross-sell (mesmo cliente)",
   cost_synergy: "Sinergia de Custo",
   geographic_expansion: "Expansão Geográfica",
   tech_stack_match: "Match Tecnológico",
@@ -71,6 +71,24 @@ export const EDGE_LABELS: Record<string, string> = {
   valuation_arbitrage: "Arbitragem de Valuation",
   capital_match: "Capital Match",
   thesis_fit: "Fit com Tese",
+};
+
+// ---------- Edge type → descrição prática (1 linha acionável) ----------
+export const EDGE_DESCRIPTIONS: Record<string, string> = {
+  buyer_acquires_seller: "Comprador estratégico ou financeiro com tese e ticket compatíveis para adquirir essa empresa.",
+  seller_acquires_seller: "Duas PMEs que valem mais juntas que separadas — uma compra a outra para crescer (roll-up).",
+  seller_merges_with_seller: "Empresas de porte parecido se fundem em uma só — divisão de equity entre os sócios.",
+  buyer_funds_seller: "Investidor injeta capital (dívida ou equity) sem comprar o controle — funding para crescer.",
+  platform_addon: "Empresa menor é absorvida por uma maior consolidadora da mesma vertical (add-on).",
+  strategic_synergy: "Combinação que destrava valor para os dois lados (operacional + comercial + tecnológico).",
+  cross_sell: "Vendem para o mesmo perfil de cliente (mesmo ICP) — uma pode oferecer o produto da outra.",
+  cost_synergy: "Compartilham fornecedores, infra ou backoffice — fusão reduz custo unitário de ambos.",
+  geographic_expansion: "Uma já opera onde a outra quer entrar — atalho para nova praça.",
+  tech_stack_match: "Mesma stack ou tecnologia complementar — integração rápida e baixa fricção pós-deal.",
+  channel_synergy: "Mesmo canal de distribuição (B2B distribuidor, varejo, e-commerce) — escala comercial.",
+  valuation_arbitrage: "Empresa boa precificada baixo do mercado — janela de compra antes da concorrência.",
+  capital_match: "Provedor de capital com tese, ticket e setor exatamente compatíveis com a necessidade.",
+  thesis_fit: "Empresa encaixa no critério de uma tese ativa de investimento (sinais + métricas).",
 };
 
 // ---------- Layers (agrupamento de edge_types) ----------
