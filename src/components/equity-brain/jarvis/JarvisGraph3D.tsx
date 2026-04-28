@@ -399,7 +399,17 @@ export function JarvisGraph3D() {
   const buildNodeObject = (node: any): Object3D => {
     const n = node as JarvisNode;
     const group = new Group();
-    const baseColor = new Color(n.displayColor ?? NODE_COLORS[n.type] ?? "#71717a");
+    const fallback = NODE_COLORS[n.type] ?? "#71717a";
+    let baseColor: Color;
+    try {
+      baseColor = new Color(n.displayColor ?? fallback);
+      // Detecta NaN no resultado do parse
+      if (!Number.isFinite(baseColor.r) || !Number.isFinite(baseColor.g) || !Number.isFinite(baseColor.b)) {
+        baseColor = new Color(fallback);
+      }
+    } catch {
+      baseColor = new Color(fallback);
+    }
     const radius = n.visualRadius ?? 6;
     const dimmed =
       focusId !== null && focusNeighborIds && !focusNeighborIds.has(n.id);
