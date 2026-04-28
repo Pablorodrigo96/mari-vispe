@@ -30,6 +30,9 @@ export default defineConfig(({ mode }) => ({
       "three-forcegraph",
       "three",
       "three-spritetext",
+      "d3-force-3d",
+      "ngraph.forcelayout",
+      "ngraph.events",
     ],
   },
   build: {
