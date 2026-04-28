@@ -628,15 +628,34 @@ export function JarvisGraph3D() {
         </div>
       )}
 
-      {/* HUD topo direito */}
-      <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-1.5 pointer-events-none">
-        <div className="px-2.5 py-1 rounded bg-zinc-950/70 border border-emerald-900/50 backdrop-blur-sm">
-          <span className="text-[9px] uppercase tracking-widest text-emerald-400 font-bold">
-            Equity Brain · Jarvis 3D
-          </span>
+      {/* HUD topo direito — estilo Iron Man com brackets em L */}
+      <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-2 pointer-events-none">
+        <div className="relative px-3 py-1.5 bg-zinc-950/80 backdrop-blur-md">
+          {/* L brackets */}
+          <span className="absolute -top-px -left-px w-2.5 h-2.5 border-t border-l border-emerald-400" />
+          <span className="absolute -top-px -right-px w-2.5 h-2.5 border-t border-r border-emerald-400" />
+          <span className="absolute -bottom-px -left-px w-2.5 h-2.5 border-b border-l border-emerald-400" />
+          <span className="absolute -bottom-px -right-px w-2.5 h-2.5 border-b border-r border-emerald-400" />
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+            </span>
+            <span className="text-[10px] uppercase tracking-[0.25em] text-emerald-300 font-bold font-mono">
+              Equity Brain · Jarvis
+            </span>
+          </div>
         </div>
-        <div className="px-2 py-0.5 rounded bg-zinc-950/60 border border-zinc-800/60 backdrop-blur-sm text-[10px] text-zinc-400 font-mono">
-          {graphData.nodes.length} nós · {graphData.links.length} conexões
+        <div className="flex gap-1.5 text-[9px] font-mono uppercase tracking-wider">
+          <div className="px-2 py-0.5 bg-zinc-950/70 border border-emerald-900/40 backdrop-blur-sm text-emerald-300">
+            <span className="text-zinc-500">N</span> {graphData.nodes.length}
+          </div>
+          <div className="px-2 py-0.5 bg-zinc-950/70 border border-emerald-900/40 backdrop-blur-sm text-cyan-300">
+            <span className="text-zinc-500">E</span> {graphData.links.length}
+          </div>
+          <div className="px-2 py-0.5 bg-zinc-950/70 border border-emerald-900/40 backdrop-blur-sm text-amber-300">
+            <span className="text-zinc-500">SIG</span> {Math.round((graphData.links.filter(l => (l.weight ?? 0) >= 0.55).length / Math.max(1, graphData.links.length)) * 100)}%
+          </div>
         </div>
       </div>
 
