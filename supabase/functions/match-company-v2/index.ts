@@ -31,6 +31,30 @@ const PORTE_ORDER = ["ME", "EPP", "MEDIA", "GRANDE"];
 
 function sigmoid(x: number) { return 1 / (1 + Math.exp(-x)); }
 
+// Etapa 2: pgvector retorna embedding como string "[0.1,0.2,...]" via PostgREST.
+function parseEmbedding(raw: any): number[] | null {
+  if (!raw) return null;
+  if (Array.isArray(raw)) return raw.map(Number);
+  if (typeof raw === "string") {
+    try {
+      const trimmed = raw.trim().replace(/^\[|\]$/g, "");
+      if (!trimmed) return null;
+      return trimmed.split(",").map(Number);
+    } catch { return null; }
+  }
+  return null;
+}
+
+function cosineSimilarity(a: number[] | null, b: number[] | null): number {
+  if (!a || !b || a.length !== b.length) return 0.5; // neutro quando não há embedding
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  if (denom === 0) return 0.5;
+  // cosine similarity ∈ [-1, 1] — normaliza para [0, 1]
+  return Math.max(0, Math.min(1, (dot / denom + 1) / 2));
+}
+
 // Etapa 1.5 (Oráculo v3): assinatura estendida com sinais numéricos por CNPJ.
 // `numericByCnpj`: Map<cnpj, Map<signal_key, signal_value>> permite ler valores reais
 // (seller_intent_score, sweet_spot_fadiga, tempo_atividade_anos) sem queries extras.
@@ -313,16 +337,24 @@ serve(async (req) => {
     const maScoreByCnpj = new Map<string, number>();
     for (const s of scoresRows ?? []) maScoreByCnpj.set(s.cnpj, Number(s.ma_score ?? 0));
 
+    // Etapa 2: pré-parse de embeddings buyers (uma vez)
+    const buyerEmbByBuyer = new Map<string, number[] | null>();
+    for (const b of buyers ?? []) buyerEmbByBuyer.set(b.id, parseEmbedding((b as any).embedding));
+
     const newMatches: any[] = [];
 
     for (const company of companies) {
       const sigSet = sigByCnpj.get(company.cnpj) ?? new Set<string>();
+      const sigNumeric = numericByCnpj.get(company.cnpj) ?? new Map<string, number>();
       const mandateProba = mandateByCnpj.get(company.cnpj) ?? 0.04;
+      const companyEmb = parseEmbedding((company as any).embedding);
 
       for (const buyer of buyers ?? []) {
         const archetype = buyer.archetype_id;
         const archetypeData = archetype ? archetypeIdx.get(archetype) : null;
-        const features = computeFeatures(company, buyer, sigSet, mandateProba);
+        const buyerEmb = buyerEmbByBuyer.get(buyer.id) ?? null;
+        const semanticFit = (companyEmb && buyerEmb) ? cosineSimilarity(companyEmb, buyerEmb) : 0.5;
+        const features = computeFeatures(company, buyer, sigSet, mandateProba, sigNumeric, semanticFit);
         const hard = applyHardFilters(company, buyer, archetype, features);
 
         if (hard.excluded) continue;
