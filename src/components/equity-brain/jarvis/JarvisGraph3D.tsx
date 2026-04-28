@@ -333,11 +333,16 @@ export function JarvisGraph3D() {
               .iterations(2),
           );
 
-          // Repulsão extra entre sellers — ~5x mais forte que antes
-          const sellerSpread = forceManyBody()
-            .strength((n: any) => (n.type === "seller" ? -2200 : 0))
-            .distanceMax(1600);
-          fgNow.d3Force?.("seller-spread", sellerSpread);
+          // Repulsão extra entre sellers — só aplica se houver sellers no grafo
+          const hasSellers = graphData.nodes.some((nn: any) => nn.type === "seller");
+          if (hasSellers) {
+            const sellerSpread = forceManyBody()
+              .strength((n: any) => (n.type === "seller" ? -2200 : 0))
+              .distanceMax(1600);
+            fgNow.d3Force?.("seller-spread", sellerSpread);
+          } else {
+            fgNow.d3Force?.("seller-spread", null);
+          }
 
           // Centering moderado: mantém o grafo visível e centralizado
           const centerForce: any = fgNow.d3Force?.("center");
@@ -348,7 +353,7 @@ export function JarvisGraph3D() {
           fgNow.cameraPosition?.({ x: 0, y: 0, z: 2800 }, undefined, 1200);
           fgNow.d3ReheatSimulation?.();
         } catch (e) {
-          console.warn("[JarvisGraph3D] força não aplicada:", e);
+          console.error("[JarvisGraph3D] força não aplicada:", e);
         }
       });
     });
