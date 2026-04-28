@@ -189,6 +189,7 @@ export function useSolarFlares(
       activeStart = performance.now();
       activeCoreMat = coreMat;
       activeHaloMat = haloMat;
+      try { onActiveChange?.(true); } catch {}
 
       console.log("[SolarFlare] fired", { from: a.id, to: b.id });
     };
