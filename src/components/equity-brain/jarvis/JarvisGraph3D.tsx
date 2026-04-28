@@ -319,6 +319,8 @@ export function JarvisGraph3D() {
 
     const safety = window.setTimeout(() => {
       try {
+        // Enquadrar tudo no viewport antes de congelar
+        (fgRef.current as any)?.zoomToFit?.(900, 120);
         const alpha = (fgRef.current as any)?.d3Alpha?.() ?? 0;
         if (alpha > 0.05) return;
         graphData.nodes.forEach((n: any) => {
