@@ -8,6 +8,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Settings2, X, RotateCcw } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import ForceGraph3D, { type ForceGraphMethods } from "react-force-graph-3d";
 import {
   Group,
@@ -89,6 +91,28 @@ export function JarvisGraph3D() {
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<JarvisNode | null>(null);
+
+  // ---------- Visual prefs (ajustes de fundo, persistidos em localStorage) ----------
+  const VISUAL_DEFAULTS = { glow: 70, scanlines: 50, vignette: 60, brightness: 30 };
+  const [visualPrefs, setVisualPrefs] = useState(() => {
+    try {
+      const raw = localStorage.getItem("jarvis3d-visual-prefs");
+      if (raw) return { ...VISUAL_DEFAULTS, ...JSON.parse(raw) };
+    } catch {}
+    return VISUAL_DEFAULTS;
+  });
+  const [visualPanelOpen, setVisualPanelOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("jarvis3d-visual-prefs", JSON.stringify(visualPrefs));
+    } catch {}
+  }, [visualPrefs]);
+
+  const glowFactor = visualPrefs.glow / 70;
+  const vignetteFactor = visualPrefs.vignette / 60;
+  const scanlineOpacity = visualPrefs.scanlines / 1000;
+  const videoBrightnessVal = (visualPrefs.brightness / 100) * 0.6 + 0.05;
 
   // Resize
   useEffect(() => {
@@ -385,7 +409,7 @@ export function JarvisGraph3D() {
       new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: dimmed ? 0.02 : 0.08 + n.heat * 0.28,
+        opacity: dimmed ? 0.02 : (0.08 + n.heat * 0.28) * glowFactor,
         blending: AdditiveBlending,
         depthWrite: false,
       }),
@@ -401,7 +425,7 @@ export function JarvisGraph3D() {
       const ringMat = new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: 0.32,
+        opacity: 0.32 * glowFactor,
         side: DoubleSide,
         blending: AdditiveBlending,
         depthWrite: false,
@@ -429,7 +453,7 @@ export function JarvisGraph3D() {
         new MeshBasicMaterial({
           color: baseColor,
           transparent: true,
-          opacity: 0.06,
+          opacity: 0.06 * glowFactor,
           blending: AdditiveBlending,
           depthWrite: false,
         }),
@@ -539,7 +563,7 @@ export function JarvisGraph3D() {
         playsInline
         preload="auto"
         style={{
-          filter: "brightness(0.3) saturate(0.5) blur(1px) hue-rotate(60deg)",
+          filter: `brightness(${videoBrightnessVal}) saturate(0.5) blur(1px) hue-rotate(60deg)`,
           mixBlendMode: "luminosity",
         }}
       />
@@ -547,8 +571,7 @@ export function JarvisGraph3D() {
       <div
         className="absolute inset-0 pointer-events-none z-[1]"
         style={{
-          background:
-            "radial-gradient(ellipse at center, rgba(6,7,10,0.35) 0%, rgba(6,7,10,0.65) 55%, rgba(6,7,10,0.92) 100%)",
+          background: `radial-gradient(ellipse at center, rgba(6,7,10,${(0.35 * vignetteFactor).toFixed(3)}) 0%, rgba(6,7,10,${Math.min(0.95, 0.65 * vignetteFactor + 0.1).toFixed(3)}) 55%, rgba(6,7,10,${Math.min(0.99, 0.92 * vignetteFactor + 0.05).toFixed(3)}) 100%)`,
         }}
       />
       {/* Nebulosa radial — sutil, dá profundidade */}
@@ -561,8 +584,9 @@ export function JarvisGraph3D() {
       />
       {/* Scanlines horizontais — textura de monitor cockpit */}
       <div
-        className="absolute inset-0 pointer-events-none z-[1] opacity-[0.05]"
+        className="absolute inset-0 pointer-events-none z-[1]"
         style={{
+          opacity: scanlineOpacity,
           backgroundImage:
             "repeating-linear-gradient(0deg, rgba(16,185,129,0.6) 0px, rgba(16,185,129,0.6) 1px, transparent 1px, transparent 3px)",
         }}
@@ -717,6 +741,70 @@ export function JarvisGraph3D() {
           d3VelocityDecay={0.28}
           warmupTicks={40}
         />
+      </div>
+
+      {/* Painel de ajustes visuais — calibra glow/scanlines/vinheta/brilho do fundo */}
+      <div className="absolute bottom-3 right-3 z-20">
+        {!visualPanelOpen ? (
+          <button
+            onClick={() => setVisualPanelOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-950/85 backdrop-blur-md border border-emerald-900/50 hover:border-emerald-500/70 text-emerald-300 text-[10px] uppercase tracking-wider font-mono transition-colors"
+            title="Ajustes visuais do fundo"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            Ajustes
+          </button>
+        ) : (
+          <div className="relative w-64 bg-zinc-950/90 backdrop-blur-md border border-emerald-900/50 p-3 font-mono">
+            <span className="absolute -top-px -left-px w-2.5 h-2.5 border-t border-l border-emerald-400" />
+            <span className="absolute -top-px -right-px w-2.5 h-2.5 border-t border-r border-emerald-400" />
+            <span className="absolute -bottom-px -left-px w-2.5 h-2.5 border-b border-l border-emerald-400" />
+            <span className="absolute -bottom-px -right-px w-2.5 h-2.5 border-b border-r border-emerald-400" />
+
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5 text-emerald-300 text-[10px] uppercase tracking-[0.2em] font-bold">
+                <Settings2 className="h-3 w-3" />
+                Ajustes visuais
+              </div>
+              <button
+                onClick={() => setVisualPanelOpen(false)}
+                className="text-zinc-500 hover:text-emerald-300 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {[
+              { key: "glow" as const, label: "Glow nós" },
+              { key: "scanlines" as const, label: "Scanlines" },
+              { key: "vignette" as const, label: "Vinheta" },
+              { key: "brightness" as const, label: "Brilho vídeo" },
+            ].map(({ key, label }) => (
+              <div key={key} className="mb-2.5 last:mb-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] uppercase tracking-wider text-zinc-400">{label}</span>
+                  <span className="text-[10px] text-emerald-300 tabular-nums">{visualPrefs[key]}</span>
+                </div>
+                <Slider
+                  value={[visualPrefs[key]]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  onValueChange={(v) => setVisualPrefs((p) => ({ ...p, [key]: v[0] }))}
+                  className="[&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [&_[role=slider]]:border-emerald-400 [&_.bg-primary]:bg-emerald-500 [&_.bg-secondary]:bg-zinc-800"
+                />
+              </div>
+            ))}
+
+            <button
+              onClick={() => setVisualPrefs(VISUAL_DEFAULTS)}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 px-2 py-1 bg-transparent border border-emerald-900/50 hover:border-emerald-500/70 text-emerald-300 text-[9px] uppercase tracking-wider transition-colors"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Restaurar padrões
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Legenda inferior */}

@@ -1,46 +1,62 @@
-## Avaliação visual atual
+## Objetivo
 
-Após inspecionar o Jarvis 3D em produção, o design **não está bonito nem impressionante** — está visualmente quebrado por 4 problemas críticos:
-
-1. **Vídeo de fundo "vaza"** — o lado direito da tela mostra relógios e instrumentos de cockpit do vídeo cru, sem nenhum nó por cima. Em vez de fundo discreto, virou o protagonista.
-2. **Grafo amontoado e descentrado** — 245 nós e **5.563 conexões** sobrepostos formam uma "bola de pelo" verde no centro-esquerda. Não dá para ler nada.
-3. **Conflito de cores** — verde neon das arestas + laranja/cinza do vídeo competem. Resultado: poluição visual.
-4. **Sem hierarquia visual** — tudo brilha ao mesmo tempo, então nada se destaca. Falta o "wow" de um cockpit Jarvis real.
+Adicionar um pequeno painel de controle no Jarvis 3D para ajustar em tempo real a intensidade dos efeitos cinematográficos do fundo, melhorando a legibilidade conforme o monitor do usuário. Em seguida, validar visualmente o resultado.
 
 ## O que será feito
 
-### 1. Domar o vídeo de fundo (deixar de competir)
-- Adicionar **overlay escuro com vinheta radial** por cima do vídeo: centro mais limpo (~40% escuro), bordas quase pretas (~85% escuro). Faz o vídeo virar atmosfera, não conteúdo.
-- Aumentar `filter` do vídeo para `brightness(0.3) saturate(0.6) blur(1px)` — vira textura, não imagem nítida.
-- Aplicar `mix-blend-mode: luminosity` no vídeo para ele assumir a paleta verde/cyan do grafo (em vez de laranja/cinza próprio).
+### 1. Estado dos efeitos (em `JarvisGraph3D.tsx`)
 
-### 2. Densificar menos: reduzir o caos do grafo
-- **Subir o `minWeight` default** de `0.15` para `0.35` — corta arestas fracas que hoje formam a "teia caótica". Vai cair de ~5.500 para ~1.500 conexões, sem perder o que importa.
-- Aumentar opacidade base das arestas fracas ainda mais baixa (de `0.05` para `0.025`) e fortalecer as fortes (`0.22 → 0.45`). Só o que é estratégico brilha.
-- Reduzir `linkOpacity` global de `0.6` para `0.35`.
+Adicionar 4 estados numéricos (0–100) com defaults compatíveis com os valores atuais:
 
-### 3. Centralizar o grafo e enquadrar a câmera
-- Ajustar `centerForce.strength` de `0.03` para `0.08` — puxa o grafo de volta ao centro sem amassar.
-- Após `cooldownTicks`, chamar `fg.zoomToFit(800, 80)` automaticamente para enquadrar tudo dentro do viewport.
-- Recuar câmera inicial de `z: 2200` para `z: 2800` para caber o grafo expandido.
+- `glowIntensity` (default 70) — multiplica opacidade do halo aditivo dos nós e dos anéis orbitais.
+- `scanlineIntensity` (default 50) — controla `opacity` da camada de scanlines horizontais (0 = oculta, 100 = 0.10).
+- `vignetteIntensity` (default 60) — controla a curva alpha da vinheta radial (centro mais limpo / bordas mais escuras).
+- `videoBrightness` (default 30) — controla `brightness()` do vídeo de fundo (0 = preto / 100 = 1.0).
 
-### 4. Acabamento cinematográfico (o "wow")
-- Adicionar **scanline horizontal sutil** (CSS gradient repeating) com `opacity: 0.04` — dá textura de monitor de cockpit.
-- HUD topo-direito: redesenhar com **bordas em L** (canto superior + inferior) ao estilo HUD militar/Iron Man, em vez de retângulo simples.
-- Adicionar 4 **marcadores de canto** (corner brackets em verde-esmeralda, ~24px) nos 4 cantos do canvas — referência visual Jarvis clássica.
-- HUD inferior central: barra fina com timestamp ao vivo + contador "NODES / EDGES / SIGNAL" em fonte mono, estilo telemetria.
-- Aumentar levemente o glow dos nós quentes (`hot === true`): `opacity 0.05+heat*0.18 → 0.08+heat*0.28`.
+Persistir em `localStorage` (`jarvis3d-visual-prefs`) para o usuário não precisar reajustar a cada visita.
 
-### 5. Legibilidade dos labels
-- Labels hoje têm fundo `rgba(9,9,11,0.6)` — pouco contraste sobre vídeo. Aumentar para `rgba(0,0,0,0.85)` e adicionar borda fina verde (`borderColor`).
+### 2. Aplicar nos efeitos existentes
+
+- **Vídeo de fundo**: `filter: brightness(videoBrightness/100 * 0.6 + 0.05) ...`
+- **Vinheta**: gradiente radial dinâmico — alpha central = `0.35 * vignetteIntensity/60`, alpha das bordas escala proporcional.
+- **Scanlines**: `opacity: scanlineIntensity / 1000` (mantém faixa sutil 0–0.10).
+- **Glow dos nós** (`buildNodeObject`): `opacity: (0.08 + n.heat * 0.28) * (glowIntensity / 70)`.
+- **Anéis orbitais e halo financial**: mesma escala `glowIntensity / 70`.
+
+Como o `nodeThreeObject` depende desse valor, adicionar `glowIntensity` às deps de re-render (forçar refresh dos objetos 3D quando mudar — basta passar `nodeThreeObject` como nova função em cada render, o que já acontece).
+
+### 3. Painel de ajuste — UI
+
+Pequeno card flutuante no canto **inferior direito** (z-index 10), recolhível:
+
+```text
+┌─ ⚙ AJUSTES VISUAIS ─────┐
+│ Glow         ▓▓▓▓░░ 70  │
+│ Scanlines    ▓▓▓░░░ 50  │
+│ Vinheta      ▓▓▓▓░ 60   │
+│ Brilho vídeo ▓▓░░░░ 30  │
+│              [Reset]    │
+└─────────────────────────┘
+```
+
+- Estilo HUD consistente: `bg-zinc-950/85 backdrop-blur-md`, borda `border-emerald-900/40`, fonte mono, labels em `text-[10px] uppercase tracking-wider`.
+- Sliders usando `@/components/ui/slider` (já existe), customizados com cor esmeralda.
+- Botão de toggle (ícone engrenagem) para colapsar/expandir — colapsado mostra só o ícone para não atrapalhar.
+- Botão "Reset" para voltar aos defaults.
+
+### 4. Validação visual
+
+Após implementar, abrir o preview em `/equity-brain/grafo-jarvis`, tirar screenshots em 2 cenários:
+
+1. Defaults (sliders nas posições iniciais).
+2. Cenário "alta legibilidade" (glow 40, scanlines 20, vinheta 80, brilho 15) para confirmar que reduzir os efeitos realmente limpa a tela.
+
+Reportar achados e ajustar defaults se necessário.
 
 ## Arquivos afetados
 
-- `src/components/equity-brain/jarvis/JarvisGraph3D.tsx` — overlay vinheta, scanlines, corner brackets, HUD redesenhada, ajustes de força/câmera/opacidades, defaults de filtro.
+- `src/components/equity-brain/jarvis/JarvisGraph3D.tsx` — adiciona estados, painel de ajuste, conecta valores aos efeitos visuais e ao `buildNodeObject`.
 
 ## Resultado esperado
 
-- Fundo cinematográfico mas **discreto** (atmosfera, não conteúdo).
-- Grafo **centralizado, mais limpo** (~1.500 conexões em vez de 5.500), com hierarquia clara: nós quentes brilham, arestas fortes se destacam.
-- Moldura HUD ao estilo Jarvis/Iron Man (corner brackets, scanlines, telemetria mono).
-- Sensação geral: "cockpit estratégico de bilhões em deals", não "explosão de espaguete verde".
+Usuário consegue, sem mexer no código, calibrar o Jarvis 3D para seu monitor — reduzindo glow/scanlines/vinheta para máxima legibilidade ou aumentando para máximo impacto cinematográfico. Preferências persistem entre sessões.
