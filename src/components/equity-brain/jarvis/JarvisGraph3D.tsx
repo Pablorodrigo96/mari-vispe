@@ -1031,6 +1031,41 @@ export function JarvisGraph3D() {
         )}
       </div>
 
+      {/* Overlay diagnóstico — FPS / nodes / links / flare ativo + copiar logs */}
+      <div className="absolute bottom-3 left-3 z-20 pointer-events-auto">
+        <div className="relative bg-zinc-950/85 backdrop-blur-md border border-emerald-900/50 px-2.5 py-1.5 font-mono">
+          <span className="absolute -top-px -left-px w-2 h-2 border-t border-l border-emerald-400" />
+          <span className="absolute -top-px -right-px w-2 h-2 border-t border-r border-emerald-400" />
+          <span className="absolute -bottom-px -left-px w-2 h-2 border-b border-l border-emerald-400" />
+          <span className="absolute -bottom-px -right-px w-2 h-2 border-b border-r border-emerald-400" />
+          <div className="flex items-center gap-2.5 text-[9px] uppercase tracking-wider">
+            <div className="flex items-center gap-1 text-emerald-300">
+              <Activity className="h-3 w-3" />
+              <span className="tabular-nums">{fps}</span>
+              <span className="text-zinc-500">fps</span>
+            </div>
+            <div className="text-zinc-400">
+              <span className="text-zinc-500">N</span> <span className="text-emerald-300 tabular-nums">{graphData.nodes.length}</span>
+            </div>
+            <div className="text-zinc-400">
+              <span className="text-zinc-500">E</span> <span className="text-cyan-300 tabular-nums">{graphData.links.length}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className={`h-1.5 w-1.5 rounded-full transition-colors ${flareActive ? "bg-amber-300 shadow-[0_0_6px_2px_rgba(252,211,77,0.7)]" : "bg-zinc-700"}`} />
+              <span className={flareActive ? "text-amber-300" : "text-zinc-500"}>flare</span>
+            </div>
+            <button
+              onClick={handleCopyLogs}
+              className="flex items-center gap-1 px-1.5 py-0.5 border border-emerald-900/50 hover:border-emerald-500/70 text-emerald-300 hover:text-emerald-200 transition-colors"
+              title="Copiar últimos 200 logs do console"
+            >
+              <ClipboardCopy className="h-3 w-3" />
+              Logs
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Legenda inferior */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
         <GraphLegend />
