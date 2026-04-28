@@ -27,10 +27,10 @@ export interface PoolOpportunity {
 }
 
 const ORIGINATOR_LABEL: Record<PoolOpportunity['originator_type'], { label: string; className: string }> = {
-  partner_accountant: { label: 'Contador Parceiro', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
-  franchisee:         { label: 'Franqueado',        className: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
-  advisor:            { label: 'Assessor M&A',      className: 'bg-violet-500/15 text-violet-400 border-violet-500/30' },
-  bdr_internal:       { label: 'BDR PME.B3',        className: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
+  partner_accountant: { label: 'Contador Parceiro', className: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' },
+  franchisee:         { label: 'Franqueado',        className: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30' },
+  advisor:            { label: 'Assessor M&A',      className: 'bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30' },
+  bdr_internal:       { label: 'BDR PME.B3',        className: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' },
   direct_seller:      { label: 'Vendedor direto',   className: 'bg-muted text-muted-foreground border-border' },
 };
 
@@ -47,7 +47,7 @@ export function SharedOpportunityCard({ opportunity: o, alreadyInterested, onExp
   const isReserved = o.reservation_status !== 'available' && o.reservation_status !== 'expired';
 
   return (
-    <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-700/50 hover:border-accent/40 transition-colors">
+    <Card className="hover:border-accent/40 hover:shadow-sm transition-all">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export function SharedOpportunityCard({ opportunity: o, alreadyInterested, onExp
           <p className="text-xs text-muted-foreground line-clamp-2">{o.description}</p>
         )}
 
-        <div className="grid grid-cols-3 gap-3 text-center pt-1 border-t border-slate-700/40">
+        <div className="grid grid-cols-3 gap-3 text-center pt-2 border-t border-border">
           <div>
             <div className="flex items-center justify-center gap-1 text-[10px] uppercase text-muted-foreground tracking-wide">
               <Banknote className="w-3 h-3" />Faturamento
@@ -94,22 +94,22 @@ export function SharedOpportunityCard({ opportunity: o, alreadyInterested, onExp
             </div>
             <p className={cn(
               'text-xs font-bold mt-0.5',
-              vdr === 100 ? 'text-emerald-400' : vdr >= 60 ? 'text-amber-400' : 'text-muted-foreground',
+              vdr === 100 ? 'text-emerald-600 dark:text-emerald-400' : vdr >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
             )}>
               {vdr}%
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-700/40 flex-wrap">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border flex-wrap">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {o.interest_count > 0 && (
-              <span className="inline-flex items-center gap-1 text-amber-400">
+              <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
                 <Flame className="w-3 h-3" />{o.interest_count} interessado{o.interest_count > 1 ? 's' : ''}
               </span>
             )}
             {isReserved && (
-              <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/30">
+              <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30">
                 {o.reservation_status === 'exclusive' ? 'Exclusivo' : 'Reservado'}
               </Badge>
             )}
@@ -122,7 +122,7 @@ export function SharedOpportunityCard({ opportunity: o, alreadyInterested, onExp
             <Button
               size="sm"
               variant="outline"
-              className="bg-transparent text-xs h-8"
+              className="text-xs h-8"
               onClick={() => onExpressInterest(o)}
             >
               Tenho comprador

@@ -23,6 +23,7 @@ import {
 import { formatDate, formatCurrency } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { categories } from '@/data/mockData';
+import { cn } from '@/lib/utils';
 
 interface ReservationRow {
   id: string;
@@ -47,7 +48,6 @@ export default function PartnerDashboard() {
   const eff = useEffectiveRoles();
   const navigate = useNavigate();
 
-  // Acesso liberado para parceiros, franqueados, advisors e admins
   const hasAccess = eff.isPartnerAccountant || eff.isAdvisor || eff.isFranchisee || eff.isAdmin;
 
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
@@ -103,7 +103,6 @@ export default function PartnerDashboard() {
 
   async function expressInterest(opp: PoolOpportunity, buyerDesc: string) {
     if (!user) return;
-    // Buscar o originator_user_id (não exposto na view por privacidade)
     const { data: listing } = await supabase
       .from('listings').select('user_id').eq('id', opp.id).maybeSingle();
     if (!listing?.user_id) {
@@ -130,7 +129,7 @@ export default function PartnerDashboard() {
     setPool(prev => prev.map(p => p.id === opp.id ? { ...p, interest_count: p.interest_count + 1 } : p));
   }
 
-  // Pool filtrado (deve ser declarado antes de qualquer early return para respeitar Rules of Hooks)
+  // Pool filtrado (antes de qualquer early return)
   const filteredPool = useMemo(() => {
     return pool.filter(o => {
       if (poolCategory !== 'all' && o.category !== poolCategory) return false;
@@ -168,7 +167,7 @@ export default function PartnerDashboard() {
     );
   }
 
-  // Stats das reservas próprias
+  // Stats
   const reserved = reservations.filter(r => r.status === 'reserved');
   const exclusive = reservations.filter(r => r.status === 'exclusive');
   const expiring = reserved.filter(r => {
@@ -180,26 +179,32 @@ export default function PartnerDashboard() {
     : 0;
 
   return (
-    <div className="p-4 lg:p-8 max-w-[1400px] mx-auto space-y-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 min-h-screen">
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent/30 to-accent/5 border border-accent/40 flex items-center justify-center shadow-gold">
-          <Briefcase className="w-6 h-6 text-accent" />
-        </div>
-        <div>
-          <Badge variant="outline" className="bg-transparent border-accent/40 text-accent text-[10px] tracking-widest mb-1">
-            PARCERIAS
-          </Badge>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            Painel do Parceiro
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Gerencie suas reservas e descubra oportunidades de match na rede.
-          </p>
-        </div>
-      </div>
+    <div className="p-4 lg:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Hero header */}
+      <Card className="relative overflow-hidden border-border">
+        <div className="absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-accent/10 to-transparent pointer-events-none" />
+        <CardContent className="p-5 lg:p-6 relative">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center shrink-0">
+              <Briefcase className="w-6 h-6 text-accent" />
+            </div>
+            <div className="min-w-0">
+              <Badge variant="outline" className="bg-accent/10 border-accent/30 text-accent text-[10px] tracking-widest mb-1.5">
+                PARCERIAS
+              </Badge>
+              <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
+                Painel do Parceiro
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Gerencie suas reservas e descubra oportunidades de match na rede.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Banner: Importar carteira em lote */}
-      <Card className="!bg-gradient-to-br from-accent/10 via-accent/5 to-transparent border-accent/30">
+      <Card className="border-l-4 border-l-accent border-border">
         <CardContent className="p-5">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -210,20 +215,20 @@ export default function PartnerDashboard() {
                 <h2 className="text-base font-semibold text-foreground">
                   Importe sua carteira completa de uma vez
                 </h2>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 break-words">
                   Suba uma planilha Excel com até 200 clientes. Cada linha vira uma reserva de 45 dias automaticamente,
                   com score calculado a partir dos dados contábeis.
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
-              <Button size="sm" variant="outline" className="bg-transparent" onClick={() => downloadTemplate()}>
+              <Button size="sm" variant="outline" onClick={() => downloadTemplate()}>
                 <Download className="w-3.5 h-3.5 mr-1" />Baixar modelo
               </Button>
               <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setBulkOpen(true)}>
                 <Upload className="w-3.5 h-3.5 mr-1" />Importar planilha
               </Button>
-              <Button size="sm" variant="outline" className="bg-transparent" onClick={() => navigate('/vender')}>
+              <Button size="sm" variant="outline" onClick={() => navigate('/vender')}>
                 <Plus className="w-3.5 h-3.5 mr-1" />1 cliente
               </Button>
             </div>
@@ -233,10 +238,10 @@ export default function PartnerDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={<Clock className="w-5 h-5" />} label="Reservados" value={reserved.length} color="text-blue-400" />
-        <StatCard icon={<CheckCircle2 className="w-5 h-5" />} label="Exclusivos" value={exclusive.length} color="text-emerald-400" />
-        <StatCard icon={<AlertTriangle className="w-5 h-5" />} label="Expirando ≤ 7d" value={expiring.length} color="text-red-400" />
-        <StatCard icon={<ArrowRight className="w-5 h-5" />} label="Conversão" value={`${conversionRate}%`} color="text-accent" />
+        <StatCard icon={<Clock className="w-5 h-5" />} label="Reservados" value={reserved.length} tone="blue" />
+        <StatCard icon={<CheckCircle2 className="w-5 h-5" />} label="Exclusivos" value={exclusive.length} tone="emerald" />
+        <StatCard icon={<AlertTriangle className="w-5 h-5" />} label="Expirando ≤ 7d" value={expiring.length} tone="red" />
+        <StatCard icon={<ArrowRight className="w-5 h-5" />} label="Conversão" value={`${conversionRate}%`} tone="amber" />
       </div>
 
       <Tabs defaultValue="my-leads" className="space-y-4">
@@ -254,9 +259,9 @@ export default function PartnerDashboard() {
 
         {/* MEUS LEADS */}
         <TabsContent value="my-leads">
-          <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-700/50">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-foreground">Meus Leads Reservados</CardTitle>
+              <CardTitle className="text-foreground text-lg">Meus Leads Reservados</CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -264,40 +269,45 @@ export default function PartnerDashboard() {
                   <Loader2 className="w-6 h-6 animate-spin text-accent" />
                 </div>
               ) : reservations.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  <Briefcase className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                  <p>Nenhuma reserva ainda. Cadastre um anúncio para iniciar uma reserva de 45 dias.</p>
-                  <Button onClick={() => navigate('/vender')} className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
+                <div className="text-center py-12">
+                  <div className="h-14 w-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
+                    <Briefcase className="w-6 h-6 text-accent" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto break-words">
+                    Nenhuma reserva ainda. Cadastre um anúncio para iniciar uma reserva de 45 dias e garantir sua comissão.
+                  </p>
+                  <Button onClick={() => navigate('/vender')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
                     Cadastrar empresa
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {reservations.map((r) => (
-                    <div key={r.id} className="border border-slate-700/40 rounded-lg p-4 bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
+                    <div key={r.id} className="border border-border rounded-lg p-4 bg-muted/30 hover:bg-muted/50 transition-colors">
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-foreground break-words">{r.listing?.title ?? 'Anúncio removido'}</h3>
-                            <Badge variant="outline" className="bg-transparent text-xs">{r.listing?.category}</Badge>
+                            <Badge variant="outline" className="text-xs">{r.listing?.category}</Badge>
                             {r.listing?.equity_score != null && (
-                              <Badge className={`text-xs border ${
-                                r.listing.equity_score >= 70 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
-                                r.listing.equity_score >= 40 ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' :
-                                'bg-red-500/15 text-red-400 border-red-500/30'
-                              }`}>
+                              <Badge className={cn(
+                                'text-xs border',
+                                r.listing.equity_score >= 70 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
+                                r.listing.equity_score >= 40 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
+                                'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30'
+                              )}>
                                 Score {r.listing.equity_score}/100
                               </Badge>
                             )}
                             {r.commission_type === 'full' && <Badge className="bg-accent/15 text-accent border-accent/30 text-xs">20% comissão</Badge>}
-                            {r.commission_type === 'discovery_fee' && <Badge className="bg-muted text-muted-foreground text-xs">Taxa de descoberta</Badge>}
+                            {r.commission_type === 'discovery_fee' && <Badge variant="secondary" className="text-xs">Taxa de descoberta</Badge>}
                             {!!r.interest_count && r.interest_count > 0 && (
-                              <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-xs gap-1">
+                              <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-xs gap-1">
                                 <Flame className="w-3 h-3" />{r.interest_count} parceiro{r.interest_count > 1 ? 's' : ''} interessado{r.interest_count > 1 ? 's' : ''}
                               </Badge>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-muted-foreground mt-1.5">
                             {r.listing?.city && r.listing?.state ? `${r.listing.city}/${r.listing.state} · ` : ''}
                             Reservado em {formatDate(r.reserved_at)}
                           </p>
@@ -330,13 +340,13 @@ export default function PartnerDashboard() {
                             {r.listing && (
                               <>
                                 <Button
-                                  size="sm" variant="outline" className="bg-transparent"
+                                  size="sm" variant="outline"
                                   onClick={() => { setVdrListingId(r.listing!.id); setVdrListingTitle(r.listing!.title); }}
                                 >
                                   <FolderOpen className="w-3 h-3 mr-1" />Cofre Digital
                                 </Button>
                                 <Button
-                                  size="sm" variant="outline" className="bg-transparent"
+                                  size="sm" variant="outline"
                                   onClick={() => navigate('/valuation')}
                                 >
                                   <Calculator className="w-3 h-3 mr-1" />Gerar Valuation
@@ -347,8 +357,8 @@ export default function PartnerDashboard() {
                         </div>
                       </div>
                       {r.status === 'reserved' && (
-                        <p className="text-xs text-amber-400 mt-3 flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3" />
+                        <p className="text-xs text-amber-700 dark:text-amber-400 mt-3 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 shrink-0" />
                           Para garantir exclusividade (20% de comissão), suba um documento no Cofre Digital ou gere um valuation.
                         </p>
                       )}
@@ -362,13 +372,13 @@ export default function PartnerDashboard() {
 
         {/* POOL DA REDE */}
         <TabsContent value="pool">
-          <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-700/50">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-foreground flex items-center gap-2">
+              <CardTitle className="text-foreground text-lg flex items-center gap-2">
                 <Handshake className="w-5 h-5 text-accent" />
                 Pool de Oportunidades da Rede
               </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 break-words">
                 Teasers anônimos de leads cadastrados por outros parceiros, franqueados, assessores e BDRs.
                 Tem comprador? Marque interesse — comissão dividida 50/50 com quem cadastrou.
               </p>
@@ -381,11 +391,11 @@ export default function PartnerDashboard() {
                     placeholder="Buscar por título, cidade ou descrição…"
                     value={poolSearch}
                     onChange={(e) => setPoolSearch(e.target.value)}
-                    className="pl-9 bg-slate-950 border-slate-700"
+                    className="pl-9"
                   />
                 </div>
                 <Select value={poolCategory} onValueChange={setPoolCategory}>
-                  <SelectTrigger className="w-full sm:w-56 bg-slate-950 border-slate-700">
+                  <SelectTrigger className="w-full sm:w-56">
                     <SelectValue placeholder="Setor" />
                   </SelectTrigger>
                   <SelectContent>
@@ -402,9 +412,11 @@ export default function PartnerDashboard() {
                   <Loader2 className="w-6 h-6 animate-spin text-accent" />
                 </div>
               ) : filteredPool.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  <Handshake className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">Nenhuma oportunidade no pool corresponde aos filtros.</p>
+                <div className="text-center py-12">
+                  <div className="h-14 w-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
+                    <Handshake className="w-6 h-6 text-accent" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Nenhuma oportunidade no pool corresponde aos filtros.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -425,7 +437,7 @@ export default function PartnerDashboard() {
 
       {/* VDR Modal */}
       <Dialog open={!!vdrListingId} onOpenChange={(o) => !o && setVdrListingId(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto !bg-slate-900 border-slate-700">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-foreground">Cofre Digital</DialogTitle>
           </DialogHeader>
@@ -453,15 +465,23 @@ export default function PartnerDashboard() {
   );
 }
 
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
+const TONE_STYLES = {
+  blue: { icon: 'bg-blue-500/15 text-blue-600 dark:text-blue-400', label: 'text-blue-600 dark:text-blue-400' },
+  emerald: { icon: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400', label: 'text-emerald-600 dark:text-emerald-400' },
+  red: { icon: 'bg-red-500/15 text-red-600 dark:text-red-400', label: 'text-red-600 dark:text-red-400' },
+  amber: { icon: 'bg-accent/15 text-accent', label: 'text-accent' },
+} as const;
+
+function StatCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string | number; tone: keyof typeof TONE_STYLES }) {
+  const t = TONE_STYLES[tone];
   return (
-    <Card className="!bg-slate-900/70 backdrop-blur-md border-slate-700/50 hover:border-accent/40 hover:shadow-[0_0_24px_-8px_hsl(38,92%,50%,0.4)] transition-all">
+    <Card className="hover:border-accent/40 hover:shadow-sm transition-all">
       <CardContent className="p-4">
-        <div className={`flex items-center gap-2 ${color} mb-2`}>
-          <div className={`h-8 w-8 rounded-lg bg-current/10 flex items-center justify-center`}>
+        <div className="flex items-center gap-2 mb-3">
+          <div className={cn('h-9 w-9 rounded-lg flex items-center justify-center', t.icon)}>
             {icon}
           </div>
-          <span className="text-[10px] uppercase tracking-wider font-semibold">{label}</span>
+          <span className={cn('text-[10px] uppercase tracking-wider font-semibold', t.label)}>{label}</span>
         </div>
         <div className="text-3xl font-bold text-foreground tabular-nums">{value}</div>
       </CardContent>
