@@ -265,16 +265,37 @@ export function JarvisGraph3D() {
     const fg = fgRef.current;
     if (!fg || !graphData.nodes.length) return;
 
-    // Espalha
-    fg.d3Force("charge")?.strength(-380);
+    // Repulsão global mais forte + distância mínima — tira o amontoado
+    const charge: any = fg.d3Force("charge");
+    if (charge) {
+      charge.strength(-650);
+      if (typeof charge.distanceMin === "function") charge.distanceMin(40);
+      if (typeof charge.distanceMax === "function") charge.distanceMax(2000);
+    }
+
     const linkForce: any = fg.d3Force("link");
     if (linkForce) {
       linkForce
-        .distance((l: any) => 90 + (1 - (l.weight ?? 0.5)) * 160)
-        .strength((l: any) => Math.max(0.05, (l.weight ?? 0.3) * 0.7));
+        .distance((l: any) => 140 + (1 - (l.weight ?? 0.5)) * 200)
+        .strength((l: any) => Math.max(0.04, (l.weight ?? 0.3) * 0.45));
     }
 
-    fg.cameraPosition({ x: 0, y: 0, z: 900 }, undefined, 1200);
+    // Colisão 3D real: garante que cada nó respeita ~2.4× seu raio visual
+    fg.d3Force(
+      "collide",
+      forceCollide((n: any) => (n.visualRadius ?? 6) * 2.4)
+        .strength(0.9)
+        .iterations(2),
+    );
+
+    // Repulsão extra entre sellers (curto alcance) — evita colapso de clusters
+    // de empresas conectadas ao mesmo buyer
+    const sellerSpread = forceManyBody()
+      .strength((n: any) => (n.type === "seller" ? -180 : 0))
+      .distanceMax(160);
+    fg.d3Force("seller-spread", sellerSpread as any);
+
+    fg.cameraPosition({ x: 0, y: 0, z: 1100 }, undefined, 1200);
 
     const safety = window.setTimeout(() => {
       try {
