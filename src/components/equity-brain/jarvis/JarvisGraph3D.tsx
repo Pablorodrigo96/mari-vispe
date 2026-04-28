@@ -563,7 +563,7 @@ export function JarvisGraph3D() {
         playsInline
         preload="auto"
         style={{
-          filter: "brightness(0.3) saturate(0.5) blur(1px) hue-rotate(60deg)",
+          filter: `brightness(${videoBrightnessVal}) saturate(0.5) blur(1px) hue-rotate(60deg)`,
           mixBlendMode: "luminosity",
         }}
       />
@@ -571,8 +571,7 @@ export function JarvisGraph3D() {
       <div
         className="absolute inset-0 pointer-events-none z-[1]"
         style={{
-          background:
-            "radial-gradient(ellipse at center, rgba(6,7,10,0.35) 0%, rgba(6,7,10,0.65) 55%, rgba(6,7,10,0.92) 100%)",
+          background: `radial-gradient(ellipse at center, rgba(6,7,10,${(0.35 * vignetteFactor).toFixed(3)}) 0%, rgba(6,7,10,${Math.min(0.95, 0.65 * vignetteFactor + 0.1).toFixed(3)}) 55%, rgba(6,7,10,${Math.min(0.99, 0.92 * vignetteFactor + 0.05).toFixed(3)}) 100%)`,
         }}
       />
       {/* Nebulosa radial — sutil, dá profundidade */}
@@ -585,8 +584,9 @@ export function JarvisGraph3D() {
       />
       {/* Scanlines horizontais — textura de monitor cockpit */}
       <div
-        className="absolute inset-0 pointer-events-none z-[1] opacity-[0.05]"
+        className="absolute inset-0 pointer-events-none z-[1]"
         style={{
+          opacity: scanlineOpacity,
           backgroundImage:
             "repeating-linear-gradient(0deg, rgba(16,185,129,0.6) 0px, rgba(16,185,129,0.6) 1px, transparent 1px, transparent 3px)",
         }}
