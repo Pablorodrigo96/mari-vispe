@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Map as MapIcon, Maximize2, Minimize2, Network } from "lucide-react";
+import { Map as MapIcon, Maximize2, Minimize2, Network, BookOpen } from "lucide-react";
 import { JarvisGraph3D } from "@/components/equity-brain/jarvis/JarvisGraph3D";
 import { Button } from "@/components/ui/button";
 
