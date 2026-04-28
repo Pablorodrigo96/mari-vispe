@@ -168,6 +168,14 @@ const App = () => (
                   </Suspense>
                 }
               />
+              <Route
+                path="grafo-jarvis/guia"
+                element={
+                  <Suspense fallback={<div className="p-10 text-zinc-400 text-sm">Carregando guia…</div>}>
+                    <EBGrafoJarvisGuiaPage />
+                  </Suspense>
+                }
+              />
               <Route path="buyers"        element={<EBBuyersPage />} />
               <Route path="teses"         element={<EBTesesPage />} />
               <Route path="calls"         element={<EBCallsPage />} />
