@@ -921,6 +921,9 @@ export type Database = {
           is_partner_accountant: boolean
           neighborhood: string | null
           notification_preference: string | null
+          partner_disqualified_at: string | null
+          partner_disqualified_reason: string | null
+          partner_status: string
           phone: string | null
           state: string | null
           stripe_customer_id: string | null
@@ -938,6 +941,9 @@ export type Database = {
           is_partner_accountant?: boolean
           neighborhood?: string | null
           notification_preference?: string | null
+          partner_disqualified_at?: string | null
+          partner_disqualified_reason?: string | null
+          partner_status?: string
           phone?: string | null
           state?: string | null
           stripe_customer_id?: string | null
@@ -955,6 +961,9 @@ export type Database = {
           is_partner_accountant?: boolean
           neighborhood?: string | null
           notification_preference?: string | null
+          partner_disqualified_at?: string | null
+          partner_disqualified_reason?: string | null
+          partner_status?: string
           phone?: string | null
           state?: string | null
           stripe_customer_id?: string | null

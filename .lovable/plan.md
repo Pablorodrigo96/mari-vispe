@@ -1,33 +1,127 @@
-## Diagnóstico
 
-A página `/parceiro` força um gradient escuro próprio (`from-slate-950 via-slate-900`) dentro do `AppShell`, que já tem um fundo claro (`bg-muted/20`). Resultado: dois "mundos" colados — sidebar/topbar claros, conteúdo preto. O título "Painel do Parceiro" some por cima do gradient, o banner amarelo claro destoa, e os StatCards aparecem vazios porque dependem do contraste escuro para o texto branco aparecer.
+# Cockpit do Head de Parcerias + Gestão de Acessos
 
-Vou refazer o `PartnerDashboard` (e padrões reutilizados) para herdar a paleta do shell e seguir o mesmo "tom" das outras páginas autenticadas (como `Painel.tsx`): fundo neutro `bg-background`/`bg-muted/20`, cards `bg-card` com bordas sutis, e o **dourado PME.B3 (`accent`)** como único destaque cromático. Nada de slate-950 hardcoded.
+Adicionar uma nova aba **"Cockpit Head"** (default) em `/admin/parcerias` com KPIs/rotinas de monitoramento, **mais** ações de gestão do ciclo de vida do parceiro: criar, aprovar, suspender, desqualificar e reativar — tudo em um só lugar.
 
-## Mudanças
+A página já existe em `src/pages/admin/AdminPartnerships.tsx` e já lê `profiles`, `listings`, `partner_lead_reservations`, `vdr_documents`, `partner_activities`. Vamos reaproveitar `fetchData` e estendê-lo.
 
-### 1. `src/pages/PartnerDashboard.tsx` — repaginação completa
-- Remover wrapper `bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 min-h-screen`. Usar `bg-background` herdado do shell, com padding consistente (`p-6 lg:p-8`).
-- **Header**: hero limpo em `bg-card` com borda fina e leve gradient dourado no canto (apenas 8% opacidade), título em `text-foreground`, badge "PARCERIAS" em `bg-accent/10 text-accent`.
-- **Banner "Importar carteira"**: trocar `from-accent/10 via-accent/5 to-transparent` (que vira branco no fundo escuro do shell) por `bg-card border-accent/30` com faixa lateral dourada `border-l-4 border-l-accent`. Botões mantêm hierarquia: primário dourado, secundários `variant="outline"`.
-- **StatCards**: usar `bg-card border-border` com hover de borda dourada. Ícone em quadradinho colorido por categoria (azul/esmeralda/vermelho/dourado em opacidade 15%). Texto em `text-foreground`/`text-muted-foreground` — sem mais branco em fundo claro.
-- **Tabs**: `TabsList` com fundo `bg-muted` e trigger ativo em `bg-card text-foreground` (igual ao padrão shadcn padrão), removendo a faixa branca solta.
-- **Cards "Meus Leads" e "Pool da Rede"**: usar `bg-card border-border`, sem `!bg-slate-900/60 backdrop-blur-md`. Itens internos: `bg-muted/40 hover:bg-muted/60 border-border/60`.
-- **Estado vazio**: ícone em círculo dourado leve (`bg-accent/10`), texto `text-muted-foreground`, CTA dourado.
-- **Inputs/Selects do filtro do pool**: usar tokens padrão (`bg-background border-input`) em vez de `bg-slate-950 border-slate-700`.
-- **VDR Dialog**: trocar `!bg-slate-900 border-slate-700` por defaults shadcn.
+---
 
-### 2. `src/components/partner/SharedOpportunityCard.tsx` — alinhar ao novo tom
-- Ler o arquivo e remover qualquer `bg-slate-*` hardcoded; substituir por tokens (`bg-card`, `border-border`, `text-foreground`/`text-muted-foreground`), preservando a estrutura e badges existentes.
+## 1. Aba "Cockpit Head" (monitoramento)
 
-### 3. `src/components/partner/InterestModal.tsx` e `ReservationCountdown.tsx` — checagem rápida
-- Ler e ajustar apenas se houver fundos escuros hardcoded incompatíveis com a paleta clara.
+```text
+┌─ KPIs (8 cards, grid 4 cols) ────────────────────────────────────┐
+│ Novos parceiros (30d) │ Engajados/Total │ Inativos (>60d) │ ICP%│
+│ Leads no mês          │ Eventos no mês  │ Reuniões R/A    │ Receita vs Estimativa │
+└──────────────────────────────────────────────────────────────────┘
 
-## Princípios visuais aplicados
-- **Uma única cor de marca**: dourado `hsl(var(--accent))`. Status (azul/verde/vermelho) só em badges/ícones pequenos, opacidade 15%, sem inundar superfícies.
-- **Hierarquia por elevação**, não por cor: `bg-background` → `bg-card` → `bg-muted/40` para itens listados.
-- **Bordas sutis** (`border-border`) em vez de cards "flutuantes" pretos.
-- **Mesma linguagem do `/painel`**: gradients laterais leves nos hero cards, ícones em quadradinho colorido, tipografia em `text-foreground`.
+┌─ Rotinas do Dia ────────────────────────┬─ Top performers ───────────┐
+│ ▸ Follow-ups pendentes (X)              │ Score = leads × ICP × conv │
+│ ▸ Reuniões agendadas hoje/semana (X)    │ Top 10 + sparkline         │
+│ ▸ Pipeline a bater por parceiro         │                            │
+│ ▸ Parceiros sem interação 30/60/90d     │                            │
+│ ▸ Sugestão de corte (>90d inativos)     │                            │
+└─────────────────────────────────────────┴────────────────────────────┘
 
-## Resultado esperado
-A área de parceiros vai parecer parte do mesmo produto — sidebar PME.B3 clara → topbar clara → conteúdo claro com toques dourados. Sem mais "mundo preto" colado em "mundo branco".
+┌─ Parceiros em risco / a cortar ─────────────────────────────────────┐
+│ Nome │ Última indicação │ Última atividade │ Leads 90d │ Ações       │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌─ Reuniões: agendadas vs realizadas (90d) ───────────────────────────┐
+│ Parceiro │ Agendadas │ Realizadas │ Taxa │ Próxima reunião          │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### KPI → fonte
+| KPI | Cálculo |
+|---|---|
+| Novos parceiros (30d) | `profiles.is_partner_accountant=true AND created_at >= now()-30d` |
+| Engajados/Total | já existe (`is_active` = última listing < 60d) |
+| Leads cadastrados / parceiro | `listings` agrupado por `user_id` |
+| Eventos realizados | `partner_activities` tipo `evento` com `completed_at` (30d) |
+| Reuniões agendadas vs realizadas | counts `reuniao_agendada` vs `reuniao_realizada` |
+| Receita / parceiro vs estimativa | `Σ asking_price × success_fee` vs meta constante (R$ 50k/mês/parceiro ativo) |
+| Leads dentro do ICP Vispe | `listings.equity_score >= 60` por parceiro |
+| Sem interagir | sem `partner_activities` E sem nova `listing` em 30/60/90d |
+
+### Rotinas → ação na UI
+| Rotina | Implementação |
+|---|---|
+| Follow-up parceiros ativos | Lista parceiros sem `followup` em 14d → botão abre Dialog de atividade existente |
+| Bater Pipeline / parceiro | Card por parceiro: meta vs realizado (barra) |
+| Revisar eventos agendados | `scheduled_at >= today AND completed_at IS NULL` → "Marcar realizada"/"Reagendar" |
+| Ranking top performers | Score `leads_mes×1 + icp×2 + exclusivos×5` |
+| Corte parceiros inativos | Inativos >90d → botão "Desqualificar" (ver §2) |
+
+---
+
+## 2. Aba "Gestão de Parceiros" (ciclo de vida)
+
+Nova aba com tabela única de **todos os parceiros** + ações administrativas.
+
+```text
+┌─ Header ──────────────────────────────────────────────────────────┐
+│ [+ Criar parceiro]   [Aprovar pendentes (3)]   filtros / busca    │
+└───────────────────────────────────────────────────────────────────┘
+
+┌─ Tabela ──────────────────────────────────────────────────────────┐
+│ Nome │ Email │ Empresa │ Status │ Origem │ Leads │ Última ação │ ⋮ │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+**Status do parceiro** (derivado em UI, persistido em `profiles`):
+- `pending` — pediu acesso (já existe `franchisee_requests`; criar fluxo equivalente para parceiro)
+- `active` — `is_partner_accountant=true`
+- `suspended` — flag nova `partner_status='suspended'`
+- `disqualified` — flag nova `partner_status='disqualified'` (mantém histórico, não pode logar como parceiro)
+
+### Ações no menu ⋮ por linha
+
+| Ação | Efeito |
+|---|---|
+| **Criar parceiro** | Modal: nome, email, telefone, empresa → Edge Function `create-partner` cria user em `auth.users` (admin API), marca `is_partner_accountant=true`, dispara magic link de boas-vindas |
+| **Aprovar acesso** | Set `is_partner_accountant=true` + insere role `advisor` em `user_roles` |
+| **Suspender** | `partner_status='suspended'` (UI bloqueia, login mantido) |
+| **Reativar** | `partner_status='active'` |
+| **Desqualificar** | `partner_status='disqualified'`, remove role `advisor`, registra `partner_activities` tipo `corte` com motivo |
+| **Editar dados** | Atualiza `profiles` (nome, telefone, empresa) |
+| **Registrar atividade** | Reusa Dialog existente |
+| **Ver drill-down** | Sheet existente (reservas, VDR, atividades) |
+
+---
+
+## 3. Mudanças técnicas
+
+### Banco (migration)
+1. `ALTER TABLE public.profiles ADD COLUMN partner_status text DEFAULT 'active' CHECK (partner_status IN ('pending','active','suspended','disqualified'));`
+2. `ALTER TABLE public.profiles ADD COLUMN partner_disqualified_reason text;`
+3. `ALTER TABLE public.profiles ADD COLUMN partner_disqualified_at timestamptz;`
+4. Permitir nova `activity_type='corte'` (texto livre, não há CHECK).
+
+### Edge Function nova: `create-partner`
+- Valida JWT do chamador e checa role `admin` via `has_role`.
+- Body: `{ email, full_name, phone?, company_name? }` (Zod).
+- Usa `supabase.auth.admin.createUser({ email, email_confirm: true })`.
+- `INSERT INTO profiles (user_id, full_name, phone, company_name, is_partner_accountant=true, partner_status='active')`.
+- `INSERT INTO user_roles (user_id, role='advisor')`.
+- Dispara `supabase.auth.admin.generateLink({ type:'magiclink', email })` e retorna o link (admin envia manualmente ou integramos email depois).
+
+### Frontend
+- **`src/pages/admin/AdminPartnerships.tsx`**: adicionar 2 abas novas — `cockpit` (default) e `manage`. Estender `fetchData` com `interest_logs` por parceiro e cálculos derivados (leads_30d, eventos_30d, reuniões_R/A, dias_sem_interacao).
+- **Novos componentes em `src/components/admin/partnerships/`**:
+  - `CockpitKPIs.tsx`, `RotinasPanel.tsx`, `TopPerformersList.tsx`, `PartnersAtRiskTable.tsx`, `MeetingsScoreboard.tsx`
+  - `PartnerManagementTable.tsx` — tabela + dropdown de ações
+  - `CreatePartnerDialog.tsx` — formulário de criação (chama `create-partner`)
+  - `DisqualifyPartnerDialog.tsx` — confirma + captura motivo
+- **`src/lib/partnershipsTargets.ts`**: constantes (`MONTHLY_REVENUE_TARGET_PER_PARTNER=50000`, `SUCCESS_FEE_PCT=0.03`, `INACTIVE_DAYS=60`, `CUT_DAYS=90`).
+
+### Permissões
+- Todas as ações já são protegidas pela RLS atual (`has_role(auth.uid(),'admin')` na update de `profiles` e `user_roles`).
+- A criação de usuário **só** acontece via Edge Function (service role) — admin frontend nunca tem `service_role`.
+
+---
+
+## Fora de escopo
+- Tabela `partnership_targets` (metas customizáveis por parceiro/mês) — usaremos constante.
+- Email transacional de boas-vindas com template — por enquanto retornamos magic link no toast para o admin compartilhar.
+- Webhook automático de aviso de inatividade (>30d).
