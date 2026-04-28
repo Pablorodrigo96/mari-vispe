@@ -194,6 +194,8 @@ export function adaptToJarvisGraph(
     // 10% dos elegíveis (hash estável → mesmo nó sempre é/ou-não neurônio)
     const isNeuron = neuronEligible && hashId(node.id) % 10 === 0;
 
+    const sellerVisual = node.type === "seller" ? sellerColor(node) : null;
+
     return {
       ...node,
       degree,
@@ -204,6 +206,8 @@ export function adaptToJarvisGraph(
       showLabel,
       strategicRole: inferStrategicRole(node),
       isNeuron,
+      displayColor: sellerVisual?.color,
+      bigSellerRing: sellerVisual?.ring ?? false,
     };
   });
 
