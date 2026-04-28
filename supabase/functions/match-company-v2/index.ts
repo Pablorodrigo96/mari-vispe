@@ -363,22 +363,24 @@ serve(async (req) => {
       const sigNumeric = numericByCnpj.get(company.cnpj) ?? new Map<string, number>();
       const mandateProba = mandateByCnpj.get(company.cnpj) ?? 0.04;
       const companyEmb = parseEmbedding((company as any).embedding);
+      // Etapa 3: wave pressure da célula da empresa
+      const wavePressure = waveByCell.get(`${company.setor_ma}::${company.uf}`) ?? 0;
 
       for (const buyer of buyers ?? []) {
         const archetype = buyer.archetype_id;
         const archetypeData = archetype ? archetypeIdx.get(archetype) : null;
         const buyerEmb = buyerEmbByBuyer.get(buyer.id) ?? null;
         const semanticFit = (companyEmb && buyerEmb) ? cosineSimilarity(companyEmb, buyerEmb) : 0.5;
-        const features = computeFeatures(company, buyer, sigSet, mandateProba, sigNumeric, semanticFit);
+        const features = computeFeatures(company, buyer, sigSet, mandateProba, sigNumeric, semanticFit, wavePressure);
         const hard = applyHardFilters(company, buyer, archetype, features);
 
         if (hard.excluded) continue;
 
         // Mistura pesos: arquétipo × revealed thetas
-        // Etapas 1.5 + 2: incluímos seller_intent (0.10) e sinergia_movel/semantic (0.05) nos defaults.
+        // Etapas 1.5 + 2 + 3: seller_intent (0.10), semantic_fit (0.05), wave_pressure (0.05).
         // O blend normaliza no final, então a soma não precisa ser 1.0.
         const baseDefaults = archetypeData?.default_weights ?? { setor: 0.3, geografia: 0.2, tese: 0.2, tamanho: 0.15, financeiro: 0.15 };
-        const defaults = { ...baseDefaults, seller_intent: 0.10, sinergia_movel: 0.05 };
+        const defaults = { ...baseDefaults, seller_intent: 0.10, semantic_fit: 0.05, wave_pressure: 0.05 };
         const revealed = revealedByBuyer.get(buyer.id) ?? {};
         const weights = blendWeights(defaults, revealed);
 
