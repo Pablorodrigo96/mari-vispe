@@ -20,7 +20,17 @@ export default defineConfig(({ mode }) => ({
     dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react/jsx-runtime", "reactflow", "dagre"],
+    include: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "reactflow",
+      "dagre",
+      "ngraph.forcelayout",
+      "ngraph.events",
+      "ngraph.merge",
+      "ngraph.random",
+    ],
     // 3D libs são lazy-loaded apenas em /equity-brain/grafo-jarvis e quebram o
     // pre-bundle do esbuild (Timer / ./webgpu). Excluí-las mantém o resto do
     // app funcionando no dev — Rollup ainda as resolve corretamente no build.
@@ -31,8 +41,6 @@ export default defineConfig(({ mode }) => ({
       "three",
       "three-spritetext",
       "d3-force-3d",
-      "ngraph.forcelayout",
-      "ngraph.events",
     ],
   },
   build: {
