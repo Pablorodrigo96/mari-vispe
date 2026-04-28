@@ -130,6 +130,19 @@ export default function PartnerDashboard() {
     setPool(prev => prev.map(p => p.id === opp.id ? { ...p, interest_count: p.interest_count + 1 } : p));
   }
 
+  // Pool filtrado (deve ser declarado antes de qualquer early return para respeitar Rules of Hooks)
+  const filteredPool = useMemo(() => {
+    return pool.filter(o => {
+      if (poolCategory !== 'all' && o.category !== poolCategory) return false;
+      if (poolSearch.trim()) {
+        const q = poolSearch.trim().toLowerCase();
+        const haystack = `${o.title} ${o.description ?? ''} ${o.city ?? ''} ${o.state ?? ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [pool, poolSearch, poolCategory]);
+
   if (authLoading || eff.loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -165,19 +178,6 @@ export default function PartnerDashboard() {
   const conversionRate = reservations.length > 0
     ? Math.round((exclusive.length / reservations.length) * 100)
     : 0;
-
-  // Pool filtrado
-  const filteredPool = useMemo(() => {
-    return pool.filter(o => {
-      if (poolCategory !== 'all' && o.category !== poolCategory) return false;
-      if (poolSearch.trim()) {
-        const q = poolSearch.trim().toLowerCase();
-        const haystack = `${o.title} ${o.description ?? ''} ${o.city ?? ''} ${o.state ?? ''}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [pool, poolSearch, poolCategory]);
 
   return (
     <div className="p-4 lg:p-8 max-w-[1400px] mx-auto space-y-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 min-h-screen">
