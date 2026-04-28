@@ -257,9 +257,9 @@ serve(async (req) => {
     }
 
     try {
-    // Carrega dados
+    // Carrega dados (Etapa 2: inclui embedding)
     let cQuery = supabase.schema("equity_brain" as any).from("companies")
-      .select("cnpj, razao_social, uf, municipio, setor_ma, subsetor_ma, porte, situacao_cadastral, faturamento_estimado, ebitda_estimado").limit(limitCompanies);
+      .select("cnpj, razao_social, uf, municipio, setor_ma, subsetor_ma, porte, situacao_cadastral, faturamento_estimado, ebitda_estimado, embedding").limit(limitCompanies);
     if (cnpjs?.length) cQuery = cQuery.in("cnpj", cnpjs);
     const { data: companies, error: cErr } = await cQuery;
     if (cErr) throw cErr;
@@ -268,7 +268,7 @@ serve(async (req) => {
     }
 
     let bQuery = supabase.schema("equity_brain" as any).from("buyers")
-      .select("id, nome, archetype_id, ufs_interesse, setores_interesse, subsetores_interesse, porte_alvo, ticket_min, ticket_max, pause_signal, pe_sponsor_name");
+      .select("id, nome, archetype_id, ufs_interesse, setores_interesse, subsetores_interesse, porte_alvo, ticket_min, ticket_max, pause_signal, pe_sponsor_name, embedding");
     if (buyerIds?.length) bQuery = bQuery.in("id", buyerIds);
     const { data: buyers, error: bErr } = await bQuery;
     if (bErr) throw bErr;
@@ -277,13 +277,17 @@ serve(async (req) => {
     const archetypeIdx = new Map<string, any>();
     (archetypes ?? []).forEach((a: any) => archetypeIdx.set(a.id, a));
 
+    // Etapa 1.5: agora puxa também signal_value (para seller_intent_score, sweet_spot_fadiga, tempo_atividade_anos)
     const { data: signals } = await supabase.schema("equity_brain" as any)
-      .from("company_signals").select("cnpj, signal_key, p_true").in("cnpj", companies.map((c:any)=>c.cnpj));
+      .from("company_signals").select("cnpj, signal_key, signal_value, p_true").in("cnpj", companies.map((c:any)=>c.cnpj));
     const sigByCnpj = new Map<string, Set<string>>();
+    const numericByCnpj = new Map<string, Map<string, number>>();
     const mandateByCnpj = new Map<string, number>();
     for (const s of signals ?? []) {
       if (!sigByCnpj.has(s.cnpj)) sigByCnpj.set(s.cnpj, new Set());
       sigByCnpj.get(s.cnpj)!.add(s.signal_key);
+      if (!numericByCnpj.has(s.cnpj)) numericByCnpj.set(s.cnpj, new Map());
+      if (s.signal_value != null) numericByCnpj.get(s.cnpj)!.set(s.signal_key, Number(s.signal_value));
       if (s.signal_key === "mandate_active_proba_v2" && s.p_true != null) {
         mandateByCnpj.set(s.cnpj, Number(s.p_true));
       }
