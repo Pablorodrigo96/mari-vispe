@@ -311,6 +311,10 @@ export function JarvisGraph3D() {
     return () => window.clearTimeout(safety);
   }, [graphData]);
 
+  // ---------- Sinapses fantasmas (10% dos nós marcados como neurônios) ----------
+  useGhostSynapses(fgRef, graphData.nodes, !isLoading && graphData.nodes.length > 0);
+
+
   // ---------- Vizinhos do hovered/selected ----------
   const focusId = selectedNode?.id ?? hoveredId ?? null;
   const focusNeighborIds = useMemo(() => {
