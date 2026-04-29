@@ -165,7 +165,7 @@ function DealCard({ m, onDragStart }: { m: Mandate; onDragStart: () => void }) {
         ) : (
           <span className="text-[10px] text-zinc-600">sem valor</span>
         )}
-        <TemperatureBadge entityType="mandate" entityId={m.id} initial={m.temperature as any} compact />
+        <TemperatureBadge temp={m.temperature} compact />
       </div>
     </Link>
   );
