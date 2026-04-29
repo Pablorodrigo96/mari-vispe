@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { X, Check } from "lucide-react";
-import { brl } from "@/lib/dealFormatters";
+import { brl, OUTCOME_OPTIONS, OUTCOME_LABEL } from "@/lib/dealFormatters";
 
 type Props = {
   mandateId: string;
@@ -13,6 +13,7 @@ type Props = {
     commission_pct?: number | null;
     contato_nome: string | null;
     contato_telefone?: string | null;
+    outcome?: string | null;
   };
   onClose: () => void;
 };
