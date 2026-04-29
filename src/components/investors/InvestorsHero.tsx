@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, TrendingUp, Shield, Briefcase } from 'lucide-react';
 import { ParticlesBackground } from '@/components/ui/particles-background';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { motion } from 'framer-motion';
 
 const containerVariants = {
@@ -23,6 +24,8 @@ export function InvestorsHero() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsla(38,92%,50%,0.1),transparent_50%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,hsla(38,92%,50%,0.06),transparent_40%)]" />
       <ParticlesBackground variant="dark" />
+      <MariBrandStamp position="tr" tone="volt" size={680} />
+
       
       <motion.div 
         className="container relative mx-auto px-4 lg:px-8"
