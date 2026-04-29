@@ -175,7 +175,7 @@ export function ExecutiveDashboardContent() {
             <EmptyState text="Preencha o UF dos mandatos." />
           )}
         </ChartCard>
-        <ChartCard title="Top 3 maiores operações">
+        <ChartCard title="Top 3 maiores operações" info={EB_TIPS.top_3_operacoes}>
           {top3.length > 0 ? (
             <div className="space-y-3 py-2">
               {top3.map((d, i) => (
@@ -200,7 +200,7 @@ export function ExecutiveDashboardContent() {
         </ChartCard>
       </div>
 
-      <ChartCard title="Projetos por responsável">
+      <ChartCard title="Projetos por responsável" info={EB_TIPS.por_responsavel}>
         {respList.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={respList}>
@@ -218,7 +218,7 @@ export function ExecutiveDashboardContent() {
         )}
       </ChartCard>
 
-      <ChartCard title="Distribuição completa de status">
+      <ChartCard title="Distribuição completa de status" info={EB_TIPS.distribuicao_status}>
         <DonutChart data={byOutcome.map((d) => ({ name: OUTCOME_LABEL[d.label] || d.label, value: d.value }))} colors={COLORS_OUTCOME} />
       </ChartCard>
     </div>
