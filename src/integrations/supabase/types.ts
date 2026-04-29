@@ -583,6 +583,8 @@ export type Database = {
           cep: string | null
           city: string | null
           cnpj: string | null
+          codename: string | null
+          codename_prefix: string | null
           created_at: string | null
           description: string | null
           equity_score: number | null
@@ -617,6 +619,8 @@ export type Database = {
           cep?: string | null
           city?: string | null
           cnpj?: string | null
+          codename?: string | null
+          codename_prefix?: string | null
           created_at?: string | null
           description?: string | null
           equity_score?: number | null
@@ -651,6 +655,8 @@ export type Database = {
           cep?: string | null
           city?: string | null
           cnpj?: string | null
+          codename?: string | null
+          codename_prefix?: string | null
           created_at?: string | null
           description?: string | null
           equity_score?: number | null
@@ -718,6 +724,13 @@ export type Database = {
             foreignKeyName: "messages_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
+            referencedRelation: "listings_blind"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
             referencedRelation: "partner_opportunity_pool"
             referencedColumns: ["id"]
           },
@@ -770,6 +783,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings_blind"
             referencedColumns: ["id"]
           },
           {
@@ -909,6 +929,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_opportunity_interests_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings_blind"
             referencedColumns: ["id"]
           },
           {
@@ -2680,6 +2707,75 @@ export type Database = {
         }
         Relationships: []
       }
+      listings_blind: {
+        Row: {
+          asking_price: number | null
+          category: string | null
+          city: string | null
+          cnpj: string | null
+          codename: string | null
+          codename_prefix: string | null
+          created_at: string | null
+          description: string | null
+          equity_score: number | null
+          faixa_faturamento: string | null
+          faixa_lucro: string | null
+          foundation_year: number | null
+          id: string | null
+          images: string[] | null
+          plan: string | null
+          state: string | null
+          status: string | null
+          title: string | null
+          vdr_readiness: number | null
+          video_url: string | null
+        }
+        Insert: {
+          asking_price?: never
+          category?: string | null
+          city?: never
+          cnpj?: never
+          codename?: string | null
+          codename_prefix?: string | null
+          created_at?: string | null
+          description?: never
+          equity_score?: number | null
+          faixa_faturamento?: never
+          faixa_lucro?: never
+          foundation_year?: number | null
+          id?: string | null
+          images?: never
+          plan?: string | null
+          state?: string | null
+          status?: string | null
+          title?: never
+          vdr_readiness?: number | null
+          video_url?: never
+        }
+        Update: {
+          asking_price?: never
+          category?: string | null
+          city?: never
+          cnpj?: never
+          codename?: string | null
+          codename_prefix?: string | null
+          created_at?: string | null
+          description?: never
+          equity_score?: number | null
+          faixa_faturamento?: never
+          faixa_lucro?: never
+          foundation_year?: number | null
+          id?: string | null
+          images?: never
+          plan?: string | null
+          state?: string | null
+          status?: string | null
+          title?: never
+          vdr_readiness?: number | null
+          video_url?: never
+        }
+        Relationships: []
+      }
       partner_opportunity_pool: {
         Row: {
           annual_profit: number | null
@@ -2891,8 +2987,21 @@ export type Database = {
         Returns: number
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      eb_can_view_identity: {
+        Args: { p_cnpj?: string; p_listing?: string }
+        Returns: boolean
+      }
       eb_dashboard_kpis: { Args: never; Returns: Json }
       eb_dashboard_kpis_v2: { Args: never; Returns: Json }
+      eb_decide_disclosure: {
+        Args: {
+          p_decision: string
+          p_expires_in_days?: number
+          p_notes?: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       eb_event_queue_stats: { Args: never; Returns: Json }
       eb_event_recent_errors: {
         Args: { p_limit?: number }
@@ -2934,6 +3043,15 @@ export type Database = {
           label: string
           mandates_count: number
         }[]
+      }
+      eb_request_disclosure: {
+        Args: {
+          p_reason?: string
+          p_target_cnpj?: string
+          p_target_kind: string
+          p_target_listing_id?: string
+        }
+        Returns: string
       }
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
       expire_old_reservations: { Args: never; Returns: undefined }

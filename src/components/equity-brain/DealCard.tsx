@@ -14,6 +14,9 @@ import {
 import { ScoreDial } from "./ScoreDial";
 import { SignalChip } from "./SignalChip";
 import { QuickCallModal } from "./QuickCallModal";
+import { BlindBadge } from "./BlindBadge";
+import { RequestDisclosureDialog } from "./RequestDisclosureDialog";
+import { useIdentityVisibility } from "@/hooks/useIdentityVisibility";
 import { cn } from "@/lib/utils";
 
 interface DealCardProps {
@@ -22,7 +25,9 @@ interface DealCardProps {
 }
 
 export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, isAdvisor } = useUserRoles();
+  const { data: canSeeIdentity = false } = useIdentityVisibility({ cnpj });
+  const identified = isAdmin || isAdvisor || canSeeIdentity;
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [callOpen, setCallOpen] = useState(false);
@@ -156,18 +161,33 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <BlindBadge unlocked={identified} />
+              {company?.codename && (
+                <span className="font-mono text-xs text-amber-300">{company.codename}</span>
+              )}
+            </div>
             <h1 className={cn("font-bold text-zinc-100 break-words", mode === "page" ? "text-3xl" : "text-xl")}>
-              {razao}
+              {identified ? razao : (company?.codename ?? "Ativo blind")}
             </h1>
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-400 mt-1">
-              <span className="font-mono">{maskCnpj(cnpj, isAdmin)}</span>
+              <span className="font-mono">{identified ? maskCnpj(cnpj, true) : "•• ••• •••/••••-••"}</span>
               {uf && (
                 <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />{municipio ? `${municipio}/${uf}` : uf}
+                  <MapPin className="h-3 w-3" />{identified && municipio ? `${municipio}/${uf}` : uf}
                 </span>
               )}
               {setor && <span className="flex items-center gap-1"><Tag className="h-3 w-3" />{setor}</span>}
             </div>
+            {!identified && (
+              <div className="mt-2">
+                <RequestDisclosureDialog
+                  targetKind="company"
+                  targetCnpj={cnpj}
+                  codename={company?.codename}
+                />
+              </div>
+            )}
           </div>
           {mode === "drawer" && (
             <Button

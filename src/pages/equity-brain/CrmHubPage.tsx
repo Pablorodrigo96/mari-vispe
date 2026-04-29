@@ -73,6 +73,9 @@ export default function CrmHubPage() {
               <Link to="/equity-brain/crm/exports" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
                 <Download className="h-3 w-3" /> Exports
               </Link>
+              <Link to="/equity-brain/crm/aberturas" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
+                <ShieldCheck className="h-3 w-3" /> Aberturas
+              </Link>
               <Link to="/equity-brain/crm/pipeline" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
                 <Kanban className="h-3 w-3" /> Pipeline
               </Link>
