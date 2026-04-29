@@ -31,7 +31,7 @@ export default function MatchAnalyticsPage() {
       const { data } = await supabase
         .from("eb_mandates" as any)
         .select("id,company_cnpj,uf,setor,status,outcome,contato_nome,contato_telefone,contato_email,exclusividade")
-        .in("outcome", ["em_andamento"])
+        .in("outcome", ["em_andamento", "vigente", "em_negociacao"])
         .limit(500);
       return (data ?? []) as any[];
     },
@@ -42,10 +42,19 @@ export default function MatchAnalyticsPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("eb_buyers" as any)
-        .select("id,nome,tipo,ufs_interesse,setores_interesse,status,raw_data")
+        .select("id,nome,tipo,ufs_interesse,setores_interesse,status,raw_data,engagement_status")
         .eq("status", "ativo")
         .limit(500);
       return (data ?? []) as any[];
+    },
+  });
+
+  const v2 = useQuery({
+    queryKey: ["eb-match-kpis-v2"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)("eb_dashboard_kpis_v2");
+      if (error) throw error;
+      return (data ?? {}) as any;
     },
   });
 
