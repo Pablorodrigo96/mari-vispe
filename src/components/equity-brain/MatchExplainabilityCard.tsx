@@ -29,7 +29,25 @@ function colorFor(feat: string) { return FEATURE_COLORS[feat] ?? "bg-slate-500";
 export function MatchExplainabilityCard() {
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logging, setLogging] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  async function logEvent(matchId: string, eventType: string, rejectionReason?: string) {
+    setLogging(eventType);
+    try {
+      const { error } = await (supabase as any).rpc("eb_log_deal_event", {
+        p_match_id: matchId,
+        p_event_type: eventType,
+        p_rejection_reason: rejectionReason ?? null,
+      });
+      if (error) throw error;
+      toast.success(`Evento "${eventType}" registrado — alimenta o aprendizado do motor.`);
+    } catch (e: any) {
+      toast.error(`Falha ao registrar: ${e?.message ?? "erro"}`);
+    } finally {
+      setLogging(null);
+    }
+  }
 
   async function load() {
     setLoading(true);
