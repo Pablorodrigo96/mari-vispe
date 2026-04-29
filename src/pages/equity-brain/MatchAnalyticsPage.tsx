@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ChartCard } from "@/components/equity-brain/crm/exec/ChartCard";
@@ -7,22 +6,23 @@ import { KpiTile } from "@/components/equity-brain/crm/exec/KpiTile";
 import { DonutChart } from "@/components/equity-brain/crm/exec/DonutChart";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { ArrowLeft, ArrowLeftRight, Mail, Phone } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { REGIAO_BY_UF, OUTCOME_LABEL, OUTCOME_COLOR, BUYER_ENGAGEMENT_LABEL, BUYER_ENGAGEMENT_COLOR } from "@/lib/dealFormatters";
 
 type Dim = "uf" | "regiao" | "setor";
+const DIMS: Dim[] = ["uf", "regiao", "setor"];
 
 export default function MatchAnalyticsPage() {
-  const [dim, setDim] = useState<Dim>("uf");
-
-  const cross = useQuery({
-    queryKey: ["eb-match-cross", dim],
-    queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)("eb_match_crosstab", { dim });
-      if (error) throw error;
-      return ((data ?? []) as any[]) as { label: string; mandates_count: number; buyers_count: number }[];
-    },
+  // Buscar as 3 dimensões em paralelo
+  const crossQueries = useQueries({
+    queries: DIMS.map((d) => ({
+      queryKey: ["eb-match-cross", d],
+      queryFn: async () => {
+        const { data, error } = await (supabase.rpc as any)("eb_match_crosstab", { dim: d });
+        if (error) throw error;
+        return ((data ?? []) as any[]) as { label: string; mandates_count: number; buyers_count: number }[];
+      },
+    })),
   });
 
   const mandates = useQuery({
