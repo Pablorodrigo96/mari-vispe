@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, GripVertical, DollarSign, Pencil } from "lucide-react";
+import { ArrowLeft, GripVertical, DollarSign, Pencil, FolderOpen, FileSignature } from "lucide-react";
 import { toast } from "sonner";
 import { brl, PIPELINE_STAGES, PIPELINE_STAGE_LABEL, DEAL_TYPE_LABEL } from "@/lib/dealFormatters";
 import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge";
@@ -19,6 +19,7 @@ type Mandate = {
   faturamento_vispe: number | null;
   commission_pct: number | null;
   uf: string | null;
+  regiao: string | null;
   setor: string | null;
   contato_nome: string | null;
   contato_telefone: string | null;
@@ -26,6 +27,12 @@ type Mandate = {
   temperature: string | null;
   stage_changed_at: string | null;
   data_inicio: string | null;
+  data_fechamento: string | null;
+  data_assinatura_contrato: string | null;
+  comprador_cnpj: string | null;
+  comprador_nome: string | null;
+  drive_url: string | null;
+  contract_url: string | null;
 };
 
 const STAGE_COLORS: Record<string, string> = {
