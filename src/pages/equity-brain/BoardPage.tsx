@@ -205,8 +205,9 @@ export default function BoardPage() {
       {/* 3) Pipeline por buyer */}
       <section className="rounded-lg border border-zinc-800 bg-zinc-900 overflow-hidden">
         <div className="px-5 py-3 border-b border-zinc-800 flex items-center justify-between">
-          <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-bold">
+          <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
             Top 10 buyers por matches premium
+            <InfoHint {...EB_TIPS.top_buyers_premium} />
           </h2>
           <Button
             variant="ghost" size="sm"
@@ -255,6 +256,7 @@ export default function BoardPage() {
           <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-2">
             <Database className="h-3.5 w-3.5" />
             Versões da fórmula de score
+            <InfoHint {...EB_TIPS.versao_score} />
           </h2>
         </div>
         <table className="w-full text-xs">
