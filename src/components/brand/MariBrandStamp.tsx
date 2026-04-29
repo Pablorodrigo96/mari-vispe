@@ -1,18 +1,16 @@
 import { cn } from '@/lib/utils';
-import { MariWatermark } from './MariLogo';
+import symbolVolt from '@/assets/mari-symbol-volt.png';
+import symbolCarbon from '@/assets/mari-symbol-carbon.png';
 
 type Position = 'tr' | 'br' | 'bl' | 'tl';
 type Tone = 'volt' | 'carbon';
 
 interface MariBrandStampProps {
-  /** Where the watermark symbol bleeds from. */
   position?: Position;
   tone?: Tone;
-  /** Show the "designed forward / mari." typographic block in the opposite corner. */
   showWordmark?: boolean;
   /** Watermark size in px (square). */
   size?: number;
-  /** Symbol watermark opacity (0–1). */
   opacity?: number;
   className?: string;
 }
@@ -25,7 +23,6 @@ const POS_CLASSES: Record<Position, string> = {
 };
 
 const WORDMARK_POS: Record<Position, string> = {
-  // Place wordmark in the corner OPPOSITE the watermark for editorial balance.
   tr: 'left-8 bottom-8 text-left',
   br: 'left-8 top-8 text-left',
   bl: 'right-8 top-8 text-right',
@@ -33,11 +30,9 @@ const WORDMARK_POS: Record<Position, string> = {
 };
 
 /**
- * Editorial brand stamp — combines an oversized symbol watermark sangrando pela
- * borda com um bloco tipográfico "designed forward / mari." no canto oposto.
- * Ambos são puramente decorativos (pointer-events-none).
- *
- * Use dentro de um container `relative overflow-hidden`.
+ * Editorial brand stamp: oversized symbol watermark bleeding from one corner +
+ * "designed forward / mari." typographic block in the opposite corner.
+ * Place inside a `relative overflow-hidden` container.
  */
 export function MariBrandStamp({
   position = 'tr',
@@ -47,26 +42,22 @@ export function MariBrandStamp({
   opacity,
   className,
 }: MariBrandStampProps) {
-  const wordmarkTone = tone === 'volt' ? 'text-volt' : 'text-foreground';
+  const src = tone === 'volt' ? symbolVolt : symbolCarbon;
   const watermarkOpacity = opacity ?? (tone === 'volt' ? 0.07 : 0.04);
 
   return (
     <>
-      <MariWatermark
-        color={tone}
-        opacity={watermarkOpacity}
+      <img
+        src={src}
+        alt=""
+        aria-hidden="true"
         className={cn(
-          'hidden md:block absolute pointer-events-none',
+          'hidden md:block absolute pointer-events-none select-none object-contain',
           POS_CLASSES[position],
           className,
         )}
-        // size is applied via inline style on the parent <img>
+        style={{ width: size, height: size, opacity: watermarkOpacity }}
       />
-      {/*
-        MariWatermark uses style.opacity but width/height come from className.
-        We override below via a sibling style tag isn't ideal — instead we wrap.
-      */}
-      <style>{`/* size handled via tailwind w/h utilities below */`}</style>
       {showWordmark && (
         <div
           className={cn(
@@ -92,12 +83,6 @@ export function MariBrandStamp({
           </div>
         </div>
       )}
-      {/* Inject the watermark sizing via a hidden style hook on the next sibling element */}
-      <span
-        aria-hidden
-        className="hidden"
-        style={{ ['--mari-stamp-size' as any]: `${size}px` }}
-      />
     </>
   );
 }
