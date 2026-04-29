@@ -7,7 +7,7 @@ import { BuyersTable } from "@/components/equity-brain/crm/BuyersTable";
 import { NextActionsPanel } from "@/components/equity-brain/crm/NextActionsPanel";
 import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
 import { AskMariDrawer } from "@/components/equity-brain/crm/AskMariDrawer";
-import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, Kanban } from "lucide-react";
+import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, Kanban, Plus, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tab = "mandates" | "buyers" | "activity";
@@ -31,6 +31,18 @@ export default function CrmHubPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            to="/equity-brain/crm/mandate/new"
+            className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded bg-[#D9F564] text-zinc-900 font-semibold hover:opacity-90"
+          >
+            <Plus className="h-3 w-3" /> Novo mandato
+          </Link>
+          <Link
+            to="/equity-brain/crm/exports"
+            className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent"
+          >
+            <Download className="h-3 w-3" /> Exports
+          </Link>
           <Link
             to="/equity-brain/crm/executivo"
             className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/10 bg-transparent font-medium"
