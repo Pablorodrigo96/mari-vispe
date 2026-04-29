@@ -1,11 +1,13 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase } from "lucide-react";
+import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
+import { useMatchPercentiles, useMatchInbox } from "@/hooks/useMatchInbox";
 
 const items = [
   { to: "/equity-brain",                label: "Dashboard",       Icon: LayoutDashboard, end: true },
+  { to: "/equity-brain/match-inbox",    label: "Match Inbox",     Icon: ArrowLeftRight, badge: "matches" as const },
   { to: "/equity-brain/crm",            label: "CRM",             Icon: Briefcase },
   { to: "/equity-brain/board",          label: "Board Executivo", Icon: LineChart },
   { to: "/equity-brain/oportunidades",  label: "Oportunidades",   Icon: Target },
@@ -21,6 +23,9 @@ const items = [
 export function EBSidebar() {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const { data: pcts } = useMatchPercentiles();
+  const { data: hotMatches = [] } = useMatchInbox({ minScore: pcts?.hot ?? 70, limit: 200 });
+  const hotCount = hotMatches.length;
 
   return (
     <aside className="w-60 shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
@@ -35,7 +40,7 @@ export function EBSidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {items.map(({ to, label, Icon, end }) => (
+        {items.map(({ to, label, Icon, end, badge }) => (
           <NavLink
             key={to}
             to={to}
@@ -50,7 +55,12 @@ export function EBSidebar() {
             }
           >
             <Icon className="h-4 w-4" />
-            {label}
+            <span className="flex-1">{label}</span>
+            {badge === "matches" && hotCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#D9F564] text-zinc-900 tabular-nums">
+                {hotCount}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

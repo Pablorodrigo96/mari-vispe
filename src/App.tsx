@@ -76,6 +76,7 @@ import BuyerDetailPage from "./pages/equity-brain/BuyerDetailPage";
 import AccessAuditPage from "./pages/equity-brain/AccessAuditPage";
 import ExecutiveDashboardPage from "./pages/equity-brain/ExecutiveDashboardPage";
 import MatchAnalyticsPage from "./pages/equity-brain/MatchAnalyticsPage";
+import MatchInboxPage from "./pages/equity-brain/MatchInboxPage";
 import PipelineKanbanPage from "./pages/equity-brain/PipelineKanbanPage";
 import PipelineHistoryPage from "./pages/equity-brain/PipelineHistoryPage";
 import MandateFormPage from "./pages/equity-brain/MandateFormPage";
@@ -164,6 +165,7 @@ const App = () => (
               }
             >
               <Route index               element={<EBDashboardPage />} />
+              <Route path="match-inbox"   element={<MatchInboxPage />} />
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
               <Route path="mapa"          element={<EBMapaPage />} />
               <Route path="grafo"         element={<EBGrafoPage />} />
