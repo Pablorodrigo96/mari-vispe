@@ -44,7 +44,7 @@ type Row = {
   stage_changed_at: string | null;
   data_inicio: string | null;
   data_fechamento: string | null;
-  data_assinatura_contrato: string | null;
+  data_assinatura: string | null;
   comprador_cnpj: string | null;
   comprador_nome: string | null;
   drive_url: string | null;
@@ -71,7 +71,7 @@ export function MandatesMondayTable() {
       const { data, error } = await supabase
         .from("eb_mandates" as any)
         .select(
-          "id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura_contrato,comprador_cnpj,comprador_nome,drive_url,contract_url",
+          "id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura,comprador_cnpj,comprador_nome,drive_url,contract_url",
         )
         .order("stage_changed_at", { ascending: false })
         .limit(1000);
@@ -403,7 +403,7 @@ export function MandatesMondayTable() {
             contract_url: editing.contract_url,
             data_inicio: editing.data_inicio,
             data_fechamento: editing.data_fechamento,
-            data_assinatura_contrato: editing.data_assinatura_contrato,
+            data_assinatura: editing.data_assinatura,
           }}
           onClose={() => setEditing(null)}
         />
