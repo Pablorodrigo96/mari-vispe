@@ -70,7 +70,7 @@ export function BlindTeaserButton({ cnpj, entityType, entityId }: Props) {
   };
   const handleWhatsapp = () => {
     const msg = `Confira esta oportunidade (Blind Teaser): ${url}`;
-    const link = getWhatsAppLink("", msg);
+    const link = getWhatsAppLink(msg);
     log("teaser_share_whatsapp", { entityType, entityId, listingId: listing!.id, ticker });
     window.open(link, "_blank", "noopener,noreferrer");
     setOpen(false);
