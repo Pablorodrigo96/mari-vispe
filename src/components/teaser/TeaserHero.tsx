@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, Eye } from 'lucide-react';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 
 interface TeaserHeroProps {
   ticker: string;
@@ -15,6 +16,7 @@ const TeaserHero = ({ ticker, totalViews = 0, uniqueViews = 0 }: TeaserHeroProps
         <div className="absolute inset-0 bg-grid-pattern opacity-60" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsla(38,92%,50%,0.06)_0%,_transparent_70%)]" />
       </div>
+      <MariBrandStamp position="br" tone="volt" size={620} opacity={0.06} showWordmark={false} />
 
       {/* Left gold decorative arcs */}
       <div className="absolute left-0 top-0 bottom-0 w-[200px] sm:w-[600px] pointer-events-none opacity-30 sm:opacity-100">

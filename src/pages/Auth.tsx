@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Mail, Lock, ArrowLeft, User, Phone, Check, Store } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -212,12 +213,15 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-muted to-background px-4 py-8">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-muted to-background px-4 py-8 relative overflow-hidden">
+      <MariBrandStamp position="tr" tone="carbon" size={520} opacity={0.05} showWordmark={false} />
+      <MariBrandStamp position="bl" tone="carbon" size={420} opacity={0.04} showWordmark />
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center justify-center mb-6">
-            <MariLogo variant="tagline-light" size={120} />
+          <Link to="/" className="inline-flex items-center justify-center mb-4">
+            <MariLogo variant="tagline-light" size={140} />
           </Link>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground mb-3">designed forward</p>
           <h1 className="text-2xl font-bold text-foreground">Bem-vindo</h1>
           <p className="text-muted-foreground mt-2">Entre ou crie sua conta para continuar</p>
         </div>

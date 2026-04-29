@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { ViewAsSwitcher } from '@/components/layout/ViewAsSwitcher';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
+import { MariLogo } from '@/components/brand/MariLogo';
 
 const ROUTE_LABELS: Record<string, string> = {
   '/painel': 'Painel',
@@ -73,8 +74,9 @@ export function AppTopbar({ onMenuClick }: Props) {
           )}
 
           <nav className="flex items-center gap-1.5 text-sm min-w-0">
-            <Link to="/painel" className="text-muted-foreground hover:text-foreground hidden sm:inline shrink-0 lowercase">
-              mari
+            <Link to="/painel" className="hidden sm:flex items-center gap-1.5 text-muted-foreground hover:text-foreground shrink-0 lowercase">
+              <MariLogo variant="symbol-light" size={20} />
+              <span>mari</span>
             </Link>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 hidden sm:inline shrink-0" />
             <span className="font-semibold text-foreground truncate">{label}</span>

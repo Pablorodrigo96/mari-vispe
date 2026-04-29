@@ -80,23 +80,23 @@ export function Header() {
       )}
     >
       <nav className="container mx-auto px-4 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
+        <div className="flex h-24 items-center justify-between">
           {/* Logo — both variants pre-loaded; toggle via opacity for instant transition */}
           <Link to="/" className="flex items-center">
             <div className="relative">
               <MariLogo
                 variant="dark"
-                size={72}
+                size={96}
                 className={cn(
-                  'transition-opacity duration-300 mt-[10px] mb-[10px] px-[50px]',
+                  'transition-opacity duration-300 my-2',
                   isTransparent ? 'opacity-100' : 'opacity-0'
                 )}
               />
               <MariLogo
                 variant="light"
-                size={72}
+                size={96}
                 className={cn(
-                  'absolute inset-0 transition-opacity duration-300 mt-[10px] mb-[10px] px-[50px]',
+                  'absolute inset-0 transition-opacity duration-300 my-2',
                   isTransparent ? 'opacity-0' : 'opacity-100'
                 )}
               />

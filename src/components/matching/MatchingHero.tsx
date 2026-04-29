@@ -1,5 +1,6 @@
 import { Search, MousePointerClick, Eye, Brain, Cpu, Network } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 
 const steps = [
   { icon: Search, label: 'Digite o nome da sua empresa', techIcon: Cpu },
@@ -10,6 +11,7 @@ const steps = [
 export function MatchingHero() {
   return (
     <section className="relative pt-32 pb-20 overflow-hidden gradient-navy-deep bg-grid-pattern">
+      <MariBrandStamp position="tr" tone="volt" size={680} />
       {/* Radial glows */}
       <div className="absolute top-10 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px]" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
