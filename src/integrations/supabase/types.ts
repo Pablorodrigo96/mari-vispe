@@ -2055,16 +2055,53 @@ export type Database = {
       eb_mandates: {
         Row: {
           comissao_pct: number | null
+          commission_pct: number | null
           company_cnpj: string | null
+          contato_email: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
           created_at: string | null
           created_by: string | null
           data_assinatura: string | null
+          data_fechamento: string | null
+          data_inicio: string | null
           data_vencimento: string | null
+          deal_type:
+            | "buyside"
+            | "sellside"
+            | "spa"
+            | "due_diligence"
+            | "cisao"
+            | "fusao"
+            | "nbo"
+            | "match"
+            | null
           exclusividade: boolean | null
+          expected_close_at: string | null
+          faturamento_vispe: number | null
           id: string | null
           observacoes: string | null
+          outcome:
+            | "em_andamento"
+            | "concluido"
+            | "cancelado"
+            | "vencido"
+            | "vendeu_sozinho"
+            | null
+          pipeline_stage:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
+          probability: number | null
+          regiao: string | null
           responsavel_id: string | null
+          setor: string | null
           source: string | null
+          stage_changed_at: string | null
           status:
             | "vigente"
             | "vencido"
@@ -2073,21 +2110,63 @@ export type Database = {
             | "vendeu_sozinho"
             | "cancelado"
             | null
+          temperature: string | null
+          temperature_reason: string | null
+          temperature_updated_at: string | null
+          uf: string | null
           updated_at: string | null
+          valor_operacao: number | null
           valor_pedido: number | null
         }
         Insert: {
           comissao_pct?: number | null
+          commission_pct?: number | null
           company_cnpj?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
           created_at?: string | null
           created_by?: string | null
           data_assinatura?: string | null
+          data_fechamento?: string | null
+          data_inicio?: string | null
           data_vencimento?: string | null
+          deal_type?:
+            | "buyside"
+            | "sellside"
+            | "spa"
+            | "due_diligence"
+            | "cisao"
+            | "fusao"
+            | "nbo"
+            | "match"
+            | null
           exclusividade?: boolean | null
+          expected_close_at?: string | null
+          faturamento_vispe?: number | null
           id?: string | null
           observacoes?: string | null
+          outcome?:
+            | "em_andamento"
+            | "concluido"
+            | "cancelado"
+            | "vencido"
+            | "vendeu_sozinho"
+            | null
+          pipeline_stage?:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
+          probability?: number | null
+          regiao?: string | null
           responsavel_id?: string | null
+          setor?: string | null
           source?: string | null
+          stage_changed_at?: string | null
           status?:
             | "vigente"
             | "vencido"
@@ -2096,21 +2175,63 @@ export type Database = {
             | "vendeu_sozinho"
             | "cancelado"
             | null
+          temperature?: string | null
+          temperature_reason?: string | null
+          temperature_updated_at?: string | null
+          uf?: string | null
           updated_at?: string | null
+          valor_operacao?: number | null
           valor_pedido?: number | null
         }
         Update: {
           comissao_pct?: number | null
+          commission_pct?: number | null
           company_cnpj?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
           created_at?: string | null
           created_by?: string | null
           data_assinatura?: string | null
+          data_fechamento?: string | null
+          data_inicio?: string | null
           data_vencimento?: string | null
+          deal_type?:
+            | "buyside"
+            | "sellside"
+            | "spa"
+            | "due_diligence"
+            | "cisao"
+            | "fusao"
+            | "nbo"
+            | "match"
+            | null
           exclusividade?: boolean | null
+          expected_close_at?: string | null
+          faturamento_vispe?: number | null
           id?: string | null
           observacoes?: string | null
+          outcome?:
+            | "em_andamento"
+            | "concluido"
+            | "cancelado"
+            | "vencido"
+            | "vendeu_sozinho"
+            | null
+          pipeline_stage?:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
+          probability?: number | null
+          regiao?: string | null
           responsavel_id?: string | null
+          setor?: string | null
           source?: string | null
+          stage_changed_at?: string | null
           status?:
             | "vigente"
             | "vencido"
@@ -2119,7 +2240,12 @@ export type Database = {
             | "vendeu_sozinho"
             | "cancelado"
             | null
+          temperature?: string | null
+          temperature_reason?: string | null
+          temperature_updated_at?: string | null
+          uf?: string | null
           updated_at?: string | null
+          valor_operacao?: number | null
           valor_pedido?: number | null
         }
         Relationships: []
@@ -2389,6 +2515,66 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_v_deal_metrics: {
+        Row: {
+          commission_pct: number | null
+          company_cnpj: string | null
+          company_name: string | null
+          created_at: string | null
+          data_assinatura: string | null
+          data_fechamento: string | null
+          data_inicio: string | null
+          data_vencimento: string | null
+          deal_type:
+            | "buyside"
+            | "sellside"
+            | "spa"
+            | "due_diligence"
+            | "cisao"
+            | "fusao"
+            | "nbo"
+            | "match"
+            | null
+          exclusividade: boolean | null
+          faturamento_vispe: number | null
+          id: string | null
+          months_to_close: number | null
+          outcome:
+            | "em_andamento"
+            | "concluido"
+            | "cancelado"
+            | "vencido"
+            | "vendeu_sozinho"
+            | null
+          pipeline_stage:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
+          probability: number | null
+          regiao: string | null
+          responsavel_id: string | null
+          setor: string | null
+          status:
+            | "vigente"
+            | "vencido"
+            | "vendemos"
+            | "em_negociacao"
+            | "vendeu_sozinho"
+            | "cancelado"
+            | null
+          temperature: string | null
+          uf: string | null
+          updated_at: string | null
+          valor_operacao: number | null
+          valor_pedido: number | null
+          year_started: number | null
+        }
+        Relationships: []
+      }
       eb_v_isp_universe: {
         Row: {
           buyer_fit_score: number | null
@@ -2645,6 +2831,7 @@ export type Database = {
         Returns: number
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      eb_dashboard_kpis: { Args: never; Returns: Json }
       eb_event_queue_stats: { Args: never; Returns: Json }
       eb_event_recent_errors: {
         Args: { p_limit?: number }
@@ -2678,6 +2865,14 @@ export type Database = {
           p_rejection_reason?: string
         }
         Returns: string
+      }
+      eb_match_crosstab: {
+        Args: { dim?: string }
+        Returns: {
+          buyers_count: number
+          label: string
+          mandates_count: number
+        }[]
       }
       expire_old_reservations: { Args: never; Returns: undefined }
       get_teaser_view_count: {
