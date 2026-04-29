@@ -73,6 +73,7 @@ import CrmHubPage from "./pages/equity-brain/CrmHubPage";
 import PermissionsAdminPage from "./pages/equity-brain/PermissionsAdminPage";
 import MandateDetailPage from "./pages/equity-brain/MandateDetailPage";
 import BuyerDetailPage from "./pages/equity-brain/BuyerDetailPage";
+import AccessAuditPage from "./pages/equity-brain/AccessAuditPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
@@ -190,6 +191,7 @@ const App = () => (
               <Route path="crm/mandate/:id"      element={<MandateDetailPage />} />
               <Route path="crm/buyer/:id"        element={<BuyerDetailPage />} />
               <Route path="crm/admin/permissoes" element={<PermissionsAdminPage />} />
+              <Route path="crm/admin/auditoria"  element={<RequireRole roles={["admin"]}><AccessAuditPage /></RequireRole>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
