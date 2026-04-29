@@ -43,6 +43,23 @@ export interface NationalCompany {
   phone?: string;
   telefone?: string;
   email?: string;
+
+  // Enriched fields (BrasilAPI fallback or local DB when available)
+  socios?: Array<{
+    nome: string;
+    qualificacao: string;
+    data_entrada: string;
+    cpf_cnpj?: string;
+    faixa_etaria?: string;
+  }>;
+  regime_tributario?: {
+    simples: boolean;
+    data_opcao_simples?: string;
+    mei: boolean;
+    data_opcao_mei?: string;
+  };
+  data_source_qsa?: 'local' | 'brasilapi' | 'unavailable';
+  data_source_simples?: 'local' | 'brasilapi' | 'unavailable';
 }
 
 interface SearchOptions {
