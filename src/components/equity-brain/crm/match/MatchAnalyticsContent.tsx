@@ -8,6 +8,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 import { Mail, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { REGIAO_BY_UF, OUTCOME_LABEL, OUTCOME_COLOR, BUYER_ENGAGEMENT_LABEL, BUYER_ENGAGEMENT_COLOR } from "@/lib/dealFormatters";
+import { EB_TIPS } from "@/lib/ebTooltips";
 
 type Dim = "uf" | "regiao" | "setor";
 const DIMS: Dim[] = ["uf", "regiao", "setor"];
@@ -87,41 +88,41 @@ export function MatchAnalyticsContent() {
       <div>
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Vendedores (mandatos)</div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
-          <KpiTile label="Total mandatos" value={totalMand} loading={v2.isLoading} />
-          <KpiTile label="Vigente" value={getMand("vigente")} accent="warning" loading={v2.isLoading} />
-          <KpiTile label="Em negociação" value={getMand("em_negociacao")} accent="primary" loading={v2.isLoading} />
-          <KpiTile label="Vendemos" value={getMand("vendemos")} accent="success" loading={v2.isLoading} />
-          <KpiTile label="Vencido" value={getMand("vencido")} accent="danger" loading={v2.isLoading} />
-          <KpiTile label="Vendeu sozinho" value={getMand("vendeu_sozinho")} accent="danger" loading={v2.isLoading} />
-          <KpiTile label="Tempo médio venda" value={v2.data?.avg_months_sellside ? `${v2.data.avg_months_sellside}m` : "—"} loading={v2.isLoading} />
+          <KpiTile label="Total mandatos" value={totalMand} loading={v2.isLoading} info={EB_TIPS.total_mandatos} />
+          <KpiTile label="Vigente" value={getMand("vigente")} accent="warning" loading={v2.isLoading} info={EB_TIPS.mand_vigente} />
+          <KpiTile label="Em negociação" value={getMand("em_negociacao")} accent="primary" loading={v2.isLoading} info={EB_TIPS.mand_em_negociacao} />
+          <KpiTile label="Vendemos" value={getMand("vendemos")} accent="success" loading={v2.isLoading} info={EB_TIPS.mand_vendemos} />
+          <KpiTile label="Vencido" value={getMand("vencido")} accent="danger" loading={v2.isLoading} info={EB_TIPS.mand_vencido} />
+          <KpiTile label="Vendeu sozinho" value={getMand("vendeu_sozinho")} accent="danger" loading={v2.isLoading} info={EB_TIPS.mand_vendeu_sozinho} />
+          <KpiTile label="Tempo médio venda" value={v2.data?.avg_months_sellside ? `${v2.data.avg_months_sellside}m` : "—"} loading={v2.isLoading} info={EB_TIPS.tempo_medio_venda} />
         </div>
       </div>
 
       <div>
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Compradores</div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <KpiTile label="Total compradores" value={totalBuy} loading={v2.isLoading} />
-          <KpiTile label="Aguardando" value={getBuy("aguardando")} accent="warning" loading={v2.isLoading} />
-          <KpiTile label="Em negociação" value={getBuy("em_negociacao")} accent="primary" loading={v2.isLoading} />
-          <KpiTile label="Mandatos exclusivos" value={`${exclusivos} (${exclusivosPct}%)`} accent="success" loading={mandates.isLoading} />
-          <KpiTile label="Tempo médio compra" value={v2.data?.avg_months_buyside ? `${v2.data.avg_months_buyside}m` : "—"} loading={v2.isLoading} />
+          <KpiTile label="Total compradores" value={totalBuy} loading={v2.isLoading} info={EB_TIPS.total_compradores} />
+          <KpiTile label="Aguardando" value={getBuy("aguardando")} accent="warning" loading={v2.isLoading} info={EB_TIPS.buy_aguardando} />
+          <KpiTile label="Em negociação" value={getBuy("em_negociacao")} accent="primary" loading={v2.isLoading} info={EB_TIPS.buy_em_negociacao} />
+          <KpiTile label="Mandatos exclusivos" value={`${exclusivos} (${exclusivosPct}%)`} accent="success" loading={mandates.isLoading} info={EB_TIPS.mandatos_exclusivos} />
+          <KpiTile label="Tempo médio compra" value={v2.data?.avg_months_buyside ? `${v2.data.avg_months_buyside}m` : "—"} loading={v2.isLoading} info={EB_TIPS.tempo_medio_compra} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <ChartCard title="Status dos mandatos">
+        <ChartCard title="Status dos mandatos" info={EB_TIPS.status_mandatos_chart}>
           <DonutChart
             data={mandStatus.map((r) => ({ name: OUTCOME_LABEL[r.status] || r.status, value: Number(r.qty || 0) }))}
             colors={mandStatus.map((r) => OUTCOME_COLOR[r.status] || "#71717a")}
           />
         </ChartCard>
-        <ChartCard title="Status dos compradores">
+        <ChartCard title="Status dos compradores" info={EB_TIPS.status_compradores_chart}>
           <DonutChart
             data={buyStatus.map((r) => ({ name: BUYER_ENGAGEMENT_LABEL[r.status] || r.status, value: Number(r.qty || 0) }))}
             colors={buyStatus.map((r) => BUYER_ENGAGEMENT_COLOR[r.status] || "#71717a")}
           />
         </ChartCard>
-        <ChartCard title="Mandatos exclusivos">
+        <ChartCard title="Mandatos exclusivos" info={EB_TIPS.exclusividade_donut}>
           <DonutChart
             data={[{ name: "Sim", value: exclusivos }, { name: "Não", value: mandList.length - exclusivos }]}
             colors={["#10b981", "#ef4444"]}
@@ -135,9 +136,9 @@ export function MatchAnalyticsContent() {
           <p className="text-xs text-zinc-500 mt-1">Cruzamento Mandatos (oferta) × Compradores (demanda)</p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <CrossChart title="Match por estado" data={crossUF} />
-          <CrossChart title="Match por região" data={crossRegiao} />
-          <CrossChart title="Match por setor" data={crossSetor} />
+          <CrossChart title="Match por estado" data={crossUF} info={EB_TIPS.match_estado} />
+          <CrossChart title="Match por região" data={crossRegiao} info={EB_TIPS.match_regiao} />
+          <CrossChart title="Match por setor" data={crossSetor} info={EB_TIPS.match_setor} />
         </div>
       </div>
 
@@ -180,9 +181,9 @@ function aggregateByLabel(arr: { label: string; Mandatos: number; Compradores: n
   return Array.from(m.values()).sort((a, b) => b.Mandatos + b.Compradores - (a.Mandatos + a.Compradores));
 }
 
-function CrossChart({ title, data }: { title: string; data: { label: string; Mandatos: number; Compradores: number }[] }) {
+function CrossChart({ title, data, info }: { title: string; data: { label: string; Mandatos: number; Compradores: number }[]; info?: any }) {
   return (
-    <ChartCard title={title}>
+    <ChartCard title={title} info={info}>
       {data.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data}>

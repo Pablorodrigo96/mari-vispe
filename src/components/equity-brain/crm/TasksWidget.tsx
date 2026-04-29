@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Check, X, Plus, Loader2, ListTodo } from "lucide-react";
 import { useCrmTasks, useUpdateTaskStatus, useCreateTask } from "@/hooks/useCrmTasks";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
+import { EB_TIPS } from "@/lib/ebTooltips";
 import { cn } from "@/lib/utils";
 
 export function TasksWidget({ entity_type, entity_id, compact }: { entity_type?: "mandate" | "buyer"; entity_id?: string; compact?: boolean }) {
@@ -26,6 +28,7 @@ export function TasksWidget({ entity_type, entity_id, compact }: { entity_type?:
           <ListTodo className="h-4 w-4 text-emerald-400" />
           <h3 className="text-sm font-semibold text-zinc-100">Tarefas {compact ? "" : "abertas"}</h3>
           <span className="text-[10px] text-zinc-500">{open.length}</span>
+          <InfoHint {...EB_TIPS.tarefas_abertas} />
         </div>
         <button
           onClick={() => setAdding(a => !a)}

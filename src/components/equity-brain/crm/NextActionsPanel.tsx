@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Sparkles, RefreshCw, MessageCircle, Eye, Plus, Loader2 } from "lucide-react";
 import { useMariSuggestions, type MariSuggestion } from "@/hooks/useMariSuggestions";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
+import { EB_TIPS } from "@/lib/ebTooltips";
 import { cn } from "@/lib/utils";
 
 const priorityCls: Record<string, string> = {
@@ -30,6 +32,7 @@ export function NextActionsPanel() {
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-emerald-400" />
           <h2 className="text-sm font-semibold text-zinc-100">Próximas ações sugeridas pela Mari</h2>
+          <InfoHint {...EB_TIPS.proximas_acoes_mari} />
         </div>
         <button
           onClick={() => refresh()}

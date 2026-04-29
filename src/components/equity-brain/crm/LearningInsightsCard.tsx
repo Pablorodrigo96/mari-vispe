@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Brain, TrendingUp, TrendingDown } from "lucide-react";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
+import { EB_TIPS } from "@/lib/ebTooltips";
 
 /**
  * Mostra como o Equity Brain v2 está aprendendo sobre este buyer:
@@ -42,6 +44,7 @@ export function LearningInsightsCard({ buyerId }: { buyerId: string }) {
       <div className="flex items-center gap-2">
         <Brain className="h-4 w-4 text-emerald-400" />
         <h3 className="text-sm font-bold text-zinc-100">Como o Mari está aprendendo sobre este buyer</h3>
+        <InfoHint {...EB_TIPS.como_motor_aprende} />
       </div>
 
       {top.length > 0 && (
