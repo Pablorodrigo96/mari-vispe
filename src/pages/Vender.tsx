@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { Footer } from '@/components/layout/Footer';
 import NewListingWizard from '@/components/sell/wizard/NewListingWizard';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Vender = () => {
