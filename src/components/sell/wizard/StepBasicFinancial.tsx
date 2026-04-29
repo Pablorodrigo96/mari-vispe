@@ -116,6 +116,8 @@ const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
             idade_anos: company.idade_anos,
             cnae_principal_descricao: company.cnae_principal_descricao,
             situacao: company.situacao,
+            socios: company.socios,
+            regime_tributario: company.regime_tributario,
           });
 
           const name = company.nome_fantasia || company.razao_social;
