@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChevronRight, Send, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBuyerMatches, useMandateMatches, useLogActivity } from "@/hooks/useCrm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { QualificationBadge } from "./QualificationBadge";
+import { QualifyLeadButton } from "./QualifyLeadButton";
+import { ExpandRFBDialog } from "./ExpandRFBDialog";
 
-type Mode = { type: "buyer"; buyerId: string } | { type: "mandate"; cnpj: string; mandateId: string };
+type Mode =
+  | { type: "buyer"; buyerId: string; buyerSetores?: string[]; buyerUfs?: string[] }
+  | { type: "mandate"; cnpj: string; mandateId: string };
+
+type Filter = "qualified" | "all" | "rfb";
 
 /**
  * Lista ranqueada de matches com drawer SHAP-like de explicabilidade.
@@ -12,10 +19,31 @@ type Mode = { type: "buyer"; buyerId: string } | { type: "mandate"; cnpj: string
 export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: string }) {
   const buyerQ = useBuyerMatches(mode.type === "buyer" ? mode.buyerId : undefined);
   const mandateQ = useMandateMatches(mode.type === "mandate" ? mode.cnpj : undefined);
-  const items = (mode.type === "buyer" ? buyerQ.data : mandateQ.data) ?? [];
+  const allItems = (mode.type === "buyer" ? buyerQ.data : mandateQ.data) ?? [];
   const isLoading = mode.type === "buyer" ? buyerQ.isLoading : mandateQ.isLoading;
+  const refetch = mode.type === "buyer" ? buyerQ.refetch : mandateQ.refetch;
   const log = useLogActivity();
   const [selected, setSelected] = useState<any | null>(null);
+  const [filter, setFilter] = useState<Filter>("qualified");
+
+  // Quando modo=buyer, contraparte é company; quando modo=mandate, contraparte é buyer
+  const counterpartType: "company" | "buyer" = mode.type === "buyer" ? "company" : "buyer";
+  const getQual = (m: any) => m.qualification_status as string | undefined;
+  const getCounterpartId = (m: any): string =>
+    counterpartType === "company" ? (m.cnpj ?? "") : (m.buyer_id ?? "");
+  const isFromRfb = (m: any) => (m.source ?? "") === "rfb_expand";
+
+  const counts = useMemo(() => ({
+    qualified: allItems.filter((m: any) => getQual(m) === "qualified").length,
+    all: allItems.length,
+    rfb: allItems.filter(isFromRfb).length,
+  }), [allItems]);
+
+  const items = useMemo(() => {
+    if (filter === "qualified") return allItems.filter((m: any) => getQual(m) === "qualified");
+    if (filter === "rfb") return allItems.filter(isFromRfb);
+    return allItems;
+  }, [allItems, filter]);
 
   function actDismiss(m: any) {
     log.mutate({
@@ -48,56 +76,105 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
     });
   }
 
-  if (isLoading) return <div className="p-4 text-xs text-zinc-400">Carregando matches…</div>;
-  if (items.length === 0) return <div className="p-4 text-xs text-zinc-400">Nenhum match disponível ainda.</div>;
+  const Toolbar = (
+    <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+      <div className="flex items-center gap-1 bg-zinc-900/60 border border-zinc-800 rounded p-0.5">
+        {([
+          { k: "qualified", label: `Qualificados (${counts.qualified})` },
+          { k: "all", label: `Todos (${counts.all})` },
+          { k: "rfb", label: `Base RFB (${counts.rfb})` },
+        ] as { k: Filter; label: string }[]).map((t) => (
+          <button key={t.k} onClick={() => setFilter(t.k)}
+            className={`text-[11px] px-2.5 py-1 rounded transition-colors ${
+              filter === t.k ? "bg-emerald-600 text-zinc-950 font-medium" : "text-zinc-400 hover:text-zinc-100"
+            }`}>{t.label}</button>
+        ))}
+      </div>
+      {mode.type === "buyer" && (
+        <ExpandRFBDialog
+          buyerId={mode.buyerId}
+          defaultSetores={mode.buyerSetores}
+          defaultUfs={mode.buyerUfs}
+          onCompleted={() => refetch?.()}
+        />
+      )}
+    </div>
+  );
+
+  if (isLoading) return <>{Toolbar}<div className="p-4 text-xs text-zinc-400">Carregando matches…</div></>;
 
   return (
     <>
-      <div className="space-y-2">
-        {items.slice(0, 25).map((m: any) => {
-          const score = Number(m.match_score ?? 0);
-          const scorePct = Math.round(score * 100);
-          const accent =
-            score >= 0.8 ? "text-emerald-300 border-emerald-700/60 bg-emerald-950/30"
-              : score >= 0.6 ? "text-amber-300 border-amber-700/60 bg-amber-950/20"
-              : "text-zinc-300 border-zinc-700/60 bg-zinc-900/40";
-          return (
-            <div key={m.id} className="flex items-center gap-3 p-3 border border-zinc-800 bg-zinc-900/40 rounded">
-              <div className={`text-xs font-bold px-2 py-1 rounded border ${accent}`}>{scorePct}%</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm text-zinc-100 break-words font-medium">
-                  {m.razao_social ?? m.buyer_name ?? m.cnpj ?? "—"}
+      {Toolbar}
+      {items.length === 0 ? (
+        <div className="p-4 text-xs text-zinc-400 border border-dashed border-zinc-800 rounded">
+          Nenhum match {filter === "qualified" ? "qualificado" : filter === "rfb" ? "vindo da Base RFB" : ""} disponível ainda.
+          {mode.type === "buyer" && filter !== "rfb" && (
+            <span className="block mt-1 text-zinc-500">Use o botão "Expandir busca na Base RFB" para importar prospects.</span>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.slice(0, 25).map((m: any) => {
+            const score = Number(m.match_score ?? 0);
+            const scorePct = Math.round(score * 100);
+            const accent =
+              score >= 0.8 ? "text-emerald-300 border-emerald-700/60 bg-emerald-950/30"
+                : score >= 0.6 ? "text-amber-300 border-amber-700/60 bg-amber-950/20"
+                : "text-zinc-300 border-zinc-700/60 bg-zinc-900/40";
+            const qual = getQual(m);
+            const counterpartId = getCounterpartId(m);
+            return (
+              <div key={m.id} className="flex items-center gap-3 p-3 border border-zinc-800 bg-zinc-900/40 rounded">
+                <div className={`text-xs font-bold px-2 py-1 rounded border ${accent}`}>{scorePct}%</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="text-sm text-zinc-100 break-words font-medium">
+                      {m.razao_social ?? m.buyer_name ?? m.cnpj ?? "—"}
+                    </div>
+                    <QualificationBadge status={qual} size="xs" />
+                    {isFromRfb(m) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded border border-zinc-700 bg-zinc-900 text-zinc-400">RFB</span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-zinc-400 break-words">
+                    {[m.uf, m.setor_ma, m.ticket_band].filter(Boolean).join(" · ") || "—"}
+                  </div>
                 </div>
-                <div className="text-[11px] text-zinc-400 break-words">
-                  {[m.uf, m.setor_ma, m.ticket_band].filter(Boolean).join(" · ") || "—"}
+                <div className="flex items-center gap-1">
+                  {qual === "unqualified" && counterpartId && (
+                    <QualifyLeadButton
+                      entityType={counterpartType}
+                      entityId={counterpartId}
+                      onQualified={() => refetch?.()}
+                    />
+                  )}
+                  <Button size="sm" variant="outline"
+                    className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                    onClick={() => actMarkInterest(m)}>
+                    <Star className="h-3 w-3 mr-1" /> Interesse
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                    onClick={() => actSendTeaser(m)}>
+                    <Send className="h-3 w-3 mr-1" /> Teaser
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    className="h-7 bg-transparent border-zinc-700 text-zinc-400 hover:text-rose-300 hover:bg-zinc-800"
+                    onClick={() => actDismiss(m)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                    onClick={() => setSelected(m)}>
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <Button size="sm" variant="outline"
-                  className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
-                  onClick={() => actMarkInterest(m)}>
-                  <Star className="h-3 w-3 mr-1" /> Interesse
-                </Button>
-                <Button size="sm" variant="outline"
-                  className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
-                  onClick={() => actSendTeaser(m)}>
-                  <Send className="h-3 w-3 mr-1" /> Teaser
-                </Button>
-                <Button size="sm" variant="outline"
-                  className="h-7 bg-transparent border-zinc-700 text-zinc-400 hover:text-rose-300 hover:bg-zinc-800"
-                  onClick={() => actDismiss(m)}>
-                  <X className="h-3 w-3" />
-                </Button>
-                <Button size="sm" variant="outline"
-                  className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
-                  onClick={() => setSelected(m)}>
-                  <ChevronRight className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent className="bg-zinc-950 border-zinc-800 text-zinc-100 w-[420px]">
