@@ -113,7 +113,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         </Link>
         <button
           onClick={onToggleCollapse}
-          className="text-muted-foreground hover:text-foreground p-1 rounded hidden lg:block"
+          className="text-zinc-300 hover:text-foreground p-1 rounded hidden lg:block"
           aria-label="Colapsar menu"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -135,7 +135,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 title={g.name}
                 className={cn(
                   'flex items-center justify-center h-10 my-1 rounded-lg transition-colors',
-                  isGroupActive ? 'bg-accent/15 text-accent' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  isGroupActive ? 'bg-accent/15 text-accent' : 'text-zinc-300 hover:bg-muted hover:text-foreground'
                 )}
               >
                 <g.icon className="h-4 w-4" />
@@ -149,7 +149,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 onClick={() => toggle(g.id)}
                 className={cn(
                   'w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors',
-                  isGroupActive ? 'text-accent' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  isGroupActive ? 'text-accent' : 'text-zinc-300 hover:text-foreground hover:bg-muted/50'
                 )}
               >
                 <span className="flex items-center gap-2">
@@ -170,7 +170,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                             'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors',
                             isActive
                               ? 'bg-accent/15 text-accent font-medium'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                              : 'text-zinc-300 hover:text-foreground hover:bg-muted'
                           )}
                         >
                           <c.icon className="h-3.5 w-3.5" />
@@ -199,7 +199,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 <li>
                   <Link
                     to="/admin"
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-zinc-300 hover:text-foreground hover:bg-muted"
                   >
                     <Shield className="h-3.5 w-3.5" />
                     Admin
@@ -221,7 +221,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         {(eff.isAdmin || eff.isAdvisor) && collapsed && (
           <div className="mt-3 pt-3 border-t border-border space-y-1">
             {eff.isAdmin && (
-              <Link to="/admin" title="Admin" className="flex items-center justify-center h-10 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
+              <Link to="/admin" title="Admin" className="flex items-center justify-center h-10 rounded-lg text-zinc-300 hover:bg-muted hover:text-foreground">
                 <Shield className="h-4 w-4" />
               </Link>
             )}
@@ -237,7 +237,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
             <Avatar className="h-8 w-8"><AvatarFallback className="bg-accent text-accent-foreground text-xs">{userInitials}</AvatarFallback></Avatar>
-            <button onClick={handleSignOut} title="Sair" className="text-muted-foreground hover:text-destructive">
+            <button onClick={handleSignOut} title="Sair" className="text-zinc-300 hover:text-destructive">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -247,10 +247,10 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
               <Avatar className="h-8 w-8"><AvatarFallback className="bg-accent text-accent-foreground text-xs">{userInitials}</AvatarFallback></Avatar>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
-                <p className="text-[10px] text-muted-foreground">Meu perfil</p>
+                <p className="text-[10px] text-zinc-400">Meu perfil</p>
               </div>
             </Link>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start mt-1 text-muted-foreground hover:text-destructive">
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start mt-1 text-zinc-300 hover:text-destructive">
               <LogOut className="h-3.5 w-3.5 mr-2" />Sair
             </Button>
           </>
