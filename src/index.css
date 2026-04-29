@@ -266,3 +266,105 @@
 .animate-float {
   animation: float 6s ease-in-out infinite;
 }
+
+/* ============================================================
+   PALETTE GUARD — mari brand uses ONLY Carbon/Volt/Graphite/Bone.
+   The codebase has many legacy `emerald-*` and `green-*` classes
+   (from the previous PME.B3 identity) used as brand accents.
+   Instead of touching ~80 component files, we redirect those
+   classes to the Volt palette via CSS overrides. Real semantic
+   "success" states should use the `--success` token / `success-*`
+   utilities, not emerald.
+   Light Volt = #D9F564 (74 84% 68%)
+   Volt-deep  = ~#A4C234 (74 70% 38%)  — for legible text on light bg
+   ============================================================ */
+@layer utilities {
+  /* TEXT — bright Volt is unreadable on light bg, so use volt-deep */
+  .text-emerald-50,
+  .text-emerald-100,
+  .text-emerald-200,
+  .text-emerald-300,
+  .text-emerald-400,
+  .text-green-300,
+  .text-green-400 { color: hsl(74 84% 78%) !important; }
+
+  .text-emerald-500,
+  .text-emerald-600,
+  .text-emerald-700,
+  .text-emerald-800,
+  .text-emerald-900,
+  .text-green-500,
+  .text-green-600,
+  .text-green-700,
+  .text-green-800 { color: hsl(74 70% 38%) !important; }
+
+  /* On dark surfaces these classes are usually paired with dark cards;
+     bright Volt reads well there — handled via .dark override below. */
+
+  /* BACKGROUNDS */
+  .bg-emerald-50, .bg-green-50      { background-color: hsl(74 84% 96%) !important; }
+  .bg-emerald-100, .bg-green-100    { background-color: hsl(74 84% 90%) !important; }
+  .bg-emerald-200, .bg-green-200    { background-color: hsl(74 84% 82%) !important; }
+  .bg-emerald-300, .bg-green-300,
+  .bg-emerald-400, .bg-green-400    { background-color: hsl(74 84% 72%) !important; }
+  .bg-emerald-500, .bg-green-500,
+  .bg-emerald-600, .bg-green-600,
+  .bg-emerald-700, .bg-green-700,
+  .bg-emerald-800, .bg-green-800,
+  .bg-emerald-900, .bg-green-900    { background-color: hsl(74 84% 68%) !important; color: hsl(0 0% 4%) !important; }
+
+  /* Tinted backgrounds with alpha (e.g. bg-emerald-500/10) */
+  [class*="bg-emerald-"][class*="/5"],
+  [class*="bg-green-"][class*="/5"]    { background-color: hsla(74, 84%, 68%, 0.05) !important; }
+  [class*="bg-emerald-"][class*="/10"],
+  [class*="bg-green-"][class*="/10"]   { background-color: hsla(74, 84%, 68%, 0.10) !important; }
+  [class*="bg-emerald-"][class*="/15"],
+  [class*="bg-green-"][class*="/15"]   { background-color: hsla(74, 84%, 68%, 0.15) !important; }
+  [class*="bg-emerald-"][class*="/20"],
+  [class*="bg-green-"][class*="/20"]   { background-color: hsla(74, 84%, 68%, 0.20) !important; }
+  [class*="bg-emerald-"][class*="/30"],
+  [class*="bg-green-"][class*="/30"]   { background-color: hsla(74, 84%, 68%, 0.30) !important; }
+  [class*="bg-emerald-"][class*="/40"],
+  [class*="bg-green-"][class*="/40"]   { background-color: hsla(74, 84%, 68%, 0.40) !important; }
+
+  /* BORDERS */
+  .border-emerald-50, .border-emerald-100, .border-emerald-200,
+  .border-emerald-300, .border-emerald-400,
+  .border-green-200, .border-green-300, .border-green-400 { border-color: hsl(74 84% 78%) !important; }
+
+  .border-emerald-500, .border-emerald-600, .border-emerald-700,
+  .border-emerald-800, .border-emerald-900,
+  .border-green-500, .border-green-600, .border-green-700 { border-color: hsl(74 70% 45%) !important; }
+
+  [class*="border-emerald-"][class*="/10"],
+  [class*="border-green-"][class*="/10"]   { border-color: hsla(74, 70%, 45%, 0.10) !important; }
+  [class*="border-emerald-"][class*="/20"],
+  [class*="border-green-"][class*="/20"]   { border-color: hsla(74, 70%, 45%, 0.20) !important; }
+  [class*="border-emerald-"][class*="/30"],
+  [class*="border-green-"][class*="/30"]   { border-color: hsla(74, 70%, 45%, 0.30) !important; }
+  [class*="border-emerald-"][class*="/40"],
+  [class*="border-emerald-"][class*="/50"],
+  [class*="border-emerald-"][class*="/60"],
+  [class*="border-green-"][class*="/40"],
+  [class*="border-green-"][class*="/50"]   { border-color: hsla(74, 70%, 45%, 0.50) !important; }
+
+  /* GRADIENTS — from-/to-/via- emerald → volt */
+  [class*="from-emerald-"], [class*="from-green-"]   { --tw-gradient-from: hsl(74 84% 68%) !important; --tw-gradient-to: hsla(74, 84%, 68%, 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+  [class*="to-emerald-"], [class*="to-green-"]       { --tw-gradient-to: hsl(74 84% 78%) !important; }
+  [class*="via-emerald-"], [class*="via-green-"]     { --tw-gradient-stops: var(--tw-gradient-from), hsl(74 84% 72%), var(--tw-gradient-to, hsla(74, 84%, 68%, 0)) !important; }
+
+  /* RING */
+  [class*="ring-emerald-"], [class*="ring-green-"]   { --tw-ring-color: hsl(74 84% 68%) !important; }
+}
+
+/* On dark surfaces, restore bright Volt for text — it has plenty of contrast. */
+.dark .text-emerald-300,
+.dark .text-emerald-400,
+.dark .text-emerald-500,
+.dark .text-emerald-600,
+.dark .text-emerald-700,
+.dark .text-green-300,
+.dark .text-green-400,
+.dark .text-green-500,
+.dark .text-green-600 { color: hsl(74 84% 68%) !important; }
+

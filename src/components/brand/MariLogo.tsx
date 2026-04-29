@@ -1,107 +1,93 @@
 import { cn } from '@/lib/utils';
+import lockupDark from '@/assets/mari-lockup-dark.png';
+import lockupLight from '@/assets/mari-lockup-light.png';
+import lockupTaglineLight from '@/assets/mari-lockup-tagline-light.png';
+import lockupVoltOnDark from '@/assets/mari-lockup-volt-on-dark.png';
+import symbolVolt from '@/assets/mari-symbol-volt.png';
+import symbolCarbon from '@/assets/mari-symbol-carbon.png';
 
 export type MariLogoVariant =
-  | 'dark'          // light wordmark for dark backgrounds, volt symbol
-  | 'light'         // dark wordmark for light backgrounds, carbon symbol
-  | 'volt'          // dark wordmark for volt backgrounds, carbon symbol
-  | 'symbol-dark'   // volt symbol only
-  | 'symbol-light'  // carbon symbol only
-  | 'symbol-volt';  // carbon symbol only (on volt bg)
+  | 'dark'           // horizontal lockup with volt symbol + bone wordmark — for carbon/black bg
+  | 'light'          // horizontal lockup all carbon — for bone/white bg
+  | 'tagline-light'  // lockup with "designed forward" tagline, all carbon — for light bg
+  | 'volt'           // lockup variant with volt symbol + faint wordmark — alt for dark bg
+  | 'symbol-dark'    // symbol only, volt — for dark bg
+  | 'symbol-light';  // symbol only, carbon — for light bg
 
 interface MariLogoProps {
   variant?: MariLogoVariant;
-  /** Height in px for full lockup, or square size for symbol-only. */
+  /** Height in pixels for full lockup, or square size for symbol variants. */
   size?: number;
   className?: string;
+  /** Force symbol-only render (defaults true for `symbol-*` variants). */
   symbolOnly?: boolean;
-  /** Show "designed forward" tagline under the wordmark */
-  withTagline?: boolean;
 }
 
+const LOCKUP: Record<'dark' | 'light' | 'tagline-light' | 'volt', string> = {
+  dark: lockupDark,
+  light: lockupLight,
+  'tagline-light': lockupTaglineLight,
+  volt: lockupVoltOnDark,
+};
+
+const SYMBOL: Record<'symbol-dark' | 'symbol-light', string> = {
+  'symbol-dark': symbolVolt,
+  'symbol-light': symbolCarbon,
+};
+
 /**
- * mari brand mark — vector, transparent background, theme-aware.
- * The symbol uses an organic donut (outer ring + central pupil dot) and the
- * wordmark is set in Inter Tight to match the brand reference.
+ * mari brand mark — uses the official transparent PNG assets.
+ * Pick the variant that matches the surface:
+ *   - `dark` / `volt` / `symbol-dark` → carbon/black backgrounds
+ *   - `light` / `tagline-light` / `symbol-light` → bone/white backgrounds
  */
 export function MariLogo({
   variant = 'dark',
   size = 32,
   className,
   symbolOnly,
-  withTagline = false,
 }: MariLogoProps) {
-  const isSymbolVariant = variant.startsWith('symbol');
+  const isSymbolVariant = variant === 'symbol-dark' || variant === 'symbol-light';
   const showSymbolOnly = symbolOnly ?? isSymbolVariant;
 
-  // Resolve colors per variant
-  const symbolColor =
-    variant === 'dark' || variant === 'symbol-dark'
-      ? 'text-volt'
-      : 'text-carbon';
-
-  const wordColor =
-    variant === 'dark' ? 'text-bone' : 'text-carbon';
-
-  const taglineColor =
-    variant === 'dark' ? 'text-bone/60' : 'text-carbon/60';
-
-  const Symbol = (
-    <svg
-      viewBox="0 0 200 200"
-      width={size}
-      height={size}
-      className={cn('shrink-0', symbolColor)}
-      fill="currentColor"
-      aria-hidden={!showSymbolOnly}
-    >
-      <path
-        fillRule="evenodd"
-        d="M100 14C148 14 188 52 188 100C188 152 152 188 102 188C50 188 12 150 12 100C12 50 50 14 100 14ZM100 60C78 60 60 78 60 100C60 122 78 140 100 140C122 140 140 122 140 100C140 78 122 60 100 60Z"
-      />
-      <circle cx="100" cy="100" r="6" />
-    </svg>
-  );
-
   if (showSymbolOnly) {
+    const key: 'symbol-dark' | 'symbol-light' = isSymbolVariant
+      ? (variant as 'symbol-dark' | 'symbol-light')
+      : variant === 'light' || variant === 'tagline-light'
+        ? 'symbol-light'
+        : 'symbol-dark';
     return (
-      <span
-        className={cn('inline-flex items-center justify-center', className)}
-        aria-label="mari"
-      >
-        {Symbol}
-      </span>
+      <img
+        src={SYMBOL[key]}
+        alt="mari"
+        width={size}
+        height={size}
+        className={cn('block object-contain shrink-0', className)}
+        style={{ width: size, height: size }}
+      />
     );
   }
 
+  const lockupKey: 'dark' | 'light' | 'tagline-light' | 'volt' =
+    variant === 'symbol-dark'
+      ? 'dark'
+      : variant === 'symbol-light'
+        ? 'light'
+        : variant;
+
   return (
-    <span
-      className={cn('inline-flex items-center gap-2', className)}
-      aria-label="mari — designed forward"
-    >
-      {Symbol}
-      <span className="flex flex-col leading-none">
-        <span
-          className={cn('font-display font-bold tracking-tight', wordColor)}
-          style={{ fontSize: size * 0.78, lineHeight: 1 }}
-        >
-          mari
-        </span>
-        {withTagline && (
-          <span
-            className={cn('font-sans tracking-[0.15em] uppercase mt-1', taglineColor)}
-            style={{ fontSize: Math.max(size * 0.18, 8) }}
-          >
-            designed forward
-          </span>
-        )}
-      </span>
-    </span>
+    <img
+      src={LOCKUP[lockupKey]}
+      alt="mari — designed forward"
+      className={cn('block object-contain shrink-0', className)}
+      style={{ height: size, width: 'auto' }}
+    />
   );
 }
 
 /**
  * Oversized decorative symbol used as a magazine-cover style watermark.
- * Pin to a corner with absolute positioning + low opacity.
+ * Renders the official PNG with low opacity, pinned via absolute positioning.
  */
 export function MariWatermark({
   className,
@@ -109,24 +95,17 @@ export function MariWatermark({
   opacity = 0.06,
 }: {
   className?: string;
-  color?: 'volt' | 'carbon' | 'bone';
+  color?: 'volt' | 'carbon';
   opacity?: number;
 }) {
-  const colorClass =
-    color === 'volt' ? 'text-volt' : color === 'bone' ? 'text-bone' : 'text-carbon';
+  const src = color === 'volt' ? symbolVolt : symbolCarbon;
   return (
-    <svg
-      viewBox="0 0 200 200"
-      className={cn('pointer-events-none select-none', colorClass, className)}
-      fill="currentColor"
-      style={{ opacity }}
+    <img
+      src={src}
+      alt=""
       aria-hidden="true"
-    >
-      <path
-        fillRule="evenodd"
-        d="M100 14C148 14 188 52 188 100C188 152 152 188 102 188C50 188 12 150 12 100C12 50 50 14 100 14ZM100 60C78 60 60 78 60 100C60 122 78 140 100 140C122 140 140 122 140 100C140 78 122 60 100 60Z"
-      />
-      <circle cx="100" cy="100" r="6" />
-    </svg>
+      className={cn('pointer-events-none select-none object-contain', className)}
+      style={{ opacity }}
+    />
   );
 }
