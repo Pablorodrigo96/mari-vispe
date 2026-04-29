@@ -1,146 +1,87 @@
-## Mari Brain — IA Global Especialista em M&A + Plataforma
+## Problema
 
-Hoje a "Mari" é um copiloto contextual restrito a um mandato/buyer. Vou expandi-la para uma **IA global de plataforma** — sempre acessível, com base de conhecimento curada (premissas, fontes de dados, indicadores, playbooks) **+** contexto vivo do usuário (matches, pipeline, mandatos, metas) **+** expertise sênior em M&A.
+Hoje a Match Inbox lista 4.300+ pares vendedor↔comprador, mas é uma **lista morta**:
 
-### O que ela vai saber responder
+- Os textos do Vendedor e do Comprador **não são links** — não dá pra clicar e abrir o 360.
+- Os botões de **WhatsApp / telefone / e-mail estão quebrados**: usam fallback fixo, `tel:` e `mailto:` vazios. Nenhum contato real aparece.
+- **Identidade fica cega** mesmo para advisor/admin (só razão social mascarada/codename) — o `IdentityRevealCard` só existe nas páginas internas de Mandato e Buyer.
+- Sem mandato, **não há CTA "Criar mandato a partir do match"** — o advisor vê o par quente mas não tem como começar a trabalhar.
+- Sem **detalhe rápido** (SHAP, fits, último contato, observações) → advisor não consegue decidir o que fazer só pela linha.
 
-1. **Plataforma** — "onde vejo X?", "como funciona o score Z?", "por que esse buyer apareceu como match?", "como subir um mandato?", "o que preencher para o teaser ficar pronto?".
-2. **Premissas e fórmulas** — Equity Score, True Value vs Estimated vs Potential, percentis Hot/Warm do Match Inbox, SLA do pipeline, gating de disclosure, regras de blind teaser.
-3. **Dados** — qual tabela/view alimenta cada KPI, o que precisa ser preenchido para o número aparecer, o que significa cada coluna.
-4. **Interpretação** — leitura de gráficos (funil, drift v1↔v2, market waves, seller intent, equity gap, partnership performance, portfolio potential).
-5. **Operação de deal (M&A sênior)** — como acelerar, como destravar negociação parada, NDA/IOI/LOI, due diligence, working capital adjustment, earn-out, vendor financing, objeções comuns, ranges de múltiplos por setor.
-6. **Metas** — diagnóstico de pipeline do advisor logado vs metas, onde focar essa semana, quais matches priorizar, quais oportunidades estão congeladas.
+## Solução
 
-### Arquitetura
+Transformar cada linha em um "cartão de ação" e adicionar um drawer de detalhe que concentra contatos reais + razões do match + ações.
 
-```text
-┌─────────────────────────────────────────────────────┐
-│  MariBrainDrawer (global, atalho ⌘K / botão flutuante)
-│  - Chat com markdown + streaming                    │
-│  - Sugestões rápidas contextuais à rota atual       │
-│  - Histórico persistente por usuário                 │
-└──────────────────────┬──────────────────────────────┘
-                       │ supabase.functions.invoke("mari-brain")
-                       ▼
-┌─────────────────────────────────────────────────────┐
-│  Edge Function: mari-brain                          │
-│  1. Carrega knowledge base (curada, versionada)     │
-│  2. Carrega contexto do usuário (snapshot ao vivo): │
-│     - métricas pipeline, mandatos, matches hot,     │
-│       deals congelados, metas vs realizado           │
-│  3. Carrega contexto da rota (mandate/buyer/hub)    │
-│  4. Carrega histórico (últimas 20 mensagens)        │
-│  5. Tool calling: search_kb, get_mandate, get_buyer,│
-│     get_pipeline_snapshot, suggest_next_action      │
-│  6. Lovable AI Gateway (gemini-2.5-pro p/ raciocínio,│
-│     com streaming SSE)                              │
-└─────────────────────────────────────────────────────┘
-```
+### 1. Linhas clicáveis (MatchInboxRow)
 
-### Base de conhecimento (curada, não vetorizada nesta fase)
+- O bloco do **Vendedor** vira link para `/equity-brain/crm/mandate/:id` quando há mandato, ou `/equity-brain/empresa/:cnpj` caso contrário.
+- O bloco do **Comprador** vira link para `/equity-brain/crm/buyer/:id`.
+- Clicar em qualquer área "vazia" da linha (fora dos botões/links) abre o **MatchDetailDrawer** (lateral).
+- Botão "Abrir" passa a ter um menu suspenso: "Mandato · Empresa · Buyer · Detalhe do match".
 
-Arquivos markdown em `supabase/functions/mari-brain/kb/` carregados no system prompt. Estrutura:
+### 2. Identidade real inline (advisor/admin)
 
-- `01-plataforma.md` — visão geral, navegação, quem faz o quê.
-- `02-premissas-scores.md` — Equity Score, True Value, percentis match, SLA.
-- `03-fontes-de-dados.md` — tabela por KPI, o que preencher para aparecer.
-- `04-graficos-interpretacao.md` — leitura de funil, drift, waves, gap.
-- `05-pipeline-operacao.md` — etapas, transições, alertas SLA, histórico.
-- `06-mna-playbook.md` — NDA→IOI→LOI→DD→SPA, objeções, ranges múltiplos PME Brasil.
-- `07-aceleracao-deal.md` — táticas para destravar, scripts, gatilhos.
-- `08-metas-e-prioridades.md` — como ler o dashboard, metas semanais.
+- Reusar o hook `useIdentityVisibility({ cnpj })`. Quando `canSee=true`:
+  - Mostrar **razão social real** (no lugar do codename) com chip "Identidade revelada".
+  - Mostrar CNPJ formatado embaixo.
+- Quando `canSee=false`: mantém codename + chip "Cego" + botão "Solicitar abertura via Advisor" (já existe `RequestDisclosureDialog`).
+- Cada expansão grava `identity_reveal` em `equity_brain.access_logs` (já existe via `useTeaserAccessLog`).
 
-Versionado em git → fácil de evoluir. Tamanho total alvo: ~30–40k tokens (cabe no contexto do gemini-2.5-pro).
+### 3. Contatos reais (WhatsApp / telefone / email)
 
-### Schema (nova tabela de chat global)
+Hoje não existem `email/phone` em `equity_brain.buyers` nem em `companies` — vivem em `equity_brain.contacts` (`entity_type` + `entity_id`, com `telefone_e164`, `email`, `is_primary`, `whatsapp_opt_in`).
 
-```sql
-create table public.mari_brain_threads (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
-  title text,
-  route text,           -- onde a conversa começou
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
+- Novo hook `useMatchContacts(cnpj, buyerId)` que busca em paralelo:
+  - Contato primário do **buyer** (`entity_type='buyer'`, `entity_id=buyerId`, prioriza `is_primary=true`).
+  - Contato primário do **vendedor**: tenta `entity_type='company' / 'cnpj'` pelo CNPJ; se não houver, pega `mandates.contato_telefone/contato_email` (já existem no schema).
+- Botões da linha passam a usar valores reais:
+  - WhatsApp: `getWhatsAppLink(message, telefoneE164)` — já é o helper centralizado.
+  - `tel:` e `mailto:` recebem os valores reais; quando não há, ficam **disabled** com tooltip "Sem contato cadastrado · adicionar".
+- Se não houver contato algum, o botão WhatsApp abre um **modal "Adicionar contato rápido"** que insere em `equity_brain.contacts` direto (advisor/admin only, RLS já permite).
 
-create table public.mari_brain_messages (
-  id uuid primary key default gen_random_uuid(),
-  thread_id uuid not null references public.mari_brain_threads(id) on delete cascade,
-  user_id uuid not null,
-  role text not null check (role in ('user','assistant','system')),
-  content text not null,
-  tool_calls jsonb,
-  created_at timestamptz default now()
-);
+### 4. Criar mandato a partir do match
 
--- RLS: dono lê/escreve as próprias threads e mensagens. Admin lê tudo.
-```
+- Quando `mandate_id` é `null`, aparece botão **"Iniciar mandato"** (volt) na linha.
+- Clica → modal `QuickStartMandateDialog` (advisor/admin) que faz INSERT em `equity_brain.mandates` com:
+  - `company_cnpj`, `match_buyer_id` (do match), `comprador_nome` (do buyer), `setor` (da empresa), `uf`, `status='prospecting'`, `pipeline_stage='qualificacao'`, `responsavel_id = auth.uid()`.
+  - Loga `crm-log-activity` ("Mandato criado a partir do match #score").
+- Após sucesso, redireciona para `/equity-brain/crm/mandate/:novoId`.
 
-### UX
+### 5. MatchDetailDrawer (slide-over à direita)
 
-- **Botão flutuante Volt #D9F564** no canto inferior direito (todas as rotas autenticadas do EB), com ícone Sparkles e badge "IA".
-- **Atalho ⌘K / Ctrl+K** abre o drawer.
-- Drawer ocupa lateral direita (480px), contém:
-  - Header: "Mari Brain — Especialista em M&A"
-  - Lista de threads (sidebar interna colapsável)
-  - Stream de mensagens com markdown (`react-markdown` já no projeto? confirmar; se não, adicionar)
-  - Sugestões rápidas contextuais à rota:
-    - Em `/equity-brain/match-inbox`: "Quais matches priorizar hoje?"
-    - Em `/equity-brain/crm/mandate/:id`: "Por que esse deal está parado?", "Próxima ação?"
-    - Em `/equity-brain/dashboard`: "Como bater minha meta da semana?"
-- Respostas com botões de ação inline quando aplicável (ex: "Abrir mandato X", "Mover para etapa Y").
+Novo componente mostrando, em uma única tela:
 
-### Tool calling (contexto vivo)
+- Header com vendedor (link) ↔ comprador (link), score, tier (🔥/⚡/·) e percentil.
+- **Por que esse match?** — barras de `setor_fit`, `geografia_fit`, `porte_fit`, `tese_fit` + tese (`thesis_key`).
+- **Identidade real** (componente reusado, condicional ao `eb_can_view_identity`).
+- **Contatos** (lista com botões WA/tel/email para cada contato).
+- **Atividade recente** do mandato (se existir) — reusa `ActivityTimeline` filtrando últimos 5.
+- Ações no rodapé: "Abrir mandato", "Abrir buyer", "Iniciar mandato" (se faltar), "Marcar como contatado" (insere atividade `match_contacted` via `crm-log-activity`), "Snooze 7d" (insere `match_snoozed_until` em uma nova coluna ou em `notas`).
 
-A edge function expõe ao modelo:
-- `get_user_pipeline_snapshot()` — KPIs, contagem por etapa, deals congelados (>SLA).
-- `get_mandate(id)` — dados + atividades recentes + matches.
-- `get_buyer(id)` — perfil + matches + tese.
-- `get_top_matches(limit)` — top da fila do advisor.
-- `search_knowledge_base(query)` — keyword search nos .md curados.
+### 6. Acessibilidade & feedback
 
-### Modelos
+- Loading skeletons na linha enquanto contatos carregam (não bloqueia render principal).
+- Toast em todas as ações (`sonner`).
+- Tooltip nos botões disabled explicando o motivo.
 
-- **Default:** `google/gemini-2.5-pro` com `reasoning.effort: "medium"` — melhor para raciocínio M&A + contexto longo.
-- **Fallback rápido (chats curtos):** `google/gemini-3-flash-preview`.
-- Streaming SSE token a token.
+## Detalhes técnicos
 
-### Detalhes técnicos
+**Arquivos a criar**
+- `src/hooks/useMatchContacts.ts` — busca contatos primários de buyer + vendedor.
+- `src/components/equity-brain/match/MatchDetailDrawer.tsx` — slide-over com SHAP/contatos/ações.
+- `src/components/equity-brain/match/QuickStartMandateDialog.tsx` — criar mandato a partir do match.
+- `src/components/equity-brain/match/AddContactDialog.tsx` — inserir contato rápido em `equity_brain.contacts`.
 
-- Reaproveitar padrão SSE do guia `connecting-to-ai-models`.
-- `verify_jwt = true` (usa auth.uid para RLS e personalização).
-- Tratar 429 (rate limit) e 402 (créditos) com toast claro.
-- Adicionar `react-markdown` se ainda não estiver instalado.
-- Persistir thread + mensagens; permitir usuário criar nova thread, renomear, deletar.
-- Snapshot de contexto vivo é regenerado a cada mensagem (não cacheado) — garante respostas atualizadas.
+**Arquivos a editar**
+- `src/components/equity-brain/match/MatchInboxRow.tsx` — links clicáveis, identidade condicional, contatos reais, CTA "Iniciar mandato", abrir drawer.
+- `src/pages/equity-brain/MatchInboxPage.tsx` — gerenciar estado do drawer e do dialog.
+- `src/hooks/useMatchInbox.ts` — incluir `mandate_id` no select já existe; adicionar `match_snoozed_until` se sair migration.
 
-### Memória de projeto
+**Migration (opcional, leve)**
+- Adicionar coluna `snoozed_until timestamptz null` em `equity_brain.matches` para permitir snooze por advisor; filtrar `snoozed_until is null OR snoozed_until < now()` na inbox.
 
-Salvar `mem://features/mari-brain-global` documentando: arquitetura, KB versionada, tool calls disponíveis, atalhos.
+**Sem mudança de RLS** — `equity_brain.contacts`, `mandates` e `matches` já têm policies de admin/advisor. `eb_can_view_identity` continua como guarda única para identidade.
 
-### Arquivos
+## Resultado
 
-**Criar:**
-- `supabase/functions/mari-brain/index.ts`
-- `supabase/functions/mari-brain/kb/01-plataforma.md` … `08-metas-e-prioridades.md`
-- `supabase/migrations/<ts>_mari_brain_threads.sql`
-- `src/components/equity-brain/mari/MariBrainDrawer.tsx`
-- `src/components/equity-brain/mari/MariBrainFab.tsx`
-- `src/components/equity-brain/mari/MariThreadList.tsx`
-- `src/components/equity-brain/mari/MariMessageBubble.tsx`
-- `src/hooks/useMariBrain.ts` (streaming + threads)
-- `src/hooks/useMariContextSuggestions.ts` (sugestões por rota)
-- `.lovable/memory/features/mari-brain-global.md`
-
-**Editar:**
-- `src/components/equity-brain/EquityBrainLayout.tsx` (montar FAB + drawer + atalho)
-- `src/integrations/supabase/types.ts` (auto)
-- `.lovable/memory/index.md` (registrar nova memória)
-- `package.json` se precisar `react-markdown`
-
-### Fora de escopo (próximas fases possíveis)
-
-- Vetorização (pgvector) da KB para search semântico — só vale quando KB > 100k tokens.
-- Voice mode.
-- Auto-execução de ações (hoje só sugere, não muda dado).
+Cada linha da Match Inbox vira uma "missão pronta" para o advisor: vê quem é a empresa real, vê o comprador real com WhatsApp/telefone funcionando, abre o detalhe com 1 clique, cria o mandato com 1 clique e marca como contatado sem sair da página.

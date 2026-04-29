@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowLeftRight, Filter, Sparkles } from "lucide-react";
-import { useMatchInbox, useMatchPercentiles } from "@/hooks/useMatchInbox";
+import { useMatchInbox, useMatchPercentiles, type MatchInboxRow as MatchRow } from "@/hooks/useMatchInbox";
 import { MatchInboxRow } from "@/components/equity-brain/match/MatchInboxRow";
+import { MatchDetailDrawer } from "@/components/equity-brain/match/MatchDetailDrawer";
 import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { ALL_UFS, SETORES } from "@/lib/dealFormatters";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ export default function MatchInboxPage() {
   const [uf, setUf] = useState<string | null>(null);
   const [setor, setSetor] = useState<string | null>(null);
   const [onlyWithMandate, setOnlyWithMandate] = useState(false);
+  const [detailRow, setDetailRow] = useState<MatchRow | null>(null);
 
   const { data: rows = [], isLoading } = useMatchInbox({
     minScore,
@@ -119,10 +121,12 @@ export default function MatchInboxPage() {
       ) : (
         <div className="space-y-2">
           {rows.map((r) => (
-            <MatchInboxRow key={r.id} row={r} percentiles={pcts} />
+            <MatchInboxRow key={r.id} row={r} percentiles={pcts} onOpenDetail={setDetailRow} />
           ))}
         </div>
       )}
+
+      <MatchDetailDrawer row={detailRow} percentiles={pcts} onClose={() => setDetailRow(null)} />
     </div>
   );
 }

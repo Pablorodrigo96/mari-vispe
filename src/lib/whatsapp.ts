@@ -1,8 +1,30 @@
 const WHATSAPP_PHONE = "5551992338258";
 
-export function getWhatsAppLink(message?: string): string {
-  const encodedMessage = message ? encodeURIComponent(message) : '';
-  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodedMessage}`;
+/**
+ * Normalize a Brazilian phone number to E.164 (digits only, with country code).
+ * Returns null when there aren't enough digits.
+ */
+export function normalizeBrPhone(raw?: string | null): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  // Already with country code (55 + 10/11 digits)
+  if (digits.length >= 12 && digits.startsWith("55")) return digits;
+  // Bare 10/11-digit Brazilian number → prepend 55
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  // Anything else (could be international) — return as-is
+  return digits;
+}
+
+/**
+ * Build a wa.me link.
+ *  - getWhatsAppLink("texto")                 → mari platform number (legacy)
+ *  - getWhatsAppLink("texto", "5511999998888") → contact's number
+ */
+export function getWhatsAppLink(message?: string, phone?: string | null): string {
+  const encodedMessage = message ? encodeURIComponent(message) : "";
+  const target = normalizeBrPhone(phone) ?? WHATSAPP_PHONE;
+  return `https://wa.me/${target}?text=${encodedMessage}`;
 }
 
 function isInIframe(): boolean {
