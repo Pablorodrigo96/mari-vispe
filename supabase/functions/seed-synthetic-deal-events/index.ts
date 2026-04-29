@@ -26,11 +26,14 @@ const DIST = [
 ];
 
 const REJECTION_REASONS = [
-  "ticket_size_mismatch",
-  "geography_out_of_scope",
-  "sector_not_in_thesis",
-  "buyer_inactive",
-  "company_too_small",
+  "geo_fora_radar",
+  "tamanho_pequeno",
+  "tamanho_grande",
+  "setor_secundario",
+  "timing_ruim",
+  "preco_alto",
+  "fit_fraco",
+  "sem_resposta",
 ];
 
 function pickWeighted<T>(items: { v: T; w: number }[]): T {
