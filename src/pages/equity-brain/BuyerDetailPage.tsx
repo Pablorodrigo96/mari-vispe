@@ -15,6 +15,8 @@ import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge
 import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
 import { ConversationSummary } from "@/components/equity-brain/crm/ConversationSummary";
 import { AskMariDrawer } from "@/components/equity-brain/crm/AskMariDrawer";
+import { IdentityRevealCard } from "@/components/equity-brain/IdentityRevealCard";
+import { BlindTeaserButton } from "@/components/equity-brain/BlindTeaserButton";
 import { formatBRL } from "@/lib/equityBrain";
 
 type Tab = "overview" | "matches" | "whatsapp" | "documents";
@@ -59,7 +61,23 @@ export default function BuyerDetailPage() {
             </span>
           </div>
         </div>
+        <BlindTeaserButton
+          cnpj={(buyer as any).cnpj}
+          entityType="buyer"
+          entityId={buyer.id}
+        />
       </header>
+
+      <IdentityRevealCard
+        entityType="buyer"
+        entityId={buyer.id}
+        cnpj={(buyer as any).cnpj}
+        razaoSocial={(buyer as any).razao_social ?? null}
+        nomeFantasia={(buyer as any).nome ?? null}
+        email={(buyer as any).email ?? null}
+        phone={(buyer as any).whatsapp ?? (buyer as any).telefone ?? null}
+        uf={(buyer.ufs_interesse ?? [])[0] ?? null}
+      />
 
       <div className="flex items-center gap-1 border-b border-zinc-800">
         {tabs.map((t) => (
@@ -116,7 +134,11 @@ export default function BuyerDetailPage() {
       )}
 
       {tab === "documents" && (
-        <DocumentsPanel entityType="buyer" entityId={buyer.id} />
+        <DocumentsPanel
+          entityType="buyer"
+          entityId={buyer.id}
+          companyContext={{ cnpj: (buyer as any).cnpj ?? null }}
+        />
       )}
 
       <AskMariDrawer entity_type="buyer" entity_id={buyer.id} />

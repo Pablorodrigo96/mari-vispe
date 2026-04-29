@@ -15,6 +15,8 @@ import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge
 import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
 import { ConversationSummary } from "@/components/equity-brain/crm/ConversationSummary";
 import { AskMariDrawer } from "@/components/equity-brain/crm/AskMariDrawer";
+import { IdentityRevealCard } from "@/components/equity-brain/IdentityRevealCard";
+import { BlindTeaserButton } from "@/components/equity-brain/BlindTeaserButton";
 import { formatBRL } from "@/lib/equityBrain";
 
 type Tab = "overview" | "matches" | "whatsapp" | "documents";
@@ -56,13 +58,33 @@ export default function MandateDetailPage() {
             <span className="text-[11px] text-zinc-400">· Ticket {formatBRL(mandate.valor_pretendido ?? mandate.ticket_alvo ?? 0)}</span>
           </div>
         </div>
-        <Link
-          to={`/equity-brain/crm/mandate/${mandate.id}/edit`}
-          className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/10 bg-transparent font-medium"
-        >
-          <Pencil className="h-3 w-3" /> Editar mandato
-        </Link>
+        <div className="flex items-center gap-2">
+          <BlindTeaserButton
+            cnpj={mandate.company_cnpj}
+            entityType="mandate"
+            entityId={mandate.id}
+          />
+          <Link
+            to={`/equity-brain/crm/mandate/${mandate.id}/edit`}
+            className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/10 bg-transparent font-medium"
+          >
+            <Pencil className="h-3 w-3" /> Editar mandato
+          </Link>
+        </div>
       </header>
+
+      <IdentityRevealCard
+        entityType="mandate"
+        entityId={mandate.id}
+        cnpj={mandate.company_cnpj}
+        razaoSocial={mandate.razao_social}
+        nomeFantasia={mandate.nome_fantasia}
+        city={(mandate as any).cidade ?? null}
+        uf={mandate.uf}
+        extras={{
+          Setor: mandate.setor_ma ?? null,
+        }}
+      />
 
       <div className="flex items-center gap-1 border-b border-zinc-800">
         {tabs.map((t) => (
@@ -118,7 +140,11 @@ export default function MandateDetailPage() {
             <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
               <FileText className="h-4 w-4" /> Documentos
             </h3>
-            <DocumentsPanel entityType="mandate" entityId={mandate.id} />
+            <DocumentsPanel
+              entityType="mandate"
+              entityId={mandate.id}
+              companyContext={{ cnpj: mandate.company_cnpj }}
+            />
           </div>
           <div className="space-y-3">
             <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">

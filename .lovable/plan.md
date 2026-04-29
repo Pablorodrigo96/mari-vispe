@@ -1,108 +1,96 @@
 
-# Tooltips informativos em todos os indicadores
+# Identidade aberta para advisor/admin + documentos unificados + Blind Teaser no Equity Brain
 
-Cada box com número, indicador, sugestão, gráfico ou aviso ganha um ícone **(i)** no canto superior direito. Ao passar o mouse, abre um tooltip com **2 partes**:
+Três entregas integradas, todas para advisor/admin (e fluxo legado preservado para parceiros/buyers):
 
-1. **O que é** — definição curta da métrica/painel.
-2. **O que fazer** — ação prática que o usuário tira dali.
+1. **Visualizar identidade real** da empresa direto no 360 do EB (sem precisar abrir cadastro original).
+2. **Aba Documentos & Pipeline unificada**: agrega `equity_brain.crm_documents` + `public.vdr_documents` + `public.listing_financial_docs` da empresa associada (via CNPJ ↔ listing).
+3. **Botão "Ver Blind Teaser"** no 360 do EB (mandate e buyer) que abre `/teaser/:ticker` da listing vinculada, com **log de acesso LGPD** registrado a cada visualização.
 
-Sem mudanças de layout, sem alterar números nem regras — apenas uma camada de affordance/UX por cima do que já existe.
-
----
-
-## 1. Componente central reutilizável
-
-Criar `src/components/equity-brain/InfoHint.tsx`:
-
-- Wrapper sobre o `Tooltip` do Radix (já existe em `src/components/ui/tooltip.tsx`).
-- Renderiza um `<Info className="h-3.5 w-3.5 text-zinc-500 hover:text-zinc-300" />`.
-- Props: `title?`, `what: string`, `action?: string`, `side?`, `align?`.
-- Acessível: `aria-label`, suporte a teclado (focus → tooltip aparece).
-- Dark, glassmorphism, alinhado à paleta mari (Volt para destaques, fundo zinc-900).
-
-E um `src/lib/ebTooltips.ts` com **dicionário centralizado** de todos os textos (chave → `{title, what, action}`), para garantir consistência e fácil revisão futura.
+Não muda o sistema de codinome existente. Apenas dá poder de "ver tudo" para quem é advisor/admin e centraliza os documentos.
 
 ---
 
-## 2. Refatorar wrappers de card existentes para aceitar `info?`
+## 1. Identity Reveal Card (advisor/admin)
 
-Em vez de espalhar o `<InfoHint/>` em centenas de lugares, adicionar uma prop opcional `info?: InfoHintProps` em:
+Novo componente `IdentityRevealCard.tsx` no header do `MandateDetailPage` e `BuyerDetailPage`:
 
-- `EBStatCard.tsx` (Board Executivo)
-- `crm/exec/KpiTile.tsx` (Dashboard Executivo, Match Analytics)
-- `crm/exec/ChartCard.tsx` (todos os gráficos)
-- `crm/KpiHeader.tsx` → extrair `Kpi` interno e adicionar `info`
-- `crm/PipelineFunnel.tsx`, `TasksWidget.tsx`, `NextActionsPanel.tsx`, `LearningInsightsCard.tsx`, `FinancialPipelinePanel.tsx`, `MatchesPanel.tsx`, `ActivityTimeline.tsx`, `DocumentsPanel.tsx`, `WhatsAppPanel.tsx`, `ConversationSummary.tsx`
-- Cards "soltos" (`Fila de eventos`, `Eventos com erro`, `Tier strong` no `BoardPage.tsx`) — receber o `<InfoHint/>` inline.
+- Usa `useIdentityVisibility({ cnpj })` (já existe).
+- Se `eb_can_view_identity = true` → mostra card expansível "Identidade real" com:
+  - Razão social, nome fantasia, CNPJ formatado, contatos (telefone/email), endereço completo, sócios (se já carregados em `eb_companies.raw_data`).
+  - Badge "Visível para advisor/admin" + ícone de cadeado aberto.
+- Se `false` → não renderiza nada (mantém o fluxo de disclosure já existente).
+- Cada expansão dispara `useAccessLog("identity-view", entityId)` para auditoria LGPD.
 
-Quando `info` é passado, o card mostra o (i) ao lado do título; se não, comportamento antigo intacto.
-
----
-
-## 3. Páginas e componentes que recebem tooltips
-
-### Board Executivo (`BoardPage.tsx`)
-- Saúde do motor: Empresas no banco, Signals computados, Scores calculados, Oportunidades quentes, **Fila de eventos**, **Eventos com erro**, Tier strong.
-- Funil semanal · 7 dias (no header da seção).
-- Top 10 buyers por matches premium (header + colunas Matches/Premium/% premium).
-- Versões da fórmula de score.
-
-### CRM Hub (`CrmHubPage.tsx` / `KpiHeader.tsx`)
-- Total Operações, Vendedores, Compradores, Em andamento, Concluídas, Canceladas, Carteira (R$), Comissão Vispe.
-- "Próximas ações sugeridas pela Mari" (NextActionsPanel) — header.
-- "Tarefas abertas" (TasksWidget).
-- "Funil de pipeline (mandatos)" (PipelineFunnel) — header + cada estágio (Vigente, Em negociação, Vendemos).
-- "Como o motor está aprendendo" (LearningInsightsCard).
-
-### Dashboard Executivo (`ExecutiveDashboardContent.tsx`)
-- Linha 1 KPIs: Total Operações, Buyside, Sellside, Em andamento, Concluídas, Canceladas.
-- Linha 2 KPIs: Total das operações, Faturamento Vispe, Ticket médio, Tempo médio venda, Tempo médio compra.
-- Todos os `ChartCard`: Status das operações, Evolução anual, Valor negociado por ano, Comissão anual Vispe, Operações por tipo, por região, Exclusividade, Fase do Sellside, Por localidade, Por estado, Top 3 maiores, Por responsável, Distribuição de status.
-
-### Match Analytics (`MatchAnalyticsContent.tsx`)
-- Todos os KpiTile (mandatos: Total/Vigente/Em negociação/Vendemos/Vencido/Vendeu sozinho/Tempo médio; compradores: Total/Aguardando/Em negociação/Mandatos exclusivos/Tempo médio).
-- Cada `ChartCard`.
-
-### Mandate/Buyer 360 e demais painéis
-- `MatchesPanel`, `FinancialPipelinePanel`, `DocumentsPanel`, `WhatsAppPanel`, `ConversationSummary`, `ActivityTimeline` — header de cada um.
-
-### Outros indicadores espalhados
-- `ScoreDial`, `MatchQualityCard`, `MatchExplainabilityCard`, `MatchDecisionCard`, `EngineHealthCard`, `EventQueueHealthCard`, `DriftMonitorCard`, `DriftAnalyticsCard`, `MarketWavesCard`, `SellerIntentMonitorCard`, `SemanticEmbeddingsCard`, `BackfillHistoryCard`, `EBFunnel` (cada estágio).
+Substitui o uso direto de `mandate.razao_social` no header por uma exibição que respeita visibilidade (já é o padrão hoje, mas o card formaliza e loga o acesso).
 
 ---
 
-## 4. Conteúdo dos tooltips (exemplos representativos)
+## 2. Aba "Documentos & Pipeline" — fontes unificadas
 
-| Indicador | What (o que é) | Action (o que fazer) |
+Refatorar `DocumentsPanel.tsx` para receber, além de `entityType`/`entityId`, um `companyContext?: { cnpj?: string; listingId?: string }` e buscar **3 fontes em paralelo**:
+
+| Fonte | Tabela | Quando aparece |
 |---|---|---|
-| **Fila de eventos** | Eventos do motor ainda não processados (matches, scoring, feedback). | Acima de 1.000 indica atraso — reveja workers/edge functions de processamento. |
-| **Eventos com erro** | Eventos que falharam 3 vezes e foram descartados. | Abra Auditoria para ver causa-raiz e reprocessar. |
-| **Tier strong** | Empresas com `ma_score` entre 60 e 79 — qualidade boa, ainda não premium. | Use como pipeline secundário para abordagem fria/SDR. |
-| **Oportunidades quentes** | Empresas com `ma_score ≥ 80`. | Priorize ligações e envio de teaser hoje. |
-| **Próximas ações Mari** | Sugestões geradas pelo motor com base em interações recentes. | Clique em "Abrir" para executar; "Tarefa" para agendar. |
-| **Comissão Vispe** | Soma de comissões realizadas em mandatos concluídos. | Compare com meta mensal no Dashboard Executivo. |
-| **Funil de pipeline** | Distribuição dos mandatos por estágio comercial. | Estágio inflado vira gargalo — investigue tempo médio. |
-| **Top 10 buyers por matches premium** | Compradores com mais matches `score ≥ 80`. | Priorize calls com esses buyers nesta semana. |
+| CRM | `equity_brain.crm_documents` | sempre (lógica atual) |
+| Marketplace VDR | `public.vdr_documents` (filtro `listing_id`) | quando o CNPJ tem listing vinculada |
+| Cadastro/Contador | `public.listing_financial_docs` (filtro `listing_id`) | quando o CNPJ tem listing vinculada |
 
-Texto completo fica em `ebTooltips.ts` para revisão pelo time.
+UI:
+- Filtro por origem (chips: "Todos", "CRM", "VDR", "Cadastro").
+- Cada item mostra badge da origem + categoria + data + uploader.
+- Documentos do marketplace ficam read-only no painel (download/preview), com link "abrir no marketplace" para gestão.
+- Empty state granular: "Nenhum documento — esta empresa não tem listing no marketplace ainda" quando aplicável.
+
+Resolução de listing: nova função em `useCrm.ts` → `useCompanyListing(cnpj)` que retorna `listings` por `cnpj`. Cacheada (RLS já permite admin SELECT em listings).
+
+Pipeline financeiro: já existe (`FinancialPipelinePanel`). Mantém igual; só ganha um aviso quando há `listing_financial_docs.equity_score` recente vindo do marketplace, indicando que os números devem cruzar.
+
+---
+
+## 3. Botão "Ver Blind Teaser" no 360 + log LGPD
+
+Novo componente `BlindTeaserButton.tsx`:
+
+- Recebe `cnpj` ou `listingId`.
+- Resolve a `listing` correspondente (mesma `useCompanyListing`).
+- Se a listing tem `ticker`, renderiza:
+  - Botão **"Ver Blind Teaser"** (ícone Eye, cor Volt) no header das páginas `MandateDetailPage` e `BuyerDetailPage` (ao lado de "Editar mandato").
+  - Submenu com 3 ações: **Abrir teaser**, **Copiar link público**, **Compartilhar via WhatsApp** (reutiliza `getWhatsAppLink` e padrões já documentados em `teaser-distribution-tools`).
+- Se a listing não existe ou não tem ticker, mostra estado desabilitado com tooltip explicativo.
+- Cada ação registra um log via novo hook `useTeaserAccessLog()`:
+  - Insere em `equity_brain.access_logs` com `action = 'teaser_view' | 'teaser_share_copy' | 'teaser_share_whatsapp'` e metadata `{ listing_id, ticker, channel }`.
+  - Quando o teaser for de fato aberto pelo usuário interno (mesma aba), também grava 1 row em `public.teaser_views` (já existe, RLS permite anyone insert) com `viewer_id = auth.uid()`.
+
+LGPD compliance:
+- O `access_logs` (security definer, schema `equity_brain`) já é a trilha auditável.
+- `useAccessLog` é estendido para aceitar uma 3ª categoria `"identity-view"` (apenas para o reveal do card de identidade).
+- Nenhum dado pessoal novo é exposto ao log; só `user_id`, `entity_type`, `entity_id`, `action`, timestamp.
+
+---
+
+## 4. Pequenas integrações de UX
+
+- Aba **"Documentos"** do `BuyerDetailPage` ganha o mesmo painel unificado, **mas sem fontes de marketplace** (buyer não tem listing). Mantém só `crm_documents`.
+- `MandateDetailPage` aba "Documentos & Pipeline": passa `companyContext={ cnpj: mandate.company_cnpj }` para o `DocumentsPanel`.
+- `IdentityRevealCard` aparece logo abaixo do header em ambas as páginas (mandate e buyer — quando o buyer tiver `cnpj`).
 
 ---
 
 ## Detalhes técnicos
 
-- **Sem novas dependências** — Radix Tooltip já presente.
-- **Performance**: tooltips são lazy (Radix). Sem impacto em re-render.
-- **Responsivo**: em mobile, tap no (i) abre o tooltip (Radix já trata).
-- **A11y**: ícone tem `tabIndex={0}` e `aria-label="Mais informações"`.
-- **Sem migrations**, **sem edge functions novas**, **sem mudança de schema**.
-- Memória: criar `mem://style/info-hints-pattern` documentando o padrão para que toda nova métrica venha com tooltip.
+- **Sem novas tabelas, sem novas migrations**. Apenas leituras adicionais e logs nas tabelas já existentes (`access_logs`, `teaser_views`).
+- **RLS já cobre** o cenário: admin tem `has_role(auth.uid(), 'admin')` e pode SELECT em `listings`, `vdr_documents`, `listing_financial_docs`.
+- **Performance**: as 3 queries de documentos rodam em paralelo via `useQueries` do TanStack Query. Cache de 60s por entidade.
+- **Memória**: atualizar `mem://features/blind-teaser-universal.md` adicionando seção "Identity reveal & document unification".
 
 ---
 
 ## Entregáveis
 
-- 1 componente novo (`InfoHint.tsx`)
-- 1 dicionário (`ebTooltips.ts`)
-- ~15 wrappers/cards refatorados para aceitar `info`
-- ~6 páginas com tooltips ligados
-- 1 entrada de memória nova
+- 3 componentes novos: `IdentityRevealCard.tsx`, `BlindTeaserButton.tsx`, `useCompanyListing.ts`
+- 1 hook novo: `useTeaserAccessLog.ts`
+- `DocumentsPanel.tsx` refatorado para multi-source com filtros
+- `useAccessLog.ts` estendido (action genérica)
+- `MandateDetailPage` e `BuyerDetailPage` atualizadas para usar os novos componentes
+- Memória atualizada
