@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Building2, Linkedin, Instagram, Youtube } from 'lucide-react';
+import { Linkedin, Instagram, Youtube } from 'lucide-react';
 import vispeLogo from '@/assets/vispe-logo-branco.png';
+import { MariLogo } from '@/components/brand/MariLogo';
 
 const SpotifyIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -38,14 +39,10 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
-                <Building2 className="h-5 w-5 text-accent-foreground" />
-              </div>
-              <span className="text-xl font-bold">
-                PME<span className="text-accent">.B3</span>
-              </span>
+            <Link to="/" className="inline-flex mb-4 text-primary-foreground">
+              <MariLogo size={36} />
             </Link>
+            <p className="text-xs uppercase tracking-[0.3em] text-accent/80 mb-3">designed forward</p>
             <p className="text-sm text-primary-foreground/70 mb-6">
               A plataforma líder em negociação de empresas no Brasil. Conectamos compradores e vendedores com segurança e transparência.
             </p>
@@ -178,14 +175,14 @@ export function Footer() {
             <img src={vispeLogo} alt="Grupo Vispe" className="h-7" />
           </a>
           <p className="text-sm text-primary-foreground/50 text-center">
-            PME.B3 é a camada de tecnologia e marketplace do Grupo Vispe.
+            mari é a camada de tecnologia e marketplace do Grupo Vispe.
           </p>
         </div>
 
         {/* Bottom */}
         <div className="mt-8 pt-6 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/50">
-            © 2025 PME.B3. Todos os direitos reservados.
+            © 2025 mari. Todos os direitos reservados.
           </p>
           <p className="text-sm text-primary-foreground/50">
             Feito com ❤️ no Brasil
