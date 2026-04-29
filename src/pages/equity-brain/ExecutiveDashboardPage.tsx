@@ -44,8 +44,19 @@ export default function ExecutiveDashboardPage() {
     },
   });
 
+  const v2 = useQuery({
+    queryKey: ["eb-exec-kpis-v2"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)("eb_dashboard_kpis_v2");
+      if (error) throw error;
+      return (data ?? {}) as any;
+    },
+  });
+
   const k = kpis.data ?? {};
+  const v2d = v2.data ?? {};
   const rows = (deals.data ?? []) as any[];
+
 
   // Agregações no cliente (200 mandatos é leve)
   const byTipo = aggregate(rows, (r) => r.deal_type, "count");
