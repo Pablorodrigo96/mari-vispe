@@ -100,7 +100,15 @@ export default function BuyerDetailPage() {
       )}
 
       {tab === "matches" && (
-        <MatchesPanel mode={{ type: "buyer", buyerId: buyer.id }} entityName={name} />
+        <MatchesPanel
+          mode={{
+            type: "buyer",
+            buyerId: buyer.id,
+            buyerSetores: buyer.setores_interesse ?? [],
+            buyerUfs: buyer.ufs_interesse ?? [],
+          }}
+          entityName={name}
+        />
       )}
 
       {tab === "whatsapp" && (
