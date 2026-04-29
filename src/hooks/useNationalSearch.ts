@@ -12,7 +12,37 @@ export interface NationalCompany {
   state: string;
   porte: string;
   capital_social: number | null;
-  location: string;
+  location?: string;
+
+  // Extended fields from Receita Federal (CNPJ lookup only)
+  is_matriz?: boolean;
+  situacao_codigo?: string;
+  situacao?: string;
+  situacao_data?: string | null;
+  data_abertura?: string | null;
+  idade_anos?: number | null;
+  foundation_year?: number | null;
+  natureza_juridica_codigo?: string;
+  natureza_juridica_descricao?: string;
+  porte_codigo?: string;
+  ente_federativo?: string | null;
+  cnae_principal_codigo?: string;
+  cnae_principal_descricao?: string;
+  cnae_secundarios?: string[];
+  tipo_logradouro?: string;
+  logradouro?: string;
+  street?: string;
+  numero?: string;
+  complemento?: string;
+  neighborhood?: string;
+  bairro?: string;
+  cep?: string;
+  municipio_codigo?: string;
+  uf?: string;
+  endereco_completo?: string;
+  phone?: string;
+  telefone?: string;
+  email?: string;
 }
 
 interface SearchOptions {
