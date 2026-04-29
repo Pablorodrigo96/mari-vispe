@@ -11,6 +11,12 @@ import { Activity, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type FeatureStat = { feature: string; n: number; avg_value: number; avg_weight: number; avg_contrib: number };
+type Health = {
+  coverage_pct: number;        // % de listings com matches v2
+  median_events_per_buyer: number;
+  buyers_with_signal: number;
+  last_spearman: number | null;
+};
 type Quality = {
   total_current: number;
   v1_current: number;
@@ -19,6 +25,7 @@ type Quality = {
   unique_buyers: number;
   avg_match_score: number;
   features: FeatureStat[];
+  health: Health;
 };
 
 const FEATURE_LABEL: Record<string, string> = {
