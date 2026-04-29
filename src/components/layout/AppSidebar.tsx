@@ -199,7 +199,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 <li>
                   <Link
                     to="/admin"
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-zinc-300 hover:text-foreground hover:bg-muted"
                   >
                     <Shield className="h-3.5 w-3.5" />
                     Admin
