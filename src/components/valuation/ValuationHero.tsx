@@ -8,8 +8,9 @@ interface ValuationHeroProps {
 
 export const ValuationHero = ({ onStartDiagnostic }: ValuationHeroProps) => {
   return (
-    <section className="pt-24 pb-20 bg-gradient-to-b from-primary/5 to-background">
-      <div className="container mx-auto px-4">
+    <section className="relative pt-24 pb-20 bg-gradient-to-b from-primary/5 to-background overflow-hidden">
+      <MariBrandStamp position="tr" tone="carbon" size={560} opacity={0.05} />
+      <div className="container mx-auto px-4 relative z-10">
         <div className="text-center max-w-3xl mx-auto">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-6">
             Descubra o valor da sua empresa{' '}
