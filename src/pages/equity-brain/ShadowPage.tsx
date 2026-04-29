@@ -14,6 +14,7 @@ import { EventQueueHealthCard } from "@/components/equity-brain/EventQueueHealth
 import { SellerIntentMonitorCard } from "@/components/equity-brain/SellerIntentMonitorCard";
 import { SemanticEmbeddingsCard } from "@/components/equity-brain/SemanticEmbeddingsCard";
 import { MarketWavesCard } from "@/components/equity-brain/MarketWavesCard";
+import MatchQualityCard from "@/components/equity-brain/MatchQualityCard";
 import { MatchExplainabilityCard } from "@/components/equity-brain/MatchExplainabilityCard";
 
 type MatchRow = MatchDecisionRow;
