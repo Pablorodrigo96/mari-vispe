@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { MariWatermark } from '@/components/brand/MariLogo';
 import { SearchBar } from '@/components/home/SearchBar';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
@@ -50,7 +51,19 @@ const Index = () => {
       <section className="relative pt-28 pb-24 md:pt-40 md:pb-36 gradient-navy-deep bg-grid-pattern overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_30%,_hsla(38,92%,50%,0.08)_0%,_transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,_hsla(222,47%,30%,0.15)_0%,_transparent_50%)]" />
-        
+
+        {/* Magazine-cover style brand watermark — symbol bleeding off the right edge */}
+        <MariWatermark
+          color="volt"
+          opacity={0.07}
+          className="hidden md:block absolute -right-40 -top-20 w-[720px] h-[720px]"
+        />
+        {/* Tagline as decorative typography */}
+        <div className="hidden lg:block absolute right-8 bottom-8 text-right pointer-events-none select-none">
+          <div className="text-volt/30 font-display text-[11px] uppercase tracking-[0.4em]">designed forward</div>
+          <div className="text-bone/10 font-display font-bold text-[120px] leading-none -mt-2">mari.</div>
+        </div>
+
         <ParticlesBackground variant="dark" />
         
         <div className="container mx-auto px-4 lg:px-8 relative z-10">

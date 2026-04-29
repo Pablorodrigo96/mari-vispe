@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { MariWatermark } from '@/components/brand/MariLogo';
 
 interface ModuleBox {
   title: string;
@@ -122,9 +123,16 @@ export default function Painel() {
   ];
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto relative">
+      {/* Magazine-style brand watermark in the hero */}
+      <MariWatermark
+        color="volt"
+        opacity={0.05}
+        className="hidden md:block absolute -right-24 -top-16 w-[420px] h-[420px] pointer-events-none"
+      />
+
       {/* Hero / greeting */}
-      <div className="mb-6">
+      <div className="mb-6 relative">
         <div className="flex items-center gap-3 flex-wrap mb-2">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Olá, {greetingName} 👋</h1>
           {eff.roles.length > 0 && (

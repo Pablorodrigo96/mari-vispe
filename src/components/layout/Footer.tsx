@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Linkedin, Instagram, Youtube } from 'lucide-react';
 import vispeLogo from '@/assets/vispe-logo-branco.png';
-import { MariLogo } from '@/components/brand/MariLogo';
+import { MariLogo, MariWatermark } from '@/components/brand/MariLogo';
 
 const SpotifyIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
