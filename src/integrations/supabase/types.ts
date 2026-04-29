@@ -1584,12 +1584,20 @@ export type Database = {
         Row: {
           bairro: string | null
           capital_social: number | null
+          cep: string | null
           cnae_descricao: string | null
           cnae_principal: string | null
+          cnae_secundarios: Json | null
           cnpj: string | null
           created_at: string | null
           data_abertura: string | null
+          data_situacao_cadastral: string | null
           ebitda_estimado: number | null
+          embedding: string | null
+          embedding_computed_at: string | null
+          embedding_text_hash: string | null
+          endereco_logradouro: string | null
+          endereco_numero: string | null
           faturamento_estimado: number | null
           funcionarios_estimado: number | null
           has_listing: boolean | null
@@ -1603,6 +1611,11 @@ export type Database = {
           nome_fantasia: string | null
           porte: string | null
           qtd_socios: number | null
+          qualification_source: string | null
+          qualification_status: "qualified" | "unqualified" | null
+          qualified_at: string | null
+          qualified_by: string | null
+          raw_data: Json | null
           razao_social: string | null
           setor_ma: string | null
           situacao_cadastral: string | null
@@ -1616,12 +1629,20 @@ export type Database = {
         Insert: {
           bairro?: string | null
           capital_social?: number | null
+          cep?: string | null
           cnae_descricao?: string | null
           cnae_principal?: string | null
+          cnae_secundarios?: Json | null
           cnpj?: string | null
           created_at?: string | null
           data_abertura?: string | null
+          data_situacao_cadastral?: string | null
           ebitda_estimado?: number | null
+          embedding?: string | null
+          embedding_computed_at?: string | null
+          embedding_text_hash?: string | null
+          endereco_logradouro?: string | null
+          endereco_numero?: string | null
           faturamento_estimado?: number | null
           funcionarios_estimado?: number | null
           has_listing?: boolean | null
@@ -1635,6 +1656,11 @@ export type Database = {
           nome_fantasia?: string | null
           porte?: string | null
           qtd_socios?: number | null
+          qualification_source?: string | null
+          qualification_status?: "qualified" | "unqualified" | null
+          qualified_at?: string | null
+          qualified_by?: string | null
+          raw_data?: Json | null
           razao_social?: string | null
           setor_ma?: string | null
           situacao_cadastral?: string | null
@@ -1648,12 +1674,20 @@ export type Database = {
         Update: {
           bairro?: string | null
           capital_social?: number | null
+          cep?: string | null
           cnae_descricao?: string | null
           cnae_principal?: string | null
+          cnae_secundarios?: Json | null
           cnpj?: string | null
           created_at?: string | null
           data_abertura?: string | null
+          data_situacao_cadastral?: string | null
           ebitda_estimado?: number | null
+          embedding?: string | null
+          embedding_computed_at?: string | null
+          embedding_text_hash?: string | null
+          endereco_logradouro?: string | null
+          endereco_numero?: string | null
           faturamento_estimado?: number | null
           funcionarios_estimado?: number | null
           has_listing?: boolean | null
@@ -1667,6 +1701,11 @@ export type Database = {
           nome_fantasia?: string | null
           porte?: string | null
           qtd_socios?: number | null
+          qualification_source?: string | null
+          qualification_status?: "qualified" | "unqualified" | null
+          qualified_at?: string | null
+          qualified_by?: string | null
+          raw_data?: Json | null
           razao_social?: string | null
           setor_ma?: string | null
           situacao_cadastral?: string | null
@@ -2906,6 +2945,15 @@ export type Database = {
       increment_capital_view: {
         Args: { p_request_id: string }
         Returns: undefined
+      }
+      qualify_lead: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: string
+          p_notes?: string
+          p_source?: string
+        }
+        Returns: Json
       }
     }
     Enums: {
