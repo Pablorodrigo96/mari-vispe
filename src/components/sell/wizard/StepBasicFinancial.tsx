@@ -285,8 +285,47 @@ const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
                     <div><span className="text-muted-foreground">Endereço:</span> <span className="font-medium">{rfData.endereco_completo}</span></div>
                   )}
                 </div>
+
+                {/* Regime Tributário */}
+                {rfData.regime_tributario && (
+                  <div className="pt-2 border-t border-accent/20 flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Regime tributário:</span>
+                    {rfData.regime_tributario.mei ? (
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-xs">MEI</Badge>
+                    ) : rfData.regime_tributario.simples ? (
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs">Simples Nacional</Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-slate-500/10 text-slate-600 border-slate-500/30 text-xs">Lucro Real / Presumido</Badge>
+                    )}
+                  </div>
+                )}
+
+                {/* Quadro Societário (QSA) */}
+                {rfData.socios && rfData.socios.length > 0 && (
+                  <div className="pt-2 border-t border-accent/20">
+                    <div className="text-xs text-muted-foreground mb-1.5">
+                      Quadro societário ({rfData.socios.length} {rfData.socios.length === 1 ? 'sócio' : 'sócios'}):
+                    </div>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {rfData.socios.slice(0, 10).map((socio, i) => (
+                        <div key={i} className="text-xs break-words">
+                          <span className="font-medium text-foreground">{socio.nome}</span>
+                          {socio.qualificacao && (
+                            <span className="text-muted-foreground"> · {socio.qualificacao}</span>
+                          )}
+                        </div>
+                      ))}
+                      {rfData.socios.length > 10 && (
+                        <div className="text-xs text-muted-foreground italic">
+                          +{rfData.socios.length - 10} sócios adicionais
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <p className="text-xs text-muted-foreground pt-1 border-t border-accent/20">
-                  Campos preenchidos automaticamente. Você pode editar se preferir.
+                  Dados públicos da Receita Federal. Você pode editar se preferir.
                 </p>
               </div>
             )}
