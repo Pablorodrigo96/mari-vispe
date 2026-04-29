@@ -135,7 +135,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 title={g.name}
                 className={cn(
                   'flex items-center justify-center h-10 my-1 rounded-lg transition-colors',
-                  isGroupActive ? 'bg-accent/15 text-accent' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  isGroupActive ? 'bg-accent/15 text-accent' : 'text-zinc-300 hover:bg-muted hover:text-foreground'
                 )}
               >
                 <g.icon className="h-4 w-4" />
