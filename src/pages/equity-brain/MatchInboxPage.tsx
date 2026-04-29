@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowLeftRight, Filter, Sparkles } from "lucide-react";
-import { useMatchInbox, useMatchPercentiles } from "@/hooks/useMatchInbox";
+import { useMatchInbox, useMatchPercentiles, type MatchInboxRow as MatchRow } from "@/hooks/useMatchInbox";
 import { MatchInboxRow } from "@/components/equity-brain/match/MatchInboxRow";
+import { MatchDetailDrawer } from "@/components/equity-brain/match/MatchDetailDrawer";
 import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { ALL_UFS, SETORES } from "@/lib/dealFormatters";
 import { cn } from "@/lib/utils";
