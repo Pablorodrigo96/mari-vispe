@@ -115,7 +115,7 @@ export function ExecutiveDashboardContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <KpiTile label="Total das operações" value={brl(k.total_value, { compact: true })} hint="Soma de operações concluídas" accent="primary" loading={kpis.isLoading} />
-        <KpiTile label="Faturamento mari" value={brl(k.total_commission, { compact: true })} hint="Comissões recebidas" accent="success" loading={kpis.isLoading} />
+        <KpiTile label="Faturamento Vispe" value={brl(k.total_commission, { compact: true })} hint="Comissões recebidas" accent="success" loading={kpis.isLoading} />
         <KpiTile label="Ticket médio" value={brl(k.avg_ticket, { compact: true })} loading={kpis.isLoading} />
         <KpiTile label="Tempo médio de venda" value={v2d.avg_months_sellside ? `${v2d.avg_months_sellside} meses` : "—"} hint="Sellside concluído" accent="success" loading={v2.isLoading} />
         <KpiTile label="Tempo médio de compra" value={v2d.avg_months_buyside ? `${v2d.avg_months_buyside} meses` : "—"} hint="Buyside concluído" accent="primary" loading={v2.isLoading} />
@@ -134,7 +134,7 @@ export function ExecutiveDashboardContent() {
         <ChartCard title="Valor negociado por ano">
           <YearlyMoneyChart data={(v2d.yearly_value ?? []).map((r: any) => ({ year: r.year, sellside: Number(r.sellside_value ?? 0), buyside: Number(r.buyside_value ?? 0) }))} />
         </ChartCard>
-        <ChartCard title="Comissão anual da mari">
+        <ChartCard title="Comissão anual da Vispe">
           <YearlyMoneyChart data={(v2d.yearly_value ?? []).map((r: any) => ({ year: r.year, sellside: Number(r.sellside_commission ?? 0), buyside: Number(r.buyside_commission ?? 0) }))} />
         </ChartCard>
       </div>
