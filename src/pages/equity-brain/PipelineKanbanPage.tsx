@@ -2,10 +2,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, GripVertical, Calendar, DollarSign } from "lucide-react";
+import { ArrowLeft, GripVertical, DollarSign, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { brl, PIPELINE_STAGES, PIPELINE_STAGE_LABEL, DEAL_TYPE_LABEL } from "@/lib/dealFormatters";
 import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge";
+import { QuickEditPopover } from "@/components/equity-brain/crm/QuickEditPopover";
 import { cn } from "@/lib/utils";
 
 type Mandate = {
@@ -16,9 +17,11 @@ type Mandate = {
   outcome: string;
   valor_operacao: number | null;
   faturamento_vispe: number | null;
+  commission_pct: number | null;
   uf: string | null;
   setor: string | null;
   contato_nome: string | null;
+  contato_telefone: string | null;
   responsavel_id: string | null;
   temperature: string | null;
   stage_changed_at: string | null;
@@ -37,13 +40,14 @@ const STAGE_COLORS: Record<string, string> = {
 export default function PipelineKanbanPage() {
   const qc = useQueryClient();
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Mandate | null>(null);
 
   const { data: mandates, isLoading } = useQuery({
     queryKey: ["pipeline-kanban"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("eb_mandates" as any)
-        .select("id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,uf,setor,contato_nome,responsavel_id,temperature,stage_changed_at,data_inicio")
+        .select("id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio")
         .neq("outcome", "cancelado")
         .order("stage_changed_at", { ascending: false })
         .limit(500);
@@ -121,7 +125,12 @@ export default function PipelineKanbanPage() {
                 )}
                 <div className="flex-1 space-y-2 overflow-y-auto">
                   {items.map((m) => (
-                    <DealCard key={m.id} m={m} onDragStart={() => setDraggedId(m.id)} />
+                    <DealCard
+                      key={m.id}
+                      m={m}
+                      onDragStart={() => setDraggedId(m.id)}
+                      onEdit={() => setEditing(m)}
+                    />
                   ))}
                 </div>
               </div>
@@ -129,22 +138,57 @@ export default function PipelineKanbanPage() {
           })}
         </div>
       )}
+
+      {editing && (
+        <QuickEditPopover
+          mandateId={editing.id}
+          values={{
+            valor_operacao: editing.valor_operacao,
+            faturamento_vispe: editing.faturamento_vispe,
+            commission_pct: editing.commission_pct,
+            contato_nome: editing.contato_nome,
+            contato_telefone: editing.contato_telefone,
+          }}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }
 
-function DealCard({ m, onDragStart }: { m: Mandate; onDragStart: () => void }) {
+function DealCard({
+  m,
+  onDragStart,
+  onEdit,
+}: {
+  m: Mandate;
+  onDragStart: () => void;
+  onEdit: () => void;
+}) {
   return (
-    <Link
-      to={`/equity-brain/crm/mandate/${m.id}`}
+    <div
       draggable
       onDragStart={onDragStart}
-      className="block rounded border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 p-2.5 cursor-move group"
+      className="rounded border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 p-2.5 cursor-move group"
     >
       <div className="flex items-start justify-between gap-1">
-        <div className="text-[11px] text-zinc-100 font-medium leading-tight break-words flex-1 truncate">
+        <Link
+          to={`/equity-brain/crm/mandate/${m.id}`}
+          className="text-[11px] text-zinc-100 font-medium leading-tight break-words flex-1 truncate hover:text-[#D9F564]"
+        >
           {m.company_cnpj}
-        </div>
+        </Link>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="text-zinc-700 hover:text-[#D9F564] shrink-0"
+          title="Edição rápida"
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
         <GripVertical className="h-3 w-3 text-zinc-700 group-hover:text-zinc-500 shrink-0 mt-0.5" />
       </div>
       <div className="flex items-center gap-1.5 mt-1.5">
@@ -163,10 +207,19 @@ function DealCard({ m, onDragStart }: { m: Mandate; onDragStart: () => void }) {
             {brl(m.valor_operacao, { compact: true })}
           </div>
         ) : (
-          <span className="text-[10px] text-zinc-600">sem valor</span>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="text-[10px] text-zinc-500 hover:text-[#D9F564] underline-offset-2 hover:underline"
+          >
+            + valor
+          </button>
         )}
         <TemperatureBadge temp={m.temperature} compact />
       </div>
-    </Link>
+    </div>
   );
 }
