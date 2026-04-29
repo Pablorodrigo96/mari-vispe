@@ -1,160 +1,90 @@
+# Promoção automática de leads qualificados ao Equity Brain (dual-role)
 
-# Sistema de Qualificação + Match Estendido para a Base RFB
+## Objetivo
+Ao qualificar um lead, garantir que ele entre no pool ativo do Equity Brain com o(s) papel(éis) corretos: **target** (empresa à venda potencial) e/ou **buyer** (comprador potencial). Isso amplia o universo de matches futuros sem depender de cadastro manual.
 
-## Conceito
+## Modelo conceitual
 
-Hoje o Equity Brain casa **mandato (vendedor)** ↔ **buyer cadastrado**. Quando não tem match na base curada (~116 empresas, 212 buyers), o advisor fica sem opção. Vamos:
+Um contato qualificado pode ser:
+- **Apenas target** — empresa operacional sem apetite declarado de comprar (default da maioria dos leads RFB).
+- **Apenas buyer** — investidor/holding/family office sem operação alvo.
+- **Dual-role** — grupo consolidador que tanto opera quanto adquire (ex: rede que cresce por M&A).
 
-1. Marcar todo registro com **`engagement_status`** (`qualified` / `unqualified`).
-2. Quando o pool curado não satisfazer, oferecer um botão **"Expandir para Base Nacional (5M CNPJs)"** que importa novos prospects diretamente da RFB já filtrados, criando-os como `unqualified`.
-3. Após contato real (ligação, WhatsApp, e-mail respondido, contrato), o advisor promove o lead para `qualified` num clique.
+O advisor decide o papel no momento da qualificação.
 
----
+## Mudanças no banco
 
-## Modelo de dados
+### 1. Estender `qualify_lead` RPC
+Adicionar parâmetros:
+- `p_promote_to_buyer boolean default false`
+- `p_promote_to_company boolean default false`
+- `p_buyer_profile jsonb default null` — quando promove a buyer, recebe `{ thesis, sectors, regions, ticket_min, ticket_max, instruments }`
+- `p_company_profile jsonb default null` — quando promove a company a partir de um buyer, recebe `{ cnpj, sector, revenue_brl, location }`
 
-### Novo enum
-```sql
-CREATE TYPE equity_brain.engagement_status AS ENUM ('qualified','unqualified');
-```
+A função:
+1. Atualiza `qualification_status = 'qualified'` na entidade de origem (igual hoje).
+2. Se `p_promote_to_buyer = true` e a entidade origem é `company`: cria registro em `equity_brain.buyers` com `qualification_status = 'qualified'`, `source = 'promoted_from_company'`, `source_company_id = <id>`.
+3. Se `p_promote_to_company = true` e a entidade origem é `buyer`: cria registro em `equity_brain.companies` com `qualification_status = 'qualified'`, `source = 'promoted_from_buyer'`, `source_buyer_id = <id>`.
+4. Registra evento em `equity_brain.deal_events` (`event_type = 'lead_promoted'`) para o loop adaptativo Bayesiano aprender.
 
-### Colunas adicionadas
+### 2. Colunas de rastreamento
+Adicionar a `equity_brain.companies` e `equity_brain.buyers`:
+- `promoted_from text` — `'rfb'`, `'company'`, `'buyer'`, `'manual'`
+- `promoted_at timestamptz`
+- `linked_entity_id uuid` — id da entidade-irmã (company ↔ buyer) quando dual-role
 
-`equity_brain.companies`:
-- `engagement_status` (default `'unqualified'`)
-- `qualified_at timestamptz`
-- `qualified_by uuid` (advisor que qualificou)
-- `qualification_source text` (`partner_referral`, `franchisee`, `inbound_listing`, `cold_outreach`, `existing_relationship`)
+Permite navegar nos dois sentidos e evitar duplicidade (constraint: `unique (cnpj, role)` lógica via índice parcial).
 
-`equity_brain.buyers`:
-- mesmas 4 colunas acima (já tem `engagement_status` no schema — confirmar enum bate)
+### 3. Trigger de re-matching
+Quando uma entidade vira `qualified` ou ganha papel novo, agendar (via `pg_notify` ou tabela `equity_brain.match_queue`) um recálculo de matches assíncrono — o worker existente (`match-buyer` / `match-company-v2`) consome a fila.
 
-### Backfill (regra de qualificação automática)
+## Mudanças na UI
 
-Tudo que **já tem relacionamento** vira `qualified`:
-- `companies` com `has_listing = true` (vendedor cadastrado na plataforma)
-- `companies` com mandato em `equity_brain.mandates`
-- `companies` referenciadas em `partner_lead_reservations`, `capital_requests`, `vdr_documents`
-- `buyers` com `source != 'rfb_expand'` e que tenham ao menos 1 `crm_activities` registrada
-- `buyers` ligados a `buyer_profiles` (clientes pagantes)
+### `QualifyLeadButton.tsx` (extensão)
+Hoje é um popover simples com escolha de fonte. Vira um diálogo curto em 2 passos:
+1. **Fonte da qualificação** (já existe): WhatsApp, indicação de parceiro, contrato assinado, etc.
+2. **Papel no Equity Brain** (novo): checkboxes
+   - `[x] Manter como alvo de aquisição` (default ligado se origem = company)
+   - `[ ] Adicionar também como comprador potencial` → expande mini-form com tese, setores, ticket
+   - `[ ] Promover a empresa-alvo` (só aparece se origem = buyer e ele declarou operar)
 
-Resto fica `unqualified`.
+### Badge de papel
+Novo componente `RoleBadges.tsx` — mostra chips lado a lado: `Target`, `Buyer`, `Dual` em listagens do CRM Hub. Clique no chip leva à entidade-irmã.
 
----
+### MatchesPanel
+Já filtra qualificados — sem mudança visual, mas agora o pool inclui buyers/companies promovidos (ganho automático de cobertura).
 
-## Fluxo do advisor
+## Edge Function
 
-### Cenário A — Vendedor cadastrado, sem comprador adequado
+Nenhuma nova. A `qualify_lead` RPC concentra toda a lógica transacional. O `expand-companies-from-rfb` continua igual (importa apenas como `unqualified`, papel `company`).
 
-Em `MandateDetailPage` (painel "Matches"):
-1. Engine roda `match-company-v2` → mostra buyers `qualified` primeiro.
-2. Se total < 5 ou advisor clica **"Expandir busca"**:
-   - Abre modal com filtros pré-preenchidos do mandato (setor, UF, ticket).
-   - Permite ajustar e dispara `match-extend-buyers` (nova edge function).
-   - Função busca buyers `unqualified` na base + sugere **importar novos** (se houver capital aberto recente, sponsor PE ativo etc — heurística simples).
-3. Buyers retornados aparecem com badge **"Não qualificado"** (cinza) e CTA **"Marcar como qualificado"** após contato.
+## Observabilidade
 
-### Cenário B — Comprador cadastrado, sem vendedor adequado
+- Métrica nova no painel admin: "Leads promovidos a buyer" / "Leads promovidos a company" no último período.
+- `deal_events` registra cada promoção, alimentando o aprendizado adaptativo (Phase 4 do Equity Brain v2).
 
-Em `BuyerDetailPage` (painel "Matches"):
-1. `match-buyer` roda hoje contra `companies_scored` — vamos passar a priorizar `engagement_status='qualified'`.
-2. Botão **"Buscar na Base RFB (5M)"**:
-   - Modal com filtros do buyer (CNAE → setor, UF, porte, capital social mínimo, idade da empresa).
-   - Dispara `expand-companies-from-rfb` (nova função; wrapper de `sync-companies-from-cnpj` mas via tese do buyer).
-   - Importa N empresas (default 50) com `source='rfb_expand'` + `engagement_status='unqualified'` em `equity_brain.companies`.
-   - Roda `compute-signals` + `match-company-v2` apenas para o lote novo.
-   - Resultados aparecem na lista com badge **"RFB · não qualificado"**.
+## Arquivos afetados
 
----
+**Migration nova**
+- Estende `qualify_lead`, adiciona colunas de promoção, cria índice de unicidade lógica e tabela `match_queue` (se ainda não existir).
 
-## UI
+**Frontend**
+- `src/components/equity-brain/crm/QualifyLeadButton.tsx` — vira diálogo com 2 passos.
+- `src/components/equity-brain/crm/RoleBadges.tsx` — novo.
+- `src/pages/equity-brain/MandateDetailPage.tsx` e `BuyerDetailPage.tsx` — exibem badges e link para entidade-irmã quando promovido.
+- `src/pages/admin/...` painel de métricas — adiciona contadores.
 
-### Badge universal (`<EngagementBadge />`)
-- `qualified`: verde Volt (`#D9F564`) + check
-- `unqualified`: graphite + ícone de alvo
+**Memória**
+- Atualiza `mem://features/lead-qualification-rfb-expand` cobrindo o dual-role.
 
-Aplicado em: `MatchesPanel`, `BuyersTable`, `MandatesTable`, `OportunidadesPage`, cards do Jarvis.
+## Fora de escopo
 
-### Filtro padrão
-`MatchesPanel` ganha tabs: **Qualificados** | **Todos** | **Apenas RFB**.
+- Promoção automática sem confirmação humana (mantemos sempre um clique do advisor — evita poluir o pool).
+- Importação de buyers da RFB (decisão anterior: buyers nascem só de cadastro real ou promoção).
+- Migração retroativa em massa de companies qualificadas para virar buyers — não faz sentido sem julgamento humano caso a caso.
 
-### Ação "Qualificar"
-Em qualquer card de empresa/buyer não qualificado:
-- Botão **"Qualificar lead"** abre popover pedindo motivo (`primeira ligação ok`, `WhatsApp respondido`, `reunião marcada`, `contrato assinado`).
-- Cria `crm_activities` + UPDATE `engagement_status='qualified'`, `qualified_at=now()`, `qualified_by=auth.uid()`, `qualification_source` conforme escolha.
+## Perguntas antes de implementar
 
----
-
-## Edge functions
-
-### Nova: `expand-companies-from-rfb`
-Input: `{ buyer_id, filters: { setores, ufs, porte_min, capital_min, idade_min_anos, limit } }`
-1. Auth: admin OR advisor.
-2. Conecta `EXTERNAL_DB_URL` (deno-postgres).
-3. Reaproveita query base de `sync-companies-from-cnpj`, mas com filtros do buyer.
-4. Exclui CNPJs já em `equity_brain.companies`.
-5. UPSERT com `source='rfb_expand'`, `engagement_status='unqualified'`.
-6. Trigger pós-insert (ou chamada explícita): roda `compute-signals` + `match-buyer` para o buyer original.
-7. Retorna `{ imported, matched, top_matches: [...] }`.
-
-### Nova: `expand-buyers-for-mandate`
-Input: `{ mandate_id }` ou `{ company_cnpj, filters }`.
-- Por enquanto apenas relaxa filtros e roda `match-company-v2` incluindo buyers `unqualified` (não importa novos buyers — buyers só entram via cadastro real).
-- Retorna lista ordenada com flag `unqualified`.
-
-### Nova: `qualify-lead`
-Input: `{ entity_type: 'company' | 'buyer', entity_id, source, notes }`
-- UPDATE engagement_status + INSERT crm_activity + dispara notificação.
-
-### Modificada: `match-buyer` e `match-company-v2`
-- Aceitar parâmetro opcional `include_unqualified: boolean` (default `false`).
-- Quando `false`, filtrar `engagement_status='qualified'`.
-
----
-
-## Layout técnico (resumo)
-
-```text
-┌──────────────────────────────────────────────────────────┐
-│  MandateDetail / BuyerDetail                             │
-│  ┌─ MatchesPanel ──────────────────────────────────┐     │
-│  │ [Qualificados (12)] [Todos (47)] [RFB (0)]      │     │
-│  │  • Buyer A  qualified                           │     │
-│  │  • Buyer B  unqualified  [Qualificar]           │     │
-│  │  ...                                             │     │
-│  │  [+ Expandir busca na Base RFB (5M)]            │     │
-│  └─────────────────────────────────────────────────┘     │
-└──────────────────────────────────────────────────────────┘
-        │
-        ▼ (clique)
-   Modal de filtros → expand-companies-from-rfb
-        │
-        ▼
-   Imports N empresas → match-buyer roda → resultados
-   aparecem com badge "RFB · não qualificado"
-```
-
-## Migrações necessárias
-
-1. ENUM `engagement_status` (se não existir compatível).
-2. Colunas em `companies` e `buyers`.
-3. Backfill SQL aplicando regras de qualificação automática.
-4. Índice em `(engagement_status, ma_score DESC)` em `companies` para acelerar listagem.
-
-## Checklist de entrega
-
-- [ ] Migração DB + backfill.
-- [ ] 3 edge functions novas + 2 modificadas.
-- [ ] `<EngagementBadge />`, modal "Expandir busca", popover "Qualificar".
-- [ ] Tabs em `MatchesPanel` + integração nos 2 detail pages.
-- [ ] Coluna "Qualificação" em `BuyersTable` e `MandatesTable`.
-- [ ] Atualizar memória do projeto.
-
----
-
-## Pontos para você decidir antes de eu codar
-
-1. **Limite por expansão RFB:** sugestão default = 50 empresas por clique. OK ou prefere outro?
-2. **Quem pode expandir RFB:** só `admin`, ou também `advisor`? (Importação é cara — recomendo `admin` + `advisor`.)
-3. **Auto-qualificação por evento:** quando o advisor enviar primeira mensagem WhatsApp pelo CRM, devo já marcar como `qualified` automaticamente, ou exigir o clique manual? (Recomendo manual com sugestão automática, para o advisor confirmar.)
-4. **Buyers RFB:** concorda em **não importar buyers da RFB** (buyers só nascem de cadastro real)? Ou quer que eu também sugira "potenciais compradores" baseados em quem fez M&A recente no setor (campo `recent_capital_raise_brl` já existe)?
+1. **Default do checkbox "Manter como alvo"** ao qualificar uma company: deixo marcado (ele já é target por origem) ou desmarco para o advisor confirmar conscientemente?
+2. **Promoção a buyer exige mini-form (tese, setores, ticket)** — OK em deixar campos opcionais e o advisor preenche depois no `BuyerDetailPage`, ou prefere bloquear até preencher tese mínima?
+3. **Re-matching assíncrono via fila** — OK ou prefere recálculo síncrono no momento da promoção (mais lento, mas resultado imediato visível)?
