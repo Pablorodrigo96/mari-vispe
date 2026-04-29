@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChevronRight, Send, X, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBuyerMatches, useMandateMatches, useLogActivity } from "@/hooks/useCrm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { QualificationBadge } from "./QualificationBadge";
+import { QualifyLeadButton } from "./QualifyLeadButton";
+import { ExpandRFBDialog } from "./ExpandRFBDialog";
 
-type Mode = { type: "buyer"; buyerId: string } | { type: "mandate"; cnpj: string; mandateId: string };
+type Mode =
+  | { type: "buyer"; buyerId: string; buyerSetores?: string[]; buyerUfs?: string[] }
+  | { type: "mandate"; cnpj: string; mandateId: string };
+
+type Filter = "qualified" | "all" | "rfb";
 
 /**
  * Lista ranqueada de matches com drawer SHAP-like de explicabilidade.
@@ -12,10 +19,31 @@ type Mode = { type: "buyer"; buyerId: string } | { type: "mandate"; cnpj: string
 export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: string }) {
   const buyerQ = useBuyerMatches(mode.type === "buyer" ? mode.buyerId : undefined);
   const mandateQ = useMandateMatches(mode.type === "mandate" ? mode.cnpj : undefined);
-  const items = (mode.type === "buyer" ? buyerQ.data : mandateQ.data) ?? [];
+  const allItems = (mode.type === "buyer" ? buyerQ.data : mandateQ.data) ?? [];
   const isLoading = mode.type === "buyer" ? buyerQ.isLoading : mandateQ.isLoading;
+  const refetch = mode.type === "buyer" ? buyerQ.refetch : mandateQ.refetch;
   const log = useLogActivity();
   const [selected, setSelected] = useState<any | null>(null);
+  const [filter, setFilter] = useState<Filter>("qualified");
+
+  // Quando modo=buyer, contraparte é company; quando modo=mandate, contraparte é buyer
+  const counterpartType: "company" | "buyer" = mode.type === "buyer" ? "company" : "buyer";
+  const getQual = (m: any) => m.qualification_status as string | undefined;
+  const getCounterpartId = (m: any): string =>
+    counterpartType === "company" ? (m.cnpj ?? "") : (m.buyer_id ?? "");
+  const isFromRfb = (m: any) => (m.source ?? "") === "rfb_expand";
+
+  const counts = useMemo(() => ({
+    qualified: allItems.filter((m: any) => getQual(m) === "qualified").length,
+    all: allItems.length,
+    rfb: allItems.filter(isFromRfb).length,
+  }), [allItems]);
+
+  const items = useMemo(() => {
+    if (filter === "qualified") return allItems.filter((m: any) => getQual(m) === "qualified");
+    if (filter === "rfb") return allItems.filter(isFromRfb);
+    return allItems;
+  }, [allItems, filter]);
 
   function actDismiss(m: any) {
     log.mutate({
