@@ -14,6 +14,9 @@ import {
 import { ScoreDial } from "./ScoreDial";
 import { SignalChip } from "./SignalChip";
 import { QuickCallModal } from "./QuickCallModal";
+import { BlindBadge } from "./BlindBadge";
+import { RequestDisclosureDialog } from "./RequestDisclosureDialog";
+import { useIdentityVisibility } from "@/hooks/useIdentityVisibility";
 import { cn } from "@/lib/utils";
 
 interface DealCardProps {
@@ -22,7 +25,9 @@ interface DealCardProps {
 }
 
 export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, isAdvisor } = useUserRoles();
+  const { data: canSeeIdentity = false } = useIdentityVisibility({ cnpj });
+  const identified = isAdmin || isAdvisor || canSeeIdentity;
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [callOpen, setCallOpen] = useState(false);
