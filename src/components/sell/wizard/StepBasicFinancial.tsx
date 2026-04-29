@@ -63,9 +63,21 @@ const parseCurrency = (value: string): number => {
   return numbers ? parseInt(numbers) / 100 : 0;
 };
 
+interface RfData {
+  razao_social?: string;
+  nome_fantasia?: string;
+  endereco_completo?: string;
+  natureza_juridica_descricao?: string;
+  porte?: string;
+  idade_anos?: number | null;
+  cnae_principal_descricao?: string;
+  situacao?: string;
+}
+
 const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
   const { lookupCnpj } = useNationalSearch();
   const [cnpjLookupStatus, setCnpjLookupStatus] = useState<'idle' | 'loading' | 'found' | 'not_found'>('idle');
+  const [rfData, setRfData] = useState<RfData | null>(null);
   const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const margin = useMemo(() => {
@@ -93,23 +105,44 @@ const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
         const company = await lookupCnpj(clean);
         if (company) {
           setCnpjLookupStatus('found');
+          setRfData({
+            razao_social: company.razao_social,
+            nome_fantasia: company.nome_fantasia,
+            endereco_completo: company.endereco_completo,
+            natureza_juridica_descricao: company.natureza_juridica_descricao,
+            porte: company.porte,
+            idade_anos: company.idade_anos,
+            cnae_principal_descricao: company.cnae_principal_descricao,
+            situacao: company.situacao,
+          });
+
           const name = company.nome_fantasia || company.razao_social;
           if (name && !data.title) onChange('title', name);
+          if (company.category) onChange('category', company.category);
+          if (company.foundation_year && !data.foundationYear) {
+            onChange('foundationYear', String(company.foundation_year));
+          }
+          // Address auto-fill (only if currently empty)
+          if (company.cep) onChange('cep' as any, company.cep);
+          if (company.street) onChange('street' as any, company.street);
+          if (company.neighborhood) onChange('neighborhood' as any, company.neighborhood);
           if (company.city) onChange('city' as any, company.city);
           if (company.state) onChange('state' as any, company.state);
-          if (company.category) onChange('category', company.category);
         } else {
           setCnpjLookupStatus('not_found');
+          setRfData(null);
         }
       }, 600);
     } else {
       setCnpjLookupStatus('idle');
+      setRfData(null);
     }
   };
 
   useEffect(() => {
     return () => { if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current); };
   }, []);
+
 
 
   const handleCurrencyChange = (field: string, value: string) => {
