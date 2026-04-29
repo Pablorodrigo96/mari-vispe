@@ -323,14 +323,82 @@ serve(async (req) => {
         email: row.correio_eletronico || "",
       };
 
+      // --- BrasilAPI fallback enrichment (QSA + Simples/MEI) ---
+      // Only enriches if the local DB doesn't have these (currently never has).
+      let enrichedCompany: any = company;
+      try {
+        const { data: cfg } = await supabaseAdminCache
+          .from("integrations_config")
+          .select("value, active")
+          .eq("key", "brasilapi_fallback_enabled")
+          .maybeSingle();
+
+        const fallbackEnabled = cfg?.active && cfg?.value === "true";
+
+        if (fallbackEnabled) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+          try {
+            const baResp = await fetch(
+              `https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`,
+              { signal: controller.signal, headers: { "Accept": "application/json" } }
+            );
+            clearTimeout(timeoutId);
+
+            if (baResp.ok) {
+              const ba = await baResp.json();
+              const socios = Array.isArray(ba.qsa)
+                ? ba.qsa.map((s: any) => ({
+                    nome: s.nome_socio || "",
+                    qualificacao: s.qualificacao_socio || "",
+                    data_entrada: s.data_entrada_sociedade || "",
+                    cpf_cnpj: s.cnpj_cpf_do_socio || undefined,
+                    faixa_etaria: s.faixa_etaria || undefined,
+                  }))
+                : [];
+
+              enrichedCompany = {
+                ...company,
+                socios,
+                regime_tributario: {
+                  simples: !!ba.opcao_pelo_simples,
+                  data_opcao_simples: ba.data_opcao_pelo_simples || undefined,
+                  mei: !!ba.opcao_pelo_mei,
+                  data_opcao_mei: ba.data_opcao_pelo_mei || undefined,
+                },
+                data_source_qsa: socios.length > 0 ? "brasilapi" : "unavailable",
+                data_source_simples: "brasilapi",
+              };
+            } else {
+              enrichedCompany = {
+                ...company,
+                data_source_qsa: "unavailable",
+                data_source_simples: "unavailable",
+              };
+            }
+          } catch (fetchErr) {
+            clearTimeout(timeoutId);
+            console.warn("BrasilAPI fallback failed:", fetchErr instanceof Error ? fetchErr.message : fetchErr);
+            enrichedCompany = {
+              ...company,
+              data_source_qsa: "unavailable",
+              data_source_simples: "unavailable",
+            };
+          }
+        }
+      } catch (cfgErr) {
+        console.warn("BrasilAPI config check failed:", cfgErr);
+      }
+
       // Save to cache (best-effort, ignore errors)
       supabaseAdminCache
         .from("cnpj_cache")
-        .upsert({ cnpj: cleanCnpj, data: company, cached_at: new Date().toISOString() })
+        .upsert({ cnpj: cleanCnpj, data: enrichedCompany, cached_at: new Date().toISOString() })
         .then(() => {})
         .catch((err) => console.error("cnpj_cache upsert failed:", err));
 
-      return new Response(JSON.stringify({ company, cached: false }), {
+      return new Response(JSON.stringify({ company: enrichedCompany, cached: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
