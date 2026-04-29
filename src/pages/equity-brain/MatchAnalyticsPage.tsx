@@ -93,19 +93,47 @@ export default function MatchAnalyticsPage() {
         </Link>
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiTile label="Mandatos vigentes" value={mandList.length} accent="success" loading={mandates.isLoading} />
-        <KpiTile label="Compradores ativos" value={buyList.length} accent="primary" loading={buyers.isLoading} />
-        <KpiTile
-          label="Mandatos exclusivos"
-          value={mandList.filter((m: any) => m.exclusividade).length}
-          loading={mandates.isLoading}
-        />
-        <KpiTile
-          label="Cobertura geográfica"
-          value={`${new Set(mandList.map((m: any) => m.uf).filter(Boolean)).size} UFs`}
-          loading={mandates.isLoading}
-        />
+      {/* KPIs grandes — totais Monday */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        <KpiTile label="Total mandatos" value={(v2.data?.mandate_status ?? []).reduce((s: number, r: any) => s + Number(r.qty || 0), 0)} loading={v2.isLoading} />
+        <KpiTile label="Vigentes" value={(v2.data?.mandate_status ?? []).find((r: any) => r.status === "vigente")?.qty ?? 0} accent="warning" loading={v2.isLoading} />
+        <KpiTile label="Em negociação" value={(v2.data?.mandate_status ?? []).find((r: any) => r.status === "em_negociacao")?.qty ?? 0} accent="primary" loading={v2.isLoading} />
+        <KpiTile label="Vendemos" value={(v2.data?.mandate_status ?? []).find((r: any) => r.status === "vendemos")?.qty ?? 0} accent="success" loading={v2.isLoading} />
+        <KpiTile label="Total compradores" value={(v2.data?.buyer_engagement ?? []).reduce((s: number, r: any) => s + Number(r.qty || 0), 0)} loading={v2.isLoading} />
+        <KpiTile label="Aguardando" value={(v2.data?.buyer_engagement ?? []).find((r: any) => r.status === "aguardando")?.qty ?? 0} accent="warning" loading={v2.isLoading} />
+        <KpiTile label="Tempo médio venda" value={v2.data?.avg_months_sellside ? `${v2.data.avg_months_sellside}m` : "—"} loading={v2.isLoading} />
+        <KpiTile label="Tempo médio compra" value={v2.data?.avg_months_buyside ? `${v2.data.avg_months_buyside}m` : "—"} loading={v2.isLoading} />
+      </div>
+
+      {/* Donuts refinados — Status mandatos × Status compradores × Exclusividade */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <ChartCard title="Status dos mandatos">
+          <DonutChart
+            data={(v2.data?.mandate_status ?? []).map((r: any) => ({
+              name: OUTCOME_LABEL[r.status] || r.status,
+              value: Number(r.qty || 0),
+            }))}
+            colors={(v2.data?.mandate_status ?? []).map((r: any) => OUTCOME_COLOR[r.status] || "#71717a")}
+          />
+        </ChartCard>
+        <ChartCard title="Status dos compradores">
+          <DonutChart
+            data={(v2.data?.buyer_engagement ?? []).map((r: any) => ({
+              name: BUYER_ENGAGEMENT_LABEL[r.status] || r.status,
+              value: Number(r.qty || 0),
+            }))}
+            colors={(v2.data?.buyer_engagement ?? []).map((r: any) => BUYER_ENGAGEMENT_COLOR[r.status] || "#71717a")}
+          />
+        </ChartCard>
+        <ChartCard title="Mandatos exclusivos">
+          <DonutChart
+            data={[
+              { name: "Sim", value: mandList.filter((m: any) => m.exclusividade).length },
+              { name: "Não", value: mandList.filter((m: any) => !m.exclusividade).length },
+            ]}
+            colors={["#10b981", "#ef4444"]}
+          />
+        </ChartCard>
       </div>
 
       <ChartCard
