@@ -220,6 +220,30 @@ function aggregateByLabel(arr: { label: string; Mandatos: number; Compradores: n
   return Array.from(m.values()).sort((a, b) => b.Mandatos + b.Compradores - (a.Mandatos + a.Compradores));
 }
 
+function CrossChart({ title, data }: { title: string; data: { label: string; Mandatos: number; Compradores: number }[] }) {
+  return (
+    <ChartCard title={title}>
+      {data.length > 0 ? (
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+            <XAxis dataKey="label" tick={{ fill: "#a1a1aa", fontSize: 9 }} angle={-45} textAnchor="end" height={70} interval={0} />
+            <YAxis tick={{ fill: "#a1a1aa", fontSize: 10 }} />
+            <Tooltip contentStyle={{ background: "#18181b", border: "1px solid #27272a", fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="Compradores" stackId="a" fill="#1d4ed8" />
+            <Bar dataKey="Mandatos" stackId="a" fill="#10b981" />
+          </BarChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="h-[260px] flex items-center justify-center text-xs text-zinc-500 text-center px-4 break-words">
+          Sem dados — preencha UF/setor nos mandatos e nos interesses dos compradores.
+        </div>
+      )}
+    </ChartCard>
+  );
+}
+
 function SideTable({
   title,
   color,
