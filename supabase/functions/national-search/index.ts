@@ -178,6 +178,28 @@ serve(async (req) => {
         });
       }
 
+      // --- Cache check (30 days) ---
+      const supabaseAdminCache = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        { auth: { persistSession: false } }
+      );
+
+      const { data: cached } = await supabaseAdminCache
+        .from("cnpj_cache")
+        .select("data, cached_at")
+        .eq("cnpj", cleanCnpj)
+        .maybeSingle();
+
+      if (cached) {
+        const ageDays = (Date.now() - new Date(cached.cached_at).getTime()) / (1000 * 60 * 60 * 24);
+        if (ageDays < CACHE_TTL_DAYS) {
+          return new Response(JSON.stringify({ company: cached.data, cached: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
       const EXTERNAL_DB_URL = Deno.env.get("EXTERNAL_DB_URL");
       if (!EXTERNAL_DB_URL) throw new Error("EXTERNAL_DB_URL not configured");
 
@@ -189,13 +211,24 @@ serve(async (req) => {
       const cnpjOrdem = cleanCnpj.substring(8, 12);
       const cnpjDv = cleanCnpj.substring(12, 14);
 
+      // Query base tables for full raw data (view doesn't expose all fields)
       const result = await client.queryObject({
         text: `
-          SELECT e.cnpj_basico || e.cnpj_ordem || e.cnpj_dv AS cnpj_completo,
-            e.nome_fantasia, e.cnae_fiscal_principal, e.uf, e.municipio, e.situacao_cadastral,
-            em.razao_social, em.capital_social, em.porte_empresa
+          SELECT
+            e.cnpj_basico, e.cnpj_ordem, e.cnpj_dv,
+            e.identificador_matriz_filial, e.nome_fantasia,
+            e.situacao_cadastral, e.data_situacao_cadastral, e.data_inicio_atividade,
+            e.cnae_fiscal_principal, e.cnae_fiscal_secundaria,
+            e.tipo_logradouro, e.logradouro, e.numero, e.complemento,
+            e.bairro, e.cep, e.uf, e.municipio,
+            e.ddd_1, e.telefone_1, e.ddd_2, e.telefone_2,
+            e.correio_eletronico,
+            em.razao_social, em.capital_social, em.porte_empresa,
+            em.natureza_juridica, em.ente_federativo,
+            cn.descricao AS cnae_descricao
           FROM estabelecimentos e
           INNER JOIN empresas em ON em.cnpj_basico = e.cnpj_basico
+          LEFT JOIN cnaes cn ON cn.codigo = e.cnae_fiscal_principal
           WHERE e.cnpj_basico = $1 AND e.cnpj_ordem = $2 AND e.cnpj_dv = $3
           LIMIT 1
         `,
@@ -214,19 +247,89 @@ serve(async (req) => {
       const municipioCod = String(row.municipio || "");
       const cityName = RF_MUNICIPIOS[municipioCod] || municipioCod;
 
-      return new Response(JSON.stringify({
-        company: {
-          razao_social: row.razao_social || "",
-          nome_fantasia: row.nome_fantasia || "",
-          cnae: row.cnae_fiscal_principal || "",
-          category: mapCnaeToVispe(row.cnae_fiscal_principal),
-          city: cityName,
-          state: row.uf || "",
-          porte: mapPorteToSize(row.porte_empresa),
-          capital_social: parseFloat(row.capital_social) || null,
-          situacao_cadastral: row.situacao_cadastral,
-        }
-      }), {
+      const dataAbertura = parseRfDate(row.data_inicio_atividade);
+      const dataSituacao = parseRfDate(row.data_situacao_cadastral);
+
+      // Build address
+      const addressParts = [
+        row.tipo_logradouro, row.logradouro,
+      ].filter(Boolean).join(" ");
+      const fullStreet = addressParts || "";
+
+      // Phone (DDD + número)
+      const tel1 = row.ddd_1 && row.telefone_1 ? `${row.ddd_1}${row.telefone_1}` : "";
+      const tel2 = row.ddd_2 && row.telefone_2 ? `${row.ddd_2}${row.telefone_2}` : "";
+      const phone = formatPhone(tel1) || formatPhone(tel2);
+
+      // CNAEs secundários (string separada por vírgula no formato "1234567,2345678")
+      const cnaeSecundarios = row.cnae_fiscal_secundaria
+        ? String(row.cnae_fiscal_secundaria).split(",").map((c: string) => c.trim()).filter(Boolean)
+        : [];
+
+      const company = {
+        // Identification
+        cnpj: cleanCnpj,
+        razao_social: row.razao_social || "",
+        nome_fantasia: row.nome_fantasia || "",
+        is_matriz: row.identificador_matriz_filial === "1",
+
+        // Status
+        situacao_codigo: row.situacao_cadastral || "",
+        situacao: decodeSituacao(row.situacao_cadastral),
+        situacao_data: dataSituacao,
+
+        // Dates
+        data_abertura: dataAbertura,
+        idade_anos: yearsSince(dataAbertura),
+        foundation_year: dataAbertura ? parseInt(dataAbertura.slice(0, 4)) : null,
+
+        // Legal
+        natureza_juridica_codigo: row.natureza_juridica || "",
+        natureza_juridica_descricao: decodeNatureza(row.natureza_juridica),
+        porte_codigo: row.porte_empresa || "",
+        porte: mapPorteToSize(row.porte_empresa),
+        capital_social: parseFloat(row.capital_social) || null,
+        ente_federativo: row.ente_federativo || null,
+
+        // Activity
+        cnae: row.cnae_fiscal_principal || "",
+        cnae_principal_codigo: row.cnae_fiscal_principal || "",
+        cnae_principal_descricao: row.cnae_descricao || "",
+        cnae_secundarios: cnaeSecundarios,
+        category: mapCnaeToVispe(row.cnae_fiscal_principal),
+
+        // Address
+        tipo_logradouro: row.tipo_logradouro || "",
+        logradouro: row.logradouro || "",
+        street: fullStreet,
+        numero: row.numero || "",
+        complemento: row.complemento || "",
+        neighborhood: row.bairro || "",
+        bairro: row.bairro || "",
+        cep: row.cep || "",
+        city: cityName,
+        municipio_codigo: municipioCod,
+        state: row.uf || "",
+        uf: row.uf || "",
+        endereco_completo: [
+          fullStreet, row.numero, row.complemento, row.bairro,
+          cityName, row.uf, row.cep ? `CEP ${row.cep}` : null,
+        ].filter(Boolean).join(", "),
+
+        // Contact
+        phone,
+        telefone: phone,
+        email: row.correio_eletronico || "",
+      };
+
+      // Save to cache (best-effort, ignore errors)
+      supabaseAdminCache
+        .from("cnpj_cache")
+        .upsert({ cnpj: cleanCnpj, data: company, cached_at: new Date().toISOString() })
+        .then(() => {})
+        .catch((err) => console.error("cnpj_cache upsert failed:", err));
+
+      return new Response(JSON.stringify({ company, cached: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
