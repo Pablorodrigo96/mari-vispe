@@ -14,6 +14,7 @@ export default function MatchInboxPage() {
   const [uf, setUf] = useState<string | null>(null);
   const [setor, setSetor] = useState<string | null>(null);
   const [onlyWithMandate, setOnlyWithMandate] = useState(false);
+  const [detailRow, setDetailRow] = useState<MatchRow | null>(null);
 
   const { data: rows = [], isLoading } = useMatchInbox({
     minScore,
