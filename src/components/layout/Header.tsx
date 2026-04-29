@@ -86,7 +86,7 @@ export function Header() {
             <MariLogo
               variant={isTransparent ? 'dark' : 'light'}
               size={72}
-              className="transition-opacity duration-300"
+              className="transition-opacity duration-300 mx-0 mt-[10px] ml-0 mr-0 mb-[10px] py-0 px-[50px]"
             />
           </Link>
 
