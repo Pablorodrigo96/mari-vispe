@@ -3,7 +3,7 @@ import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Phone, Mail, Bookmark, Copy, RotateCw, Loader2, ExternalLink, Building2, MapPin, Tag,
+  Phone, Mail, Bookmark, BookmarkCheck, Copy, RotateCw, Loader2, ExternalLink, Building2, MapPin, Tag, MessageCircle, UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,10 @@ import { QuickCallModal } from "./QuickCallModal";
 import { BlindBadge } from "./BlindBadge";
 import { RequestDisclosureDialog } from "./RequestDisclosureDialog";
 import { useIdentityVisibility } from "@/hooks/useIdentityVisibility";
+import { useMatchContacts } from "@/hooks/useMatchContacts";
+import { useIsSaved, useToggleSaved } from "@/hooks/useSavedCompanies";
+import { getWhatsAppLink, normalizeBrPhone } from "@/lib/whatsapp";
+import { AddContactDialog } from "./match/AddContactDialog";
 import { cn } from "@/lib/utils";
 
 interface DealCardProps {
@@ -111,6 +115,14 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
   const loading = queries.some((q) => q.isLoading);
   const tier = tierFor(scored?.ma_score ?? opp?.ma_score);
   const tierBadge = tierLabel(tier);
+
+  // Real seller contacts + saved state
+  const { data: contactsBundle } = useMatchContacts(cnpj, null);
+  const sellerContact = contactsBundle?.seller ?? null;
+  const sellerPhone = normalizeBrPhone(sellerContact?.telefone_e164);
+  const sellerEmail = sellerContact?.email ?? null;
+  const { data: isSaved = false } = useIsSaved(cnpj);
+  const toggleSaved = useToggleSaved(cnpj);
 
   const refetchAll = () => {
     qc.invalidateQueries({ queryKey: ["eb"] });
@@ -219,7 +231,7 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
             </span>
           )}
         </div>
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-2 pt-1 flex-wrap">
           <Button
             size="sm"
             onClick={() => setCallOpen(true)}
@@ -227,18 +239,72 @@ export function DealCard({ cnpj, mode = "drawer" }: DealCardProps) {
           >
             <Phone className="h-3.5 w-3.5 mr-1" />Ligar
           </Button>
+
+          {sellerPhone ? (
+            <a
+              href={getWhatsAppLink(
+                `Olá ${sellerContact?.nome ?? ""}! Falo da mari, identifiquei investidores qualificados interessados na sua empresa.`,
+                sellerPhone,
+              )}
+              target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center h-9 px-3 rounded text-sm font-medium border bg-transparent border-emerald-800/60 text-emerald-300 hover:border-emerald-600"
+              title={`WhatsApp ${sellerContact?.nome ?? ""}`}
+            >
+              <MessageCircle className="h-3.5 w-3.5 mr-1" />WhatsApp
+            </a>
+          ) : (
+            <AddContactDialog
+              entityType="company" entityId={cnpj} entityLabel={razao}
+              trigger={
+                <button className="inline-flex items-center h-9 px-3 rounded text-sm font-medium border bg-transparent border-zinc-800 text-zinc-500 hover:text-[#D9F564]">
+                  <MessageCircle className="h-3.5 w-3.5 mr-1" />Adicionar WhatsApp
+                </button>
+              }
+            />
+          )}
+
+          {sellerEmail ? (
+            <a
+              href={`mailto:${sellerEmail}?subject=${encodeURIComponent(`mari · oportunidade para ${razao ?? "sua empresa"}`)}&body=${encodeURIComponent(`Olá ${sellerContact?.nome ?? ""},\n\nFalo da mari. Identificamos investidores qualificados interessados na sua empresa e gostaria de marcar uma conversa rápida.\n\nFica bem amanhã ou depois?`)}`}
+              className="inline-flex items-center h-9 px-3 rounded text-sm font-medium border bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+              title={`Email ${sellerEmail}`}
+            >
+              <Mail className="h-3.5 w-3.5 mr-1" />Email
+            </a>
+          ) : (
+            <AddContactDialog
+              entityType="company" entityId={cnpj} entityLabel={razao}
+              trigger={
+                <button className="inline-flex items-center h-9 px-3 rounded text-sm font-medium border bg-transparent border-zinc-800 text-zinc-500 hover:text-[#D9F564]">
+                  <Mail className="h-3.5 w-3.5 mr-1" />Adicionar email
+                </button>
+              }
+            />
+          )}
+
           <Button
             size="sm" variant="outline"
-            className="bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+            disabled={toggleSaved.isPending}
+            onClick={() => toggleSaved.mutate(isSaved)}
+            className={cn(
+              "border-zinc-700 hover:bg-zinc-800 bg-transparent",
+              isSaved ? "text-[#D9F564] border-[#D9F564]/40" : "text-zinc-200",
+            )}
           >
-            <Mail className="h-3.5 w-3.5 mr-1" />Email
+            {isSaved ? <BookmarkCheck className="h-3.5 w-3.5 mr-1" /> : <Bookmark className="h-3.5 w-3.5 mr-1" />}
+            {isSaved ? "Salvo" : "Salvar"}
           </Button>
-          <Button
-            size="sm" variant="outline"
-            className="bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800"
-          >
-            <Bookmark className="h-3.5 w-3.5 mr-1" />Salvar
-          </Button>
+
+          {(sellerContact || (!sellerPhone && !sellerEmail)) && (
+            <AddContactDialog
+              entityType="company" entityId={cnpj} entityLabel={razao}
+              trigger={
+                <button className="inline-flex items-center h-9 px-3 rounded text-sm font-medium border bg-transparent border-zinc-800 text-zinc-400 hover:text-[#D9F564] hover:border-zinc-600">
+                  <UserPlus className="h-3.5 w-3.5 mr-1" />Contato
+                </button>
+              }
+            />
+          )}
         </div>
       </div>
 

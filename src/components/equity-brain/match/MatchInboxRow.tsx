@@ -154,9 +154,17 @@ export function MatchInboxRow({ row, percentiles, onOpenDetail }: Props) {
             />
           )}
 
+          <Link
+            to={`/equity-brain/match/${row.id}`}
+            onClick={stop}
+            title="Página completa do match"
+            className="h-8 w-8 inline-flex items-center justify-center rounded border border-zinc-800 bg-transparent text-zinc-400 hover:text-[#D9F564] hover:border-zinc-600"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Link>
           <button
             onClick={(e) => { e.stopPropagation(); onOpenDetail?.(row); }}
-            title="Detalhes do match"
+            title="Preview do match"
             className="h-8 w-8 inline-flex items-center justify-center rounded border border-zinc-800 bg-transparent text-zinc-400 hover:text-[#D9F564] hover:border-zinc-600"
           >
             <Info className="h-3.5 w-3.5" />

@@ -1,87 +1,86 @@
-## Problema
+## O que vamos resolver
 
-Hoje a Match Inbox lista 4.300+ pares vendedor↔comprador, mas é uma **lista morta**:
+Hoje, ao clicar num match, três coisas estão quebradas:
+1. **Não existe uma página do match** — só um drawer lateral. Sem URL, sem ID, sem como compartilhar.
+2. **A "ficha da empresa" abre vazia** — a rota `/equity-brain/empresa/:cnpj` exige CNPJ, mas o link às vezes envia o **codename** (ex.: `VL60b55c58449f`) ou um `listing_id`. O `DealCard` não encontra nada e mostra "empresa não encontrada".
+3. **Botões da ficha são fake** — WhatsApp, Email e Salvar do `DealCard` não usam os contatos reais (estão sem handler).
 
-- Os textos do Vendedor e do Comprador **não são links** — não dá pra clicar e abrir o 360.
-- Os botões de **WhatsApp / telefone / e-mail estão quebrados**: usam fallback fixo, `tel:` e `mailto:` vazios. Nenhum contato real aparece.
-- **Identidade fica cega** mesmo para advisor/admin (só razão social mascarada/codename) — o `IdentityRevealCard` só existe nas páginas internas de Mandato e Buyer.
-- Sem mandato, **não há CTA "Criar mandato a partir do match"** — o advisor vê o par quente mas não tem como começar a trabalhar.
-- Sem **detalhe rápido** (SHAP, fits, último contato, observações) → advisor não consegue decidir o que fazer só pela linha.
+## O que vamos entregar
 
-## Solução
+### 1. Página dedicada do match: `/equity-brain/match/:matchId`
 
-Transformar cada linha em um "cartão de ação" e adicionar um drawer de detalhe que concentra contatos reais + razões do match + ações.
+Cada linha do Match Inbox vira uma página própria com URL fixa que pode ser compartilhada/colada no CRM.
 
-### 1. Linhas clicáveis (MatchInboxRow)
+```text
+┌────────────────────────────────────────────────────────────┐
+│ #MATCH-3f2a · Score 78 🔥 · Quente                         │
+│ MARI-VAR-0042 (vendedor) ──► Patria Equity (comprador)     │
+├──────────────────────┬─────────────────────────────────────┤
+│ VENDEDOR (ficha)     │ COMPRADOR (ficha)                   │
+│ • Razão / Codename   │ • Nome / Tipo                       │
+│ • Setor · UF · Fat.  │ • Ticket · Setores · UFs            │
+│ • Botão "Abrir 360"  │ • Botão "Abrir 360"                 │
+│ • WhatsApp / Tel /   │ • WhatsApp / Tel / Email REAIS      │
+│   Email REAIS        │                                     │
+├──────────────────────┴─────────────────────────────────────┤
+│ Por que esse match: barras Setor/Geo/Porte/Tese + thesis   │
+│ Próximos passos sugeridos (Mari Brain)                     │
+│ Histórico de contato (eb_call_feedback do CNPJ)            │
+│ Ações: [Iniciar mandato] [Solicitar abertura] [Snooze]     │
+└────────────────────────────────────────────────────────────┘
+```
 
-- O bloco do **Vendedor** vira link para `/equity-brain/crm/mandate/:id` quando há mandato, ou `/equity-brain/empresa/:cnpj` caso contrário.
-- O bloco do **Comprador** vira link para `/equity-brain/crm/buyer/:id`.
-- Clicar em qualquer área "vazia" da linha (fora dos botões/links) abre o **MatchDetailDrawer** (lateral).
-- Botão "Abrir" passa a ter um menu suspenso: "Mandato · Empresa · Buyer · Detalhe do match".
+- Usa o mesmo conteúdo do `MatchDetailDrawer` mas em modo página.
+- Inclui o histórico de contato do vendedor (mesma query usada no `DealCard`: `eb_call_feedback`).
+- Linka direto para mandato (se existir) ou abre `QuickStartMandateDialog` se ainda não existir.
+- Linka para `/equity-brain/empresa/:cnpj` e `/equity-brain/crm/buyer/:id` agora **funcionando**.
 
-### 2. Identidade real inline (advisor/admin)
+### 2. Resolver corretamente a rota da ficha
 
-- Reusar o hook `useIdentityVisibility({ cnpj })`. Quando `canSee=true`:
-  - Mostrar **razão social real** (no lugar do codename) com chip "Identidade revelada".
-  - Mostrar CNPJ formatado embaixo.
-- Quando `canSee=false`: mantém codename + chip "Cego" + botão "Solicitar abertura via Advisor" (já existe `RequestDisclosureDialog`).
-- Cada expansão grava `identity_reveal` em `equity_brain.access_logs` (já existe via `useTeaserAccessLog`).
+Trocar a rota `empresa/:cnpj` por `empresa/:idOrCode` que aceita 3 formatos e resolve no carregamento:
 
-### 3. Contatos reais (WhatsApp / telefone / email)
+| Formato detectado     | Como tratar                                                             |
+| --------------------- | ----------------------------------------------------------------------- |
+| 14 dígitos            | `cnpj` direto                                                           |
+| começa com `MARI-...` | buscar `equity_brain.companies` por `codename`                          |
+| UUID                  | tentar `equity_brain.companies.listing_id` → cair em `public.listings`  |
+| outros (ex.: `VL60…`) | buscar `public.listings.ticker` → pegar o `cnpj` do listing             |
 
-Hoje não existem `email/phone` em `equity_brain.buyers` nem em `companies` — vivem em `equity_brain.contacts` (`entity_type` + `entity_id`, com `telefone_e164`, `email`, `is_primary`, `whatsapp_opt_in`).
+A página `DealDetailPage` ganha um hook `useCompanyResolver(idOrCode)` que devolve `{ cnpj, razao_social, codename }` ou redireciona para 404 com mensagem amigável. Todos os links espalhados (`MatchInboxRow`, `MatchHotHero`, `MatchDetailDrawer`, `DealCard`, `EquityBrainLayout`) passam a usar `cnpj` quando existe e `codename` como fallback — nunca mais `undefined`.
 
-- Novo hook `useMatchContacts(cnpj, buyerId)` que busca em paralelo:
-  - Contato primário do **buyer** (`entity_type='buyer'`, `entity_id=buyerId`, prioriza `is_primary=true`).
-  - Contato primário do **vendedor**: tenta `entity_type='company' / 'cnpj'` pelo CNPJ; se não houver, pega `mandates.contato_telefone/contato_email` (já existem no schema).
-- Botões da linha passam a usar valores reais:
-  - WhatsApp: `getWhatsAppLink(message, telefoneE164)` — já é o helper centralizado.
-  - `tel:` e `mailto:` recebem os valores reais; quando não há, ficam **disabled** com tooltip "Sem contato cadastrado · adicionar".
-- Se não houver contato algum, o botão WhatsApp abre um **modal "Adicionar contato rápido"** que insere em `equity_brain.contacts` direto (advisor/admin only, RLS já permite).
+### 3. Handlers reais nos botões da ficha (`DealCard`)
 
-### 4. Criar mandato a partir do match
+- Buscar contatos via `useMatchContacts(cnpj)` (já existe — só usar o lado `seller`).
+- **WhatsApp**: `getWhatsAppLink(template, contacts.seller.telefone_e164)` com mensagem pré-preenchida ("Olá {nome}! Falo da mari sobre...").
+- **Email**: `mailto:${contacts.seller.email}?subject=...&body=...`
+- **Salvar**: persiste em `eb_saved_companies` (tabela nova, simples: `user_id, cnpj, created_at, note`) com toast "Salvo na sua lista".
+- Estado desabilitado quando não há contato + botão "Adicionar contato" abrindo o `AddContactDialog` existente.
+- Ligar continua abrindo o `QuickCallModal`.
 
-- Quando `mandate_id` é `null`, aparece botão **"Iniciar mandato"** (volt) na linha.
-- Clica → modal `QuickStartMandateDialog` (advisor/admin) que faz INSERT em `equity_brain.mandates` com:
-  - `company_cnpj`, `match_buyer_id` (do match), `comprador_nome` (do buyer), `setor` (da empresa), `uf`, `status='prospecting'`, `pipeline_stage='qualificacao'`, `responsavel_id = auth.uid()`.
-  - Loga `crm-log-activity` ("Mandato criado a partir do match #score").
-- Após sucesso, redireciona para `/equity-brain/crm/mandate/:novoId`.
+### 4. Linkagem da inbox para a nova página
 
-### 5. MatchDetailDrawer (slide-over à direita)
+- Botão `Info` (ℹ) na linha → leva para `/equity-brain/match/:matchId` (em vez de só abrir o drawer).
+- Drawer mantém-se para preview rápido + ganha um link "Ver página completa do match".
 
-Novo componente mostrando, em uma única tela:
+## Arquivos
 
-- Header com vendedor (link) ↔ comprador (link), score, tier (🔥/⚡/·) e percentil.
-- **Por que esse match?** — barras de `setor_fit`, `geografia_fit`, `porte_fit`, `tese_fit` + tese (`thesis_key`).
-- **Identidade real** (componente reusado, condicional ao `eb_can_view_identity`).
-- **Contatos** (lista com botões WA/tel/email para cada contato).
-- **Atividade recente** do mandato (se existir) — reusa `ActivityTimeline` filtrando últimos 5.
-- Ações no rodapé: "Abrir mandato", "Abrir buyer", "Iniciar mandato" (se faltar), "Marcar como contatado" (insere atividade `match_contacted` via `crm-log-activity`), "Snooze 7d" (insere `match_snoozed_until` em uma nova coluna ou em `notas`).
+**Novos**
+- `src/pages/equity-brain/MatchDetailPage.tsx` — página `/equity-brain/match/:matchId`
+- `src/hooks/useMatchById.ts` — busca 1 match em `equity_brain.matches` + enriquece como o inbox
+- `src/hooks/useCompanyResolver.ts` — resolve `idOrCode` → CNPJ canônico
+- `src/hooks/useSavedCompanies.ts` — toggle salvar/remover
+- `supabase/migrations/<ts>_eb_saved_companies.sql` — tabela + RLS (advisor/admin own rows)
 
-### 6. Acessibilidade & feedback
+**Editados**
+- `src/App.tsx` — rota `match/:matchId` + manter `empresa/:idOrCode` (renomeia o param)
+- `src/pages/equity-brain/DealDetailPage.tsx` — usa `useCompanyResolver`, mostra estados loading/not-found
+- `src/components/equity-brain/DealCard.tsx` — handlers reais nos 3 botões + Adicionar contato
+- `src/components/equity-brain/match/MatchInboxRow.tsx` — Info navega para a página do match
+- `src/components/equity-brain/match/MatchDetailDrawer.tsx` — link "Ver página completa"
 
-- Loading skeletons na linha enquanto contatos carregam (não bloqueia render principal).
-- Toast em todas as ações (`sonner`).
-- Tooltip nos botões disabled explicando o motivo.
+## Observações técnicas
 
-## Detalhes técnicos
-
-**Arquivos a criar**
-- `src/hooks/useMatchContacts.ts` — busca contatos primários de buyer + vendedor.
-- `src/components/equity-brain/match/MatchDetailDrawer.tsx` — slide-over com SHAP/contatos/ações.
-- `src/components/equity-brain/match/QuickStartMandateDialog.tsx` — criar mandato a partir do match.
-- `src/components/equity-brain/match/AddContactDialog.tsx` — inserir contato rápido em `equity_brain.contacts`.
-
-**Arquivos a editar**
-- `src/components/equity-brain/match/MatchInboxRow.tsx` — links clicáveis, identidade condicional, contatos reais, CTA "Iniciar mandato", abrir drawer.
-- `src/pages/equity-brain/MatchInboxPage.tsx` — gerenciar estado do drawer e do dialog.
-- `src/hooks/useMatchInbox.ts` — incluir `mandate_id` no select já existe; adicionar `match_snoozed_until` se sair migration.
-
-**Migration (opcional, leve)**
-- Adicionar coluna `snoozed_until timestamptz null` em `equity_brain.matches` para permitir snooze por advisor; filtrar `snoozed_until is null OR snoozed_until < now()` na inbox.
-
-**Sem mudança de RLS** — `equity_brain.contacts`, `mandates` e `matches` já têm policies de admin/advisor. `eb_can_view_identity` continua como guarda única para identidade.
-
-## Resultado
-
-Cada linha da Match Inbox vira uma "missão pronta" para o advisor: vê quem é a empresa real, vê o comprador real com WhatsApp/telefone funcionando, abre o detalhe com 1 clique, cria o mandato com 1 clique e marca como contatado sem sair da página.
+- Os links existentes que usam `row.cnpj` continuam funcionando (CNPJ é o caso mais comum). O resolver só entra em ação quando vier codename/listing_id/ticker.
+- Se um match não tiver `cnpj` válido (ainda acontece em listings sem enriquecimento), o resolver tenta `listing_id` → busca o `cnpj` lá e redireciona para a URL canônica `/equity-brain/empresa/<cnpj>` (via `navigate(replace: true)`).
+- LGPD: revelar CNPJ continua passando por `useIdentityVisibility` + log em `equity_brain.access_logs` (já existe, só reusar).
+- A tabela `eb_saved_companies` é nova mas pequena, com RLS por `user_id`.

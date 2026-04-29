@@ -244,7 +244,14 @@ export function MatchDetailDrawer({ row, onClose, percentiles }: Props) {
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex justify-between items-center">
+          <Link
+            to={`/equity-brain/match/${row.id}`}
+            onClick={onClose}
+            className="text-[11px] inline-flex items-center gap-1 text-[#D9F564] hover:underline"
+          >
+            <Eye className="h-3 w-3" /> Ver página completa do match
+          </Link>
           <Button variant="ghost" onClick={onClose} className="text-zinc-400 hover:text-zinc-100">Fechar</Button>
         </div>
       </SheetContent>
