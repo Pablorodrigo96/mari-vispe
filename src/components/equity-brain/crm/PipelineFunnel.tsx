@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { useMandates } from "@/hooks/useCrm";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
+import { EB_TIPS } from "@/lib/ebTooltips";
 
 const STAGES = [
   { key: "vigente", label: "Vigente", color: "bg-amber-500" },
@@ -20,7 +22,10 @@ export function PipelineFunnel() {
 
   return (
     <div className="bg-zinc-900/40 border border-zinc-800 rounded p-4">
-      <div className="text-[10px] uppercase text-zinc-400 mb-2">Funil de pipeline (mandatos)</div>
+      <div className="text-[10px] uppercase text-zinc-400 mb-2 flex items-center gap-1.5">
+        Funil de pipeline (mandatos)
+        <InfoHint {...EB_TIPS.funil_pipeline} />
+      </div>
       <div className="space-y-2">
         {STAGES.map(s => {
           const v = counts[s.key] ?? 0;
