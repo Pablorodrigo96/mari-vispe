@@ -13,6 +13,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { formatNumber, relativeTime, eventIcon, scoreColor } from "@/lib/equityBrain";
 import { rowsToCsv, downloadCsv } from "@/lib/exportCsv";
+import { MatchHotHero } from "@/components/equity-brain/match/MatchHotHero";
 import { cn } from "@/lib/utils";
 
 const REFRESH_MS = 60_000;
