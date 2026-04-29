@@ -144,7 +144,7 @@ export default function ExecutiveDashboardPage() {
       </div>
 
       {/* Linha 2 — Financeiros */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <KpiTile
           label="Total das operações"
           value={brl(k.total_value, { compact: true })}
@@ -162,8 +162,21 @@ export default function ExecutiveDashboardPage() {
         <KpiTile
           label="Ticket médio"
           value={brl(k.avg_ticket, { compact: true })}
-          hint={`Tempo médio fechamento: ${k.avg_months_close ?? "—"} meses`}
           loading={kpis.isLoading}
+        />
+        <KpiTile
+          label="Tempo médio de venda"
+          value={v2d.avg_months_sellside ? `${v2d.avg_months_sellside} meses` : "—"}
+          hint="Sellside concluído"
+          accent="success"
+          loading={v2.isLoading}
+        />
+        <KpiTile
+          label="Tempo médio de compra"
+          value={v2d.avg_months_buyside ? `${v2d.avg_months_buyside} meses` : "—"}
+          hint="Buyside concluído"
+          accent="primary"
+          loading={v2.isLoading}
         />
       </div>
 
@@ -181,8 +194,30 @@ export default function ExecutiveDashboardPage() {
         </ChartCard>
       </div>
 
-      {/* Linha 4 — Donuts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Linha 3.5 — Valor & Comissão por ano */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard title="Valor negociado por ano">
+          <YearlyMoneyChart
+            data={(v2d.yearly_value ?? []).map((r: any) => ({
+              year: r.year,
+              sellside: Number(r.sellside_value ?? 0),
+              buyside: Number(r.buyside_value ?? 0),
+            }))}
+          />
+        </ChartCard>
+        <ChartCard title="Comissão anual da mari">
+          <YearlyMoneyChart
+            data={(v2d.yearly_value ?? []).map((r: any) => ({
+              year: r.year,
+              sellside: Number(r.sellside_commission ?? 0),
+              buyside: Number(r.buyside_commission ?? 0),
+            }))}
+          />
+        </ChartCard>
+      </div>
+
+      {/* Linha 4 — Donuts + Fase do Sellside */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <ChartCard title="Operações por tipo">
           <DonutChart data={byTipo.map((d) => ({ name: DEAL_TYPE_LABEL[d.label] || d.label, value: d.value }))} />
         </ChartCard>
@@ -192,7 +227,20 @@ export default function ExecutiveDashboardPage() {
         <ChartCard title="Mandatos com exclusividade?">
           <DonutChart data={exclusiv} colors={["#10b981", "#ef4444"]} />
         </ChartCard>
+        <ChartCard title="Fase do Sellside">
+          <DonutChart
+            data={(v2d.sellside_phases ?? []).map((p: any) => ({
+              name: PIPELINE_STAGE_LABEL[p.stage] || p.stage,
+              value: Number(p.qty ?? 0),
+            }))}
+          />
+        </ChartCard>
       </div>
+
+      {/* Linha 4.5 — Operações por localidade (Buyside × Sellside) */}
+      <ChartCard title="Operações por localidade">
+        <StackedLocalityChart data={(v2d.by_locality ?? []) as any[]} />
+      </ChartCard>
 
       {/* Linha 5 — Estado + Top3 + Responsável */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
