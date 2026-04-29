@@ -1,102 +1,138 @@
 
-# Pipeline Kanban — Fix + Editor de Stages + SLA + Histórico
+# Matches no centro do Equity Brain
 
-## Por que o Kanban está vazio
+## Diagnóstico — onde estão os matches hoje
 
-A tela faz `SELECT` em `eb_mandates` pedindo a coluna **`data_assinatura_contrato`**, que **não existe** nessa tabela (o nome real é `data_assinatura`). O PostgREST devolve **HTTP 400 (`42703 column ... does not exist`)** e nenhum mandato é carregado — por isso todas as 6 colunas aparecem zeradas, mesmo havendo **86 mandatos em stage `match`** no banco.
+Os matches **existem** (4.330 linhas em `equity_brain.matches` com `is_current=true`), mas estão escondidos:
 
-Fix imediato: trocar `data_assinatura_contrato` por `data_assinatura` no `select` e no objeto `values` passado ao `QuickEditPopover`.
+- A página `/equity-brain/oportunidades` (onde você está) **não mostra matches** — ela lista *empresas* da view `eb_opportunities_ready` (todas as 5k+ companies sincronizadas do marketplace + RFB), ranqueadas por `ma_score`. Não há filtro de "tem buyer interessado".
+- Match Analytics (`crm?tab=matching`) só mostra **agregados por UF/região/setor** — não lista os pares.
+- O Pipeline tem 86 mandatos mas nenhum match associado → o advisor não vê "para esta empresa, esses 5 compradores casam".
+- `match_score` máximo hoje é **57** (média 42), então o filtro `>=60` do Board zera tudo. Precisamos calibrar threshold.
+- `eb_matches_enriched` (view pública) está retornando 0 — precisa ser checado/recriado.
+
+**Em uma frase:** o motor calcula, mas nenhuma tela diz ao advisor *"hoje você tem X pares mandato↔buyer prontos para ligar"*.
 
 ---
 
-## Novidades
+## O que vai mudar
 
-### 1. Editor de Stages (CRUD de etapas)
+### 1. Nova página **`/equity-brain/match-inbox`** — a "caixa de entrada de matches"
 
-Novo painel "Configurar etapas" (botão de engrenagem no header do Kanban) com modal que permite:
-
-- **Adicionar** etapa (key + label + cor + posição).
-- **Renomear / recolorir** etapas existentes.
-- **Reordenar** via drag-and-drop.
-- **Remover** etapa (com obrigação de migrar mandatos da etapa removida para outra).
-- **SLA por etapa** (nº de dias ideal antes de virar "congelada").
-
-Persistência: nova tabela `public.eb_pipeline_stages` (`key`, `label`, `color`, `position`, `sla_days`, `is_terminal`, `archived_at`). RLS: SELECT autenticado, INSERT/UPDATE/DELETE só admin/advisor.
-
-O `PIPELINE_STAGES` hardcoded em `dealFormatters.ts` vira fallback; o Kanban e o `QuickEditPopover` passam a ler stages do hook `usePipelineStages()` (TanStack Query, cache 5min). Mandatos com `pipeline_stage` cujo enum não exista mais ficam numa coluna virtual "Sem etapa" para realocação.
-
-> Nota técnica: como hoje `pipeline_stage` é um ENUM Postgres, o editor grava em texto livre dentro de `eb_pipeline_stages` e a coluna `eb_mandates.pipeline_stage` é migrada para `text` com CHECK opcional. Migration cuidará do cast.
-
-### 2. Gestão de tempo / Oportunidade congelada
-
-Para cada card mostrar:
-
-- **Tempo na etapa**: `now() - stage_changed_at` (badge "12d na etapa").
-- **Estado SLA** baseado em `eb_pipeline_stages.sla_days`:
-  - verde: dentro do prazo
-  - amarelo: 80–100% do SLA
-  - **vermelho + ícone snowflake**: estourou → "Congelada"
-- Filtro no header: "Mostrar só congeladas".
-- KPI no topo: `% deals congelados`, `tempo médio por etapa`, `tempo médio total do funil`.
-
-Alerta automático:
-
-- Edge function nova `pipeline-freeze-alerts` (cron diário às 09:00) varre mandatos com `now() - stage_changed_at > sla_days` e:
-  - cria notificação em `public.notifications` para o `responsavel_id`
-  - cria atividade `kind='alert_frozen'` em `equity_brain.crm_activities`
-  - dedup: não dispara se já existir alerta nas últimas 24h
-- Botão manual "Reanimar" no card → atualiza `stage_changed_at = now()` e loga atividade.
-
-### 3. Histórico de transições
-
-Nova tabela `public.eb_pipeline_transitions`:
+Lista flat de pares **mandato (vendedor) × buyer (comprador)** ordenada por score, com tudo que o advisor precisa para agir em 1 clique:
 
 ```text
-id, mandate_id, from_stage, to_stage, from_outcome, to_outcome,
-moved_by, moved_at, time_in_previous_stage_seconds, note
+┌─ Match Inbox ──── 312 pares · 47 quentes · 18 sem ação há 7d ─────┐
+│ [score≥40▼] [setor▼] [UF▼] [só mandatos vigentes] [só sem ação]   │
+├──────────────────────────────────────────────────────────────────┤
+│ 🔥 89  ISP-MG-1234 ─────► COMPRADOR ALPHA   telecom/MG  R$1.4M   │
+│        Vitor Rosa            João S.        ✉ 📞 wa  [Abrir →]   │
+│        "Match generic · setor 0.9 · geo 0.8 · porte 0.7"         │
+│        ─ sem ação há 12d                          [Marcar ação]  │
+├──────────────────────────────────────────────────────────────────┤
+│ ⚡ 76  SAUDE-SP-991 ─────► FUNDO BETA        saúde/SP    R$8M    │
+│   ...                                                            │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-Trigger `eb_mandates_after_update_pipeline` insere uma row sempre que `pipeline_stage` ou `outcome` mudam, calculando `time_in_previous_stage_seconds = now() - OLD.stage_changed_at` e atualizando `stage_changed_at = now()`.
+Cada linha:
+- Score (badge com cor por tier — quente ≥70, morno 50-69, frio 40-49)
+- Codename / nome do mandato (com IdentityRevealCard inline)
+- Codename / nome do buyer
+- Setor · UF · ticket
+- 3 botões: **Ligar** (deep-link tel:), **WhatsApp** (template), **Email**
+- "Última ação" (de `crm_activities`) + estado: `novo`, `contatado`, `qualificado`, `descartado`
+- Click → drawer lateral com `MatchDecisionCard` (já existe) + SHAP explainability
 
-UI:
-- Aba **"Histórico"** dentro de `MandateDetailPage` mostra timeline vertical (de cima pra baixo) com `from → to`, autor, duração, nota.
-- Página nova **`/equity-brain/crm/pipeline/historico`** com:
-  - Tabela paginada de todas as transições + filtros (período, responsável, setor, UF, stage de origem/destino).
-  - **KPIs agregados**:
-    - Tempo médio total `match → closed`
-    - Tempo médio por etapa (heatmap horizontal)
-    - Taxa de conversão entre etapas (funil com %)
-    - Top 5 mandatos mais demorados / mais rápidos
-  - Export CSV reusando `lib/exportCsv.ts`.
-- Cada KPI/coluna ganha o `InfoHint` (padrão `info-hints-pattern`) e a chave é registrada em `ebTooltips.ts`.
+### 2. Dashboard inicial (`/equity-brain`) ganha **hero "Matches do dia"**
+
+No topo, antes dos KPIs atuais:
+
+```text
+┌─ Hoje você tem 47 matches QUENTES esperando ação ───────────────┐
+│  [Top 5 cards horizontais, scroll]                              │
+│  [Ver todos →]  [Filtrar meus mandatos]                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Card pequeno de cada match: score + mandato → buyer + 1 botão "Abrir".
+
+### 3. CRM Hub ganha aba **"Matches"** (4ª top-tab)
+
+Ao lado de Visão Geral · Executivo · Match Analytics, adiciona **"Matches"** (a inbox embedada). Match Analytics fica como ele é (agregados); Matches é a fila acionável.
+
+### 4. MandateDetailPage e BuyerDetailPage ganham card **"Top Matches"** no header
+
+Hoje a aba existe enterrada. Vamos puxar para o **header do 360**, sempre visível:
+
+- Em `MandateDetailPage`: "🎯 5 compradores casam com este mandato — top: BUYER X (score 76)" + botões diretos.
+- Em `BuyerDetailPage`: "🎯 8 mandatos casam com este buyer — top: ISP-MG-1234 (score 76)".
+
+### 5. Sidebar do EB ganha item **"Match Inbox"** com badge contando matches sem ação
+
+Ícone `ArrowLeftRight` + número em pílula Volt (ex: `47`), igual o badge de notificações.
+
+### 6. Recalibração + auto-promoção a pipeline
+
+- Threshold "quente" passa a usar **percentis dinâmicos** (top 10% = 🔥, top 30% = ⚡) em vez de hardcode 80/60. Hoje nada bate 80; com percentil, o advisor sempre vê os melhores X%.
+- Trigger novo: quando advisor marca match como `qualificado`, abre modal "Criar mandato/atividade vinculando este match" — mantém pipeline alimentado pelo motor.
+
+### 7. Recriar `public.eb_matches_enriched` (está vazia)
+
+Migration recria a view pública apontando para `equity_brain.matches_enriched` (que tem dados) com GRANT correto. Hoje a UI consulta ela e recebe 0 linhas — bug silencioso.
 
 ---
 
-## Arquivos
+## O que **não** muda agora
 
-**Criar**
-- `supabase/migrations/<timestamp>_pipeline_stages_and_transitions.sql` — tabelas, trigger, alter enum→text, RLS.
-- `supabase/functions/pipeline-freeze-alerts/index.ts` + cron via `cron.schedule`.
-- `src/hooks/usePipelineStages.ts`
-- `src/components/equity-brain/crm/PipelineStagesEditor.tsx` (modal CRUD)
-- `src/components/equity-brain/crm/StageTimeBadge.tsx`
-- `src/pages/equity-brain/PipelineHistoryPage.tsx`
-- `src/components/equity-brain/crm/MandateTransitionsTab.tsx`
-
-**Editar**
-- `src/pages/equity-brain/PipelineKanbanPage.tsx` — fix da coluna, integração com `usePipelineStages`, badges de tempo, filtro congeladas, botão de configuração.
-- `src/components/equity-brain/crm/QuickEditPopover.tsx` — usar `data_assinatura` (não `_contrato`) e ler stages do hook.
-- `src/lib/dealFormatters.ts` — manter como fallback apenas.
-- `src/pages/equity-brain/MandateDetailPage.tsx` — nova aba "Histórico".
-- `src/App.tsx` — rota `/equity-brain/crm/pipeline/historico`.
-- `src/components/layout/AppSidebar.tsx` (se houver entrada CRM) — link para Histórico.
-- `src/lib/ebTooltips.ts` — entradas dos novos KPIs.
-- `mem://index.md` + nova memória `mem://features/pipeline-stages-sla-history.md`.
+- A página `/equity-brain/oportunidades` continua existindo (universo de empresas para prospecção fria), mas ganha banner: "Procurando pares prontos? Vá pra **Match Inbox**".
+- `MatchAnalyticsContent` não muda — ele é o painel agregado de visão de mercado.
+- O motor de cálculo (`match-batch`, `match-company-v2`) não muda nesta entrega.
 
 ---
 
-## Observações
+## Detalhes técnicos
 
-- A migração que altera `pipeline_stage` de enum para text precisa de cast explícito; mantemos um CHECK opcional contra a lista de keys conhecidas para evitar lixo.
-- O cron de freeze é idempotente (dedup 24h) e respeita responsável: notificação vai para o owner do mandato; admins recebem agregado semanal (fora do escopo desta entrega — ficará registrado como TODO).
-- Sem mudança no fluxo de identidade/disclosure já existente.
+**Arquivos novos**
+- `src/pages/equity-brain/MatchInboxPage.tsx`
+- `src/components/equity-brain/match/MatchInboxRow.tsx`
+- `src/components/equity-brain/match/MatchHotHero.tsx` (usado no Dashboard)
+- `src/components/equity-brain/match/TopMatchesHeader.tsx` (usado em Mandate/Buyer 360)
+- `src/hooks/useMatchInbox.ts` (query + filtros)
+- `src/hooks/useMatchPercentiles.ts` (computa quente/morno/frio dinamicamente)
+- `supabase/migrations/<ts>_recreate_eb_matches_enriched.sql` (recria view + grants)
+
+**Arquivos editados**
+- `src/App.tsx` — rota `/equity-brain/match-inbox`
+- `src/pages/equity-brain/DashboardPage.tsx` — insere `<MatchHotHero />` no topo
+- `src/pages/equity-brain/CrmHubPage.tsx` — adiciona top-tab "Matches"
+- `src/pages/equity-brain/MandateDetailPage.tsx` e `BuyerDetailPage.tsx` — `<TopMatchesHeader />` no topo
+- `src/components/equity-brain/EquityBrainLayout.tsx` (ou sidebar do EB) — item "Match Inbox" + badge
+- `src/lib/ebTooltips.ts` — chaves para os novos KPIs ("Match quente", "Sem ação 7d", percentis)
+- `mem://index.md` + nova memória `mem://features/match-inbox.md`
+
+**Query base do inbox** (já validada manualmente):
+```sql
+SELECT m.id, m.cnpj, m.buyer_id, m.match_score, m.thesis_key, m.status,
+       m.setor_fit, m.geografia_fit, m.porte_fit, m.feature_contributions,
+       c.razao_social, c.codename, c.uf, c.setor_ma, c.faturamento_estimado,
+       b.nome AS buyer_nome, b.tipo AS buyer_tipo,
+       (SELECT MAX(created_at) FROM equity_brain.crm_activities a
+         WHERE a.entity_type='match' AND a.entity_id=m.id) AS last_action_at
+FROM equity_brain.matches m
+LEFT JOIN equity_brain.companies c ON c.cnpj = m.cnpj
+LEFT JOIN equity_brain.buyers b    ON b.id   = m.buyer_id
+WHERE m.is_current = true
+ORDER BY m.match_score DESC
+LIMIT 200;
+```
+
+InfoHints (padrão `info-hints-pattern`) em todo KPI/badge novo.
+
+---
+
+## Resposta direta à sua pergunta
+
+**Quem está em "Oportunidades"?** Todas as **empresas** (CNPJs vindos do marketplace + RFB) com score M&A calculado — é uma lista de prospecção fria, não de matches. Por isso parece desconectada do CRM/pipeline.
+
+**Onde estão os matches?** Calculados em `equity_brain.matches` (4.330 pares ativos), mas só apareciam afundados em drawers, no DealCard, no Shadow e em agregados. Este plano traz eles para o centro: hero no Dashboard, top-tab no CRM, página dedicada `Match Inbox`, badge na sidebar e card no topo de cada mandato/buyer.

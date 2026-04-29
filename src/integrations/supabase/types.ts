@@ -2454,14 +2454,20 @@ export type Database = {
           ai_pitch: string | null
           ai_thesis_summary: string | null
           assigned_bdr: string | null
+          buyer_archetype: string | null
           buyer_id: string | null
           cnpj: string | null
           computed_at: string | null
+          engine_version: string | null
+          ev_p50: number | null
+          feature_contributions: Json | null
           geografia_fit: number | null
           id: string | null
           is_current: boolean | null
           ma_score_emp: number | null
           match_score: number | null
+          multiple_p50: number | null
+          p_close_12m: number | null
           porte_fit: number | null
           prioridade: number | null
           reasons: Json | null
@@ -2475,14 +2481,20 @@ export type Database = {
           ai_pitch?: string | null
           ai_thesis_summary?: string | null
           assigned_bdr?: string | null
+          buyer_archetype?: string | null
           buyer_id?: string | null
           cnpj?: string | null
           computed_at?: string | null
+          engine_version?: string | null
+          ev_p50?: number | null
+          feature_contributions?: Json | null
           geografia_fit?: number | null
           id?: string | null
           is_current?: boolean | null
           ma_score_emp?: number | null
           match_score?: number | null
+          multiple_p50?: number | null
+          p_close_12m?: number | null
           porte_fit?: number | null
           prioridade?: number | null
           reasons?: Json | null
@@ -2496,14 +2508,20 @@ export type Database = {
           ai_pitch?: string | null
           ai_thesis_summary?: string | null
           assigned_bdr?: string | null
+          buyer_archetype?: string | null
           buyer_id?: string | null
           cnpj?: string | null
           computed_at?: string | null
+          engine_version?: string | null
+          ev_p50?: number | null
+          feature_contributions?: Json | null
           geografia_fit?: number | null
           id?: string | null
           is_current?: boolean | null
           ma_score_emp?: number | null
           match_score?: number | null
+          multiple_p50?: number | null
+          p_close_12m?: number | null
           porte_fit?: number | null
           prioridade?: number | null
           reasons?: Json | null
