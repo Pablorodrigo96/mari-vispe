@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="40" fill="#0A0A0A"/>
+  <path fill-rule="evenodd" fill="#D9F564"
+    d="M100 30C140 30 170 60 170 100C170 142 142 170 102 170C58 170 30 142 30 100C30 58 58 30 100 30ZM100 70C84 70 70 84 70 100C70 116 84 130 100 130C116 130 130 116 130 100C130 84 116 70 100 70Z"/>
+  <circle cx="100" cy="100" r="5" fill="#D9F564"/>
+</svg>
