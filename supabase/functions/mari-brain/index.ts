@@ -140,8 +140,11 @@ Deno.serve(async (req) => {
       content: message,
     });
 
-    // Contexto vivo
-    const liveCtx = await getLiveContext(supabase, userId, route, entity_type, entity_id);
+    // Contexto vivo + KB
+    const [liveCtx, KB] = await Promise.all([
+      getLiveContext(supabase, userId, route, entity_type, entity_id),
+      loadKnowledgeBase(),
+    ]);
 
     const system = `Você é a **Mari Brain**, IA copilota oficial da plataforma mari (PME.B3 / Equity Brain).
 Você é especialista sênior em M&A de PMEs no Brasil E especialista total na plataforma.
