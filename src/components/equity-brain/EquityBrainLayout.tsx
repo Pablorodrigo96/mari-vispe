@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { EBSidebar } from "./EBSidebar";
 import { VerticalSelector } from "./VerticalSelector";
 import { Input } from "@/components/ui/input";
+import { MariBrainFab } from "./mari/MariBrainFab";
 
 export function EquityBrainLayout() {
   const [search, setSearch] = useState("");
@@ -43,6 +44,7 @@ export function EquityBrainLayout() {
           <Outlet />
         </main>
       </div>
+      <MariBrainFab />
     </div>
   );
 }
