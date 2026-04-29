@@ -5,11 +5,14 @@ import { KpiTile } from "@/components/equity-brain/crm/exec/KpiTile";
 import { ChartCard } from "@/components/equity-brain/crm/exec/ChartCard";
 import { DonutChart } from "@/components/equity-brain/crm/exec/DonutChart";
 import { StatusBarChart, YearlyEvolutionChart } from "@/components/equity-brain/crm/exec/StatusByYearChart";
-import { brl, DEAL_TYPE_LABEL, OUTCOME_LABEL, OUTCOME_COLOR, REGIAO_BY_UF } from "@/lib/dealFormatters";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
+import { YearlyMoneyChart } from "@/components/equity-brain/crm/exec/YearlyMoneyChart";
+import { StackedLocalityChart } from "@/components/equity-brain/crm/exec/StackedLocalityChart";
+import { brl, DEAL_TYPE_LABEL, OUTCOME_LABEL, OUTCOME_COLOR, REGIAO_BY_UF, PIPELINE_STAGE_LABEL } from "@/lib/dealFormatters";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { ArrowLeft, TrendingUp } from "lucide-react";
 
 const COLORS_OUTCOME = Object.values(OUTCOME_COLOR);
+
 
 export default function ExecutiveDashboardPage() {
   const kpis = useQuery({
