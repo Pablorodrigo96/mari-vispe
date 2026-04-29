@@ -18,9 +18,9 @@ export default function MatchAnalyticsPage() {
   const cross = useQuery({
     queryKey: ["eb-match-cross", dim],
     queryFn: async () => {
-      const { data, error } = await supabase.schema("equity_brain").rpc("match_crosstab", { dim });
+      const { data, error } = await (supabase.rpc as any)("eb_match_crosstab", { dim });
       if (error) throw error;
-      return (data ?? []) as { label: string; mandates_count: number; buyers_count: number }[];
+      return ((data ?? []) as any[]) as { label: string; mandates_count: number; buyers_count: number }[];
     },
   });
 
@@ -28,12 +28,11 @@ export default function MatchAnalyticsPage() {
     queryKey: ["eb-match-mandates"],
     queryFn: async () => {
       const { data } = await supabase
-        .schema("equity_brain")
-        .from("mandates")
+        .from("eb_mandates" as any)
         .select("id,company_cnpj,uf,setor,status,outcome,contato_nome,contato_telefone,contato_email,exclusividade")
         .in("outcome", ["em_andamento"])
         .limit(500);
-      return data ?? [];
+      return (data ?? []) as any[];
     },
   });
 
@@ -41,12 +40,11 @@ export default function MatchAnalyticsPage() {
     queryKey: ["eb-match-buyers"],
     queryFn: async () => {
       const { data } = await supabase
-        .schema("equity_brain")
-        .from("buyers")
+        .from("eb_buyers" as any)
         .select("id,nome,tipo,ufs_interesse,setores_interesse,status,raw_data")
         .eq("status", "ativo")
         .limit(500);
-      return data ?? [];
+      return (data ?? []) as any[];
     },
   });
 

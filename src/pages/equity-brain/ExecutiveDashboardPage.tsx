@@ -15,9 +15,9 @@ export default function ExecutiveDashboardPage() {
   const kpis = useQuery({
     queryKey: ["eb-exec-kpis"],
     queryFn: async () => {
-      const { data, error } = await supabase.schema("equity_brain").rpc("dashboard_kpis");
+      const { data, error } = await (supabase.rpc as any)("eb_dashboard_kpis");
       if (error) throw error;
-      return data as Record<string, any>;
+      return (data ?? {}) as Record<string, any>;
     },
   });
 
@@ -25,12 +25,11 @@ export default function ExecutiveDashboardPage() {
     queryKey: ["eb-exec-deals"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain")
-        .from("v_deal_metrics")
+        .from("eb_v_deal_metrics" as any)
         .select("*")
         .limit(2000);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as any[];
     },
   });
 
