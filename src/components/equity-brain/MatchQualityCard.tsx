@@ -144,6 +144,30 @@ export default function MatchQualityCard() {
               <Stat label="Score médio" value={data.avg_match_score.toFixed(1)} accent="amber" />
             </div>
 
+            {/* Semáforos de saúde do aprendizado */}
+            <div className="grid grid-cols-3 gap-2">
+              <HealthChip
+                label="Cobertura listings"
+                value={`${data.health.coverage_pct.toFixed(0)}%`}
+                level={data.health.coverage_pct >= 80 ? "ok" : data.health.coverage_pct >= 40 ? "warn" : "bad"}
+              />
+              <HealthChip
+                label={`Buyers c/ sinal (≥2 obs)`}
+                value={`${data.health.buyers_with_signal}`}
+                level={data.health.buyers_with_signal >= 20 ? "ok" : data.health.buyers_with_signal >= 5 ? "warn" : "bad"}
+              />
+              <HealthChip
+                label="Drift Spearman"
+                value={data.health.last_spearman == null ? "—" : data.health.last_spearman.toFixed(2)}
+                level={
+                  data.health.last_spearman == null ? "warn"
+                  : data.health.last_spearman >= 0.85 ? "ok"
+                  : data.health.last_spearman >= 0.70 ? "warn"
+                  : "bad"
+                }
+              />
+            </div>
+
             {data.v1_current > 0 && (
               <Badge variant="outline" className="bg-amber-950/40 text-amber-300 border-amber-900/60">
                 {data.v1_current.toLocaleString("pt-BR")} matches v1 antigos ainda ativos — rodar match-batch
