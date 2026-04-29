@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { MariLogo } from "@/components/brand/MariLogo";
 
 const items = [
   { to: "/equity-brain",                label: "Dashboard",       Icon: LayoutDashboard, end: true },
@@ -24,12 +25,10 @@ export function EBSidebar() {
     <aside className="w-60 shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
       <div className="px-5 py-5 border-b border-zinc-800">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-md bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-zinc-950 font-black text-sm">
-            EB
-          </div>
+          <MariLogo variant="symbol-dark" size={32} />
           <div>
             <div className="text-zinc-100 text-sm font-bold leading-none">Equity Brain</div>
-            <div className="text-zinc-500 text-[11px] mt-0.5">Vispe Capital</div>
+            <div className="text-zinc-500 text-[11px] mt-0.5">by mari · Vispe Capital</div>
           </div>
         </div>
       </div>
