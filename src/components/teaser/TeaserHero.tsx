@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, Eye } from 'lucide-react';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 
 interface TeaserHeroProps {
   ticker: string;
