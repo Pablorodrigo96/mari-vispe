@@ -181,6 +181,8 @@ const Index = () => {
         </div>
       </section>
 
+      <MariDivider tone="carbon" spacing="sm" />
+
       {/* Featured Listings */}
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-8">
