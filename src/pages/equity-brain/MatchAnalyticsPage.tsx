@@ -4,11 +4,12 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ChartCard } from "@/components/equity-brain/crm/exec/ChartCard";
 import { KpiTile } from "@/components/equity-brain/crm/exec/KpiTile";
+import { DonutChart } from "@/components/equity-brain/crm/exec/DonutChart";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { ArrowLeft, ArrowLeftRight, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { REGIAO_BY_UF } from "@/lib/dealFormatters";
+import { REGIAO_BY_UF, OUTCOME_LABEL, OUTCOME_COLOR, BUYER_ENGAGEMENT_LABEL, BUYER_ENGAGEMENT_COLOR } from "@/lib/dealFormatters";
 
 type Dim = "uf" | "regiao" | "setor";
 
