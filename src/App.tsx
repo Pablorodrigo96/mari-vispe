@@ -195,7 +195,7 @@ const App = () => (
               <Route path="crm/admin/permissoes" element={<PermissionsAdminPage />} />
               <Route path="crm/admin/auditoria"  element={<RequireRole roles={["admin"]}><AccessAuditPage /></RequireRole>} />
               <Route path="crm/executivo"        element={<ExecutiveDashboardPage />} />
-              <Route path="crm/matching"         element={<MatchAnalyticsPage />
+              <Route path="crm/matching"         element={<MatchAnalyticsPage />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
