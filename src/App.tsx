@@ -77,6 +77,8 @@ import AccessAuditPage from "./pages/equity-brain/AccessAuditPage";
 import ExecutiveDashboardPage from "./pages/equity-brain/ExecutiveDashboardPage";
 import MatchAnalyticsPage from "./pages/equity-brain/MatchAnalyticsPage";
 import PipelineKanbanPage from "./pages/equity-brain/PipelineKanbanPage";
+import MandateFormPage from "./pages/equity-brain/MandateFormPage";
+import ExportsPage from "./pages/equity-brain/ExportsPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
@@ -198,6 +200,9 @@ const App = () => (
               <Route path="crm/executivo"        element={<ExecutiveDashboardPage />} />
               <Route path="crm/matching"         element={<MatchAnalyticsPage />} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
+              <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />
+              <Route path="crm/mandate/new"      element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
+              <Route path="crm/mandate/:id/edit" element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

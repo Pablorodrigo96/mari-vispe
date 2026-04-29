@@ -2874,6 +2874,7 @@ export type Database = {
           mandates_count: number
         }[]
       }
+      eb_upsert_mandate: { Args: { p: Json }; Returns: string }
       expire_old_reservations: { Args: never; Returns: undefined }
       get_teaser_view_count: {
         Args: { p_listing_id: string }

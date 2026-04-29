@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, MessageCircle, FileText, Activity, DollarSign, Target } from "lucide-react";
+import { ArrowLeft, MessageCircle, FileText, Activity, DollarSign, Target, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMandate } from "@/hooks/useCrm";
 import { useAccessLog } from "@/hooks/useAccessLog";
@@ -56,6 +56,12 @@ export default function MandateDetailPage() {
             <span className="text-[11px] text-zinc-400">· Ticket {formatBRL(mandate.valor_pretendido ?? mandate.ticket_alvo ?? 0)}</span>
           </div>
         </div>
+        <Link
+          to={`/equity-brain/crm/mandate/${mandate.id}/edit`}
+          className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/10 bg-transparent font-medium"
+        >
+          <Pencil className="h-3 w-3" /> Editar mandato
+        </Link>
       </header>
 
       <div className="flex items-center gap-1 border-b border-zinc-800">
