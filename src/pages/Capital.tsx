@@ -11,6 +11,7 @@ import { CapitalLeadModal } from '@/components/capital/CapitalLeadModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, MessageCircle } from 'lucide-react';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import type { SimulatorInputs, ScoringResult } from '@/lib/capitalScoring';
 
 export type CapitalObjective = 'giro' | 'expansao' | 'refinanciamento' | 'socio';
