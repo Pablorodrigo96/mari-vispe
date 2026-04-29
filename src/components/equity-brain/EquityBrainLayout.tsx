@@ -44,6 +44,7 @@ export function EquityBrainLayout() {
           <Outlet />
         </main>
       </div>
+      <MariBrainFab />
     </div>
   );
 }
