@@ -238,10 +238,57 @@ const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
                 <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-accent" />
               )}
             </div>
-            {cnpjLookupStatus === 'found' && (
-              <p className="text-xs text-accent flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                Empresa encontrada na base nacional! Dados preenchidos automaticamente.
+            {cnpjLookupStatus === 'found' && rfData && (
+              <div className="mt-2 rounded-lg border border-accent/30 bg-accent/5 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-accent" />
+                  <Badge variant="outline" className="bg-accent/10 text-accent border-accent/40 text-xs">
+                    Dados da Receita Federal
+                  </Badge>
+                  {rfData.situacao && (
+                    <Badge
+                      variant="outline"
+                      className={
+                        rfData.situacao === 'Ativa'
+                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs'
+                          : 'bg-orange-500/10 text-orange-600 border-orange-500/30 text-xs'
+                      }
+                    >
+                      {rfData.situacao}
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-sm text-foreground space-y-1 break-words">
+                  {rfData.razao_social && (
+                    <div><span className="text-muted-foreground">Razão social:</span> <span className="font-medium">{rfData.razao_social}</span></div>
+                  )}
+                  {rfData.nome_fantasia && rfData.nome_fantasia !== rfData.razao_social && (
+                    <div><span className="text-muted-foreground">Nome fantasia:</span> <span className="font-medium">{rfData.nome_fantasia}</span></div>
+                  )}
+                  {rfData.natureza_juridica_descricao && (
+                    <div><span className="text-muted-foreground">Natureza:</span> <span className="font-medium">{rfData.natureza_juridica_descricao}</span></div>
+                  )}
+                  {rfData.porte && (
+                    <div><span className="text-muted-foreground">Porte:</span> <span className="font-medium">{rfData.porte}</span></div>
+                  )}
+                  {rfData.idade_anos != null && (
+                    <div><span className="text-muted-foreground">Idade:</span> <span className="font-medium">{rfData.idade_anos} anos</span></div>
+                  )}
+                  {rfData.cnae_principal_descricao && (
+                    <div><span className="text-muted-foreground">CNAE:</span> <span className="font-medium">{rfData.cnae_principal_descricao}</span></div>
+                  )}
+                  {rfData.endereco_completo && (
+                    <div><span className="text-muted-foreground">Endereço:</span> <span className="font-medium">{rfData.endereco_completo}</span></div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground pt-1 border-t border-accent/20">
+                  Campos preenchidos automaticamente. Você pode editar se preferir.
+                </p>
+              </div>
+            )}
+            {cnpjLookupStatus === 'not_found' && (
+              <p className="text-xs text-muted-foreground">
+                CNPJ não encontrado na base. Continue preenchendo manualmente.
               </p>
             )}
           </div>
