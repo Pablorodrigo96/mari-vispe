@@ -24,11 +24,11 @@ export function EBSidebar() {
   return (
     <aside className="w-60 shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
       <div className="px-5 py-5 border-b border-zinc-800">
-        <div className="flex items-center gap-2">
-          <MariLogo variant="symbol-dark" size={48} />
+        <div className="flex items-center gap-3">
+          <MariLogo variant="symbol-dark" size={56} />
           <div>
-            <div className="text-zinc-100 text-sm font-bold leading-none">Equity Brain</div>
-            <div className="text-zinc-500 text-[11px] mt-0.5">by mari · Vispe Capital</div>
+            <div className="text-zinc-100 text-base font-bold leading-none">Equity Brain</div>
+            <div className="text-zinc-500 text-[11px] mt-1">by mari · Vispe Capital</div>
           </div>
         </div>
       </div>
