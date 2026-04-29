@@ -286,6 +286,26 @@ serve(async (req) => {
         };
       });
 
+      // DRY-RUN: retorna preview sem gravar
+      if (dryRun) {
+        const partnerPreview = partnersRows.slice(0, 30).map((p) => ({
+          cnpj_basico: p.cnpj_basico,
+          nome: p.nome_socio,
+          tipo: mapTipoSocio(p.identificador_socio),
+          qualificacao: p.qualificacao_socio,
+        }));
+        return new Response(
+          JSON.stringify({
+            dry_run: true,
+            companies_found: records.length,
+            partners_found: partnersRows.length,
+            companies_preview: records.slice(0, 5),
+            partners_preview: partnerPreview,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       // UPSERT companies
       const { error: upsertErr } = await supabase
         .schema("equity_brain" as any)
