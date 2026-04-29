@@ -106,61 +106,61 @@ export function ExecutiveDashboardContent() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiTile label="Total Operações" value={fmt(k.total_operations)} loading={kpis.isLoading} />
-        <KpiTile label="Buyside" value={fmt(k.buyside)} accent="primary" loading={kpis.isLoading} />
-        <KpiTile label="Sellside" value={fmt(k.sellside)} accent="success" loading={kpis.isLoading} />
-        <KpiTile label="Em andamento" value={fmt(k.em_andamento)} accent="warning" loading={kpis.isLoading} />
-        <KpiTile label="Concluídas" value={fmt(k.concluido)} accent="success" loading={kpis.isLoading} />
-        <KpiTile label="Canceladas" value={fmt(k.cancelado)} accent="danger" loading={kpis.isLoading} />
+        <KpiTile label="Total Operações" value={fmt(k.total_operations)} loading={kpis.isLoading} info={EB_TIPS.total_operacoes} />
+        <KpiTile label="Buyside" value={fmt(k.buyside)} accent="primary" loading={kpis.isLoading} info={EB_TIPS.kpi_buyside} />
+        <KpiTile label="Sellside" value={fmt(k.sellside)} accent="success" loading={kpis.isLoading} info={EB_TIPS.kpi_sellside} />
+        <KpiTile label="Em andamento" value={fmt(k.em_andamento)} accent="warning" loading={kpis.isLoading} info={EB_TIPS.em_andamento} />
+        <KpiTile label="Concluídas" value={fmt(k.concluido)} accent="success" loading={kpis.isLoading} info={EB_TIPS.concluidas} />
+        <KpiTile label="Canceladas" value={fmt(k.cancelado)} accent="danger" loading={kpis.isLoading} info={EB_TIPS.canceladas} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <KpiTile label="Total das operações" value={brl(k.total_value, { compact: true })} hint="Soma de operações concluídas" accent="primary" loading={kpis.isLoading} />
-        <KpiTile label="Faturamento Vispe" value={brl(k.total_commission, { compact: true })} hint="Comissões recebidas" accent="success" loading={kpis.isLoading} />
-        <KpiTile label="Ticket médio" value={brl(k.avg_ticket, { compact: true })} loading={kpis.isLoading} />
-        <KpiTile label="Tempo médio de venda" value={v2d.avg_months_sellside ? `${v2d.avg_months_sellside} meses` : "—"} hint="Sellside concluído" accent="success" loading={v2.isLoading} />
-        <KpiTile label="Tempo médio de compra" value={v2d.avg_months_buyside ? `${v2d.avg_months_buyside} meses` : "—"} hint="Buyside concluído" accent="primary" loading={v2.isLoading} />
+        <KpiTile label="Total das operações" value={brl(k.total_value, { compact: true })} hint="Soma de operações concluídas" accent="primary" loading={kpis.isLoading} info={EB_TIPS.total_das_operacoes} />
+        <KpiTile label="Faturamento Vispe" value={brl(k.total_commission, { compact: true })} hint="Comissões recebidas" accent="success" loading={kpis.isLoading} info={EB_TIPS.faturamento_vispe} />
+        <KpiTile label="Ticket médio" value={brl(k.avg_ticket, { compact: true })} loading={kpis.isLoading} info={EB_TIPS.ticket_medio} />
+        <KpiTile label="Tempo médio de venda" value={v2d.avg_months_sellside ? `${v2d.avg_months_sellside} meses` : "—"} hint="Sellside concluído" accent="success" loading={v2.isLoading} info={EB_TIPS.tempo_medio_venda} />
+        <KpiTile label="Tempo médio de compra" value={v2d.avg_months_buyside ? `${v2d.avg_months_buyside} meses` : "—"} hint="Buyside concluído" accent="primary" loading={v2.isLoading} info={EB_TIPS.tempo_medio_compra} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Status das operações">
+        <ChartCard title="Status das operações" info={EB_TIPS.status_operacoes}>
           <StatusBarChart data={statusByType} />
         </ChartCard>
-        <ChartCard title="Evolução anual de novas operações">
+        <ChartCard title="Evolução anual de novas operações" info={EB_TIPS.evolucao_anual}>
           {yearly.length > 0 ? <YearlyEvolutionChart data={yearly} /> : <EmptyState text="Sem data de início preenchida nos mandatos." />}
         </ChartCard>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Valor negociado por ano">
+        <ChartCard title="Valor negociado por ano" info={EB_TIPS.valor_negociado_ano}>
           <YearlyMoneyChart data={(v2d.yearly_value ?? []).map((r: any) => ({ year: r.year, sellside: Number(r.sellside_value ?? 0), buyside: Number(r.buyside_value ?? 0) }))} />
         </ChartCard>
-        <ChartCard title="Comissão anual da Vispe">
+        <ChartCard title="Comissão anual da Vispe" info={EB_TIPS.comissao_anual}>
           <YearlyMoneyChart data={(v2d.yearly_value ?? []).map((r: any) => ({ year: r.year, sellside: Number(r.sellside_commission ?? 0), buyside: Number(r.buyside_commission ?? 0) }))} />
         </ChartCard>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <ChartCard title="Operações por tipo">
+        <ChartCard title="Operações por tipo" info={EB_TIPS.operacoes_por_tipo}>
           <DonutChart data={byTipo.map((d) => ({ name: DEAL_TYPE_LABEL[d.label] || d.label, value: d.value }))} />
         </ChartCard>
-        <ChartCard title="Operações por região">
+        <ChartCard title="Operações por região" info={EB_TIPS.operacoes_por_regiao}>
           <DonutChart data={byRegiao} />
         </ChartCard>
-        <ChartCard title="Mandatos com exclusividade?">
+        <ChartCard title="Mandatos com exclusividade?" info={EB_TIPS.exclusividade_donut}>
           <DonutChart data={exclusiv} colors={["#10b981", "#ef4444"]} />
         </ChartCard>
-        <ChartCard title="Fase do Sellside">
+        <ChartCard title="Fase do Sellside" info={EB_TIPS.fase_sellside}>
           <DonutChart data={(v2d.sellside_phases ?? []).map((p: any) => ({ name: PIPELINE_STAGE_LABEL[p.stage] || p.stage, value: Number(p.qty ?? 0) }))} />
         </ChartCard>
       </div>
 
-      <ChartCard title="Operações por localidade">
+      <ChartCard title="Operações por localidade" info={EB_TIPS.operacoes_localidade}>
         <StackedLocalityChart data={(v2d.by_locality ?? []) as any[]} />
       </ChartCard>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Operações por estado">
+        <ChartCard title="Operações por estado" info={EB_TIPS.operacoes_estado}>
           {byUF.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={byUF}>
