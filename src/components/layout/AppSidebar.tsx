@@ -247,10 +247,10 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
               <Avatar className="h-8 w-8"><AvatarFallback className="bg-accent text-accent-foreground text-xs">{userInitials}</AvatarFallback></Avatar>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
-                <p className="text-[10px] text-muted-foreground">Meu perfil</p>
+                <p className="text-[10px] text-zinc-400">Meu perfil</p>
               </div>
             </Link>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start mt-1 text-muted-foreground hover:text-destructive">
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start mt-1 text-zinc-300 hover:text-destructive">
               <LogOut className="h-3.5 w-3.5 mr-2" />Sair
             </Button>
           </>
