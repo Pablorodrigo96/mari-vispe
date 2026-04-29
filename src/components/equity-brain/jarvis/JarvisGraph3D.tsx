@@ -52,7 +52,12 @@ import { GraphFilterSidebar } from "@/components/equity-brain/graph/GraphFilterS
 import { GraphLegend } from "@/components/equity-brain/graph/GraphLegend";
 import { NodeDetailPanel } from "@/components/equity-brain/graph/NodeDetailPanel";
 
-const DEFAULT_NODE_TYPES = new Set([
+// Tudo começa desligado para abrir leve; usuário ativa progressivamente.
+const DEFAULT_NODE_TYPES = new Set<string>();
+const DEFAULT_LAYERS = new Set<LayerKey>();
+
+// "Ativar tudo" usa estes conjuntos cheios.
+const ALL_NODE_TYPES = new Set([
   "seller",
   "buyer_strategic",
   "buyer_financial",
@@ -61,7 +66,7 @@ const DEFAULT_NODE_TYPES = new Set([
   "asset",
   "strategy",
 ]);
-const DEFAULT_LAYERS = new Set<LayerKey>([
+const ALL_LAYERS = new Set<LayerKey>([
   "ma_direct",
   "rollup",
   "operational",
@@ -95,14 +100,26 @@ export function JarvisGraph3D() {
   const [selectedNode, setSelectedNode] = useState<JarvisNode | null>(null);
 
   // ---------- Visual prefs (ajustes de fundo, persistidos em localStorage) ----------
+  // Defaults LEVES — abre o painel rápido; usuário aumenta efeitos quando quiser.
   const VISUAL_DEFAULTS = {
+    glow: 0,
+    scanlines: 0,
+    vignette: 0,
+    brightness: 10,
+    curvatureMin: 0,
+    curvatureRange: 0,
+    linkSegments: 4,
+    arcStyle: "quad" as "quad" | "sine",
+  };
+  // Valores ricos antigos — aplicados pelo botão "Ativar tudo".
+  const VISUAL_FULL = {
     glow: 70,
     scanlines: 50,
     vignette: 60,
     brightness: 30,
-    curvatureMin: 18, // 0-80
-    curvatureRange: 24, // 0-60
-    linkSegments: 12, // 4-24
+    curvatureMin: 18,
+    curvatureRange: 24,
+    linkSegments: 12,
     arcStyle: "quad" as "quad" | "sine",
   };
   const [visualPrefs, setVisualPrefs] = useState(() => {
@@ -642,16 +659,24 @@ export function JarvisGraph3D() {
     return ALWAYS_LIVE_EDGE_TYPES.has(link.edge_type);
   };
 
-  // ---------- Reset ----------
+  // ---------- Reset (volta ao modo LEVE) ----------
   const handleReset = () => {
     setSelectedVerticals(new Set());
     setSelectedUfs(new Set());
-    setSelectedNodeTypes(DEFAULT_NODE_TYPES);
-    setEnabledLayers(DEFAULT_LAYERS);
-    setMinWeight(0.15);
+    setSelectedNodeTypes(new Set(DEFAULT_NODE_TYPES));
+    setEnabledLayers(new Set(DEFAULT_LAYERS));
+    setMinWeight(0.35);
     setMinConfidence(0);
     setThesisFilter(null);
     setBuyerFilter(null);
+    setVisualPrefs(VISUAL_DEFAULTS);
+  };
+
+  // ---------- Ativar tudo (modo CHEIO) ----------
+  const handleEnableAll = () => {
+    setSelectedNodeTypes(new Set(ALL_NODE_TYPES));
+    setEnabledLayers(new Set(ALL_LAYERS));
+    setVisualPrefs(VISUAL_FULL);
   };
 
   // ---------- Mobile fallback ----------
@@ -825,7 +850,37 @@ export function JarvisGraph3D() {
             <span className="text-zinc-500">SIG</span> {Math.round((graphData.links.filter(l => (l.weight ?? 0) >= 0.55).length / Math.max(1, graphData.links.length)) * 100)}%
           </div>
         </div>
+        {/* Botão Ativar tudo — modo cheio */}
+        <button
+          onClick={handleEnableAll}
+          className="pointer-events-auto mt-1 px-2.5 py-1 bg-emerald-950/70 border border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/80 hover:text-emerald-200 text-[10px] font-mono uppercase tracking-wider backdrop-blur-sm transition-colors"
+          title="Liga todas as camadas, tipos de nó e efeitos visuais"
+        >
+          Ativar tudo
+        </button>
       </div>
+
+      {/* Empty state — quando nada está selecionado */}
+      {!isLoading && enabledLayers.size === 0 && selectedNodeTypes.size === 0 && (
+        <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none">
+          <div className="max-w-md mx-4 px-6 py-5 bg-zinc-950/85 border border-emerald-900/50 backdrop-blur-md text-center pointer-events-auto">
+            <div className="text-emerald-400 text-2xl mb-2">🧠</div>
+            <div className="text-emerald-300 text-xs uppercase tracking-[0.2em] font-mono mb-2">
+              Cérebro em standby
+            </div>
+            <p className="text-zinc-400 text-xs leading-relaxed mb-4">
+              Para manter o desempenho, o Jarvis abre com tudo desligado. Selecione camadas e
+              tipos de nó na barra lateral à esquerda — ou ative o modo cheio com um clique.
+            </p>
+            <button
+              onClick={handleEnableAll}
+              className="px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/60 text-emerald-300 hover:bg-emerald-600/30 hover:text-emerald-200 text-[11px] font-mono uppercase tracking-wider transition-colors"
+            >
+              Ativar tudo
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Grafo 3D — canvas WebGL transparente sobre o vídeo de fundo.
           Apenas este canvas é afetado por zoom/rotação da câmera. */}
