@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { MariWatermark } from '@/components/brand/MariLogo';
+import { MariDivider } from '@/components/brand/MariDivider';
 import { SearchBar } from '@/components/home/SearchBar';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
