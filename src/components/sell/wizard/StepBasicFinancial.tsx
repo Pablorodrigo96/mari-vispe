@@ -72,6 +72,8 @@ interface RfData {
   idade_anos?: number | null;
   cnae_principal_descricao?: string;
   situacao?: string;
+  socios?: Array<{ nome: string; qualificacao: string; data_entrada: string }>;
+  regime_tributario?: { simples: boolean; mei: boolean; data_opcao_simples?: string; data_opcao_mei?: string };
 }
 
 const StepBasicFinancial = ({ data, onChange }: StepBasicFinancialProps) => {
