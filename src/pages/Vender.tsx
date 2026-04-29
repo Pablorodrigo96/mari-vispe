@@ -31,11 +31,13 @@ const Vender = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4">
+
+      <main className="pt-24 pb-16 relative overflow-hidden">
+        <MariBrandStamp position="tr" tone="carbon" size={520} opacity={0.04} showWordmark={false} />
+        <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-8">
+              <p className="text-[10px] uppercase tracking-[0.4em] text-accent mb-3">designed forward</p>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
                 Anuncie sua Empresa
               </h1>
@@ -43,7 +45,7 @@ const Vender = () => {
                 Preencha os dados abaixo para cadastrar sua empresa no marketplace
               </p>
             </div>
-            
+
             <NewListingWizard />
           </div>
         </div>
