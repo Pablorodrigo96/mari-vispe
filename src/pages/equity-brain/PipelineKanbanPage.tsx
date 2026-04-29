@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, GripVertical, DollarSign, Pencil } from "lucide-react";
+import { ArrowLeft, GripVertical, DollarSign, Pencil, FolderOpen, FileSignature } from "lucide-react";
 import { toast } from "sonner";
 import { brl, PIPELINE_STAGES, PIPELINE_STAGE_LABEL, DEAL_TYPE_LABEL } from "@/lib/dealFormatters";
 import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge";
@@ -19,6 +19,7 @@ type Mandate = {
   faturamento_vispe: number | null;
   commission_pct: number | null;
   uf: string | null;
+  regiao: string | null;
   setor: string | null;
   contato_nome: string | null;
   contato_telefone: string | null;
@@ -26,6 +27,12 @@ type Mandate = {
   temperature: string | null;
   stage_changed_at: string | null;
   data_inicio: string | null;
+  data_fechamento: string | null;
+  data_assinatura_contrato: string | null;
+  comprador_cnpj: string | null;
+  comprador_nome: string | null;
+  drive_url: string | null;
+  contract_url: string | null;
 };
 
 const STAGE_COLORS: Record<string, string> = {
@@ -47,7 +54,7 @@ export default function PipelineKanbanPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("eb_mandates" as any)
-        .select("id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio")
+        .select("id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura_contrato,comprador_cnpj,comprador_nome,drive_url,contract_url")
         .neq("outcome", "cancelado")
         .order("stage_changed_at", { ascending: false })
         .limit(500);
@@ -149,6 +156,18 @@ export default function PipelineKanbanPage() {
             contato_nome: editing.contato_nome,
             contato_telefone: editing.contato_telefone,
             outcome: editing.outcome,
+            pipeline_stage: editing.pipeline_stage,
+            deal_type: editing.deal_type,
+            uf: editing.uf,
+            regiao: editing.regiao,
+            responsavel_id: editing.responsavel_id,
+            comprador_cnpj: editing.comprador_cnpj,
+            comprador_nome: editing.comprador_nome,
+            drive_url: editing.drive_url,
+            contract_url: editing.contract_url,
+            data_inicio: editing.data_inicio,
+            data_fechamento: editing.data_fechamento,
+            data_assinatura_contrato: editing.data_assinatura_contrato,
           }}
           onClose={() => setEditing(null)}
         />
@@ -201,7 +220,12 @@ function DealCard({
       {m.contato_nome && (
         <div className="text-[10px] text-zinc-400 mt-1 truncate break-words">{m.contato_nome}</div>
       )}
-      <div className="flex items-center justify-between mt-2">
+      {m.comprador_nome && (
+        <div className="text-[10px] text-blue-300 mt-0.5 truncate break-words" title="Comprador (MATCH)">
+          ↔ {m.comprador_nome}
+        </div>
+      )}
+      <div className="flex items-center justify-between mt-2 gap-1">
         {m.valor_operacao ? (
           <div className="flex items-center gap-1 text-[10px] text-emerald-300 font-medium tabular-nums">
             <DollarSign className="h-2.5 w-2.5" />
@@ -219,7 +243,25 @@ function DealCard({
             + valor
           </button>
         )}
-        <TemperatureBadge temp={m.temperature} compact />
+        <div className="flex items-center gap-1">
+          {m.drive_url && (
+            <a href={m.drive_url} target="_blank" rel="noopener noreferrer"
+               onClick={(e) => e.stopPropagation()}
+               title="Drive do projeto"
+               className="text-zinc-500 hover:text-[#D9F564]">
+              <FolderOpen className="h-3 w-3" />
+            </a>
+          )}
+          {m.contract_url && (
+            <a href={m.contract_url} target="_blank" rel="noopener noreferrer"
+               onClick={(e) => e.stopPropagation()}
+               title="Contrato"
+               className="text-zinc-500 hover:text-[#D9F564]">
+              <FileSignature className="h-3 w-3" />
+            </a>
+          )}
+          <TemperatureBadge temp={m.temperature} compact />
+        </div>
       </div>
     </div>
   );

@@ -1,57 +1,111 @@
-# Consolidação CRM Hub com Tabs estilo Monday
-
 ## Objetivo
 
-Transformar `/equity-brain/crm` em uma página única com 3 abas no topo — **Visão Geral**, **Dashboard Executivo** e **Match Analytics** — eliminando a navegação entre rotas separadas para esses dashboards. As rotas existentes (`/crm/executivo` e `/crm/matching`) continuam funcionando como deep-links, mas o fluxo principal passa a ser tabular dentro do hub.
+Tornar o CRM-Hub equivalente ao Monday: cada cliente (mandato) precisa concentrar **todos os campos operacionais** (Vendedor, Comprador, Fase, Drive, Status, Datas, Valores, % Vispe, Executivo, MATCH, Contrato, Estado, Região), expostos do mesmo jeito na **Lista** e no **Kanban**, e o **Dashboard Executivo** precisa cobrir os 16 indicadores listados.
 
-## Mudanças
+---
 
-### 1. Refatorar conteúdo das páginas em componentes reutilizáveis
+## Parte 1 — Schema (migration `eb_mandates`)
 
-Hoje `ExecutiveDashboardPage.tsx` e `MatchAnalyticsPage.tsx` são páginas completas (com header, padding, link de voltar). Vou extrair o **conteúdo** (KPIs + gráficos) em dois componentes puros:
+Adicionar colunas faltantes em `equity_brain.mandates`:
 
-- `src/components/equity-brain/crm/exec/ExecutiveDashboardContent.tsx` — todos os blocos de KPIs e gráficos do dashboard executivo (linhas 1 a 7 do arquivo atual), sem header nem `<Link voltar>`.
-- `src/components/equity-brain/crm/match/MatchAnalyticsContent.tsx` — todos os KPIs de vendedores/compradores, donuts, crosstabs UF/Região/Setor e tabelas laterais, sem header nem botão de voltar.
+| Campo Monday              | Coluna nova/existente                                              |
+| ------------------------- | ------------------------------------------------------------------ |
+| Vendedor                  | `company_cnpj` (já existe — é o vendedor do sellside)              |
+| Comprador                 | **novo** `comprador_cnpj varchar(14)` + `comprador_nome text`      |
+| MATCH (par compra/venda)  | **novo** `match_buyer_id uuid` (FK lógica → eb_buyers)             |
+| Fase                      | `pipeline_stage` (existe)                                          |
+| Drive                     | **novo** `drive_url text`                                          |
+| Contrato                  | **novo** `contract_url text`                                       |
+| Status do projeto         | `outcome` (existe)                                                 |
+| Data de conclusão         | `data_fechamento` (existe)                                         |
+| Data de fechamento do contrato | **novo** `data_assinatura_contrato date`                      |
+| Valor da Operação         | `valor_operacao` (existe)                                          |
+| R$ Vispe                  | `faturamento_vispe` (existe)                                       |
+| % Vispe                   | `commission_pct` (existe)                                          |
+| Executivo Responsável     | `responsavel_id` (existe — FK profiles)                            |
+| Estado                    | `uf` (existe)                                                      |
+| Região                    | `regiao` (existe)                                                  |
 
-As páginas atuais (`ExecutiveDashboardPage.tsx` e `MatchAnalyticsPage.tsx`) passam a ser wrappers finos que renderizam apenas o header + o componente de conteúdo, mantendo as rotas funcionais.
+Atualizar a RPC `eb_upsert_mandate` para aceitar os 4 novos campos.
 
-### 2. Adicionar tabs no `CrmHubPage.tsx`
+---
 
-Substituir os botões "Dashboard Executivo" e "Match Analytics" do header por uma barra de tabs estilo Monday (full-width, sticky abaixo do header), com 3 abas:
+## Parte 2 — Edição rápida unificada (Lista + Kanban)
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ [Visão Geral] [Dashboard Executivo] [Match Analytics]        │
-└──────────────────────────────────────────────────────────────┘
+Refatorar `QuickEditPopover.tsx` para conter **todos os campos** acima, organizados em 4 seções:
+
+```
+[ Identificação ]   Vendedor (CNPJ readonly) · Comprador CNPJ + Nome · Executivo (select profiles)
+[ Localização   ]   UF (select) · Região (auto pelo UF, editável)
+[ Pipeline      ]   Deal type · Fase · Status (outcome) · Data início · Data conclusão · Data assinatura contrato
+[ Financeiro    ]   Valor operação · % Vispe · R$ Vispe (preview) · Ticket alvo
+[ Documentos    ]   Drive URL · Contrato URL (com botão "Abrir")
 ```
 
-- **Visão Geral** (default): conteúdo atual do hub — KPI header, NextActionsPanel, PipelineFunnel, TasksWidget, banner "Como o motor está aprendendo" e tabs internas Mandatos/Buyers/Atividades.
-- **Dashboard Executivo**: renderiza `<ExecutiveDashboardContent />`.
-- **Match Analytics**: renderiza `<MatchAnalyticsContent />`.
+O mesmo popover é aberto:
+- da **Lista** (`MandatesTable.tsx`) — adicionar botão lápis por linha + colunas novas (Comprador, Fase, Valor, % Vispe, Drive, Contrato, Executivo)
+- do **Kanban** (`PipelineKanbanPage.tsx`) — já abre, só ganha os campos novos
 
-A aba ativa fica em estado local (`useState`) e é sincronizada com a query string `?tab=executivo|matching|geral` para permitir links diretos e refresh sem perder contexto.
+---
 
-### 3. Estilo das tabs (Monday-like)
+## Parte 3 — Lista estilo Monday (mesma visão do Kanban)
 
-Tabs largas, com ícone à esquerda, fundo zinc-900, borda inferior `#D9F564` quando ativa, hover sutil. Implementação manual (sem Radix) seguindo o padrão já usado nas tabs internas Mandatos/Buyers/Atividades para consistência visual.
+Reescrever `MandatesTable.tsx` para tabela densa agrupada por **Fase** (collapsible), colunas:
 
-### 4. Limpeza dos botões duplicados
+```
+Vendedor | Comprador | Fase | Status | Valor Op | R$ Vispe | % Vispe | Executivo | UF | Região | Drive | Contrato | Data conclusão | Ações
+```
 
-No header do hub, manter apenas: **Novo mandato**, **Exports**, **Pipeline**, **Auditoria**, **Permissões**. Remover **Dashboard Executivo** e **Match Analytics** (agora são tabs).
+Os mesmos 500 mandatos que aparecem no Kanban aparecem aqui — fonte única (`eb_mandates` com mesmos filtros). Drive/Contrato renderizam como ícone-link clicável; cada célula editável → abre QuickEditPopover focado no campo.
 
-### 5. Sidebar (`EBSidebar`) — verificar
+---
 
-Conferir se a sidebar tem links separados para Executivo/Matching e, se sim, apontá-los para `/equity-brain/crm?tab=executivo` e `?tab=matching` em vez das rotas isoladas (mantém UX coesa, mas não quebra deep-links antigos).
+## Parte 4 — Dashboard Executivo (auditoria dos 16 indicadores)
 
-## Arquivos afetados
+Inventário atual em `ExecutiveDashboardContent.tsx`:
 
-- **Criar**: `src/components/equity-brain/crm/exec/ExecutiveDashboardContent.tsx`
-- **Criar**: `src/components/equity-brain/crm/match/MatchAnalyticsContent.tsx`
-- **Editar**: `src/pages/equity-brain/CrmHubPage.tsx` (adicionar tabs de topo + render condicional)
-- **Editar**: `src/pages/equity-brain/ExecutiveDashboardPage.tsx` (vira wrapper fino)
-- **Editar**: `src/pages/equity-brain/MatchAnalyticsPage.tsx` (vira wrapper fino)
-- **Editar (se aplicável)**: `src/components/equity-brain/EBSidebar.tsx` para apontar para tabs
+| #  | Indicador                              | Status atual                            |
+| -- | -------------------------------------- | --------------------------------------- |
+| 1  | Total de Operações                     | OK (KpiTile)                            |
+| 2  | Buy Side / Sell Side                   | OK (2 KpiTiles)                         |
+| 3  | Em andamento                           | OK                                      |
+| 4  | Concluídas                             | OK                                      |
+| 5  | Canceladas                             | OK                                      |
+| 6  | Total das operações (R$)               | OK                                      |
+| 7  | Faturamento Vispe                      | OK ("Faturamento mari")                 |
+| 8  | Ticket médio                           | OK                                      |
+| 9  | Evolução anual de novas operações      | OK (YearlyEvolutionChart)               |
+| 10 | Operações por tipo                     | OK (DonutChart byTipo)                  |
+| 11 | Fase do Sell Side                      | OK (sellside_phases donut)              |
+| 12 | Operações por região                   | OK                                      |
+| 13 | Valor negociado por ano                | OK (YearlyMoneyChart)                   |
+| 14 | Comissão anual da Vispe                | OK (YearlyMoneyChart)                   |
+| 15 | Top 3 maiores operações                | OK                                      |
+| 16 | Projetos por responsável               | OK (stacked bar)                        |
 
-## Resultado
+**Conclusão**: já temos todos. Ajustes finos:
+- Renomear "Faturamento mari" → **"Faturamento Vispe"** (alinhar nomenclatura).
+- Garantir que todos os charts mostrem **EmptyState** elegante quando os dados estão vazios (já feito em alguns).
+- Reordenar para seguir a numeração 1→16 (atualmente a ordem é diferente).
 
-Usuário em `/equity-brain/crm` vê 3 abas no topo e alterna entre Visão Geral, Dashboard Executivo e Match Analytics sem navegação entre rotas — exatamente como Monday.com. Todos os indicadores e gráficos já existentes (KPIs financeiros, evolução anual, donuts, localidades, crosstabs UF/Região/Setor, tabelas de vendedores/compradores) ficam acessíveis em um único lugar.
+---
+
+## Arquivos a alterar
+
+**Migrations**
+- `supabase/migrations/<ts>_mandates_monday_fields.sql` — colunas novas + atualização da RPC `eb_upsert_mandate`.
+
+**Componentes**
+- `src/components/equity-brain/crm/QuickEditPopover.tsx` — expandir para todos os campos
+- `src/components/equity-brain/crm/MandatesTable.tsx` — colunas Monday-style + edição inline
+- `src/pages/equity-brain/PipelineKanbanPage.tsx` — passar novos valores ao popover; mostrar Drive/Contrato icon nos cards
+- `src/components/equity-brain/crm/exec/ExecutiveDashboardContent.tsx` — renomear label e reordenar
+- `src/hooks/useCrm.ts` — incluir colunas novas no SELECT de `useMandates`/`useMandate`
+
+---
+
+## Resultado para o usuário
+
+- Cada cliente fica com ficha completa estilo Monday, com Drive e Contrato a 1 clique.
+- Lista e Kanban mostram exatamente os mesmos cards / linhas, sincronizados.
+- Dashboard Executivo cobre os 16 indicadores na ordem solicitada.
