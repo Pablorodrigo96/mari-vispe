@@ -1,5 +1,6 @@
 import { Star, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 
 interface ValuationHeroProps {
   onStartDiagnostic: () => void;
