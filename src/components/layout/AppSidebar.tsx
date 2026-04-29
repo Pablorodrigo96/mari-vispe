@@ -102,14 +102,14 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
   return (
     <aside
       className={cn(
-        'sticky top-0 h-screen bg-card border-r border-border flex flex-col transition-all duration-200 z-30',
+        'sticky top-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col transition-all duration-200 z-30',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Brand */}
       <div className="h-16 px-4 border-b border-border flex items-center justify-between shrink-0">
-        <Link to="/painel" className="flex items-center min-w-0 text-foreground">
-          <MariLogo size={28} showWordmark={!collapsed} />
+        <Link to="/painel" className="flex items-center min-w-0">
+          <MariLogo variant={collapsed ? 'symbol-dark' : 'dark'} size={collapsed ? 28 : 32} />
         </Link>
         <button
           onClick={onToggleCollapse}

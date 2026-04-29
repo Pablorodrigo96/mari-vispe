@@ -84,8 +84,9 @@ export function Header() {
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <MariLogo
-              size={32}
-              className={cn('transition-colors duration-300', isTransparent ? 'text-white' : 'text-foreground')}
+              variant={isTransparent ? 'dark' : 'light'}
+              size={36}
+              className="transition-opacity duration-300"
             />
           </Link>
 
@@ -188,11 +189,11 @@ export function Header() {
             )}
 
             {showLoggedOutUI ? (
-              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold" asChild>
+              <Button className="bg-volt hover:bg-volt-light text-carbon shadow-volt font-medium" asChild>
                 <Link to="/vender">Anunciar Grátis</Link>
               </Button>
             ) : (
-              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold" asChild>
+              <Button className="bg-volt hover:bg-volt-light text-carbon shadow-volt font-medium" asChild>
                 <Link to="/painel">Meu Painel</Link>
               </Button>
             )}
@@ -322,11 +323,11 @@ export function Header() {
                   </Button>
                 )}
                 {showLoggedOutUI ? (
-                  <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+                  <Button className="w-full justify-center bg-volt hover:bg-volt-light text-carbon font-medium" asChild>
                     <Link to="/vender">Anunciar Grátis</Link>
                   </Button>
                 ) : (
-                  <Button className="w-full justify-center bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+                  <Button className="w-full justify-center bg-volt hover:bg-volt-light text-carbon font-medium" asChild>
                     <Link to="/painel">Meu Painel</Link>
                   </Button>
                 )}

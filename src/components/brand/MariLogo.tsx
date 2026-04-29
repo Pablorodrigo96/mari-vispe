@@ -1,61 +1,81 @@
 import { cn } from '@/lib/utils';
+import logoDark from '@/assets/mari-logo-dark.png';
+import logoLight from '@/assets/mari-logo-light.png';
+import logoVolt from '@/assets/mari-logo-volt.png';
+import symbolDark from '@/assets/mari-symbol-dark.png';
+import symbolVolt from '@/assets/mari-symbol-volt.png';
+
+export type MariLogoVariant =
+  | 'dark'          // logo + tagline on dark backgrounds (volt symbol + bone wordmark)
+  | 'light'         // logo + tagline on light/bone backgrounds (carbon everything)
+  | 'volt'          // logo + tagline on volt backgrounds (carbon everything)
+  | 'symbol-dark'   // symbol only on dark bg (volt symbol)
+  | 'symbol-volt';  // symbol only on volt bg (carbon symbol)
 
 interface MariLogoProps {
-  className?: string;
-  /** Size of the symbol in pixels (square). Default 32. */
+  variant?: MariLogoVariant;
+  /** Height in pixels for full lockups, or square size for symbol variants. */
   size?: number;
-  /** Show the "mari" wordmark next to the symbol. */
-  showWordmark?: boolean;
-  /** Color of the symbol disc + wordmark. Defaults to currentColor. */
-  symbolColor?: string;
-  /** Inner egg color (defaults to volt). */
-  innerColor?: string;
+  className?: string;
+  /** Hide the wordmark (forces symbol-only). Defaults true for `symbol-*` variants. */
+  symbolOnly?: boolean;
 }
 
+const FULL_LOGOS: Record<'dark' | 'light' | 'volt', string> = {
+  dark: logoDark,
+  light: logoLight,
+  volt: logoVolt,
+};
+
+const SYMBOLS: Record<'symbol-dark' | 'symbol-volt', string> = {
+  'symbol-dark': symbolDark,
+  'symbol-volt': symbolVolt,
+};
+
 /**
- * mari brand mark.
- * Vinyl-like organic disc with an inner egg-shaped opening and a center dot.
- * Symbol uses currentColor for the outer disc so it adapts to context;
- * the inner opening defaults to Volt accent.
+ * mari brand mark — uses the official PNG assets.
+ * Pick the variant that matches the background:
+ *   - `dark`  → carbon/black backgrounds
+ *   - `light` → bone/white backgrounds
+ *   - `volt`  → volt-green backgrounds
+ *   - `symbol-dark` / `symbol-volt` → symbol only (collapsed sidebar, favicons, badges)
  */
 export function MariLogo({
-  className,
+  variant = 'dark',
   size = 32,
-  showWordmark = true,
-  symbolColor,
-  innerColor = 'hsl(var(--volt))',
+  className,
+  symbolOnly,
 }: MariLogoProps) {
-  return (
-    <span
-      className={cn('inline-flex items-center gap-2 select-none', className)}
-      style={symbolColor ? { color: symbolColor } : undefined}
-    >
-      <svg
+  const isSymbolOnlyVariant = variant === 'symbol-dark' || variant === 'symbol-volt';
+  const showSymbolOnly = symbolOnly ?? isSymbolOnlyVariant;
+
+  if (showSymbolOnly) {
+    const src = isSymbolOnlyVariant
+      ? SYMBOLS[variant as 'symbol-dark' | 'symbol-volt']
+      : variant === 'volt'
+        ? SYMBOLS['symbol-volt']
+        : SYMBOLS['symbol-dark'];
+    return (
+      <img
+        src={src}
+        alt="mari"
         width={size}
         height={size}
-        viewBox="0 0 200 200"
-        fill="none"
-        aria-hidden="true"
-        className="shrink-0"
-      >
-        {/* Outer organic disc */}
-        <path
-          d="M100 14c-46 0-82 38-82 86 0 50 38 86 82 86 50 0 86-40 86-88 0-46-36-84-86-84z"
-          fill="currentColor"
-        />
-        {/* Inner egg-shaped opening */}
-        <ellipse cx="100" cy="102" rx="32" ry="42" fill={innerColor} />
-        {/* Center dot */}
-        <circle cx="100" cy="104" r="4.5" fill="currentColor" />
-      </svg>
-      {showWordmark && (
-        <span
-          className="font-display font-medium leading-none lowercase"
-          style={{ fontSize: size * 0.7, letterSpacing: '-0.04em' }}
-        >
-          mari
-        </span>
-      )}
-    </span>
+        className={cn('block object-contain shrink-0', className)}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
+  const fullKey: 'dark' | 'light' | 'volt' =
+    variant === 'light' ? 'light' : variant === 'volt' ? 'volt' : 'dark';
+
+  return (
+    <img
+      src={FULL_LOGOS[fullKey]}
+      alt="mari — designed forward"
+      className={cn('block object-contain shrink-0', className)}
+      style={{ height: size, width: 'auto' }}
+    />
   );
 }

@@ -39,10 +39,10 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1">
-            <Link to="/" className="inline-flex mb-4 text-primary-foreground">
-              <MariLogo size={36} />
+            <Link to="/" className="inline-flex mb-4">
+              <MariLogo variant="dark" size={42} />
             </Link>
-            <p className="text-xs uppercase tracking-[0.3em] text-accent/80 mb-3">designed forward</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-volt/90 mb-3">designed forward</p>
             <p className="text-sm text-primary-foreground/70 mb-6">
               A plataforma líder em negociação de empresas no Brasil. Conectamos compradores e vendedores com segurança e transparência.
             </p>

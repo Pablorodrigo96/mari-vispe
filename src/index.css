@@ -29,15 +29,19 @@
     --muted-foreground: 0 0% 40%;
 
     /* Volt accent */
-    --accent: 74 84% 68%;
-    --accent-foreground: 0 0% 4%;
+    /* Volt accent — `--accent` is widely used for TEXT (text-accent, ring, focus).
+       On light backgrounds the bright Volt becomes unreadable, so light-mode
+       --accent is a deeper Volt that hits WCAG AA. Bright Volt is preserved
+       in --volt and reachable via bg-volt / text-volt utilities for surfaces. */
+    --accent: 74 70% 32%;
+    --accent-foreground: 60 33% 97%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 50%;
     --destructive-foreground: 60 33% 97%;
 
     --border: 0 0% 88%;
     --input: 0 0% 88%;
-    --ring: 74 84% 68%;
+    --ring: 74 70% 38%;
 
     --radius: 0.5rem;
 
