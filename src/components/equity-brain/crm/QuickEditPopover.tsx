@@ -26,6 +26,7 @@ export function QuickEditPopover({ mandateId, values, onClose }: Props) {
     commission_pct: values.commission_pct?.toString() ?? "",
     contato_nome: values.contato_nome ?? "",
     contato_telefone: values.contato_telefone ?? "",
+    outcome: values.outcome ?? "",
   });
 
   const save = useMutation({
@@ -36,6 +37,7 @@ export function QuickEditPopover({ mandateId, values, onClose }: Props) {
       if (form.commission_pct !== "") patch.commission_pct = Number(form.commission_pct);
       if (form.contato_nome) patch.contato_nome = form.contato_nome;
       if (form.contato_telefone) patch.contato_telefone = form.contato_telefone;
+      if (form.outcome) patch.outcome = form.outcome;
       const { error } = await supabase.from("eb_mandates" as any).update(patch).eq("id", mandateId);
       if (error) throw error;
     },
