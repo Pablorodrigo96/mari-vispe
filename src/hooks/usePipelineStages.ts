@@ -88,9 +88,9 @@ export function useArchivePipelineStage() {
   return useMutation({
     mutationFn: async ({ id, migrateToKey, currentKey }: { id: string; migrateToKey?: string; currentKey: string }) => {
       if (migrateToKey) {
-        const { error: mErr } = await supabase
+        const { error: mErr } = await (supabase as any)
           .schema("equity_brain")
-          .from("mandates" as any)
+          .from("mandates")
           .update({ pipeline_stage: migrateToKey })
           .eq("pipeline_stage", currentKey);
         if (mErr) throw mErr;
