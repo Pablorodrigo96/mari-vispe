@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { ViewAsSwitcher } from '@/components/layout/ViewAsSwitcher';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
+import { MariLogo } from '@/components/brand/MariLogo';
 
 const ROUTE_LABELS: Record<string, string> = {
   '/painel': 'Painel',
