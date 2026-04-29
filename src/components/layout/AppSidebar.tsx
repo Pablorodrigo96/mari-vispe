@@ -221,7 +221,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         {(eff.isAdmin || eff.isAdvisor) && collapsed && (
           <div className="mt-3 pt-3 border-t border-border space-y-1">
             {eff.isAdmin && (
-              <Link to="/admin" title="Admin" className="flex items-center justify-center h-10 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
+              <Link to="/admin" title="Admin" className="flex items-center justify-center h-10 rounded-lg text-zinc-300 hover:bg-muted hover:text-foreground">
                 <Shield className="h-4 w-4" />
               </Link>
             )}
