@@ -52,7 +52,12 @@ import { GraphFilterSidebar } from "@/components/equity-brain/graph/GraphFilterS
 import { GraphLegend } from "@/components/equity-brain/graph/GraphLegend";
 import { NodeDetailPanel } from "@/components/equity-brain/graph/NodeDetailPanel";
 
-const DEFAULT_NODE_TYPES = new Set([
+// Tudo começa desligado para abrir leve; usuário ativa progressivamente.
+const DEFAULT_NODE_TYPES = new Set<string>();
+const DEFAULT_LAYERS = new Set<LayerKey>();
+
+// "Ativar tudo" usa estes conjuntos cheios.
+const ALL_NODE_TYPES = new Set([
   "seller",
   "buyer_strategic",
   "buyer_financial",
@@ -61,7 +66,7 @@ const DEFAULT_NODE_TYPES = new Set([
   "asset",
   "strategy",
 ]);
-const DEFAULT_LAYERS = new Set<LayerKey>([
+const ALL_LAYERS = new Set<LayerKey>([
   "ma_direct",
   "rollup",
   "operational",
