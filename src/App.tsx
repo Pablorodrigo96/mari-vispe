@@ -70,6 +70,7 @@ const EBGrafoJarvisGuiaPage = lazy(() => import("./pages/equity-brain/GrafoJarvi
 import EBBoardPage from "./pages/equity-brain/BoardPage";
 import EBShadowPage from "./pages/equity-brain/ShadowPage";
 import CrmHubPage from "./pages/equity-brain/CrmHubPage";
+import PermissionsAdminPage from "./pages/equity-brain/PermissionsAdminPage";
 import MandateDetailPage from "./pages/equity-brain/MandateDetailPage";
 import BuyerDetailPage from "./pages/equity-brain/BuyerDetailPage";
 
@@ -188,6 +189,7 @@ const App = () => (
               <Route path="crm"                  element={<CrmHubPage />} />
               <Route path="crm/mandate/:id"      element={<MandateDetailPage />} />
               <Route path="crm/buyer/:id"        element={<BuyerDetailPage />} />
+              <Route path="crm/admin/permissoes" element={<PermissionsAdminPage />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
