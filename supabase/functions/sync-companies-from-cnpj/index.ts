@@ -132,7 +132,18 @@ serve(async (req) => {
       ];
       const args: unknown[] = [];
 
-      if (uf) {
+      if (cnpjsFilter.length > 0) {
+        // dry-run / pontual: filtra por (cnpj_basico+ordem+dv) usando a lista informada
+        const basicos = cnpjsFilter.map((c) => c.slice(0, 8));
+        const ordens = cnpjsFilter.map((c) => c.slice(8, 12));
+        const dvs = cnpjsFilter.map((c) => c.slice(12, 14));
+        args.push(basicos); conditions.push(`e.cnpj_basico = ANY($${args.length}::text[])`);
+        args.push(ordens);  conditions.push(`e.cnpj_ordem  = ANY($${args.length}::text[])`);
+        args.push(dvs);     conditions.push(`e.cnpj_dv     = ANY($${args.length}::text[])`);
+        // remove restrições de tempo para dry-run
+        conditions.shift(); conditions.shift(); // remove '5 years' e NOT NULL
+        conditions.shift(); // remove situacao = 02 (queremos qualquer status)
+      } else if (uf) {
         args.push(uf.toUpperCase());
         conditions.push(`e.uf = $${args.length}`);
       }
