@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ArrowLeft, MessageCircle, FileText, Activity, DollarSign, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMandate } from "@/hooks/useCrm";
+import { useAccessLog } from "@/hooks/useAccessLog";
 import { ActivityTimeline } from "@/components/equity-brain/crm/ActivityTimeline";
 import { WhatsAppWebFrame } from "@/components/equity-brain/crm/WhatsAppWebFrame";
 import { MatchesPanel } from "@/components/equity-brain/crm/MatchesPanel";
@@ -10,6 +11,10 @@ import { DocumentsPanel } from "@/components/equity-brain/crm/DocumentsPanel";
 import { FinancialPipelinePanel } from "@/components/equity-brain/crm/FinancialPipelinePanel";
 import { StatusBadge } from "@/components/equity-brain/crm/StatusBadge";
 import { RegionBadge } from "@/components/equity-brain/crm/RegionBadge";
+import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge";
+import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
+import { ConversationSummary } from "@/components/equity-brain/crm/ConversationSummary";
+import { AskMariDrawer } from "@/components/equity-brain/crm/AskMariDrawer";
 import { formatBRL } from "@/lib/equityBrain";
 
 type Tab = "overview" | "matches" | "whatsapp" | "documents";
@@ -18,6 +23,7 @@ export default function MandateDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: mandate, isLoading } = useMandate(id);
   const [tab, setTab] = useState<Tab>("overview");
+  useAccessLog("mandate", mandate?.id);
 
   if (isLoading) return <div className="p-8 text-zinc-400 text-sm">Carregando…</div>;
   if (!mandate) return <div className="p-8 text-zinc-400 text-sm">Mandato não encontrado.</div>;
@@ -39,7 +45,10 @@ export default function MandateDetailPage() {
 
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 pb-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-zinc-100 break-words">{name}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-zinc-100 break-words">{name}</h1>
+            <TemperatureBadge temp={(mandate as any).temperature} reason={(mandate as any).temperature_reason} />
+          </div>
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <StatusBadge status={mandate.status} />
             <RegionBadge uf={mandate.uf} />
@@ -69,6 +78,7 @@ export default function MandateDetailPage() {
       {tab === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-3">
+            <ConversationSummary entity_type="mandate" entity_id={mandate.id} />
             <h3 className="text-sm font-bold text-zinc-100">Timeline</h3>
             <ActivityTimeline entityType="mandate" entityId={mandate.id} />
           </div>
@@ -80,6 +90,7 @@ export default function MandateDetailPage() {
               <div className="text-xs text-zinc-300">Setor: {mandate.setor_ma ?? "—"}</div>
               <div className="text-xs text-zinc-300">Receita: {formatBRL(mandate.faturamento_anual ?? 0)}</div>
             </div>
+            <TasksWidget entity_type="mandate" entity_id={mandate.id} compact />
           </div>
         </div>
       )}
@@ -111,6 +122,8 @@ export default function MandateDetailPage() {
           </div>
         </div>
       )}
+
+      <AskMariDrawer entity_type="mandate" entity_id={mandate.id} />
     </div>
   );
 }
