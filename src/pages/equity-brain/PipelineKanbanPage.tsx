@@ -54,7 +54,7 @@ export default function PipelineKanbanPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("eb_mandates" as any)
-        .select("id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio")
+        .select("id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura_contrato,comprador_cnpj,comprador_nome,drive_url,contract_url")
         .neq("outcome", "cancelado")
         .order("stage_changed_at", { ascending: false })
         .limit(500);
