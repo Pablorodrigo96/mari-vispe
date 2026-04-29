@@ -12,7 +12,7 @@ const benefits = [
 
 export function ConsultorBanner() {
   const handleWhatsApp = async () => {
-    const msg = 'Olá, vi os matches automáticos na PME.B3 e gostaria de conversar com um consultor sobre oportunidades estratégicas que o algoritmo pode não identificar.';
+    const msg = 'Olá, vi os matches automáticos na mari e gostaria de conversar com um consultor sobre oportunidades estratégicas que o algoritmo pode não identificar.';
     const opened = await openWhatsApp(msg);
     if (!opened) {
       toast.info('Link copiado! Cole no navegador para abrir o WhatsApp.');

@@ -38,7 +38,7 @@ export function MatchCard({ match, index = 0 }: MatchCardProps) {
     '[&>div]:bg-muted-foreground';
 
   const handleWhatsApp = async () => {
-    const msg = `Olá, encontrei o anúncio "${match.title}" na PME.B3 e gostaria de mais informações.`;
+    const msg = `Olá, encontrei o anúncio "${match.title}" na mari e gostaria de mais informações.`;
     const opened = await openWhatsApp(msg);
     if (!opened) {
       toast.info('Link copiado! Cole no navegador para abrir o WhatsApp.');

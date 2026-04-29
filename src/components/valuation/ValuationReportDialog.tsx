@@ -78,7 +78,7 @@ export const ValuationReportDialog = ({
     doc.rect(0, 0, pageWidth, 50, 'F');
 
     // Header text
-    addText('PME.B3', margin, 20, { fontSize: 24, fontStyle: 'bold', color: [16, 185, 129] }); // Emerald
+    addText('mari', margin, 20, { fontSize: 24, fontStyle: 'bold', color: [16, 185, 129] }); // Emerald
     addText('Market Approach - Valuation Relativo', margin, 32, { fontSize: 14, color: [255, 255, 255] });
     addText(`Emitido em ${formatDate(result.calculatedAt)}`, margin, 42, { fontSize: 10, color: [200, 200, 200] });
 
@@ -289,7 +289,7 @@ export const ValuationReportDialog = ({
     // Footer
     doc.setFillColor(15, 23, 42);
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-    addText('© PME.B3 - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
+    addText('© mari - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
     addText('www.pmeb3.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: [16, 185, 129] });
 
     // === PAGE 3: Diagnostic (conditional) ===
@@ -303,7 +303,7 @@ export const ValuationReportDialog = ({
       // Header
       doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, pageWidth, 40, 'F');
-      addText('PME.B3', margin, 18, { fontSize: 20, fontStyle: 'bold', color: [16, 185, 129] });
+      addText('mari', margin, 18, { fontSize: 20, fontStyle: 'bold', color: [16, 185, 129] });
       addText('DIAGNÓSTICO DE VALOR — True Value', margin, 30, { fontSize: 13, color: [255, 255, 255] });
 
       yPos = 55;
@@ -425,7 +425,7 @@ export const ValuationReportDialog = ({
       // Footer
       doc.setFillColor(15, 23, 42);
       doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-      addText('© PME.B3 - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
+      addText('© mari - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
       addText('www.pmeb3.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: [16, 185, 129] });
     }
 

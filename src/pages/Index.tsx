@@ -231,7 +231,7 @@ const Index = () => {
           transition={{ duration: 0.6, ease }}
         >
           <p className="text-white/40 text-sm italic mb-6 max-w-lg mx-auto">
-            "A PME.B3 nos conectou com o comprador ideal em menos de 60 dias. Processo transparente e profissional."
+            "A mari nos conectou com o comprador ideal em menos de 60 dias. Processo transparente e profissional."
           </p>
           <p className="text-accent text-xs font-medium tracking-widest uppercase mb-8">— Carlos M., Empresário</p>
           

@@ -55,7 +55,7 @@ export function InvestorTestimonials() {
             O que dizem nossos investidores
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Investidores que já encontraram oportunidades de sucesso através da PME.B3.
+            Investidores que já encontraram oportunidades de sucesso através da mari.
           </p>
         </motion.div>
         

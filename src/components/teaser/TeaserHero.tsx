@@ -169,7 +169,7 @@ const TeaserHero = ({ ticker, totalViews = 0, uniqueViews = 0 }: TeaserHeroProps
         >
           <TrendingUp className="w-4 h-4 text-gray-900" />
         </motion.div>
-        <span className="text-sm font-bold tracking-[0.2em] text-white/50">PME.B3</span>
+        <span className="text-sm font-bold tracking-[0.2em] text-white/50">mari</span>
       </motion.div>
     </section>
   );

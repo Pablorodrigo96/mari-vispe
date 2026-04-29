@@ -1,4 +1,4 @@
-// Mock data for PME.B3 marketplace
+// Mock data for mari marketplace
 
 export interface Business {
   id: string;
