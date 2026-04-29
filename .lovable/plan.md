@@ -1,100 +1,51 @@
-# Mapear 100% da base nacional de CNPJs e expandir o auto-preenchimento
+# Expansão da Integração com Base Nacional de CNPJ — REVISADO
 
-## Objetivo
+## Auditoria concluída (Fase 1)
 
-Confirmar **exatamente** quais tabelas/colunas existem no banco externo de CNPJs, validar os relacionamentos que você descreveu, e então expandir a função `national-search` para devolver muito mais dados (endereço, idade, sócios, telefone, natureza jurídica, etc.) — preenchendo automaticamente todos os campos possíveis nos formulários de **Vender empresa**, **Captação de capital** e **Cadastro de comprador**.
+Banco externo tem **apenas 4 objetos** no schema `public`:
 
-## Fase 1 — Auditoria do banco externo (reuso do `cnpj-db-inspect`)
+| Objeto | Tipo | Linhas | Conteúdo |
+|---|---|---|---|
+| `cnaes` | tabela | 1.359 | código + descrição |
+| `empresas` | tabela | 4.511.699 | cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa, ente_federativo |
+| `estabelecimentos` | tabela | 5.491.329 | dados completos do estabelecimento (endereço, CNAE, situação, contato) |
+| `estabelecimentos_detalhados` | **view** | — | JOIN pronto: razao_social + nome_fantasia + porte + capital + endereco_completo + CEP + UF + municipio (nome) + cnae + cnae_descricao + telefone_formatado + email |
 
-Reescrevo o edge function `cnpj-db-inspect` para devolver:
+**Não disponível na fonte**: socios (QSA), simples/MEI, naturezas (descrições), qualificacoes, municipios (códigos IBGE→nome separados), motivos, paises.
 
-1. **Lista completa de tabelas e views** do schema `public` (com tipo: TABLE/VIEW).
-2. **Todas as colunas** de cada tabela (nome + tipo).
-3. **Contagem aproximada** de linhas (via `pg_class.reltuples`, instantâneo).
-4. **Uma linha de amostra** de cada tabela principal (`estabelecimentos`, `empresas`, `cnaes`, e tentativa em `socios`, `simples`, `motivos`, `municipios`, `paises`, `qualificacoes`, `naturezas`, `estabelecimentos_detalhados`).
+**Códigos a decodificar no código**:
+- `situacao_cadastral`: 01=Nula, 02=Ativa, 03=Suspensa, 04=Inapta, 08=Baixada
+- `porte_empresa`: 00=Não informado, 01=Micro Empresa, 03=EPP, 05=Demais
+- `identificador_matriz_filial`: 1=Matriz, 2=Filial
+- `natureza_juridica`: deixar código bruto (1359 valores — tabela estática só com top 30 mais comuns: 2062=LTDA, 2305=SA, 2135=EIRELI, 2143=Empresário Individual, 2240=SS, 2348=MEI…)
 
-Isso me confirma:
-- Se `socios` (QSA) realmente existe nessa instância e quais campos tem (CPF/CNPJ do sócio, nome, % participação, qualificação, data de entrada).
-- Se `simples` (opção pelo Simples Nacional / MEI) está disponível.
-- Quais tabelas auxiliares existem para decodificar códigos: `municipios`, `paises`, `motivos` (motivo da situação cadastral), `naturezas` (natureza jurídica), `qualificacoes` (qualificação do sócio).
-- A estrutura real da view `estabelecimentos_detalhados` (que parece já fazer pré-join).
+## Plano revisado
 
-## Fase 2 — Documentar o mapa de dados
+### Fase 3 — `national-search` expandida (case `cnpj`)
+- Usar a **view `estabelecimentos_detalhados`** como fonte primária (1 query, sem JOIN manual)
+- Decodificar `situacao_cadastral`, `porte_empresa`, `natureza_juridica` (top 30) via mapas no código
+- Calcular `idade_anos` a partir de `data_inicio_atividade` (formato YYYYMMDD)
+- Retornar payload retrocompatível + novos campos: `nome_fantasia`, `endereco_completo`, `logradouro`, `numero`, `complemento`, `bairro`, `cep`, `municipio`, `uf`, `telefone`, `email`, `capital_social`, `porte`, `porte_codigo`, `natureza_juridica_codigo`, `natureza_juridica_descricao`, `data_abertura` (ISO), `idade_anos`, `situacao_codigo`, `situacao`, `cnae_principal_codigo`, `cnae_principal_descricao`, `cnae_secundarios` (array de códigos), `is_matriz`
 
-Com base no resultado da Fase 1, gero um documento `docs/CNPJ_DATA_MAP.md` com:
+### Fase 4 — Cache local
+Tabela `cnpj_cache` no Lovable Cloud:
+- `cnpj` text PK
+- `data` jsonb
+- `cached_at` timestamptz default now()
+- TTL: 30 dias verificado em código
+- RLS: SELECT público; INSERT/UPDATE só service_role
 
-- Diagrama textual das relações (CNPJ básico = chave, ordem+dv compõem CNPJ completo).
-- Lista por tabela com: nome em PT-BR, tipo, propósito, e se "uso hoje" / "vou passar a usar" / "decodifica via X".
-- Mapeamento `código → nome legível` para: situação cadastral (01/02/03/04/08), porte (00/01/03/05), natureza jurídica, motivo de baixa, qualificação de sócio.
+### Fase 5 — UI no wizard de venda
+- `StepBasicInfo`: razao_social, nome_fantasia, foundation_year (de data_abertura)
+- `StepLocation`: cep, street (= tipo_logradouro+logradouro), neighborhood, city, state
+- `StepContact`: phone (telefone_formatado)
+- Badge verde "Receita Federal" ao lado dos campos preenchidos; some ao editar
 
-## Fase 3 — Expandir `national-search` (caso `type: "cnpj"`)
+## Itens removidos do plano original
+- ❌ Sócios (QSA) — não existe na base
+- ❌ Simples/MEI — não existe
+- ❌ JOINs manuais com municipios/naturezas/qualificacoes — view já resolve
+- ❌ `docs/CNPJ_DATA_MAP.md` separado — virou esta seção do plano
 
-Refatoro a query de lookup por CNPJ para retornar (todos os campos confirmados na Fase 1):
-
-**Identificação**
-- razao_social, nome_fantasia, cnpj completo, matriz/filial
-
-**Atividade**
-- cnae_principal (código + descrição via JOIN com `cnaes`)
-- cnaes_secundarios (lista código + descrição)
-
-**Status**
-- situacao_cadastral (decodificada: Ativa/Suspensa/Inapta/Baixada)
-- data_situacao_cadastral
-- motivo_situacao (se baixada/inapta — decodificado)
-- data_inicio_atividade → calcula **idade da empresa em meses/anos**
-
-**Endereço completo**
-- tipo_logradouro + logradouro + numero + complemento + bairro + cep + municipio (nome) + uf + pais
-
-**Contato**
-- telefone_1 (DDD + número), telefone_2, email (correio_eletronico)
-
-**Estrutura jurídica**
-- natureza_juridica (código + descrição)
-- ente_federativo (se órgão público)
-- capital_social
-- porte_empresa (decodificado)
-
-**Regime tributário** (se tabela `simples` existir)
-- opcao_simples (S/N + data)
-- opcao_mei (S/N + data)
-
-**Sócios (QSA)** (se tabela `socios` existir)
-- Lista de sócios: nome, qualificação (decodificada), data_entrada, % participação, faixa etária
-
-## Fase 4 — Auto-preencher formulários
-
-Atualizo os componentes para consumir os novos campos:
-
-| Tela | Campos novos preenchidos |
-|---|---|
-| `StepBasicInfo` (Vender) | razão social, nome fantasia, CNAE com descrição, idade da empresa, natureza jurídica |
-| `StepLocation` (Vender) | CEP, rua, número, complemento, bairro, cidade, UF |
-| `StepContact` (Vender) | telefone (se vazio), email (se vazio) |
-| `CapitalLeadModal` | tudo acima + faixa de porte e capital social como contexto de score |
-| `RegisterBuyer` | razão social, cidade/UF, setor (CNAE→categoria) |
-
-Todos os campos auto-preenchidos ficam **editáveis** (nunca read-only) e mostram um pequeno selo "preenchido pela Receita Federal" para o usuário entender de onde veio.
-
-## Fase 5 — Cache (opcional, ganho de performance)
-
-Adiciono uma tabela `public.cnpj_cache` no Lovable Cloud (não na base externa) com:
-- cnpj (PK), payload (jsonb), fetched_at (timestamp), ttl 30 dias
-- Antes de chamar a base externa, verifico cache. Reduz custo e latência em CNPJs já consultados.
-
-## Decisões técnicas
-
-- **Mantém `Deno.land/x/postgres@v0.17.0`** (já funciona).
-- **Lê do secret `EXTERNAL_DB_URL`** (sem hardcode).
-- **Decodificação de códigos**: para campos de baixa cardinalidade (situação, porte) faço hardcode em TS (rápido); para alta cardinalidade (CNAE, município, natureza) faço LEFT JOIN com a tabela auxiliar.
-- **Privacidade dos sócios**: CPF dos sócios na base RF vem **mascarado** (`***123456**`). Devolvo como vem, sem desmascarar.
-- **Performance**: 1 única query com todos os JOINs em vez de N round-trips. Index esperado: `(cnpj_basico)` em todas.
-
-## Entregáveis
-
-1. `cnpj-db-inspect/index.ts` reescrito (auditoria completa).
-2. `docs/CNPJ_DATA_MAP.md` (documento humano com tudo que está disponível).
-3. `national-search/index.ts` com query expandida para `type: "cnpj"`.
-4. Atualizações em `StepLocation`, `StepBasicInfo`, `StepContact`, `CapitalLeadModal`, `RegisterBuyer` para consumir os campos novos.
-5. (Opcional Fase 5) Migration `cnpj_cache` + lógica de cache na função.
+## Sequência
+Fase 3 (national-search) → Fase 4 (cache) → Fase 5 (UI wizard).
