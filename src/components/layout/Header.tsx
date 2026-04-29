@@ -80,12 +80,12 @@ export function Header() {
       )}
     >
       <nav className="container mx-auto px-4 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-20 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <MariLogo
               variant={isTransparent ? 'dark' : 'light'}
-              size={36}
+              size={72}
               className="transition-opacity duration-300"
             />
           </Link>
