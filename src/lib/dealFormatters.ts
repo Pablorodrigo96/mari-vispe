@@ -32,7 +32,10 @@ export const PIPELINE_STAGE_LABEL: Record<string, string> = {
 export const PIPELINE_STAGES = ["match", "nbo", "due_diligence", "spa", "closing", "closed"] as const;
 
 export const OUTCOME_LABEL: Record<string, string> = {
+  vigente: "Vigente",
   em_andamento: "Em andamento",
+  em_negociacao: "Em negociação",
+  vendemos: "Vendemos",
   concluido: "Concluído",
   cancelado: "Cancelado",
   vencido: "Vencido",
@@ -40,11 +43,37 @@ export const OUTCOME_LABEL: Record<string, string> = {
 };
 
 export const OUTCOME_COLOR: Record<string, string> = {
+  vigente: "#f59e0b",
   em_andamento: "#10b981",
+  em_negociacao: "#3b82f6",
+  vendemos: "#22c55e",
   concluido: "#22c55e",
   cancelado: "#ef4444",
-  vencido: "#f97316",
+  vencido: "#dc2626",
   vendeu_sozinho: "#a855f7",
+};
+
+export const OUTCOME_OPTIONS = [
+  "vigente",
+  "em_negociacao",
+  "vendemos",
+  "vendeu_sozinho",
+  "vencido",
+  "cancelado",
+] as const;
+
+export const BUYER_ENGAGEMENT_LABEL: Record<string, string> = {
+  aguardando: "Aguardando",
+  em_negociacao: "Em negociação",
+  comprou: "Comprou",
+  descartado: "Descartado",
+};
+
+export const BUYER_ENGAGEMENT_COLOR: Record<string, string> = {
+  aguardando: "#f97316",
+  em_negociacao: "#3b82f6",
+  comprou: "#10b981",
+  descartado: "#71717a",
 };
 
 export const REGIAO_BY_UF: Record<string, string> = {
