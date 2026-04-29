@@ -33,6 +33,7 @@ export default function Capital() {
         {/* Hero + Simulator */}
         <section className="relative py-16 lg:py-24 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-background to-primary/5" />
+          <MariBrandStamp position="tr" tone="carbon" size={560} opacity={0.05} />
           <div className="container mx-auto px-4 lg:px-8 relative">
             <div className="grid lg:grid-cols-2 gap-12 items-start">
               {/* Left: Copy */}
