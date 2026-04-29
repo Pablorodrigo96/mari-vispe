@@ -148,6 +148,7 @@ export default function PipelineKanbanPage() {
             commission_pct: editing.commission_pct,
             contato_nome: editing.contato_nome,
             contato_telefone: editing.contato_telefone,
+            outcome: editing.outcome,
           }}
           onClose={() => setEditing(null)}
         />

@@ -2087,6 +2087,9 @@ export type Database = {
             | "cancelado"
             | "vencido"
             | "vendeu_sozinho"
+            | "vigente"
+            | "vendemos"
+            | "em_negociacao"
             | null
           pipeline_stage:
             | "match"
@@ -2152,6 +2155,9 @@ export type Database = {
             | "cancelado"
             | "vencido"
             | "vendeu_sozinho"
+            | "vigente"
+            | "vendemos"
+            | "em_negociacao"
             | null
           pipeline_stage?:
             | "match"
@@ -2217,6 +2223,9 @@ export type Database = {
             | "cancelado"
             | "vencido"
             | "vendeu_sozinho"
+            | "vigente"
+            | "vendemos"
+            | "em_negociacao"
             | null
           pipeline_stage?:
             | "match"
@@ -2545,6 +2554,9 @@ export type Database = {
             | "cancelado"
             | "vencido"
             | "vendeu_sozinho"
+            | "vigente"
+            | "vendemos"
+            | "em_negociacao"
             | null
           pipeline_stage:
             | "match"
@@ -2832,6 +2844,7 @@ export type Database = {
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       eb_dashboard_kpis: { Args: never; Returns: Json }
+      eb_dashboard_kpis_v2: { Args: never; Returns: Json }
       eb_event_queue_stats: { Args: never; Returns: Json }
       eb_event_recent_errors: {
         Args: { p_limit?: number }

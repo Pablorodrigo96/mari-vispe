@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { X, Check } from "lucide-react";
-import { brl } from "@/lib/dealFormatters";
+import { brl, OUTCOME_OPTIONS, OUTCOME_LABEL } from "@/lib/dealFormatters";
 
 type Props = {
   mandateId: string;
@@ -13,6 +13,7 @@ type Props = {
     commission_pct?: number | null;
     contato_nome: string | null;
     contato_telefone?: string | null;
+    outcome?: string | null;
   };
   onClose: () => void;
 };
@@ -25,6 +26,7 @@ export function QuickEditPopover({ mandateId, values, onClose }: Props) {
     commission_pct: values.commission_pct?.toString() ?? "",
     contato_nome: values.contato_nome ?? "",
     contato_telefone: values.contato_telefone ?? "",
+    outcome: values.outcome ?? "",
   });
 
   const save = useMutation({
@@ -35,6 +37,7 @@ export function QuickEditPopover({ mandateId, values, onClose }: Props) {
       if (form.commission_pct !== "") patch.commission_pct = Number(form.commission_pct);
       if (form.contato_nome) patch.contato_nome = form.contato_nome;
       if (form.contato_telefone) patch.contato_telefone = form.contato_telefone;
+      if (form.outcome) patch.outcome = form.outcome;
       const { error } = await supabase.from("eb_mandates" as any).update(patch).eq("id", mandateId);
       if (error) throw error;
     },
@@ -90,6 +93,19 @@ export function QuickEditPopover({ mandateId, values, onClose }: Props) {
             <div className="px-2 py-1 text-[11px] text-emerald-300 tabular-nums break-words">
               {commissaoPreview ? brl(commissaoPreview, { compact: true }) : "—"}
             </div>
+          </div>
+          <div className="col-span-2">
+            <label className="block text-[9px] uppercase text-zinc-500 mb-1">Status do mandato</label>
+            <select
+              className={inputCls}
+              value={form.outcome}
+              onChange={set("outcome")}
+            >
+              <option value="">— manter atual —</option>
+              {OUTCOME_OPTIONS.map((o) => (
+                <option key={o} value={o}>{OUTCOME_LABEL[o] || o}</option>
+              ))}
+            </select>
           </div>
           <div className="col-span-2">
             <label className="block text-[9px] uppercase text-zinc-500 mb-1">Contato</label>
