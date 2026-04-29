@@ -213,3 +213,17 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
     </div>
   );
 }
+
+function HealthChip({ label, value, level }: { label: string; value: string; level: "ok" | "warn" | "bad" }) {
+  const cls = level === "ok"
+    ? "border-emerald-800 bg-emerald-950/30 text-emerald-300"
+    : level === "warn"
+      ? "border-amber-800 bg-amber-950/30 text-amber-300"
+      : "border-rose-800 bg-rose-950/30 text-rose-300";
+  return (
+    <div className={`rounded-lg border p-2 ${cls}`}>
+      <div className="text-[10px] uppercase tracking-wide opacity-70 break-words">{label}</div>
+      <div className="text-base font-semibold break-words">{value}</div>
+    </div>
+  );
+}
