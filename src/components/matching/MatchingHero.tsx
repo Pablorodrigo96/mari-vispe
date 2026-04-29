@@ -1,5 +1,6 @@
 import { Search, MousePointerClick, Eye, Brain, Cpu, Network } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 
 const steps = [
   { icon: Search, label: 'Digite o nome da sua empresa', techIcon: Cpu },
