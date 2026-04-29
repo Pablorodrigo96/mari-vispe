@@ -102,7 +102,8 @@ serve(async (req) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${serviceKey}`,
+            Authorization: forwardAuth,
+            apikey: serviceKey,
           },
           body: JSON.stringify({ cnpjs: cnpjChunk, limit_companies: cnpjChunk.length, persist: true }),
         });
