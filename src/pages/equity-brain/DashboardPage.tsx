@@ -189,6 +189,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <MatchHotHero />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <EBStatCard label="Empresas no banco" value={formatNumber(kpis.data?.companies)} hint="situação ativa" Icon={Building2} accent="zinc" />
         <EBStatCard label="Score M&A médio"   value={kpis.data?.avgMa ?? "—"}            hint="amostra 1k recentes" Icon={Target} accent="emerald" />
