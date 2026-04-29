@@ -429,7 +429,10 @@ export default function EBShadowPage() {
         </TabsContent>
 
         <TabsContent value="drift" className="mt-4">
-          <DriftAnalyticsCard />
+          <div className="space-y-4">
+            <DriftMonitorCard />
+            <DriftAnalyticsCard />
+          </div>
         </TabsContent>
 
         <TabsContent value="health" className="mt-4">
