@@ -18,6 +18,7 @@ import { AskMariDrawer } from "@/components/equity-brain/crm/AskMariDrawer";
 import { IdentityRevealCard } from "@/components/equity-brain/IdentityRevealCard";
 import { BlindTeaserButton } from "@/components/equity-brain/BlindTeaserButton";
 import { formatBRL } from "@/lib/equityBrain";
+import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 
 type Tab = "overview" | "matches" | "whatsapp" | "documents";
 
@@ -78,6 +79,8 @@ export default function BuyerDetailPage() {
         phone={(buyer as any).whatsapp ?? (buyer as any).telefone ?? null}
         uf={(buyer.ufs_interesse ?? [])[0] ?? null}
       />
+
+      <TopMatchesHeader buyerId={buyer.id} />
 
       <div className="flex items-center gap-1 border-b border-zinc-800">
         {tabs.map((t) => (
