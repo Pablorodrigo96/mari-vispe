@@ -1603,6 +1603,7 @@ export type Database = {
           has_listing: boolean | null
           last_enriched_at: string | null
           latitude: number | null
+          linked_buyer_id: string | null
           listing_id: string | null
           longitude: number | null
           municipio: string | null
@@ -1610,6 +1611,8 @@ export type Database = {
           natureza_juridica: string | null
           nome_fantasia: string | null
           porte: string | null
+          promoted_at: string | null
+          promoted_from: string | null
           qtd_socios: number | null
           qualification_source: string | null
           qualification_status: "qualified" | "unqualified" | null
@@ -1648,6 +1651,7 @@ export type Database = {
           has_listing?: boolean | null
           last_enriched_at?: string | null
           latitude?: number | null
+          linked_buyer_id?: string | null
           listing_id?: string | null
           longitude?: number | null
           municipio?: string | null
@@ -1655,6 +1659,8 @@ export type Database = {
           natureza_juridica?: string | null
           nome_fantasia?: string | null
           porte?: string | null
+          promoted_at?: string | null
+          promoted_from?: string | null
           qtd_socios?: number | null
           qualification_source?: string | null
           qualification_status?: "qualified" | "unqualified" | null
@@ -1693,6 +1699,7 @@ export type Database = {
           has_listing?: boolean | null
           last_enriched_at?: string | null
           latitude?: number | null
+          linked_buyer_id?: string | null
           listing_id?: string | null
           longitude?: number | null
           municipio?: string | null
@@ -1700,6 +1707,8 @@ export type Database = {
           natureza_juridica?: string | null
           nome_fantasia?: string | null
           porte?: string | null
+          promoted_at?: string | null
+          promoted_from?: string | null
           qtd_socios?: number | null
           qualification_source?: string | null
           qualification_status?: "qualified" | "unqualified" | null
@@ -2946,15 +2955,29 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
-      qualify_lead: {
-        Args: {
-          p_entity_id: string
-          p_entity_type: string
-          p_notes?: string
-          p_source?: string
-        }
-        Returns: Json
-      }
+      qualify_lead:
+        | {
+            Args: {
+              p_entity_id: string
+              p_entity_type: string
+              p_notes?: string
+              p_source?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_buyer_profile?: Json
+              p_company_profile?: Json
+              p_entity_id: string
+              p_entity_type: string
+              p_notes?: string
+              p_promote_to_buyer?: boolean
+              p_promote_to_company?: boolean
+              p_source?: string
+            }
+            Returns: Json
+          }
     }
     Enums: {
       app_role: "seller" | "buyer" | "advisor" | "admin" | "franchisee"
