@@ -40,7 +40,7 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1">
             <Link to="/" className="inline-flex mb-4">
-              <MariLogo variant="dark" size={42} />
+              <MariLogo variant="dark" size={88} />
             </Link>
             <p className="text-xs uppercase tracking-[0.3em] text-volt/90 mb-3">designed forward</p>
             <p className="text-sm text-primary-foreground/70 mb-6">

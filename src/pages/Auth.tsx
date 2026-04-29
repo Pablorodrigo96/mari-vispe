@@ -216,7 +216,7 @@ export default function Auth() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center justify-center mb-6">
-            <MariLogo variant="light" size={48} />
+            <MariLogo variant="tagline-light" size={120} />
           </Link>
           <h1 className="text-2xl font-bold text-foreground">Bem-vindo</h1>
           <p className="text-muted-foreground mt-2">Entre ou crie sua conta para continuar</p>
