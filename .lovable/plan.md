@@ -1,77 +1,89 @@
+## Auditoria — O que está pronto vs. o que falta
 
-# Próxima etapa — 1.5 (consertos + plug-in no scoring) + 2 (embeddings)
+Comparei o estado real do banco/edge functions com o blueprint completo do Equity Brain v3.
 
-Antes de avançar, a auditoria do estado atual revelou 3 pontos que precisam ser tratados juntos:
+### Estado atual (números reais)
 
-| Achado | Impacto |
-|---|---|
-| `socio_idade_max` **não foi materializado** (0 linhas em `company_signals`) | `unipessoal_fundador_55plus` ficou 100% zero — bug silencioso da Etapa 1 |
-| `seller_intent_score` médio = **0.19** (esperado ~0.35) | Score subdimensionado por causa do bug acima |
-| `current_matches = 0` | UI de counterfactual da Etapa 1 não tem o que renderizar até rodar `match-batch` |
-| `canonical_transactions = 21` | **Confirma**: Wave Detection (Onda 3) ainda não tem volume — não fazer agora |
+```text
+companies          116    buyers              212
+signals            873    canonical_tx         21
+current_matches  17.389   market_waves        580
+deal_events           1   revealed_thetas       0  ← vazio
+company_partners      0   drift_snapshots       0  ← vazio
+```
 
-A Etapa 2 do plano original (embeddings) faz sentido executar **agora** porque:
-- `embed-signal` já existe e funciona.
-- Lovable AI Gateway provê `text-embedding-3-small` sem API key extra.
-- Dá para preencher 1 dos placeholders restantes do `match-company-v2` (`sinergia_movel` → `semantic_fit`).
+### Status por fase
 
----
-
-## Escopo desta execução
-
-### Bloco A — Conserto da Etapa 1 (obrigatório, 30min)
-
-**A1.** Edge function `compute-seller-intent`: corrigir o cálculo de `socio_idade_max` para escrever a linha em `company_signals` (hoje só calcula em memória mas não faz upsert do próprio sinal). Re-rodar para as 116 empresas.
-
-**A2.** Após A1, recalcular `unipessoal_fundador_55plus` e `seller_intent_score` (que dependem dele). Validar: distribuição esperada ≥ 5% das empresas com `unipessoal_fundador_55plus=1`.
-
-**A3.** Disparar `match-batch` 1x para popular `matches.is_current=true` com `feature_contributions`, para o UI de counterfactual ter dados reais.
-
-### Bloco B — Etapa 1.5: Plug-in de 2 features reais no `match-company-v2`
-
-Substituir 2 dos 5 placeholders constantes (0.5) por features derivadas de sinais reais. Os outros 3 (`marca_regional`, `verticalizacao`, `regulatorio`) permanecem em 0.5 — não há substituto fiel ainda, trocar por ruído pioraria.
-
-| Linha atual em `match-company-v2/index.ts` | Substituir por |
-|---|---|
-| `let financeiro = 0.5;` (linha 62) | Derivar de `sweet_spot_fadiga` + `tempo_atividade_anos` normalizado: empresas no sweet spot 8-20a recebem 0.7; <3a → 0.3; >25a → 0.4 |
-| `const sinergia_movel = 0.5;` (linha 94) | **Será preenchido pelo Bloco C** (embeddings) — placeholder mantido até Bloco C entregar |
-
-Adicionar feature **nova** ao vetor de scoring:
-- `seller_intent` (peso 0.10, redistribuído de `match_score`): lê direto `seller_intent_score` da company. Empresas com intent > 0.5 ganham boost; < 0.2 sofrem leve penalidade.
-
-Ajuste de pesos será documentado em comentário no arquivo. Recalcular matches (`match-batch`) ao final.
-
-### Bloco C — Etapa 2: Embeddings semânticos (`semantic_fit`)
-
-**C1.** Migration: adicionar coluna `embedding vector(1536)` em `equity_brain.companies` e `equity_brain.buyers` (se ainda não existir). Index HNSW em ambas.
-
-**C2.** Edge function nova: `compute-semantic-embeddings`
-- Admin-only.
-- Para `companies`: gera embedding de `concat(razao_social, cnae_descricao, setor_ma, subsetor_ma)`.
-- Para `buyers`: gera embedding de `concat(nome, sinergias_chave, tese_descricao)`.
-- Usa Lovable AI Gateway (`google/text-embedding-004` ou `openai/text-embedding-3-small` — verificar qual está disponível; fallback para o que `embed-signal` já usa).
-- Batch de 50, idempotente (só recalcula se `updated_at > embedding_computed_at`).
-- Registra em `engine_runs`.
-
-**C3.** Plugar no `match-company-v2`:
-- Substituir `sinergia_movel = 0.5` por `semantic_fit = 1 - cosine_distance(company.embedding, buyer.embedding)`.
-- Quando algum dos lados não tiver embedding, fallback para 0.5 (preserva comportamento atual).
-
-**C4.** Card UI no `/equity-brain` (ShadowPage): `SemanticEmbeddingsCard` — total de companies/buyers com embedding, último run, botão "Recalcular".
-
-### Critério de aceite
-
-- Bloco A: `unipessoal_fundador_55plus` com pelo menos 5 empresas marcadas; `current_matches > 0`.
-- Bloco B: Feature `seller_intent` aparece em `feature_contributions` de matches recém-gerados; `financeiro` tem variância (não é mais constante 0.5).
-- Bloco C: ≥ 100 companies e ≥ 200 buyers com embedding; pelo menos 1 match com `semantic_fit ≠ 0.5`.
-
-### Fora desta etapa (para discutir depois)
-
-- **Wave Detection** (canonical_transactions = 21, volume insuficiente — adiar até atingir ≥ 100 deals).
-- **Hazard model** (depende de Bloco B estabilizado por ≥ 2 semanas com dados de `deal_events`).
-- **Enriquecimento externo** (News/PJe/LinkedIn — requer decisão de orçamento Serper/Apify/ProxyCurl).
-- **Substituir os outros 3 placeholders** (`marca_regional`, `verticalizacao`, `regulatorio`) — sem substituto fiel hoje.
+```text
+Fase 1 — Ingestão & Schema           ✅ COMPLETO
+Fase 2 — Sinais determinísticos      ✅ COMPLETO (873 sinais)
+Fase 3 — Embeddings semânticos       ✅ COMPLETO (semantic_fit ativo)
+Fase 3.5 — Market Waves              ✅ COMPLETO (580 células)
+Fase 4 — Match Engine v2             ✅ COMPLETO (17.389 matches v2)
+Fase 5 — Loop adaptativo (Bayes)     ⚠️  PARCIAL — código pronto, sem dados
+Fase 6 — Drift / Observabilidade     ⚠️  PARCIAL — função existe, 0 snapshots
+Fase 7 — UI/Operação BDR             ⚠️  PARCIAL — falta workflow operacional
+```
 
 ---
 
-Aprovando, executo os 3 blocos sequencialmente em uma única passagem.
+## O que falta (priorizado)
+
+### 🔴 Bloco 1 — Ativar o loop de aprendizado (crítico)
+O motor v2 está funcionando, mas **não aprende** porque faltam dois insumos:
+
+1. **Backfill de `deal_events`** — só 1 evento existe. A função `backfill-deal-events-from-history` foi deployada mas nunca executada em massa. Precisa rodar para gerar eventos sintéticos a partir de `interest_logs`, `messages`, `partner_lead_reservations`, `capital_timeline`.
+2. **Executar `update-buyer-revealed-thetas`** — `buyer_revealed_thetas` está zerado. Após o backfill, rodar o update Bayesiano para popular preferências reveladas dos 212 buyers.
+3. **Cron diário** — agendar `update-buyer-revealed-thetas` em `setup-equity-brain-crons` para rodar automaticamente.
+
+### 🔴 Bloco 2 — Ativar sinais demográficos (QSA)
+- `company_partners` está **vazio** (0 registros). Sem isso, sinais como `unipessoal_55plus`, `sucessao_familiar`, `socio_unico` ficam mortos.
+- Precisa popular via `sync-companies-from-cnpj` (já existe) puxando QSA da Receita para os 116 CNPJs ativos.
+- Após popular, recomputar `company_signals` para reativar features demográficas no score.
+
+### 🟡 Bloco 3 — Observabilidade (drift)
+- `drift_snapshots` está **vazio**. A função `compute-drift-snapshot` existe mas nunca foi chamada.
+- Faltam: execução inicial + cron semanal + card no `ShadowPage` mostrando histórico v1 vs v2 (KS distance, score drift, top movers).
+
+### 🟡 Bloco 4 — Workflow operacional BDR
+O motor produz 17k matches mas falta a camada de execução:
+- **Match → Ação**: hoje não há fluxo "transformar match em deal_event" pela UI. O BDR precisa de um botão `Marcar como contatado / Rejeitado / Resposta recebida` em cada match (alimenta o loop Bayes).
+- **Fila de prioridade**: `OportunidadesPage` mostra empresas, mas falta uma fila ranqueada por `score × wave_pressure × seller_intent` filtrada por SLA.
+- **DealDetailPage** já existe — verificar se expõe a timeline de eventos e o `MatchExplainabilityCard` para o match selecionado.
+
+### 🟢 Bloco 5 — Hazard models (timing)
+Adiar até ter ≥100 deal_events com transição de estágio. Hoje (1 evento) é estatisticamente impossível. Após Bloco 1, reavaliar.
+
+### 🟢 Bloco 6 — Polimentos
+- `wave_score` como heatmap no `MapaPage` (Deal Flow).
+- Expor `MatchQualityCard` também no Dashboard admin (hoje só no Shadow).
+- Documentação/onboarding do BDR no `GrafoJarvisGuiaPage`.
+
+---
+
+## Plano de execução proposto (ordem)
+
+```text
+1. Backfill deal_events em massa            (Bloco 1.1)
+2. Rodar update-buyer-revealed-thetas       (Bloco 1.2)
+3. Agendar cron diário do passo 2           (Bloco 1.3)
+4. Popular company_partners via QSA         (Bloco 2)
+5. Rodar compute-drift-snapshot + cron      (Bloco 3)
+6. UI: botões de feedback no match          (Bloco 4.1)
+7. UI: fila priorizada SLA                  (Bloco 4.2)
+8. Polimentos (Bloco 6) — opcional
+```
+
+Hazard models (Bloco 5) ficam adiados até massa de eventos > 100.
+
+---
+
+## Resumo direto
+
+**Não falta arquitetura — falta dado e ativação.** Todas as funções existem e o schema está completo. O que está parado é:
+- O loop adaptativo nunca foi "ligado" (sem deal_events, sem thetas).
+- Sinais demográficos estão dormentes (sem QSA).
+- Observabilidade (drift) nunca rodou.
+- UI do BDR não fecha o ciclo (não consegue gerar feedback).
+
+**Quer que eu execute os Blocos 1 → 2 → 3 → 4 nessa ordem?** São ~4 etapas independentes, cada uma destrava uma camada do motor.
