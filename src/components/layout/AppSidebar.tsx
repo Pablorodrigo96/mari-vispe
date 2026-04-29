@@ -237,7 +237,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
             <Avatar className="h-8 w-8"><AvatarFallback className="bg-accent text-accent-foreground text-xs">{userInitials}</AvatarFallback></Avatar>
-            <button onClick={handleSignOut} title="Sair" className="text-muted-foreground hover:text-destructive">
+            <button onClick={handleSignOut} title="Sair" className="text-zinc-300 hover:text-destructive">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
