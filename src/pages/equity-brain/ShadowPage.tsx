@@ -196,6 +196,7 @@ export default function EBShadowPage() {
         </TabsList>
 
         <TabsContent value="summary" className="mt-4 space-y-4">
+          <MatchQualityCard />
           <MatchExplainabilityCard />
           <MarketWavesCard />
           <Card className="!bg-slate-900/60 backdrop-blur-md border-slate-800">
