@@ -7,6 +7,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { EBFunnel } from "@/components/equity-brain/EBFunnel";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
+import { EB_TIPS } from "@/lib/ebTooltips";
 import { Button } from "@/components/ui/button";
 import { formatNumber, relativeTime, scoreColor } from "@/lib/equityBrain";
 import { cn } from "@/lib/utils";
