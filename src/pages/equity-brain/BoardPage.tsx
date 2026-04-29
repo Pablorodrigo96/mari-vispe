@@ -138,10 +138,10 @@ export default function BoardPage() {
       <section className="space-y-3">
         <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-bold">Saúde do motor</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <EBStatCard label="Empresas no banco"   value={formatNumber(health.data?.companies)} hint="universo total"          Icon={Building2} accent="zinc" />
-          <EBStatCard label="Signals computados"  value={formatNumber(health.data?.signals)}   hint="sinais ativos"           Icon={Activity}  accent="blue" />
-          <EBStatCard label="Scores calculados"   value={formatNumber(health.data?.scores)}    hint="versão atual"            Icon={Target}    accent="emerald" />
-          <EBStatCard label="Oportunidades quentes" value={formatNumber(health.data?.premium)} hint="ma_score ≥ 80"          Icon={TrendingUp} accent="amber" />
+          <EBStatCard label="Empresas no banco"   value={formatNumber(health.data?.companies)} hint="universo total"          Icon={Building2} accent="zinc"    info={EB_TIPS.empresas_no_banco} />
+          <EBStatCard label="Signals computados"  value={formatNumber(health.data?.signals)}   hint="sinais ativos"           Icon={Activity}  accent="blue"    info={EB_TIPS.signals_computados} />
+          <EBStatCard label="Scores calculados"   value={formatNumber(health.data?.scores)}    hint="versão atual"            Icon={Target}    accent="emerald" info={EB_TIPS.scores_calculados} />
+          <EBStatCard label="Oportunidades quentes" value={formatNumber(health.data?.premium)} hint="ma_score ≥ 80"          Icon={TrendingUp} accent="amber"  info={EB_TIPS.oportunidades_quentes} />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <div className={cn(
@@ -152,7 +152,10 @@ export default function BoardPage() {
           )}>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Fila de eventos</div>
+                <div className="flex items-center gap-1.5">
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Fila de eventos</div>
+                  <InfoHint {...EB_TIPS.fila_eventos} />
+                </div>
                 <div className={cn("text-2xl font-bold mt-1", (health.data?.queue ?? 0) > 100 ? "text-amber-300" : "text-zinc-100")}>
                   {formatNumber(health.data?.queue)}
                 </div>
@@ -166,14 +169,20 @@ export default function BoardPage() {
             </div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Eventos com erro</div>
+            <div className="flex items-center gap-1.5">
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Eventos com erro</div>
+              <InfoHint {...EB_TIPS.eventos_erro} />
+            </div>
             <div className={cn("text-2xl font-bold mt-1", (health.data?.queueErrors ?? 0) > 0 ? "text-rose-300" : "text-zinc-100")}>
               {formatNumber(health.data?.queueErrors)}
             </div>
             <div className="text-[10px] text-zinc-500 mt-1">drop após 3 retries</div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Tier strong</div>
+            <div className="flex items-center gap-1.5">
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Tier strong</div>
+              <InfoHint {...EB_TIPS.tier_strong} />
+            </div>
             <div className="text-2xl font-bold mt-1 text-zinc-100">{formatNumber(health.data?.strong)}</div>
             <div className="text-[10px] text-zinc-500 mt-1">60 ≤ ma_score &lt; 80</div>
           </div>
@@ -182,8 +191,9 @@ export default function BoardPage() {
 
       {/* 2) Funil semanal */}
       <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-bold mb-4">
+        <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-bold mb-4 flex items-center gap-1.5">
           Funil semanal · últimos 7 dias
+          <InfoHint {...EB_TIPS.funil_semanal} />
         </h2>
         {funnel.data ? (
           <EBFunnel stages={funnel.data} />
