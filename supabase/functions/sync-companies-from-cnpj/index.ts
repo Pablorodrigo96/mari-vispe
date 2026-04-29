@@ -110,6 +110,11 @@ serve(async (req) => {
     const cnaePrefixes: string[] = Array.isArray(body.cnae_prefixes) ? body.cnae_prefixes : [];
     const limit: number = Math.min(Number(body.limit ?? 1000), 5000);
     const offset: number = Math.max(Number(body.offset ?? 0), 0);
+    // NEW (Oráculo v3 / Bloco 2): lista de CNPJs específicos + dry-run
+    const cnpjsFilter: string[] = Array.isArray(body.cnpjs)
+      ? body.cnpjs.map((c: string) => String(c).replace(/[^0-9]/g, "")).filter((c: string) => c.length === 14)
+      : [];
+    const dryRun: boolean = body.dry_run === true;
 
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
@@ -127,7 +132,18 @@ serve(async (req) => {
       ];
       const args: unknown[] = [];
 
-      if (uf) {
+      if (cnpjsFilter.length > 0) {
+        // dry-run / pontual: filtra por (cnpj_basico+ordem+dv) usando a lista informada
+        const basicos = cnpjsFilter.map((c) => c.slice(0, 8));
+        const ordens = cnpjsFilter.map((c) => c.slice(8, 12));
+        const dvs = cnpjsFilter.map((c) => c.slice(12, 14));
+        args.push(basicos); conditions.push(`e.cnpj_basico = ANY($${args.length}::text[])`);
+        args.push(ordens);  conditions.push(`e.cnpj_ordem  = ANY($${args.length}::text[])`);
+        args.push(dvs);     conditions.push(`e.cnpj_dv     = ANY($${args.length}::text[])`);
+        // remove restrições de tempo para dry-run
+        conditions.shift(); conditions.shift(); // remove '5 years' e NOT NULL
+        conditions.shift(); // remove situacao = 02 (queremos qualquer status)
+      } else if (uf) {
         args.push(uf.toUpperCase());
         conditions.push(`e.uf = $${args.length}`);
       }
@@ -269,6 +285,26 @@ serve(async (req) => {
           last_enriched_at: new Date().toISOString(),
         };
       });
+
+      // DRY-RUN: retorna preview sem gravar
+      if (dryRun) {
+        const partnerPreview = partnersRows.slice(0, 30).map((p) => ({
+          cnpj_basico: p.cnpj_basico,
+          nome: p.nome_socio,
+          tipo: mapTipoSocio(p.identificador_socio),
+          qualificacao: p.qualificacao_socio,
+        }));
+        return new Response(
+          JSON.stringify({
+            dry_run: true,
+            companies_found: records.length,
+            partners_found: partnersRows.length,
+            companies_preview: records.slice(0, 5),
+            partners_preview: partnerPreview,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
 
       // UPSERT companies
       const { error: upsertErr } = await supabase

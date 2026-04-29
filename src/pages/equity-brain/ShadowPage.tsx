@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { MatchDecisionCard, type MatchDecisionRow } from "@/components/equity-brain/MatchDecisionCard";
 import { EngineHealthCard } from "@/components/equity-brain/EngineHealthCard";
 import { DriftAnalyticsCard } from "@/components/equity-brain/DriftAnalyticsCard";
+import DriftMonitorCard from "@/components/equity-brain/DriftMonitorCard";
 import { BackfillHistoryCard } from "@/components/equity-brain/BackfillHistoryCard";
 import { EventQueueHealthCard } from "@/components/equity-brain/EventQueueHealthCard";
 import { SellerIntentMonitorCard } from "@/components/equity-brain/SellerIntentMonitorCard";
@@ -428,7 +429,10 @@ export default function EBShadowPage() {
         </TabsContent>
 
         <TabsContent value="drift" className="mt-4">
-          <DriftAnalyticsCard />
+          <div className="space-y-4">
+            <DriftMonitorCard />
+            <DriftAnalyticsCard />
+          </div>
         </TabsContent>
 
         <TabsContent value="health" className="mt-4">

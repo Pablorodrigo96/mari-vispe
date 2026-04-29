@@ -11,6 +11,12 @@ import { Activity, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type FeatureStat = { feature: string; n: number; avg_value: number; avg_weight: number; avg_contrib: number };
+type Health = {
+  coverage_pct: number;        // % de listings com matches v2
+  median_events_per_buyer: number;
+  buyers_with_signal: number;
+  last_spearman: number | null;
+};
 type Quality = {
   total_current: number;
   v1_current: number;
@@ -19,6 +25,7 @@ type Quality = {
   unique_buyers: number;
   avg_match_score: number;
   features: FeatureStat[];
+  health: Health;
 };
 
 const FEATURE_LABEL: Record<string, string> = {
@@ -75,6 +82,24 @@ export default function MatchQualityCard() {
         ? v2Rows.reduce((s, r) => s + Number(r.match_score ?? 0), 0) / v2Rows.length
         : 0;
 
+      // Health metrics paralelos
+      const [thetasRes, listingsRes, snapsRes] = await Promise.all([
+        (supabase as any).schema("equity_brain").from("buyer_revealed_thetas")
+          .select("buyer_id, n_observations").gte("n_observations", 1),
+        supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active"),
+        (supabase as any).schema("equity_brain").from("drift_snapshots")
+          .select("spearman_corr, snapshot_at").order("snapshot_at", { ascending: false }).limit(1),
+      ]);
+      const thetas = (thetasRes?.data ?? []) as Array<{ buyer_id: string; n_observations: number }>;
+      const byBuyer = new Map<string, number>();
+      for (const t of thetas) byBuyer.set(t.buyer_id, Math.max(byBuyer.get(t.buyer_id) ?? 0, t.n_observations));
+      const obsValues = Array.from(byBuyer.values()).sort((a, b) => a - b);
+      const median = obsValues.length ? obsValues[Math.floor(obsValues.length / 2)] : 0;
+      const buyersWithSignal = Array.from(byBuyer.values()).filter((n) => n >= 2).length;
+      const totalListings = (listingsRes as any)?.count ?? 0;
+      const coveragePct = totalListings > 0 ? Math.min(100, (new Set(v2Rows.map((r) => r.cnpj)).size / totalListings) * 100) : 0;
+      const lastSpearman = snapsRes?.data?.[0]?.spearman_corr == null ? null : Number(snapsRes.data[0].spearman_corr);
+
       setData({
         total_current: rows.length,
         v1_current: v1Rows.length,
@@ -83,6 +108,12 @@ export default function MatchQualityCard() {
         unique_buyers: new Set(v2Rows.map((r) => r.buyer_id)).size,
         avg_match_score: avgScore,
         features,
+        health: {
+          coverage_pct: coveragePct,
+          median_events_per_buyer: median,
+          buyers_with_signal: buyersWithSignal,
+          last_spearman: lastSpearman,
+        },
       });
     } finally {
       setLoading(false);
@@ -111,6 +142,30 @@ export default function MatchQualityCard() {
               <Stat label="Empresas cobertas" value={`${data.unique_cnpjs}`} />
               <Stat label="Buyers ativos" value={`${data.unique_buyers}`} />
               <Stat label="Score médio" value={data.avg_match_score.toFixed(1)} accent="amber" />
+            </div>
+
+            {/* Semáforos de saúde do aprendizado */}
+            <div className="grid grid-cols-3 gap-2">
+              <HealthChip
+                label="Cobertura listings"
+                value={`${data.health.coverage_pct.toFixed(0)}%`}
+                level={data.health.coverage_pct >= 80 ? "ok" : data.health.coverage_pct >= 40 ? "warn" : "bad"}
+              />
+              <HealthChip
+                label={`Buyers c/ sinal (≥2 obs)`}
+                value={`${data.health.buyers_with_signal}`}
+                level={data.health.buyers_with_signal >= 20 ? "ok" : data.health.buyers_with_signal >= 5 ? "warn" : "bad"}
+              />
+              <HealthChip
+                label="Drift Spearman"
+                value={data.health.last_spearman == null ? "—" : data.health.last_spearman.toFixed(2)}
+                level={
+                  data.health.last_spearman == null ? "warn"
+                  : data.health.last_spearman >= 0.85 ? "ok"
+                  : data.health.last_spearman >= 0.70 ? "warn"
+                  : "bad"
+                }
+              />
             </div>
 
             {data.v1_current > 0 && (
@@ -155,6 +210,20 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
     <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
       <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
       <div className={`text-lg font-semibold ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function HealthChip({ label, value, level }: { label: string; value: string; level: "ok" | "warn" | "bad" }) {
+  const cls = level === "ok"
+    ? "border-emerald-800 bg-emerald-950/30 text-emerald-300"
+    : level === "warn"
+      ? "border-amber-800 bg-amber-950/30 text-amber-300"
+      : "border-rose-800 bg-rose-950/30 text-rose-300";
+  return (
+    <div className={`rounded-lg border p-2 ${cls}`}>
+      <div className="text-[10px] uppercase tracking-wide opacity-70 break-words">{label}</div>
+      <div className="text-base font-semibold break-words">{value}</div>
     </div>
   );
 }

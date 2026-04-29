@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Microscope, RefreshCw } from "lucide-react";
+import { Loader2, Microscope, RefreshCw, Phone, MessageCircle, FileSignature, XCircle, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 type Contribution = { feature: string; weight: number; value: number; contribution: number };
 type MatchRow = {
@@ -28,7 +29,25 @@ function colorFor(feat: string) { return FEATURE_COLORS[feat] ?? "bg-slate-500";
 export function MatchExplainabilityCard() {
   const [rows, setRows] = useState<MatchRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logging, setLogging] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  async function logEvent(matchId: string, eventType: string, rejectionReason?: string) {
+    setLogging(eventType);
+    try {
+      const { error } = await (supabase as any).rpc("eb_log_deal_event", {
+        p_match_id: matchId,
+        p_event_type: eventType,
+        p_rejection_reason: rejectionReason ?? null,
+      });
+      if (error) throw error;
+      toast.success(`Evento "${eventType}" registrado — alimenta o aprendizado do motor.`);
+    } catch (e: any) {
+      toast.error(`Falha ao registrar: ${e?.message ?? "erro"}`);
+    } finally {
+      setLogging(null);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -113,6 +132,43 @@ export function MatchExplainabilityCard() {
                       <Badge variant="outline" className="bg-transparent text-xs text-emerald-300 border-emerald-700/60">
                         p(close) {selected.p_close_12m == null ? "—" : `${(selected.p_close_12m * 100).toFixed(1)}%`}
                       </Badge>
+                    </div>
+                  </div>
+
+                  {/* BDR Feedback Loop — alimenta buyer_revealed_thetas */}
+                  <div className="rounded border border-slate-800 bg-slate-950/40 p-2">
+                    <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5 break-words">
+                      Feedback BDR · alimenta o aprendizado
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px]"
+                        onClick={() => logEvent(selected.id, "contacted")}>
+                        <Phone className="h-3 w-3 mr-1" /> Contatado
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px]"
+                        onClick={() => logEvent(selected.id, "reply_received")}>
+                        <MessageCircle className="h-3 w-3 mr-1" /> Respondeu
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-emerald-300 border-emerald-800"
+                        onClick={() => logEvent(selected.id, "nda_signed")}>
+                        <FileSignature className="h-3 w-3 mr-1" /> NDA
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-emerald-300 border-emerald-800"
+                        onClick={() => logEvent(selected.id, "closed")}>
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Fechou
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-rose-300 border-rose-800"
+                        onClick={() => logEvent(selected.id, "rejected", "size_mismatch")}>
+                        <XCircle className="h-3 w-3 mr-1" /> Rejeitou (porte)
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-rose-300 border-rose-800"
+                        onClick={() => logEvent(selected.id, "rejected", "geography")}>
+                        <XCircle className="h-3 w-3 mr-1" /> Rejeitou (geo)
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-rose-300 border-rose-800"
+                        onClick={() => logEvent(selected.id, "dropped")}>
+                        <XCircle className="h-3 w-3 mr-1" /> Dropou
+                      </Button>
                     </div>
                   </div>
 
