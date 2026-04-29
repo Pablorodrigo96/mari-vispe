@@ -107,9 +107,9 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
       )}
     >
       {/* Brand */}
-      <div className="h-16 px-4 border-b border-border flex items-center justify-between shrink-0">
+      <div className="h-20 px-4 border-b border-border flex items-center justify-between shrink-0">
         <Link to="/painel" className="flex items-center min-w-0">
-          <MariLogo variant={collapsed ? 'symbol-dark' : 'dark'} size={collapsed ? 44 : 64} />
+          <MariLogo variant={collapsed ? 'symbol-dark' : 'dark'} size={collapsed ? 48 : 80} />
         </Link>
         <button
           onClick={onToggleCollapse}
