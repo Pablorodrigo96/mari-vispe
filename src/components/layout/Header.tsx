@@ -84,8 +84,9 @@ export function Header() {
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <MariLogo
-              size={32}
-              className={cn('transition-colors duration-300', isTransparent ? 'text-white' : 'text-foreground')}
+              variant={isTransparent ? 'dark' : 'light'}
+              size={36}
+              className="transition-opacity duration-300"
             />
           </Link>
 
