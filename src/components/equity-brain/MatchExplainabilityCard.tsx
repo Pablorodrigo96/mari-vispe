@@ -135,6 +135,43 @@ export function MatchExplainabilityCard() {
                     </div>
                   </div>
 
+                  {/* BDR Feedback Loop — alimenta buyer_revealed_thetas */}
+                  <div className="rounded border border-slate-800 bg-slate-950/40 p-2">
+                    <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5 break-words">
+                      Feedback BDR · alimenta o aprendizado
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px]"
+                        onClick={() => logEvent(selected.id, "contacted")}>
+                        <Phone className="h-3 w-3 mr-1" /> Contatado
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px]"
+                        onClick={() => logEvent(selected.id, "reply_received")}>
+                        <MessageCircle className="h-3 w-3 mr-1" /> Respondeu
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-emerald-300 border-emerald-800"
+                        onClick={() => logEvent(selected.id, "nda_signed")}>
+                        <FileSignature className="h-3 w-3 mr-1" /> NDA
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-emerald-300 border-emerald-800"
+                        onClick={() => logEvent(selected.id, "closed")}>
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Fechou
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-rose-300 border-rose-800"
+                        onClick={() => logEvent(selected.id, "rejected", "size_mismatch")}>
+                        <XCircle className="h-3 w-3 mr-1" /> Rejeitou (porte)
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-rose-300 border-rose-800"
+                        onClick={() => logEvent(selected.id, "rejected", "geography")}>
+                        <XCircle className="h-3 w-3 mr-1" /> Rejeitou (geo)
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={!!logging} className="bg-transparent h-7 text-[11px] text-rose-300 border-rose-800"
+                        onClick={() => logEvent(selected.id, "dropped")}>
+                        <XCircle className="h-3 w-3 mr-1" /> Dropou
+                      </Button>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     {sortedContribs.map((c) => {
                       const widthPct = (Math.abs(c.contribution) / maxAbs) * 100;
