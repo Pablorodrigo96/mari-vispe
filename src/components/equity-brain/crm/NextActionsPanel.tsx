@@ -20,7 +20,7 @@ export function NextActionsPanel() {
   const navigate = useNavigate();
 
   const goTo = (s: MariSuggestion) => {
-    const path = s.entity_type === "mandate" ? `/equity-brain/crm/mandates/${s.entity_id}` : `/equity-brain/crm/buyers/${s.entity_id}`;
+    const path = s.entity_type === "mandate" ? `/equity-brain/crm/mandate/${s.entity_id}` : `/equity-brain/crm/buyer/${s.entity_id}`;
     navigate(path);
   };
 
