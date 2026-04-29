@@ -30,12 +30,20 @@ export default function CrmHubPage() {
             Hub de mandatos e buyers, com Mari como copiloto e WhatsApp integrado.
           </p>
         </div>
-        <Link
-          to="/equity-brain/crm/admin/permissoes"
-          className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent"
-        >
-          <ShieldCheck className="h-3 w-3" /> Permissões
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/equity-brain/crm/admin/auditoria"
+            className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent"
+          >
+            <ShieldCheck className="h-3 w-3" /> Auditoria
+          </Link>
+          <Link
+            to="/equity-brain/crm/admin/permissoes"
+            className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent"
+          >
+            <ShieldCheck className="h-3 w-3" /> Permissões
+          </Link>
+        </div>
       </header>
 
       <KpiHeader />
