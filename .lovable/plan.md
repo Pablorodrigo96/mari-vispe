@@ -1,51 +1,110 @@
-# Expansão da Integração com Base Nacional de CNPJ — REVISADO
+## Objetivo
 
-## Auditoria concluída (Fase 1)
+Cobrir os dados que **não existem** na sua base nacional atual (sócios/QSA, regime tributário Simples/MEI) seguindo dois caminhos em paralelo:
 
-Banco externo tem **apenas 4 objetos** no schema `public`:
+1. **Caminho permanente** — você pede ao fornecedor da base para incluir as tabelas faltantes (ação manual sua, fora do código).
+2. **Caminho imediato** — eu implemento um **fallback automático via BrasilAPI** (gratuita, sem API key) que busca QSA e Simples só quando o CNPJ não tiver esses dados na base local.
 
-| Objeto | Tipo | Linhas | Conteúdo |
-|---|---|---|---|
-| `cnaes` | tabela | 1.359 | código + descrição |
-| `empresas` | tabela | 4.511.699 | cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa, ente_federativo |
-| `estabelecimentos` | tabela | 5.491.329 | dados completos do estabelecimento (endereço, CNAE, situação, contato) |
-| `estabelecimentos_detalhados` | **view** | — | JOIN pronto: razao_social + nome_fantasia + porte + capital + endereco_completo + CEP + UF + municipio (nome) + cnae + cnae_descricao + telefone_formatado + email |
+Quando o fornecedor entregar as tabelas, basta avisar — desligo o fallback em 1 linha.
 
-**Não disponível na fonte**: socios (QSA), simples/MEI, naturezas (descrições), qualificacoes, municipios (códigos IBGE→nome separados), motivos, paises.
+---
 
-**Códigos a decodificar no código**:
-- `situacao_cadastral`: 01=Nula, 02=Ativa, 03=Suspensa, 04=Inapta, 08=Baixada
-- `porte_empresa`: 00=Não informado, 01=Micro Empresa, 03=EPP, 05=Demais
-- `identificador_matriz_filial`: 1=Matriz, 2=Filial
-- `natureza_juridica`: deixar código bruto (1359 valores — tabela estática só com top 30 mais comuns: 2062=LTDA, 2305=SA, 2135=EIRELI, 2143=Empresário Individual, 2240=SS, 2348=MEI…)
+## Parte 1 — O que VOCÊ faz (caminho permanente)
 
-## Plano revisado
+Mande este pedido ao seu fornecedor da base CNPJ:
 
-### Fase 3 — `national-search` expandida (case `cnpj`)
-- Usar a **view `estabelecimentos_detalhados`** como fonte primária (1 query, sem JOIN manual)
-- Decodificar `situacao_cadastral`, `porte_empresa`, `natureza_juridica` (top 30) via mapas no código
-- Calcular `idade_anos` a partir de `data_inicio_atividade` (formato YYYYMMDD)
-- Retornar payload retrocompatível + novos campos: `nome_fantasia`, `endereco_completo`, `logradouro`, `numero`, `complemento`, `bairro`, `cep`, `municipio`, `uf`, `telefone`, `email`, `capital_social`, `porte`, `porte_codigo`, `natureza_juridica_codigo`, `natureza_juridica_descricao`, `data_abertura` (ISO), `idade_anos`, `situacao_codigo`, `situacao`, `cnae_principal_codigo`, `cnae_principal_descricao`, `cnae_secundarios` (array de códigos), `is_matriz`
+> "Por favor, incluam no próximo dump mensal as tabelas `socios` e `simples` que a Receita Federal já disponibiliza gratuitamente junto com `empresas` e `estabelecimentos` no mesmo pacote público (https://dadosabertos.rfb.gov.br/CNPJ/). Precisamos dos campos:
+> - **socios**: cnpj_basico, identificador_socio, nome_socio, cnpj_cpf_socio, qualificacao_socio, data_entrada_sociedade, pais, representante_legal, qualificacao_representante, faixa_etaria
+> - **simples**: cnpj_basico, opcao_pelo_simples, data_opcao_simples, data_exclusao_simples, opcao_pelo_mei, data_opcao_mei, data_exclusao_mei
+> 
+> Também seria útil as tabelas de domínio: `municipios`, `naturezas_juridicas`, `paises`, `qualificacoes_socios`, `motivos`."
 
-### Fase 4 — Cache local
-Tabela `cnpj_cache` no Lovable Cloud:
-- `cnpj` text PK
-- `data` jsonb
-- `cached_at` timestamptz default now()
-- TTL: 30 dias verificado em código
-- RLS: SELECT público; INSERT/UPDATE só service_role
+Custo: **zero** (a Receita disponibiliza tudo grátis).
 
-### Fase 5 — UI no wizard de venda
-- `StepBasicInfo`: razao_social, nome_fantasia, foundation_year (de data_abertura)
-- `StepLocation`: cep, street (= tipo_logradouro+logradouro), neighborhood, city, state
-- `StepContact`: phone (telefone_formatado)
-- Badge verde "Receita Federal" ao lado dos campos preenchidos; some ao editar
+---
 
-## Itens removidos do plano original
-- ❌ Sócios (QSA) — não existe na base
-- ❌ Simples/MEI — não existe
-- ❌ JOINs manuais com municipios/naturezas/qualificacoes — view já resolve
-- ❌ `docs/CNPJ_DATA_MAP.md` separado — virou esta seção do plano
+## Parte 2 — O que EU faço (caminho imediato: fallback BrasilAPI)
 
-## Sequência
-Fase 3 (national-search) → Fase 4 (cache) → Fase 5 (UI wizard).
+### 2.1 — Atualizar `supabase/functions/national-search/index.ts`
+
+No fluxo `type === "cnpj"`, **depois** de consultar a base local, fazer uma chamada paralela à BrasilAPI para enriquecer com:
+- **QSA** (sócios) — endpoint `https://brasilapi.com.br/api/cnpj/v1/{cnpj}` retorna o array `qsa`
+- **Simples/MEI** — mesmo endpoint retorna `opcao_pelo_simples`, `data_opcao_pelo_simples`, `opcao_pelo_mei`, `data_opcao_pelo_mei`
+
+Estratégia:
+- Chamada com timeout curto (3s) — se a BrasilAPI falhar, retorna apenas dados locais (graceful degradation)
+- Resultado mesclado é salvo no `cnpj_cache` (TTL 30 dias) — então segunda consulta do mesmo CNPJ não chama a BrasilAPI de novo
+- Nenhum custo, nenhuma API key, sem rate limit relevante para uso individual de auto-preenchimento
+
+### 2.2 — Estender o tipo `NationalCompany` em `src/hooks/useNationalSearch.ts`
+
+Adicionar campos opcionais:
+```ts
+socios?: Array<{
+  nome: string;
+  qualificacao: string;
+  data_entrada: string;
+  cpf_cnpj?: string;
+  faixa_etaria?: string;
+}>;
+regime_tributario?: {
+  simples: boolean;
+  data_opcao_simples?: string;
+  mei: boolean;
+  data_opcao_mei?: string;
+};
+data_source_qsa?: 'local' | 'brasilapi' | 'unavailable';
+data_source_simples?: 'local' | 'brasilapi' | 'unavailable';
+```
+
+### 2.3 — Exibir os novos dados no wizard de venda
+
+Em `src/components/sell/wizard/StepBasicFinancial.tsx`, após o auto-preenchimento por CNPJ, mostrar (read-only, recolhível):
+- **Quadro Societário** — lista de sócios com nome, qualificação e data de entrada
+- **Regime Tributário** — badge "Simples Nacional" / "MEI" / "Lucro Real/Presumido (não optante)"
+
+Esses blocos só aparecem quando há dados (`socios.length > 0` ou `regime_tributario` definido), com pequena legenda discreta indicando a fonte ("Dados públicos Receita Federal").
+
+### 2.4 — Painel de admin para monitorar
+
+Pequeno indicador no `cnpj-db-inspect` ou novo endpoint que conte:
+- Quantos CNPJs no `cnpj_cache` vieram só da base local vs. enriquecidos via BrasilAPI
+- Útil para você saber quando o fornecedor entregar as tabelas e poder desligar o fallback
+
+### 2.5 — Switch para desligar fallback (1 linha)
+
+Adicionar flag em `integrations_config`:
+```
+key='brasilapi_fallback_enabled', value='true'
+```
+Quando suas tabelas chegarem, basta mudar para `false` na admin (sem deploy).
+
+---
+
+## Detalhes técnicos
+
+**Por que BrasilAPI (e não ReceitaWS/CNPJá):**
+- Grátis, sem API key, sem captcha
+- Mantida pela comunidade, hospedada em CDN, latência ~500ms
+- Usa a mesma fonte oficial (Receita Federal)
+- Limite informal de ~3 req/s — mais que suficiente para auto-preenchimento individual; cache de 30 dias absorve picos
+
+**Falhas esperadas e tratamento:**
+- Timeout/erro de rede → retorna sem QSA, registra `data_source_qsa: 'unavailable'`, segue normalmente
+- CNPJ não encontrado na BrasilAPI mas existe localmente → mostra dados locais sem QSA
+- Cache hit → não chama BrasilAPI
+
+**Sem mudanças de schema necessárias** — o `cnpj_cache.data` é `jsonb`, então os novos campos cabem sem migração.
+
+---
+
+## Resultado final
+
+Quando o usuário digitar um CNPJ no wizard de venda, vai ver auto-preenchido:
+- Razão social, fantasia, endereço, CNAE, idade, capital social, situação cadastral, natureza jurídica, contato (já existem hoje)
+- **+ Sócios (QSA)** — novo, via BrasilAPI até fornecedor entregar
+- **+ Regime tributário (Simples/MEI)** — novo, via BrasilAPI até fornecedor entregar
+
+Quando o fornecedor entregar as tabelas, eu reescrevo o JOIN no SQL para puxar localmente (mais rápido) e desligo o fallback.
+
+Posso aprovar?
