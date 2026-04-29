@@ -113,7 +113,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         </Link>
         <button
           onClick={onToggleCollapse}
-          className="text-muted-foreground hover:text-foreground p-1 rounded hidden lg:block"
+          className="text-zinc-300 hover:text-foreground p-1 rounded hidden lg:block"
           aria-label="Colapsar menu"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
