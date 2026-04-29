@@ -88,6 +88,7 @@ const NATUREZA_MAP: Record<string, string> = {
   "1031": "Órgão Público do Poder Executivo Municipal",
   "1244": "Empresa Pública",
   "1252": "Sociedade de Economia Mista",
+  "2038": "Sociedade de Economia Mista",
   "1333": "Fundo Público",
   "3034": "Serviço Notarial e Registral",
   "3069": "Fundação Privada",
