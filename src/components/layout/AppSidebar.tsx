@@ -149,7 +149,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 onClick={() => toggle(g.id)}
                 className={cn(
                   'w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors',
-                  isGroupActive ? 'text-accent' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  isGroupActive ? 'text-accent' : 'text-zinc-300 hover:text-foreground hover:bg-muted/50'
                 )}
               >
                 <span className="flex items-center gap-2">
