@@ -1,25 +1,33 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-// Knowledge Base — embedded at build time
-import kb01 from "./kb/01-plataforma.md" with { type: "text" };
-import kb02 from "./kb/02-premissas-scores.md" with { type: "text" };
-import kb03 from "./kb/03-fontes-de-dados.md" with { type: "text" };
-import kb04 from "./kb/04-graficos-interpretacao.md" with { type: "text" };
-import kb05 from "./kb/05-pipeline-operacao.md" with { type: "text" };
-import kb06 from "./kb/06-mna-playbook.md" with { type: "text" };
-import kb07 from "./kb/07-aceleracao-deal.md" with { type: "text" };
-import kb08 from "./kb/08-metas-e-prioridades.md" with { type: "text" };
+// Knowledge Base — loaded at cold start from co-located markdown files
+const KB_FILES = [
+  "01-plataforma.md",
+  "02-premissas-scores.md",
+  "03-fontes-de-dados.md",
+  "04-graficos-interpretacao.md",
+  "05-pipeline-operacao.md",
+  "06-mna-playbook.md",
+  "07-aceleracao-deal.md",
+  "08-metas-e-prioridades.md",
+];
 
-const KNOWLEDGE_BASE = [
-  `# 1. PLATAFORMA\n${kb01}`,
-  `# 2. PREMISSAS & SCORES\n${kb02}`,
-  `# 3. FONTES DE DADOS\n${kb03}`,
-  `# 4. GRÁFICOS\n${kb04}`,
-  `# 5. PIPELINE\n${kb05}`,
-  `# 6. M&A PLAYBOOK\n${kb06}`,
-  `# 7. ACELERAÇÃO DE DEAL\n${kb07}`,
-  `# 8. METAS\n${kb08}`,
-].join("\n\n---\n\n");
+let _kbCache: string | null = null;
+async function loadKnowledgeBase(): Promise<string> {
+  if (_kbCache) return _kbCache;
+  const parts: string[] = [];
+  for (const f of KB_FILES) {
+    try {
+      const url = new URL(`./kb/${f}`, import.meta.url);
+      const text = await Deno.readTextFile(url);
+      parts.push(text);
+    } catch (e) {
+      console.warn(`KB load fail ${f}`, e);
+    }
+  }
+  _kbCache = parts.join("\n\n---\n\n");
+  return _kbCache;
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
