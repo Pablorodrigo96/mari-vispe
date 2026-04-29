@@ -378,6 +378,24 @@ export type Database = {
           },
         ]
       }
+      cnpj_cache: {
+        Row: {
+          cached_at: string
+          cnpj: string
+          data: Json
+        }
+        Insert: {
+          cached_at?: string
+          cnpj: string
+          data: Json
+        }
+        Update: {
+          cached_at?: string
+          cnpj?: string
+          data?: Json
+        }
+        Relationships: []
+      }
       franchisee_regions: {
         Row: {
           categories: string[] | null
