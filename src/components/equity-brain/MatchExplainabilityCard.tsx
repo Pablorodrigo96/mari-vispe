@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Microscope, RefreshCw } from "lucide-react";
+import { Loader2, Microscope, RefreshCw, Phone, MessageCircle, FileSignature, XCircle, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 type Contribution = { feature: string; weight: number; value: number; contribution: number };
 type MatchRow = {
