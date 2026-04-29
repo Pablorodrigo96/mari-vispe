@@ -7,7 +7,7 @@ import { BuyersTable } from "@/components/equity-brain/crm/BuyersTable";
 import { NextActionsPanel } from "@/components/equity-brain/crm/NextActionsPanel";
 import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
 import { AskMariDrawer } from "@/components/equity-brain/crm/AskMariDrawer";
-import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight } from "lucide-react";
+import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, Kanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tab = "mandates" | "buyers" | "activity";
@@ -36,6 +36,12 @@ export default function CrmHubPage() {
             className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/10 bg-transparent font-medium"
           >
             <TrendingUp className="h-3 w-3" /> Dashboard Executivo
+          </Link>
+          <Link
+            to="/equity-brain/crm/pipeline"
+            className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent"
+          >
+            <Kanban className="h-3 w-3" /> Pipeline
           </Link>
           <Link
             to="/equity-brain/crm/matching"
