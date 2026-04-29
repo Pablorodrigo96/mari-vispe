@@ -121,10 +121,12 @@ export default function MatchInboxPage() {
       ) : (
         <div className="space-y-2">
           {rows.map((r) => (
-            <MatchInboxRow key={r.id} row={r} percentiles={pcts} />
+            <MatchInboxRow key={r.id} row={r} percentiles={pcts} onOpenDetail={setDetailRow} />
           ))}
         </div>
       )}
+
+      <MatchDetailDrawer row={detailRow} percentiles={pcts} onClose={() => setDetailRow(null)} />
     </div>
   );
 }
