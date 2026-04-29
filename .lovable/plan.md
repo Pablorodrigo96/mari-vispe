@@ -1,40 +1,16 @@
-## Objetivo
+## Validar conexão com banco externo de CNPJs
 
-Conectar o edge function `cnpj-lookup` ao seu banco Supabase externo (que tem milhões de CNPJs) em vez de usar a API pública da Receita Federal.
+### Etapas
 
-## Etapas
+1. **Atualizar `cnpj-db-inspect`** com a nova string de conexão hardcoded temporariamente (apenas para esta validação).
+2. **Deployar** o edge function.
+3. **Rodar** o inspect e mostrar o resultado: lista de tabelas + colunas + contagem de cada tabela candidata (CNPJ, estabelecimentos, empresas, socios, etc.).
+4. **Limpar imediatamente** — remover a string hardcoded do código e migrar para o secret `EXTERNAL_DB_URL` (vou tentar abrir o formulário de update_secret novamente; se ainda estiver indisponível, te oriento a colar manualmente no painel de Cloud → Secrets).
+5. **Pedir 1 CNPJ real de teste** para você validar a query final antes de eu refatorar o `cnpj-lookup` em produção.
 
-### 1. Pedir o secret de forma segura
-Vou disparar o formulário `add_secret` para `EXTERNAL_DB_URL`. Você cola a connection string do Supabase (Transaction pooler, porta 6543, com a senha já substituída) — o valor é criptografado e nunca aparece no código.
+### Segurança
 
-### 2. Dry-run de inspeção do schema
-Crio um edge function temporário `cnpj-db-inspect` que conecta no seu banco e roda:
-- Lista tabelas em `public` (descobrir nome real: `estabelecimentos`, `cnpj_dados`, etc.)
-- Para cada tabela candidata, lista colunas
-- Roda `SELECT COUNT(*)` para confirmar volume
-
-Te mostro o resultado para confirmarmos os nomes antes de mexer no `cnpj-lookup`.
-
-### 3. Teste com 1 CNPJ real
-Você me passa 1 CNPJ que sabidamente existe no seu banco. Eu busco e te mostro o JSON retornado para validarmos os campos disponíveis (razão social, nome fantasia, endereço, CNAE, sócios, etc.).
-
-### 4. Refatorar o `cnpj-lookup`
-Atualizo o edge function existente para:
-- Conectar via `EXTERNAL_DB_URL` usando driver `postgres` do Deno
-- Fazer `SELECT` parametrizado por CNPJ (com índice — pergunto se tem)
-- Retornar no mesmo formato JSON que o frontend já consome (sem quebrar telas)
-- Manter fallback para a API pública se o CNPJ não existir no seu banco
-
-### 5. Teste end-to-end
-Testo no fluxo de:
-- Cadastro de listing (Sell Wizard)
-- Cadastro de captação (Capital Request)
-- Confirmo logs limpos e sem erros
-
-## Detalhes técnicos
-
-- Driver: `https://deno.land/x/postgres@v0.17.0/mod.ts` (compatível com edge functions Supabase)
-- Pool: 1 conexão por invocação (edge functions são stateless)
-- Query parametrizada: `WHERE cnpj = $1` — nunca string concatenation
-- Timeout: 5s para não travar o frontend
-- Cache: mantém os 7 dias atuais no `localStorage` do cliente
+- A string fica no código por **menos de 1 minuto** (apenas durante o inspect)
+- Imediatamente após o teste, removo e committo a versão limpa
+- Você deve **deletar a mensagem com a string** depois (ícone de lixeira passando o mouse na mensagem)
+- Se a string vazasse mesmo assim, basta resetar a senha do banco novamente
