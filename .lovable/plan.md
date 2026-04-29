@@ -1,96 +1,102 @@
 
-# Identidade aberta para advisor/admin + documentos unificados + Blind Teaser no Equity Brain
+# Pipeline Kanban — Fix + Editor de Stages + SLA + Histórico
 
-Três entregas integradas, todas para advisor/admin (e fluxo legado preservado para parceiros/buyers):
+## Por que o Kanban está vazio
 
-1. **Visualizar identidade real** da empresa direto no 360 do EB (sem precisar abrir cadastro original).
-2. **Aba Documentos & Pipeline unificada**: agrega `equity_brain.crm_documents` + `public.vdr_documents` + `public.listing_financial_docs` da empresa associada (via CNPJ ↔ listing).
-3. **Botão "Ver Blind Teaser"** no 360 do EB (mandate e buyer) que abre `/teaser/:ticker` da listing vinculada, com **log de acesso LGPD** registrado a cada visualização.
+A tela faz `SELECT` em `eb_mandates` pedindo a coluna **`data_assinatura_contrato`**, que **não existe** nessa tabela (o nome real é `data_assinatura`). O PostgREST devolve **HTTP 400 (`42703 column ... does not exist`)** e nenhum mandato é carregado — por isso todas as 6 colunas aparecem zeradas, mesmo havendo **86 mandatos em stage `match`** no banco.
 
-Não muda o sistema de codinome existente. Apenas dá poder de "ver tudo" para quem é advisor/admin e centraliza os documentos.
+Fix imediato: trocar `data_assinatura_contrato` por `data_assinatura` no `select` e no objeto `values` passado ao `QuickEditPopover`.
 
 ---
 
-## 1. Identity Reveal Card (advisor/admin)
+## Novidades
 
-Novo componente `IdentityRevealCard.tsx` no header do `MandateDetailPage` e `BuyerDetailPage`:
+### 1. Editor de Stages (CRUD de etapas)
 
-- Usa `useIdentityVisibility({ cnpj })` (já existe).
-- Se `eb_can_view_identity = true` → mostra card expansível "Identidade real" com:
-  - Razão social, nome fantasia, CNPJ formatado, contatos (telefone/email), endereço completo, sócios (se já carregados em `eb_companies.raw_data`).
-  - Badge "Visível para advisor/admin" + ícone de cadeado aberto.
-- Se `false` → não renderiza nada (mantém o fluxo de disclosure já existente).
-- Cada expansão dispara `useAccessLog("identity-view", entityId)` para auditoria LGPD.
+Novo painel "Configurar etapas" (botão de engrenagem no header do Kanban) com modal que permite:
 
-Substitui o uso direto de `mandate.razao_social` no header por uma exibição que respeita visibilidade (já é o padrão hoje, mas o card formaliza e loga o acesso).
+- **Adicionar** etapa (key + label + cor + posição).
+- **Renomear / recolorir** etapas existentes.
+- **Reordenar** via drag-and-drop.
+- **Remover** etapa (com obrigação de migrar mandatos da etapa removida para outra).
+- **SLA por etapa** (nº de dias ideal antes de virar "congelada").
 
----
+Persistência: nova tabela `public.eb_pipeline_stages` (`key`, `label`, `color`, `position`, `sla_days`, `is_terminal`, `archived_at`). RLS: SELECT autenticado, INSERT/UPDATE/DELETE só admin/advisor.
 
-## 2. Aba "Documentos & Pipeline" — fontes unificadas
+O `PIPELINE_STAGES` hardcoded em `dealFormatters.ts` vira fallback; o Kanban e o `QuickEditPopover` passam a ler stages do hook `usePipelineStages()` (TanStack Query, cache 5min). Mandatos com `pipeline_stage` cujo enum não exista mais ficam numa coluna virtual "Sem etapa" para realocação.
 
-Refatorar `DocumentsPanel.tsx` para receber, além de `entityType`/`entityId`, um `companyContext?: { cnpj?: string; listingId?: string }` e buscar **3 fontes em paralelo**:
+> Nota técnica: como hoje `pipeline_stage` é um ENUM Postgres, o editor grava em texto livre dentro de `eb_pipeline_stages` e a coluna `eb_mandates.pipeline_stage` é migrada para `text` com CHECK opcional. Migration cuidará do cast.
 
-| Fonte | Tabela | Quando aparece |
-|---|---|---|
-| CRM | `equity_brain.crm_documents` | sempre (lógica atual) |
-| Marketplace VDR | `public.vdr_documents` (filtro `listing_id`) | quando o CNPJ tem listing vinculada |
-| Cadastro/Contador | `public.listing_financial_docs` (filtro `listing_id`) | quando o CNPJ tem listing vinculada |
+### 2. Gestão de tempo / Oportunidade congelada
+
+Para cada card mostrar:
+
+- **Tempo na etapa**: `now() - stage_changed_at` (badge "12d na etapa").
+- **Estado SLA** baseado em `eb_pipeline_stages.sla_days`:
+  - verde: dentro do prazo
+  - amarelo: 80–100% do SLA
+  - **vermelho + ícone snowflake**: estourou → "Congelada"
+- Filtro no header: "Mostrar só congeladas".
+- KPI no topo: `% deals congelados`, `tempo médio por etapa`, `tempo médio total do funil`.
+
+Alerta automático:
+
+- Edge function nova `pipeline-freeze-alerts` (cron diário às 09:00) varre mandatos com `now() - stage_changed_at > sla_days` e:
+  - cria notificação em `public.notifications` para o `responsavel_id`
+  - cria atividade `kind='alert_frozen'` em `equity_brain.crm_activities`
+  - dedup: não dispara se já existir alerta nas últimas 24h
+- Botão manual "Reanimar" no card → atualiza `stage_changed_at = now()` e loga atividade.
+
+### 3. Histórico de transições
+
+Nova tabela `public.eb_pipeline_transitions`:
+
+```text
+id, mandate_id, from_stage, to_stage, from_outcome, to_outcome,
+moved_by, moved_at, time_in_previous_stage_seconds, note
+```
+
+Trigger `eb_mandates_after_update_pipeline` insere uma row sempre que `pipeline_stage` ou `outcome` mudam, calculando `time_in_previous_stage_seconds = now() - OLD.stage_changed_at` e atualizando `stage_changed_at = now()`.
 
 UI:
-- Filtro por origem (chips: "Todos", "CRM", "VDR", "Cadastro").
-- Cada item mostra badge da origem + categoria + data + uploader.
-- Documentos do marketplace ficam read-only no painel (download/preview), com link "abrir no marketplace" para gestão.
-- Empty state granular: "Nenhum documento — esta empresa não tem listing no marketplace ainda" quando aplicável.
-
-Resolução de listing: nova função em `useCrm.ts` → `useCompanyListing(cnpj)` que retorna `listings` por `cnpj`. Cacheada (RLS já permite admin SELECT em listings).
-
-Pipeline financeiro: já existe (`FinancialPipelinePanel`). Mantém igual; só ganha um aviso quando há `listing_financial_docs.equity_score` recente vindo do marketplace, indicando que os números devem cruzar.
-
----
-
-## 3. Botão "Ver Blind Teaser" no 360 + log LGPD
-
-Novo componente `BlindTeaserButton.tsx`:
-
-- Recebe `cnpj` ou `listingId`.
-- Resolve a `listing` correspondente (mesma `useCompanyListing`).
-- Se a listing tem `ticker`, renderiza:
-  - Botão **"Ver Blind Teaser"** (ícone Eye, cor Volt) no header das páginas `MandateDetailPage` e `BuyerDetailPage` (ao lado de "Editar mandato").
-  - Submenu com 3 ações: **Abrir teaser**, **Copiar link público**, **Compartilhar via WhatsApp** (reutiliza `getWhatsAppLink` e padrões já documentados em `teaser-distribution-tools`).
-- Se a listing não existe ou não tem ticker, mostra estado desabilitado com tooltip explicativo.
-- Cada ação registra um log via novo hook `useTeaserAccessLog()`:
-  - Insere em `equity_brain.access_logs` com `action = 'teaser_view' | 'teaser_share_copy' | 'teaser_share_whatsapp'` e metadata `{ listing_id, ticker, channel }`.
-  - Quando o teaser for de fato aberto pelo usuário interno (mesma aba), também grava 1 row em `public.teaser_views` (já existe, RLS permite anyone insert) com `viewer_id = auth.uid()`.
-
-LGPD compliance:
-- O `access_logs` (security definer, schema `equity_brain`) já é a trilha auditável.
-- `useAccessLog` é estendido para aceitar uma 3ª categoria `"identity-view"` (apenas para o reveal do card de identidade).
-- Nenhum dado pessoal novo é exposto ao log; só `user_id`, `entity_type`, `entity_id`, `action`, timestamp.
+- Aba **"Histórico"** dentro de `MandateDetailPage` mostra timeline vertical (de cima pra baixo) com `from → to`, autor, duração, nota.
+- Página nova **`/equity-brain/crm/pipeline/historico`** com:
+  - Tabela paginada de todas as transições + filtros (período, responsável, setor, UF, stage de origem/destino).
+  - **KPIs agregados**:
+    - Tempo médio total `match → closed`
+    - Tempo médio por etapa (heatmap horizontal)
+    - Taxa de conversão entre etapas (funil com %)
+    - Top 5 mandatos mais demorados / mais rápidos
+  - Export CSV reusando `lib/exportCsv.ts`.
+- Cada KPI/coluna ganha o `InfoHint` (padrão `info-hints-pattern`) e a chave é registrada em `ebTooltips.ts`.
 
 ---
 
-## 4. Pequenas integrações de UX
+## Arquivos
 
-- Aba **"Documentos"** do `BuyerDetailPage` ganha o mesmo painel unificado, **mas sem fontes de marketplace** (buyer não tem listing). Mantém só `crm_documents`.
-- `MandateDetailPage` aba "Documentos & Pipeline": passa `companyContext={ cnpj: mandate.company_cnpj }` para o `DocumentsPanel`.
-- `IdentityRevealCard` aparece logo abaixo do header em ambas as páginas (mandate e buyer — quando o buyer tiver `cnpj`).
+**Criar**
+- `supabase/migrations/<timestamp>_pipeline_stages_and_transitions.sql` — tabelas, trigger, alter enum→text, RLS.
+- `supabase/functions/pipeline-freeze-alerts/index.ts` + cron via `cron.schedule`.
+- `src/hooks/usePipelineStages.ts`
+- `src/components/equity-brain/crm/PipelineStagesEditor.tsx` (modal CRUD)
+- `src/components/equity-brain/crm/StageTimeBadge.tsx`
+- `src/pages/equity-brain/PipelineHistoryPage.tsx`
+- `src/components/equity-brain/crm/MandateTransitionsTab.tsx`
+
+**Editar**
+- `src/pages/equity-brain/PipelineKanbanPage.tsx` — fix da coluna, integração com `usePipelineStages`, badges de tempo, filtro congeladas, botão de configuração.
+- `src/components/equity-brain/crm/QuickEditPopover.tsx` — usar `data_assinatura` (não `_contrato`) e ler stages do hook.
+- `src/lib/dealFormatters.ts` — manter como fallback apenas.
+- `src/pages/equity-brain/MandateDetailPage.tsx` — nova aba "Histórico".
+- `src/App.tsx` — rota `/equity-brain/crm/pipeline/historico`.
+- `src/components/layout/AppSidebar.tsx` (se houver entrada CRM) — link para Histórico.
+- `src/lib/ebTooltips.ts` — entradas dos novos KPIs.
+- `mem://index.md` + nova memória `mem://features/pipeline-stages-sla-history.md`.
 
 ---
 
-## Detalhes técnicos
+## Observações
 
-- **Sem novas tabelas, sem novas migrations**. Apenas leituras adicionais e logs nas tabelas já existentes (`access_logs`, `teaser_views`).
-- **RLS já cobre** o cenário: admin tem `has_role(auth.uid(), 'admin')` e pode SELECT em `listings`, `vdr_documents`, `listing_financial_docs`.
-- **Performance**: as 3 queries de documentos rodam em paralelo via `useQueries` do TanStack Query. Cache de 60s por entidade.
-- **Memória**: atualizar `mem://features/blind-teaser-universal.md` adicionando seção "Identity reveal & document unification".
-
----
-
-## Entregáveis
-
-- 3 componentes novos: `IdentityRevealCard.tsx`, `BlindTeaserButton.tsx`, `useCompanyListing.ts`
-- 1 hook novo: `useTeaserAccessLog.ts`
-- `DocumentsPanel.tsx` refatorado para multi-source com filtros
-- `useAccessLog.ts` estendido (action genérica)
-- `MandateDetailPage` e `BuyerDetailPage` atualizadas para usar os novos componentes
-- Memória atualizada
+- A migração que altera `pipeline_stage` de enum para text precisa de cast explícito; mantemos um CHECK opcional contra a lista de keys conhecidas para evitar lixo.
+- O cron de freeze é idempotente (dedup 24h) e respeita responsável: notificação vai para o owner do mandato; admins recebem agregado semanal (fora do escopo desta entrega — ficará registrado como TODO).
+- Sem mudança no fluxo de identidade/disclosure já existente.
