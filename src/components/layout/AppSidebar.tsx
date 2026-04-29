@@ -102,7 +102,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
   return (
     <aside
       className={cn(
-        'sticky top-0 h-screen bg-card border-r border-border flex flex-col transition-all duration-200 z-30',
+        'sticky top-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col transition-all duration-200 z-30',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
