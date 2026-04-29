@@ -1,12 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, GripVertical, DollarSign, Pencil, FolderOpen, FileSignature } from "lucide-react";
+import { ArrowLeft, GripVertical, DollarSign, Pencil, FolderOpen, FileSignature, Settings2, Snowflake, History, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { brl, PIPELINE_STAGES, PIPELINE_STAGE_LABEL, DEAL_TYPE_LABEL } from "@/lib/dealFormatters";
+import { brl, DEAL_TYPE_LABEL } from "@/lib/dealFormatters";
 import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge";
 import { QuickEditPopover } from "@/components/equity-brain/crm/QuickEditPopover";
+import { PipelineStagesEditor } from "@/components/equity-brain/crm/PipelineStagesEditor";
+import { StageTimeBadge, getStageTimeState } from "@/components/equity-brain/crm/StageTimeBadge";
+import { usePipelineStages, STAGE_COLOR_CLASSES } from "@/hooks/usePipelineStages";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { cn } from "@/lib/utils";
 
 type Mandate = {
@@ -28,33 +32,28 @@ type Mandate = {
   stage_changed_at: string | null;
   data_inicio: string | null;
   data_fechamento: string | null;
-  data_assinatura_contrato: string | null;
+  data_assinatura: string | null;
   comprador_cnpj: string | null;
   comprador_nome: string | null;
   drive_url: string | null;
   contract_url: string | null;
 };
 
-const STAGE_COLORS: Record<string, string> = {
-  match: "border-blue-500/40 bg-blue-500/5",
-  nbo: "border-cyan-500/40 bg-cyan-500/5",
-  due_diligence: "border-amber-500/40 bg-amber-500/5",
-  spa: "border-purple-500/40 bg-purple-500/5",
-  closing: "border-orange-500/40 bg-orange-500/5",
-  closed: "border-emerald-500/40 bg-emerald-500/5",
-};
-
 export default function PipelineKanbanPage() {
   const qc = useQueryClient();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Mandate | null>(null);
+  const [stagesOpen, setStagesOpen] = useState(false);
+  const [onlyFrozen, setOnlyFrozen] = useState(false);
+
+  const { data: stages = [] } = usePipelineStages();
 
   const { data: mandates, isLoading } = useQuery({
     queryKey: ["pipeline-kanban"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("eb_mandates" as any)
-        .select("id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura_contrato,comprador_cnpj,comprador_nome,drive_url,contract_url")
+        .select("id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura,comprador_cnpj,comprador_nome,drive_url,contract_url")
         .neq("outcome", "cancelado")
         .order("stage_changed_at", { ascending: false })
         .limit(500);
@@ -78,12 +77,47 @@ export default function PipelineKanbanPage() {
     onError: (e: any) => toast.error(e?.message ?? "Falha ao mover"),
   });
 
-  const byStage: Record<string, Mandate[]> = {};
-  PIPELINE_STAGES.forEach((s) => (byStage[s] = []));
-  (mandates ?? []).forEach((m) => {
-    const s = m.pipeline_stage || "match";
-    (byStage[s] ?? (byStage[s] = [])).push(m);
+  const reanimate = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("eb_mandates" as any)
+        .update({ stage_changed_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pipeline-kanban"] });
+      toast.success("SLA reiniciado");
+    },
   });
+
+  const stageMap = useMemo(() => {
+    const m: Record<string, typeof stages[number]> = {};
+    stages.forEach((s) => (m[s.key] = s));
+    return m;
+  }, [stages]);
+
+  const byStage: Record<string, Mandate[]> = {};
+  stages.forEach((s) => (byStage[s.key] = []));
+  const orphans: Mandate[] = [];
+  (mandates ?? []).forEach((m) => {
+    const key = m.pipeline_stage || "match";
+    if (byStage[key]) byStage[key].push(m);
+    else orphans.push(m);
+  });
+
+  const frozenCount = (mandates ?? []).filter((m) => {
+    const s = stageMap[m.pipeline_stage];
+    if (!s || s.is_terminal) return false;
+    return getStageTimeState(m.stage_changed_at, s.sla_days).status === "frozen";
+  }).length;
+
+  const filterFn = (m: Mandate) => {
+    if (!onlyFrozen) return true;
+    const s = stageMap[m.pipeline_stage];
+    if (!s || s.is_terminal) return false;
+    return getStageTimeState(m.stage_changed_at, s.sla_days).status === "frozen";
+  };
 
   return (
     <div className="p-6 space-y-4 bg-zinc-950 min-h-full">
@@ -92,57 +126,119 @@ export default function PipelineKanbanPage() {
           <Link to="/equity-brain/crm" className="text-[11px] text-zinc-500 hover:text-zinc-300 inline-flex items-center gap-1">
             <ArrowLeft className="h-3 w-3" /> CRM
           </Link>
-          <h1 className="text-2xl font-bold text-zinc-100 mt-1 tracking-tight">Pipeline M&amp;A</h1>
+          <h1 className="text-2xl font-bold text-zinc-100 mt-1 tracking-tight inline-flex items-center gap-2">
+            Pipeline M&amp;A
+            <InfoHint
+              title="Pipeline M&A"
+              what="Kanban dos mandatos por etapa do processo. Cada cartão mostra tempo na etapa, tipo de operação e valor."
+              action="Arraste cartões para mover. Cards em vermelho com floquinho de neve estão congelados (SLA estourado)."
+            />
+          </h1>
           <p className="text-xs text-zinc-400 mt-1 break-words">
-            Arraste cards entre colunas para movimentar deals. Cada mudança vira atividade automática.
+            Arraste cards entre colunas para movimentar deals. Cada mudança vira atividade automática e entra no histórico.
           </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setOnlyFrozen((v) => !v)}
+            className={cn(
+              "text-[11px] px-2.5 py-1.5 rounded border inline-flex items-center gap-1.5",
+              onlyFrozen
+                ? "border-rose-700/60 bg-rose-500/10 text-rose-200"
+                : "border-zinc-800 bg-transparent text-zinc-300 hover:text-rose-200",
+            )}
+            title="Mostrar apenas oportunidades congeladas"
+          >
+            <Snowflake className="h-3 w-3" />
+            {onlyFrozen ? "Mostrando congeladas" : "Congeladas"}
+            <span className="text-[10px] text-rose-300/80 tabular-nums">{frozenCount}</span>
+          </button>
+          <Link
+            to="/equity-brain/crm/pipeline/historico"
+            className="text-[11px] px-2.5 py-1.5 rounded border border-zinc-800 bg-transparent text-zinc-300 hover:text-[#D9F564] inline-flex items-center gap-1.5"
+          >
+            <History className="h-3 w-3" /> Histórico
+          </Link>
+          <button
+            onClick={() => setStagesOpen(true)}
+            className="text-[11px] px-2.5 py-1.5 rounded border border-zinc-800 bg-transparent text-zinc-300 hover:text-[#D9F564] inline-flex items-center gap-1.5"
+          >
+            <Settings2 className="h-3 w-3" /> Configurar etapas
+          </button>
         </div>
       </header>
 
       {isLoading ? (
         <div className="text-xs text-zinc-500 p-6">Carregando…</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {PIPELINE_STAGES.map((stage) => {
-            const items = byStage[stage] ?? [];
+        <div
+          className="grid gap-3"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(stages.length, 1)}, minmax(180px, 1fr))`,
+          }}
+        >
+          {stages.map((stage) => {
+            const items = (byStage[stage.key] ?? []).filter(filterFn);
             const totalValue = items.reduce((s, m) => s + Number(m.valor_operacao ?? 0), 0);
             return (
               <div
-                key={stage}
+                key={stage.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
-                  if (draggedId) move.mutate({ id: draggedId, stage });
+                  if (draggedId) move.mutate({ id: draggedId, stage: stage.key });
                   setDraggedId(null);
                 }}
                 className={cn(
                   "rounded-lg border p-2 min-h-[400px] flex flex-col",
-                  STAGE_COLORS[stage],
+                  STAGE_COLOR_CLASSES[stage.color] ?? STAGE_COLOR_CLASSES.zinc,
                 )}
               >
-                <div className="flex items-center justify-between px-1 mb-2">
-                  <div className="text-[11px] font-semibold uppercase text-zinc-200 tracking-wider">
-                    {PIPELINE_STAGE_LABEL[stage]}
+                <div className="flex items-center justify-between px-1 mb-1">
+                  <div className="text-[11px] font-semibold uppercase text-zinc-200 tracking-wider break-words">
+                    {stage.label}
                   </div>
                   <span className="text-[10px] text-zinc-400 tabular-nums">{items.length}</span>
                 </div>
-                {totalValue > 0 && (
-                  <div className="text-[10px] text-zinc-500 px-1 mb-2 tabular-nums break-words">
-                    Σ {brl(totalValue, { compact: true })}
-                  </div>
-                )}
+                <div className="text-[9px] text-zinc-500 px-1 mb-2 flex items-center justify-between">
+                  <span>SLA {stage.sla_days}d</span>
+                  {totalValue > 0 && <span className="tabular-nums">Σ {brl(totalValue, { compact: true })}</span>}
+                </div>
                 <div className="flex-1 space-y-2 overflow-y-auto">
                   {items.map((m) => (
                     <DealCard
                       key={m.id}
                       m={m}
+                      slaDays={stage.sla_days}
+                      isTerminal={stage.is_terminal}
                       onDragStart={() => setDraggedId(m.id)}
                       onEdit={() => setEditing(m)}
+                      onReanimate={() => reanimate.mutate(m.id)}
                     />
                   ))}
                 </div>
               </div>
             );
           })}
+          {orphans.filter(filterFn).length > 0 && (
+            <div className="rounded-lg border border-zinc-700/60 bg-zinc-800/20 p-2 min-h-[400px] flex flex-col">
+              <div className="text-[11px] font-semibold uppercase text-zinc-300 tracking-wider mb-2 px-1">
+                Sem etapa
+              </div>
+              <div className="flex-1 space-y-2 overflow-y-auto">
+                {orphans.filter(filterFn).map((m) => (
+                  <DealCard
+                    key={m.id}
+                    m={m}
+                    slaDays={0}
+                    isTerminal
+                    onDragStart={() => setDraggedId(m.id)}
+                    onEdit={() => setEditing(m)}
+                    onReanimate={() => reanimate.mutate(m.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -167,29 +263,41 @@ export default function PipelineKanbanPage() {
             contract_url: editing.contract_url,
             data_inicio: editing.data_inicio,
             data_fechamento: editing.data_fechamento,
-            data_assinatura_contrato: editing.data_assinatura_contrato,
+            data_assinatura: editing.data_assinatura,
           }}
           onClose={() => setEditing(null)}
         />
       )}
+
+      {stagesOpen && <PipelineStagesEditor onClose={() => setStagesOpen(false)} />}
     </div>
   );
 }
 
 function DealCard({
   m,
+  slaDays,
+  isTerminal,
   onDragStart,
   onEdit,
+  onReanimate,
 }: {
   m: Mandate;
+  slaDays: number;
+  isTerminal?: boolean;
   onDragStart: () => void;
   onEdit: () => void;
+  onReanimate: () => void;
 }) {
+  const { status } = getStageTimeState(m.stage_changed_at, slaDays);
   return (
     <div
       draggable
       onDragStart={onDragStart}
-      className="rounded border border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 p-2.5 cursor-move group"
+      className={cn(
+        "rounded border bg-zinc-900/80 hover:border-zinc-700 p-2.5 cursor-move group",
+        status === "frozen" && !isTerminal ? "border-rose-700/60" : "border-zinc-800",
+      )}
     >
       <div className="flex items-start justify-between gap-1">
         <Link
@@ -199,11 +307,7 @@ function DealCard({
           {m.company_cnpj}
         </Link>
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onEdit();
-          }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
           className="text-zinc-700 hover:text-[#D9F564] shrink-0"
           title="Edição rápida"
         >
@@ -211,11 +315,21 @@ function DealCard({
         </button>
         <GripVertical className="h-3 w-3 text-zinc-700 group-hover:text-zinc-500 shrink-0 mt-0.5" />
       </div>
-      <div className="flex items-center gap-1.5 mt-1.5">
+      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
         <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
           {DEAL_TYPE_LABEL[m.deal_type] ?? m.deal_type}
         </span>
         {m.uf && <span className="text-[9px] text-zinc-500">{m.uf}</span>}
+        <StageTimeBadge stageChangedAt={m.stage_changed_at} slaDays={slaDays} isTerminal={isTerminal} compact />
+        {status === "frozen" && !isTerminal && (
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReanimate(); }}
+            title="Reiniciar SLA (registrar contato/atividade)"
+            className="text-[9px] inline-flex items-center gap-0.5 text-amber-300 hover:text-amber-200"
+          >
+            <RotateCcw className="h-2.5 w-2.5" /> reanimar
+          </button>
+        )}
       </div>
       {m.contato_nome && (
         <div className="text-[10px] text-zinc-400 mt-1 truncate break-words">{m.contato_nome}</div>
@@ -233,11 +347,7 @@ function DealCard({
           </div>
         ) : (
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onEdit();
-            }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
             className="text-[10px] text-zinc-500 hover:text-[#D9F564] underline-offset-2 hover:underline"
           >
             + valor
@@ -246,16 +356,14 @@ function DealCard({
         <div className="flex items-center gap-1">
           {m.drive_url && (
             <a href={m.drive_url} target="_blank" rel="noopener noreferrer"
-               onClick={(e) => e.stopPropagation()}
-               title="Drive do projeto"
+               onClick={(e) => e.stopPropagation()} title="Drive do projeto"
                className="text-zinc-500 hover:text-[#D9F564]">
               <FolderOpen className="h-3 w-3" />
             </a>
           )}
           {m.contract_url && (
             <a href={m.contract_url} target="_blank" rel="noopener noreferrer"
-               onClick={(e) => e.stopPropagation()}
-               title="Contrato"
+               onClick={(e) => e.stopPropagation()} title="Contrato"
                className="text-zinc-500 hover:text-[#D9F564]">
               <FileSignature className="h-3 w-3" />
             </a>
