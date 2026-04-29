@@ -69,6 +69,9 @@ const EBGrafoJarvisPage = lazy(() => import("./pages/equity-brain/GrafoJarvisPag
 const EBGrafoJarvisGuiaPage = lazy(() => import("./pages/equity-brain/GrafoJarvisGuiaPage"));
 import EBBoardPage from "./pages/equity-brain/BoardPage";
 import EBShadowPage from "./pages/equity-brain/ShadowPage";
+import CrmHubPage from "./pages/equity-brain/CrmHubPage";
+import MandateDetailPage from "./pages/equity-brain/MandateDetailPage";
+import BuyerDetailPage from "./pages/equity-brain/BuyerDetailPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
@@ -182,6 +185,9 @@ const App = () => (
               <Route path="empresa/:cnpj" element={<EBDealDetailPage />} />
               <Route path="board"         element={<EBBoardPage />} />
               <Route path="shadow"        element={<EBShadowPage />} />
+              <Route path="crm"                  element={<CrmHubPage />} />
+              <Route path="crm/mandate/:id"      element={<MandateDetailPage />} />
+              <Route path="crm/buyer/:id"        element={<BuyerDetailPage />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
