@@ -4,12 +4,15 @@ const corsHeaders = {
 };
 import { Client } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
 
+// TEMPORARY: hardcoded for one-time inspection. Will be removed after validation.
+const HARDCODED_DB_URL = "postgresql://postgres.oyarjshdqeaatlmlzvbx:F5tvldvKaA3G7RDO@aws-1-us-east-1.pooler.supabase.com:5432/postgres";
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const dbUrl = Deno.env.get('EXTERNAL_DB_URL');
+  const dbUrl = HARDCODED_DB_URL || Deno.env.get('EXTERNAL_DB_URL');
   if (!dbUrl) {
-    return new Response(JSON.stringify({ error: 'EXTERNAL_DB_URL not set' }), {
+    return new Response(JSON.stringify({ error: 'no db url' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -21,14 +24,12 @@ Deno.serve(async (req) => {
     await client.connect();
     result.connected = true;
 
-    // 1. List public tables
     const tablesRes = await client.queryObject<{ table_name: string }>(`
       SELECT table_name FROM information_schema.tables
-      WHERE table_schema = 'public' ORDER BY table_name LIMIT 100
+      WHERE table_schema = 'public' ORDER BY table_name LIMIT 200
     `);
     result.tables = tablesRes.rows.map(r => r.table_name);
 
-    // 2. For likely CNPJ tables, get columns + count
     const candidates = result.tables.filter((t: string) =>
       /cnpj|estabelec|empres|socio|receita|cnae|simples/i.test(t)
     );
