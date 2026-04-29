@@ -659,16 +659,24 @@ export function JarvisGraph3D() {
     return ALWAYS_LIVE_EDGE_TYPES.has(link.edge_type);
   };
 
-  // ---------- Reset ----------
+  // ---------- Reset (volta ao modo LEVE) ----------
   const handleReset = () => {
     setSelectedVerticals(new Set());
     setSelectedUfs(new Set());
-    setSelectedNodeTypes(DEFAULT_NODE_TYPES);
-    setEnabledLayers(DEFAULT_LAYERS);
-    setMinWeight(0.15);
+    setSelectedNodeTypes(new Set(DEFAULT_NODE_TYPES));
+    setEnabledLayers(new Set(DEFAULT_LAYERS));
+    setMinWeight(0.35);
     setMinConfidence(0);
     setThesisFilter(null);
     setBuyerFilter(null);
+    setVisualPrefs(VISUAL_DEFAULTS);
+  };
+
+  // ---------- Ativar tudo (modo CHEIO) ----------
+  const handleEnableAll = () => {
+    setSelectedNodeTypes(new Set(ALL_NODE_TYPES));
+    setEnabledLayers(new Set(ALL_LAYERS));
+    setVisualPrefs(VISUAL_FULL);
   };
 
   // ---------- Mobile fallback ----------
