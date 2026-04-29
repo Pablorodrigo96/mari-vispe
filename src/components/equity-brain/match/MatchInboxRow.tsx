@@ -13,7 +13,7 @@ interface Props {
 
 export function MatchInboxRow({ row, percentiles, onOpen }: Props) {
   const tier = tierForScore(row.match_score, percentiles);
-  const wa = getWhatsAppLink(5551992338258, `Olá! Falo da mari sobre uma oportunidade compatível com seu perfil de investimento (${row.setor_ma ?? "—"} / ${row.uf ?? "BR"}).`);
+  const wa = getWhatsAppLink(`Olá! Falo da mari sobre uma oportunidade compatível com seu perfil de investimento (${row.setor_ma ?? "—"} / ${row.uf ?? "BR"}).`);
 
   return (
     <div className="border border-zinc-800 rounded-lg bg-zinc-900/60 hover:border-zinc-700 p-3 transition-colors">
