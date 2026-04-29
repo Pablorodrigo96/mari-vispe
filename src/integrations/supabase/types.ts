@@ -1238,6 +1238,36 @@ export type Database = {
       }
     }
     Views: {
+      eb_buyer_preferences_history: {
+        Row: {
+          after_snap: Json | null
+          before_snap: Json | null
+          buyer_id: string | null
+          changed_at: string | null
+          changed_by: string | null
+          diff: Json | null
+          id: string | null
+        }
+        Insert: {
+          after_snap?: Json | null
+          before_snap?: Json | null
+          buyer_id?: string | null
+          changed_at?: string | null
+          changed_by?: string | null
+          diff?: Json | null
+          id?: string | null
+        }
+        Update: {
+          after_snap?: Json | null
+          before_snap?: Json | null
+          buyer_id?: string | null
+          changed_at?: string | null
+          changed_by?: string | null
+          diff?: Json | null
+          id?: string | null
+        }
+        Relationships: []
+      }
       eb_buyer_theses: {
         Row: {
           active: boolean | null
@@ -1338,6 +1368,135 @@ export type Database = {
           observacoes?: string | null
           porte_alvo?: string[] | null
           prioridade_global?: number | null
+          responsavel_id?: string | null
+          setores_interesse?: string[] | null
+          sinergias_chave?: string[] | null
+          source?: string | null
+          status?: string | null
+          subsetores_interesse?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          tipo?: string | null
+          ufs_interesse?: string[] | null
+          ultimo_contato_em?: string | null
+          updated_at?: string | null
+          vertical_principal?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      eb_buyers_enriched: {
+        Row: {
+          active_matches_count: number | null
+          archetype_id: string | null
+          avg_multiple_paid_recent: number | null
+          cautela_flag: boolean | null
+          cautela_motivo: string | null
+          cnpj: string | null
+          created_at: string | null
+          deals_last_12m: number | null
+          deals_realizados: number | null
+          embedding: string | null
+          embedding_computed_at: string | null
+          embedding_text_hash: string | null
+          id: string | null
+          median_target_size_recent: number | null
+          municipios_interesse: string[] | null
+          nome: string | null
+          observacoes: string | null
+          pause_signal: boolean | null
+          pe_sponsor_entry_date: string | null
+          pe_sponsor_name: string | null
+          porte_alvo: string[] | null
+          primary_contact: Json | null
+          prioridade_global: number | null
+          raw_data: Json | null
+          recent_capital_raise_brl: number | null
+          recent_capital_raise_date: string | null
+          responsavel_id: string | null
+          setores_interesse: string[] | null
+          sinergias_chave: string[] | null
+          source: string | null
+          status: string | null
+          subsetores_interesse: string[] | null
+          ticket_max: number | null
+          ticket_min: number | null
+          tipo: string | null
+          ufs_interesse: string[] | null
+          ultimo_contato_em: string | null
+          updated_at: string | null
+          vertical_principal: string | null
+          website: string | null
+        }
+        Insert: {
+          active_matches_count?: never
+          archetype_id?: string | null
+          avg_multiple_paid_recent?: number | null
+          cautela_flag?: boolean | null
+          cautela_motivo?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          deals_last_12m?: number | null
+          deals_realizados?: number | null
+          embedding?: string | null
+          embedding_computed_at?: string | null
+          embedding_text_hash?: string | null
+          id?: string | null
+          median_target_size_recent?: number | null
+          municipios_interesse?: string[] | null
+          nome?: string | null
+          observacoes?: string | null
+          pause_signal?: boolean | null
+          pe_sponsor_entry_date?: string | null
+          pe_sponsor_name?: string | null
+          porte_alvo?: string[] | null
+          primary_contact?: never
+          prioridade_global?: number | null
+          raw_data?: Json | null
+          recent_capital_raise_brl?: number | null
+          recent_capital_raise_date?: string | null
+          responsavel_id?: string | null
+          setores_interesse?: string[] | null
+          sinergias_chave?: string[] | null
+          source?: string | null
+          status?: string | null
+          subsetores_interesse?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          tipo?: string | null
+          ufs_interesse?: string[] | null
+          ultimo_contato_em?: string | null
+          updated_at?: string | null
+          vertical_principal?: string | null
+          website?: string | null
+        }
+        Update: {
+          active_matches_count?: never
+          archetype_id?: string | null
+          avg_multiple_paid_recent?: number | null
+          cautela_flag?: boolean | null
+          cautela_motivo?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          deals_last_12m?: number | null
+          deals_realizados?: number | null
+          embedding?: string | null
+          embedding_computed_at?: string | null
+          embedding_text_hash?: string | null
+          id?: string | null
+          median_target_size_recent?: number | null
+          municipios_interesse?: string[] | null
+          nome?: string | null
+          observacoes?: string | null
+          pause_signal?: boolean | null
+          pe_sponsor_entry_date?: string | null
+          pe_sponsor_name?: string | null
+          porte_alvo?: string[] | null
+          primary_contact?: never
+          prioridade_global?: number | null
+          raw_data?: Json | null
+          recent_capital_raise_brl?: number | null
+          recent_capital_raise_date?: string | null
           responsavel_id?: string | null
           setores_interesse?: string[] | null
           sinergias_chave?: string[] | null
@@ -1686,6 +1845,138 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_contacts: {
+        Row: {
+          cargo: string | null
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          entity_id: string | null
+          entity_type: "mandate" | "buyer" | null
+          id: string | null
+          is_primary: boolean | null
+          nome: string | null
+          notas: string | null
+          source: string | null
+          telefone_e164: string | null
+          updated_at: string | null
+          whatsapp_opt_in: boolean | null
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          entity_id?: string | null
+          entity_type?: "mandate" | "buyer" | null
+          id?: string | null
+          is_primary?: boolean | null
+          nome?: string | null
+          notas?: string | null
+          source?: string | null
+          telefone_e164?: string | null
+          updated_at?: string | null
+          whatsapp_opt_in?: boolean | null
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          entity_id?: string | null
+          entity_type?: "mandate" | "buyer" | null
+          id?: string | null
+          is_primary?: boolean | null
+          nome?: string | null
+          notas?: string | null
+          source?: string | null
+          telefone_e164?: string | null
+          updated_at?: string | null
+          whatsapp_opt_in?: boolean | null
+        }
+        Relationships: []
+      }
+      eb_crm_activities: {
+        Row: {
+          body: string | null
+          contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          direction: "out" | "in" | "system" | null
+          entity_id: string | null
+          entity_type: "mandate" | "buyer" | null
+          id: string | null
+          kind:
+            | "whatsapp"
+            | "call"
+            | "email"
+            | "meeting"
+            | "note"
+            | "status_change"
+            | "preference_change"
+            | "match_event"
+            | null
+          metadata: Json | null
+        }
+        Insert: {
+          body?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          direction?: "out" | "in" | "system" | null
+          entity_id?: string | null
+          entity_type?: "mandate" | "buyer" | null
+          id?: string | null
+          kind?:
+            | "whatsapp"
+            | "call"
+            | "email"
+            | "meeting"
+            | "note"
+            | "status_change"
+            | "preference_change"
+            | "match_event"
+            | null
+          metadata?: Json | null
+        }
+        Update: {
+          body?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          direction?: "out" | "in" | "system" | null
+          entity_id?: string | null
+          entity_type?: "mandate" | "buyer" | null
+          id?: string | null
+          kind?:
+            | "whatsapp"
+            | "call"
+            | "email"
+            | "meeting"
+            | "note"
+            | "status_change"
+            | "preference_change"
+            | "match_event"
+            | null
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      eb_crm_kpis: {
+        Row: {
+          comissao_realizada: number | null
+          mandates_cancelado: number | null
+          mandates_em_negociacao: number | null
+          mandates_vencido: number | null
+          mandates_vendemos: number | null
+          mandates_vigente: number | null
+          ticket_medio: number | null
+          total_buyers_active: number | null
+          total_mandates: number | null
+          valor_total_carteira: number | null
+        }
+        Relationships: []
+      }
       eb_events: {
         Row: {
           created_at: string | null
@@ -1758,6 +2049,114 @@ export type Database = {
           display_name?: string | null
           required_signals?: string[] | null
           thesis_key?: string | null
+        }
+        Relationships: []
+      }
+      eb_mandates: {
+        Row: {
+          comissao_pct: number | null
+          company_cnpj: string | null
+          created_at: string | null
+          created_by: string | null
+          data_assinatura: string | null
+          data_vencimento: string | null
+          exclusividade: boolean | null
+          id: string | null
+          observacoes: string | null
+          responsavel_id: string | null
+          source: string | null
+          status:
+            | "vigente"
+            | "vencido"
+            | "vendemos"
+            | "em_negociacao"
+            | "vendeu_sozinho"
+            | "cancelado"
+            | null
+          updated_at: string | null
+          valor_pedido: number | null
+        }
+        Insert: {
+          comissao_pct?: number | null
+          company_cnpj?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_assinatura?: string | null
+          data_vencimento?: string | null
+          exclusividade?: boolean | null
+          id?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          source?: string | null
+          status?:
+            | "vigente"
+            | "vencido"
+            | "vendemos"
+            | "em_negociacao"
+            | "vendeu_sozinho"
+            | "cancelado"
+            | null
+          updated_at?: string | null
+          valor_pedido?: number | null
+        }
+        Update: {
+          comissao_pct?: number | null
+          company_cnpj?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_assinatura?: string | null
+          data_vencimento?: string | null
+          exclusividade?: boolean | null
+          id?: string | null
+          observacoes?: string | null
+          responsavel_id?: string | null
+          source?: string | null
+          status?:
+            | "vigente"
+            | "vencido"
+            | "vendemos"
+            | "em_negociacao"
+            | "vendeu_sozinho"
+            | "cancelado"
+            | null
+          updated_at?: string | null
+          valor_pedido?: number | null
+        }
+        Relationships: []
+      }
+      eb_mandates_enriched: {
+        Row: {
+          comissao_pct: number | null
+          company_cnpj: string | null
+          created_at: string | null
+          data_assinatura: string | null
+          data_vencimento: string | null
+          exclusividade: boolean | null
+          faturamento_estimado: number | null
+          has_listing: boolean | null
+          id: string | null
+          listing_id: string | null
+          municipio: string | null
+          nome_fantasia: string | null
+          observacoes: string | null
+          primary_contact: Json | null
+          razao_social: string | null
+          regiao: string | null
+          responsavel_id: string | null
+          setor_ma: string | null
+          source: string | null
+          status:
+            | "vigente"
+            | "vencido"
+            | "vendemos"
+            | "em_negociacao"
+            | "vendeu_sozinho"
+            | "cancelado"
+            | null
+          subsetor_ma: string | null
+          uf: string | null
+          updated_at: string | null
+          valor_pedido: number | null
         }
         Relationships: []
       }
