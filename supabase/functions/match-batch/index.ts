@@ -48,6 +48,8 @@ serve(async (req) => {
         status: auth.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Reaproveita o JWT original (admin ou service_role) para chamar match-company-v2
+    const forwardAuth = req.headers.get("Authorization") ?? `Bearer ${serviceKey}`;
 
     const body = await req.json().catch(() => ({}));
     const filter = body.filter ?? {};
