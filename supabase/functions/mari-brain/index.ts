@@ -159,7 +159,7 @@ Você é especialista sênior em M&A de PMEs no Brasil E especialista total na p
 - Se faltar dado para responder, diga o que precisa ser preenchido e onde.
 
 ## Base de conhecimento (autoritativa)
-${KNOWLEDGE_BASE}
+${KB}
 
 ## Contexto vivo do usuário (atualizado agora)
 ${liveCtx}`;
