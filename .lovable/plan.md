@@ -1,100 +1,151 @@
-## Imports do Equity Brain (espelho do Exports)
+## Objetivo
 
-Hoje o `/equity-brain/crm/exports` gera 4 CSVs (Deals, Mandatos enriquecidos, Buyers enriquecidos, Atividades CRM). Vamos criar o caminho inverso: `/equity-brain/crm/imports` aceitando os mesmos formatos (mais Empresas e Contatos) para popular o sistema em massa, com validação, preview e disparo automático dos pipelines (matches, scores, market waves, gráficos).
+Criar uma camada universal de **Blind Teaser** para todas as empresas que entram na plataforma (parceiros, valuation, captação, listings manuais, importação em massa, expansão RFB). Cada empresa ganha um **codinome** automático e dados sensíveis ficam ocultos para parceiros/franqueados/buyers — só **admins e advisors Vispe** veem a identidade real. Para "destravar", parceiros acionam um advisor.
 
-### Páginas / componentes novos
+---
 
-- `src/pages/equity-brain/ImportsPage.tsx` — espelho visual do `ExportsPage`, com 6 cards (Empresas, Mandatos/Deals, Buyers, Contatos, Atividades CRM, **Pacote completo .xlsx multi-aba**) abrindo cada um o `ImportDialog`.
-- `src/components/equity-brain/crm/ImportDialog.tsx` — modal reutilizável (baseado em `BulkUploadDialog`):
-  1. Botão **"Baixar modelo"** gera .xlsx com cabeçalhos exatos da view de export correspondente + linha-exemplo + aba "Instruções" com enums válidos.
-  2. Drag-and-drop / file picker (.xlsx, .csv) — parse via `XLSX.read` (já no projeto).
-  3. **Preview com validação linha-a-linha** (Zod schemas por entidade): mostra "X válidas / Y com erro" e badges por erro, igual ao BulkUpload.
-  4. Toggle **"Dry-run"** (default ON) — chama edge function só validando, sem inserir.
-  5. Botão **"Importar N linhas"** — chama edge function em modo commit.
-- Link "Imports" adicionado no header do `ExportsPage` e na sidebar do CRM.
+## Comportamento esperado
 
-### Edge function `eb-import`
+- Toda `equity_brain.companies` e todo `listings` ganha automaticamente um `codename` (ex.: `MARI-TECH-0142`, `MARI-FOOD-0087`).
+- Em qualquer tela onde um parceiro/buyer/franchisee veja oportunidades/matches, aparece **somente** o teaser cego: codinome, setor, UF, faixa de receita, faixa de ticket, score, sinais. Nunca CNPJ, razão social, município exato, sócios, telefone, email, endereço.
+- Admin/Advisor Vispe vê tudo (toggle "Modo Cego" para QA opcional).
+- Botão **"Solicitar abertura via Advisor"** em cada teaser abre fluxo que cria um `disclosure_request` e notifica o advisor responsável (ou pool de advisors).
+- Advisor aprova → libera identidade só para aquele user/listing/janela de tempo (registro auditado).
 
-`supabase/functions/eb-import/index.ts` — única função, validação server-side com Zod, recebe `{ entity, rows, dry_run, dedupe_strategy }` onde `entity ∈ {companies, mandates, buyers, contacts, activities, bundle}`.
+---
 
-Pipeline por entidade:
+## Mudanças no banco
 
+### Schema
+
+1. `equity_brain.companies` + `public.listings`: adicionar
+   - `codename text unique` (gerado automaticamente)
+   - `codename_prefix text` (ex.: `TECH`, `FOOD`, derivado de `setor_ma` / `category`)
+2. Função `equity_brain.generate_codename(setor text) returns text` — pega prefixo do setor e sequência (ex.: `MARI-TECH-0001`).
+3. Trigger `BEFORE INSERT` em `companies` e `listings` que preenche `codename` se vier nulo. Backfill para registros existentes.
+4. Nova tabela `equity_brain.disclosure_requests`:
+   - `id, requester_id, target_kind ('company'|'listing'), target_cnpj, target_listing_id, status ('pending'|'approved'|'rejected'|'expired'), reason, advisor_id, decided_at, expires_at (default now()+14d), created_at`
+   - RLS: requester vê os seus; advisor/admin vê todos; insert aberto a authenticated; update só advisor/admin.
+5. Nova tabela `equity_brain.disclosure_grants`:
+   - `id, request_id, granted_to_user_id, target_kind, target_cnpj, target_listing_id, granted_by, granted_at, expires_at, revoked_at`
+6. View pública/parceira **`equity_brain.companies_blind`** `WITH (security_invoker=on)`:
+   - Expõe: `codename, setor_ma, subsetor_ma, uf, porte, faixa_faturamento (bucket), faixa_capital_social (bucket), qtd_socios, qtd_funcionarios_bucket, ma_score, sucessao_score, has_signals, refreshed_at`.
+   - **Esconde**: `cnpj, razao_social, nome_fantasia, municipio, bairro, cep, endereco_*, lat/lng exatos, sócios PF/PJ, raw_data, faturamento_estimado bruto`.
+7. View `public.listings_blind` análoga para listings (esconde título real, endereço, fotos identificáveis, vídeo).
+8. RPC `eb_can_view_identity(p_user uuid, p_cnpj text default null, p_listing uuid default null) returns boolean` — true se admin/advisor, dono, ou existe `disclosure_grant` ativo.
+9. RPC `eb_request_disclosure(p_target_kind, p_target_cnpj, p_target_listing_id, p_reason)` cria request + `deal_event` `disclosure_requested` + notificação para advisors.
+10. RPC `eb_approve_disclosure(p_request_id, p_expires_in_days)` cria grant, marca request, dispara `deal_event` `disclosure_granted` e notifica requester.
+
+### Bucketing (helpers SQL)
+
+- `faixa_faturamento`: `<2M / 2-10M / 10-50M / 50-200M / 200M+`.
+- `qtd_funcionarios_bucket`: `<10 / 10-50 / 50-200 / 200-1k / 1k+`.
+
+---
+
+## Backend / Edge Functions
+
+- Atualizar **todas** as origens que criam companies/listings para garantir codename:
+  - `sync-listings-to-equity-brain`, `sync-companies-from-cnpj`, `expand-companies-from-rfb`, `eb-import`, wizard `NewListingWizard.tsx` (já gera ticker — passa a usar a nova função para alinhar formato).
+  - O trigger cobre o caso geral; as funções só precisam não sobrescrever.
+- Nova edge function `eb-disclosure` (POST `request` / `approve` / `reject` / `revoke`) — wrapper sobre as RPCs com logging em `equity_brain.access_logs`.
+- `match-buyer` / `match-batch`: passam a retornar somente campos cegos quando `requester` não é admin/advisor (já há service role, basta acrescentar máscara no payload entregue ao client).
+
+---
+
+## Frontend
+
+### Componentes novos
+
+- `src/lib/blindTeaser.ts`: `getCodename(company|listing)`, `bucketRevenue(n)`, `bucketEmployees(n)`, helpers de máscara.
+- `src/components/equity-brain/BlindBadge.tsx`: chip "🔒 Blind" com tooltip explicando.
+- `src/components/equity-brain/RequestDisclosureDialog.tsx`: form com motivo (livre + checklist: "tenho buyer interessado", "due diligence", "co-broker") → chama `eb-disclosure` `request`.
+- `src/components/equity-brain/DisclosureStatusPill.tsx`: pending/approved/rejected/expired.
+- `src/pages/equity-brain/DisclosuresPage.tsx` (advisor/admin): inbox para aprovar/recusar requests com contexto da empresa.
+- Hook `useIdentityVisibility(cnpj?, listingId?)` → consulta RPC `eb_can_view_identity`; controla render condicional.
+
+### Telas a adaptar
+
+- `OportunidadesPage`: para não-admins, lista a partir de `equity_brain.companies_blind` em vez de `eb_opportunities_ready` (ou cria `eb_opportunities_blind`). Mostra codename + bucket + score + botão "Solicitar abertura".
+- `DealCard`: dois modos — `identified` (admin/advisor/grant) e `blind`. Mascara CNPJ, razão social, endereço, sócios, contatos, raw_data. Substitui por codename + buckets. Botão "Solicitar abertura via Advisor".
+- `MatchesPanel`, `BuyerDetailPage` (lado company), `MapaPage` (markers sem nome real / coords arredondadas para o centróide do município), `ExportsPage` (exports não-admin saem cegos).
+- `BlindTeaser.tsx` (página pública por ticker): já cega — apenas alinhar para usar `codename` quando vier de companies sem listing.
+- `AppShell` / sidebar: nova rota **CRM → Aberturas (disclosures)** para advisors/admins.
+
+### Notificações
+
+- Insert em `notifications` para advisors quando há novo request; para requester quando aprovado/recusado/expirado.
+
+---
+
+## Auditoria & segurança
+
+- Cada visualização identificada por não-dono é logada em `equity_brain.access_logs` (já existe).
+- Grants têm expiração padrão 14 dias e podem ser revogados.
+- RLS nas views base permanece restrita; tudo via `companies_blind` para parceiros.
+- `deal_events`: novos tipos `disclosure_requested`, `disclosure_granted`, `disclosure_rejected`, `disclosure_revoked`, `identity_viewed`.
+
+---
+
+## Plano de rollout
+
+1. Migration: colunas `codename`, função+trigger, backfill, tabelas `disclosure_requests` / `disclosure_grants`, views `*_blind`, RPCs.
+2. Edge function `eb-disclosure` + ajustes em `match-*`.
+3. Helpers + componentes (`BlindBadge`, `RequestDisclosureDialog`, `DisclosureStatusPill`, hook).
+4. Refatorar `DealCard`, `OportunidadesPage`, `MatchesPanel`, `BuyerDetailPage`, `MapaPage`, `ExportsPage` para usar visão cega quando aplicável.
+5. `DisclosuresPage` (inbox advisor) + rota + sidebar.
+6. Atualizar `sync-*` / `eb-import` / wizard para confiar no trigger de codename.
+7. Memory update (`mem://features/blind-teaser-universal`).
+
+---
+
+## Detalhes técnicos relevantes
+
+```sql
+-- Trigger essencial
+CREATE OR REPLACE FUNCTION equity_brain.set_codename()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE prefix text; seq int;
+BEGIN
+  IF NEW.codename IS NOT NULL THEN RETURN NEW; END IF;
+  prefix := COALESCE(upper(left(regexp_replace(NEW.setor_ma,'[^A-Za-z]','','g'),4)), 'GEN');
+  SELECT COALESCE(MAX(substring(codename from '\d+$')::int),0)+1
+    INTO seq FROM equity_brain.companies WHERE codename LIKE 'MARI-'||prefix||'-%';
+  NEW.codename := format('MARI-%s-%s', prefix, lpad(seq::text,4,'0'));
+  RETURN NEW;
+END$$;
 ```
-text
-companies   → upsert equity_brain.companies (key: cnpj)
-              qualification_status = 'qualified', source = 'import'
-mandates    → resolve company by cnpj (cria stub se faltar)
-              upsert equity_brain.mandates (key: id ou cnpj+data_assinatura)
-              + insere contato primário se vier nas colunas contato_*
-buyers      → upsert equity_brain.buyers (key: id ou cnpj+name)
-              qualification_status = 'qualified'
-contacts    → upsert equity_brain.contacts (key: entity_type+entity_id+email)
-activities  → insert equity_brain.crm_activities (append-only, dedupe por hash)
-bundle      → processa abas na ordem: companies → buyers → mandates
-              → contacts → activities, em transação única
+
+```sql
+-- View cega (resumo)
+CREATE VIEW equity_brain.companies_blind WITH (security_invoker=on) AS
+SELECT codename, setor_ma, subsetor_ma, uf, porte,
+  CASE WHEN faturamento_estimado < 2e6 THEN '<2M'
+       WHEN faturamento_estimado < 10e6 THEN '2-10M'
+       WHEN faturamento_estimado < 50e6 THEN '10-50M'
+       WHEN faturamento_estimado < 200e6 THEN '50-200M'
+       ELSE '200M+' END AS faixa_faturamento,
+  qtd_socios, has_listing, qualification_status
+FROM equity_brain.companies;
 ```
 
-Resposta (mesmo formato em dry-run e commit):
-```json
-{ "inserted": 12, "updated": 3, "skipped": 1, "errors": [{row, field, msg}], "ids": [...] }
+```ts
+// Hook de visibilidade
+const { data: canSeeIdentity } = useQuery({
+  queryKey: ['eb','identity', cnpj, listingId],
+  queryFn: async () => {
+    const { data } = await supabase.rpc('eb_can_view_identity', {
+      p_cnpj: cnpj ?? null, p_listing: listingId ?? null,
+    });
+    return data === true;
+  },
+});
 ```
 
-### Auto-recálculo pós-import (o "popular gráficos")
+---
 
-Ao final de um commit bem-sucedido, a function enfileira jobs nas funções já existentes para que dashboards/gráficos atualizem sozinhos:
+## Fora do escopo (próxima iteração)
 
-- `match-batch` para cada mandato/buyer novo → alimenta `MatchAnalyticsPage` e `PipelineKanban`.
-- `calculate-scores` para empresas novas → alimenta `equity_score` no Dashboard/Grafo.
-- `compute-market-waves` (debounce 30s) → atualiza `MarketWavesCard`.
-- `compute-mandate-active-proba` para mandatos novos → temperatura/probabilidade.
-- `crm-detect-new-matches` → notificações.
-- Insere row em `equity_brain.match_queue` (já existe da fase de qualificação) marcando entidades para reprocessamento assíncrono.
-
-Tudo é fire-and-forget (`Promise.allSettled`, sem bloquear a resposta). UI mostra toast: "12 mandatos importados — recalculando matches em background (~2 min)."
-
-### Schemas de validação (Zod, por entidade)
-
-Cada schema espelha as colunas baixáveis no Exports + aceita aliases comuns (pt-BR ↔ snake_case). Campos obrigatórios mínimos:
-
-- **companies**: `cnpj` (14 dígitos, validado), `razao_social`, `uf`. Resto opcional.
-- **mandates**: `company_cnpj`, `valor_pedido`, `data_assinatura`. Enums: `status`, `deal_type`, `pipeline_stage`, `outcome` validados contra valores aceitos pela view `eb_mandates`.
-- **buyers**: `name`, `setores[]` (parseado de string separada por `|`), `ticket_min`, `ticket_max`, `ufs[]`.
-- **contacts**: `entity_type`, `entity_id` OU `entity_cnpj`, `nome`, `email|telefone` (pelo menos um).
-- **activities**: `entity_type`, `entity_id`, `kind`, `created_at`, `note`.
-- **bundle**: arquivo .xlsx com abas nomeadas exatamente `companies|mandates|buyers|contacts|activities`.
-
-### Permissões
-
-- Rota protegida por `RequireRole role="admin|advisor"` (mesmo padrão do Exports).
-- Edge function valida JWT + `has_role('admin'|'advisor')` antes de qualquer write.
-- Imports são logados em `equity_brain.deal_events` com `event_type='bulk_import'`, payload com contagens — auditável no `AccessAuditPage`.
-
-### Detalhes técnicos relevantes
-
-- **Idempotência**: upserts usam `ON CONFLICT DO UPDATE` nas chaves naturais (cnpj, id quando informado). Reimportar a mesma planilha não duplica.
-- **Tamanho**: chunking de 500 linhas por chamada (XLSX em browser comporta milhares; a function processa em lotes para respeitar timeout de 60s).
-- **CSV vs XLSX**: ambos suportados (`xlsx` lib já lê os dois). Separador `;` ou `,` autodetectado.
-- **Datas**: aceita `dd/mm/aaaa`, `aaaa-mm-dd` e serial number do Excel (normalizado para ISO no parse).
-- **Colunas extras**: ignoradas silenciosamente (não quebra se o CSV exportado tiver colunas calculadas como `regiao`).
-- **Erros parciais**: em modo commit, transação por linha — uma linha ruim não bloqueia as outras; erros vão num CSV de download "falhas_import_<data>.csv".
-
-### Arquivos a criar/editar
-
-Criar:
-- `src/pages/equity-brain/ImportsPage.tsx`
-- `src/components/equity-brain/crm/ImportDialog.tsx`
-- `src/lib/ebImportSchemas.ts` (Zod + aliases)
-- `src/lib/ebImportTemplates.ts` (gerador de modelo .xlsx por entidade)
-- `supabase/functions/eb-import/index.ts`
-
-Editar:
-- `src/App.tsx` (rota `/equity-brain/crm/imports`)
-- `src/pages/equity-brain/ExportsPage.tsx` (botão "Imports" no header, simétrico)
-- `src/components/equity-brain/EBSidebar.tsx` (item de menu)
-- `.lovable/memory/index.md` + nova memória `mem://features/eb-bulk-imports.md`
-
-### Fora do escopo (próxima rodada se quiser)
-
-- Mapeamento visual coluna→campo (assume cabeçalhos = nomes das colunas das views de export).
-- Importar imagens/anexos (só metadados textuais por enquanto).
-- Importar `deal_events` históricos para retroalimentar a Bayesian update do Equity Brain v2 (já existe `backfill-deal-events-from-history` separadamente).
+- NDA digital antes de aprovar grant.
+- Watermark dinâmico em PDFs do VDR.
+- Score de confiança do parceiro afetando aprovação automática.
