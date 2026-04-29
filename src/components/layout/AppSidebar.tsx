@@ -170,7 +170,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                             'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors',
                             isActive
                               ? 'bg-accent/15 text-accent font-medium'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                              : 'text-zinc-300 hover:text-foreground hover:bg-muted'
                           )}
                         >
                           <c.icon className="h-3.5 w-3.5" />
