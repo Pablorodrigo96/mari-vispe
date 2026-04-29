@@ -3,7 +3,7 @@ import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Phone, Mail, Bookmark, Copy, RotateCw, Loader2, ExternalLink, Building2, MapPin, Tag,
+  Phone, Mail, Bookmark, BookmarkCheck, Copy, RotateCw, Loader2, ExternalLink, Building2, MapPin, Tag, MessageCircle, UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,10 @@ import { QuickCallModal } from "./QuickCallModal";
 import { BlindBadge } from "./BlindBadge";
 import { RequestDisclosureDialog } from "./RequestDisclosureDialog";
 import { useIdentityVisibility } from "@/hooks/useIdentityVisibility";
+import { useMatchContacts } from "@/hooks/useMatchContacts";
+import { useIsSaved, useToggleSaved } from "@/hooks/useSavedCompanies";
+import { getWhatsAppLink, normalizeBrPhone } from "@/lib/whatsapp";
+import { AddContactDialog } from "./match/AddContactDialog";
 import { cn } from "@/lib/utils";
 
 interface DealCardProps {
