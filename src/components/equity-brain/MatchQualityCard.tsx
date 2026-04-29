@@ -82,6 +82,24 @@ export default function MatchQualityCard() {
         ? v2Rows.reduce((s, r) => s + Number(r.match_score ?? 0), 0) / v2Rows.length
         : 0;
 
+      // Health metrics paralelos
+      const [thetasRes, listingsRes, snapsRes] = await Promise.all([
+        (supabase as any).schema("equity_brain").from("buyer_revealed_thetas")
+          .select("buyer_id, n_observations").gte("n_observations", 1),
+        supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "active"),
+        (supabase as any).schema("equity_brain").from("drift_snapshots")
+          .select("spearman_corr, snapshot_at").order("snapshot_at", { ascending: false }).limit(1),
+      ]);
+      const thetas = (thetasRes?.data ?? []) as Array<{ buyer_id: string; n_observations: number }>;
+      const byBuyer = new Map<string, number>();
+      for (const t of thetas) byBuyer.set(t.buyer_id, Math.max(byBuyer.get(t.buyer_id) ?? 0, t.n_observations));
+      const obsValues = Array.from(byBuyer.values()).sort((a, b) => a - b);
+      const median = obsValues.length ? obsValues[Math.floor(obsValues.length / 2)] : 0;
+      const buyersWithSignal = Array.from(byBuyer.values()).filter((n) => n >= 2).length;
+      const totalListings = (listingsRes as any)?.count ?? 0;
+      const coveragePct = totalListings > 0 ? Math.min(100, (new Set(v2Rows.map((r) => r.cnpj)).size / totalListings) * 100) : 0;
+      const lastSpearman = snapsRes?.data?.[0]?.spearman_corr == null ? null : Number(snapsRes.data[0].spearman_corr);
+
       setData({
         total_current: rows.length,
         v1_current: v1Rows.length,
@@ -90,6 +108,12 @@ export default function MatchQualityCard() {
         unique_buyers: new Set(v2Rows.map((r) => r.buyer_id)).size,
         avg_match_score: avgScore,
         features,
+        health: {
+          coverage_pct: coveragePct,
+          median_events_per_buyer: median,
+          buyers_with_signal: buyersWithSignal,
+          last_spearman: lastSpearman,
+        },
       });
     } finally {
       setLoading(false);
