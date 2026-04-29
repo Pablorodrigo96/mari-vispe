@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { KpiHeader } from "@/components/equity-brain/crm/KpiHeader";
 import { PipelineFunnel } from "@/components/equity-brain/crm/PipelineFunnel";
-import { MandatesTable } from "@/components/equity-brain/crm/MandatesTable";
+import { MandatesMondayTable } from "@/components/equity-brain/crm/MandatesMondayTable";
 import { BuyersTable } from "@/components/equity-brain/crm/BuyersTable";
 import { NextActionsPanel } from "@/components/equity-brain/crm/NextActionsPanel";
 import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
@@ -142,7 +142,7 @@ export default function CrmHubPage() {
               ))}
             </div>
 
-            {tab === "mandates" && <MandatesTable />}
+            {tab === "mandates" && <MandatesMondayTable />}
             {tab === "buyers" && <BuyersTable />}
             {tab === "activity" && (
               <div className="text-xs text-zinc-400 p-6 bg-zinc-900/40 border border-zinc-800 rounded">
