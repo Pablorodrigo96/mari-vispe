@@ -50,7 +50,7 @@ export default function DashboardPage() {
     queryKey: ["eb", "dashboard-kpis", cnaeFilter.join(",")],
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
-      const companiesQ = supabase.from("eb_companies" as any).select("cnpj", { count: "exact", head: true }).eq("situacao_cadastral", "Ativa");
+      const companiesQ = supabase.from("eb_companies" as any).select("cnpj", { count: "exact", head: true }).ilike("situacao_cadastral", "ativa");
       const premiumQ   = supabase.from("eb_opportunities_ready" as any).select("cnpj", { count: "exact", head: true }).gte("ma_score", 80);
       if (cnaeFilter.length > 0) {
         companiesQ.in("cnae_principal", cnaeFilter);
