@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Mail, Lock, ArrowLeft, User, Phone, Check, Store } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
+import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
