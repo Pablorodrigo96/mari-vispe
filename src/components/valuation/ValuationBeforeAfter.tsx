@@ -37,7 +37,7 @@ export const ValuationBeforeAfter = () => {
             </div>
             <div className="text-center">
               <span className="inline-block px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-500 font-semibold text-sm">
-                ✅ Com PME.B3
+                ✅ Com mari
               </span>
             </div>
           </div>

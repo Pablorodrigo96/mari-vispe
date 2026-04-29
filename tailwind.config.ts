@@ -53,14 +53,25 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         gold: {
-          DEFAULT: "hsl(var(--gold))",
-          light: "hsl(var(--gold-light))",
-          dark: "hsl(var(--gold-dark))",
+          DEFAULT: "hsl(var(--volt))",
+          light: "hsl(var(--volt-light))",
+          dark: "hsl(var(--volt-dark))",
         },
         navy: {
-          DEFAULT: "hsl(var(--navy))",
-          light: "hsl(var(--navy-light))",
+          DEFAULT: "hsl(var(--carbon))",
+          light: "hsl(var(--graphite))",
         },
+        volt: {
+          DEFAULT: "hsl(var(--volt))",
+          light: "hsl(var(--volt-light))",
+          dark: "hsl(var(--volt-dark))",
+        },
+        carbon: {
+          DEFAULT: "hsl(var(--carbon))",
+          light: "hsl(var(--graphite))",
+        },
+        graphite: "hsl(var(--graphite))",
+        bone: "hsl(var(--bone))",
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
@@ -83,6 +94,7 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+        display: ["Inter Tight", "Space Grotesk", "Inter", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {

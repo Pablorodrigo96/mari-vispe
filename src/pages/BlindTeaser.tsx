@@ -113,7 +113,7 @@ const BlindTeaser = () => {
         } else {
           const listingData = data as unknown as TeaserListing;
           setListing(listingData);
-          document.title = `Blind Teaser ${listingData.ticker} | PME.B3`;
+          document.title = `Blind Teaser ${listingData.ticker} | mari`;
 
           // Register view
           try {

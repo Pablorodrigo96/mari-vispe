@@ -158,7 +158,7 @@ export default function PartnerDashboard() {
           Painel restrito a parceiros, franqueados e assessores
         </h1>
         <p className="text-muted-foreground mb-6">
-          Esta área é exclusiva para parceiros credenciados pela PME.B3.
+          Esta área é exclusiva para parceiros credenciados pela mari.
         </p>
         <Button onClick={() => navigate('/painel')} className="bg-accent hover:bg-accent/90 text-accent-foreground">
           Voltar ao painel

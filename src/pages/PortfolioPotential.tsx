@@ -152,7 +152,7 @@ export default function PortfolioPotential() {
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-accent" />
-            <h2 className="text-lg font-semibold text-foreground">Sua carteira na PME.B3</h2>
+            <h2 className="text-lg font-semibold text-foreground">Sua carteira na mari</h2>
             <Badge variant="outline" className="bg-transparent">{realStats.total} clientes ativos</Badge>
           </div>
 
@@ -176,7 +176,7 @@ export default function PortfolioPotential() {
               <Button
                 size="lg"
                 className="bg-accent hover:bg-accent/90 text-accent-foreground"
-                onClick={() => openWhatsApp(`Olá! Tenho ${realStats.total} clientes cadastrados na PME.B3 e quero acelerar a conversão da carteira.`)}
+                onClick={() => openWhatsApp(`Olá! Tenho ${realStats.total} clientes cadastrados na mari e quero acelerar a conversão da carteira.`)}
               >
                 <MessageCircle className="w-4 h-4 mr-2" />Falar com Head de Parcerias
               </Button>

@@ -54,7 +54,7 @@ export function MatchingHero() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg md:text-xl text-primary-foreground/60 mb-12 max-w-2xl mx-auto"
           >
-            Com o buscador inteligente da PME.B3, encontramos oportunidades de negócios compatíveis com a sua empresa. Digite o nome, selecione a correta e veja as oportunidades esperando por você.
+            Com o buscador inteligente da mari, encontramos oportunidades de negócios compatíveis com a sua empresa. Digite o nome, selecione a correta e veja as oportunidades esperando por você.
           </motion.p>
 
           {/* Step indicators */}

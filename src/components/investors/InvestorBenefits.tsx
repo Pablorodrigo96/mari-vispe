@@ -37,7 +37,7 @@ export function InvestorBenefits() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Por que investir com a PME.B3?
+            Por que investir com a mari?
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Oferecemos uma experiência completa para investidores que buscam oportunidades reais de crescimento.

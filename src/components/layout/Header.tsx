@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Building2, LogOut, ClipboardList, User, Shield, UserSearch, DollarSign, BarChart3, Briefcase } from 'lucide-react';
+import { Menu, X, LogOut, ClipboardList, User, Shield, UserSearch, DollarSign, BarChart3, Briefcase } from 'lucide-react';
+import { MariLogo } from '@/components/brand/MariLogo';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -81,13 +82,11 @@ export function Header() {
       <nav className="container mx-auto px-4 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
-              <Building2 className="h-5 w-5 text-accent-foreground" />
-            </div>
-            <span className={cn('text-xl font-bold transition-colors duration-300', isTransparent ? 'text-white' : 'text-foreground')}>
-              PME<span className="text-accent">.B3</span>
-            </span>
+          <Link to="/" className="flex items-center">
+            <MariLogo
+              size={32}
+              className={cn('transition-colors duration-300', isTransparent ? 'text-white' : 'text-foreground')}
+            />
           </Link>
 
           {/* Desktop Navigation */}

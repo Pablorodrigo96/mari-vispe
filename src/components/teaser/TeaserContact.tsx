@@ -107,7 +107,7 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
   };
 
   const handleWhatsApp = async () => {
-    const msg = `Olá! Tenho interesse no ativo ${ticker} divulgado na PME.B3. Gostaria de mais informações.`;
+    const msg = `Olá! Tenho interesse no ativo ${ticker} divulgado na mari. Gostaria de mais informações.`;
     const opened = await openWhatsApp(msg);
     if (!opened) {
       toast.info('Link copiado! Cole no navegador para abrir o WhatsApp.');
@@ -310,14 +310,14 @@ const TeaserContact = ({ listingId, ticker }: TeaserContactProps) => {
               </span>
             </div>
             <p className="text-xs text-white/30 text-center max-w-lg mx-auto leading-relaxed">
-              Este teaser foi elaborado pela PME.B3, é de extrema confidencialidade e não poderá ser compartilhado
+              Este teaser foi elaborado pela mari, é de extrema confidencialidade e não poderá ser compartilhado
               por outras fontes. A veracidade e a acurácia das informações aqui demonstradas são de responsabilidade
               exclusiva do fornecedor. As informações contidas neste documento são de caráter meramente informativo
               e não constituem oferta, solicitação ou recomendação de investimento.
             </p>
           </div>
 
-          <p className="text-sm font-bold text-white/40 mt-6 tracking-[0.3em] text-center">PME.B3</p>
+          <p className="text-sm font-bold text-white/40 mt-6 tracking-[0.3em] text-center">mari</p>
         </motion.div>
       </div>
     </section>

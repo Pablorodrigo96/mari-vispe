@@ -6,6 +6,7 @@ import {
   Briefcase, Sparkles, Shield, Brain, ChevronDown, LogOut, User, ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { MariLogo } from '@/components/brand/MariLogo';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
@@ -107,15 +108,8 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
     >
       {/* Brand */}
       <div className="h-16 px-4 border-b border-border flex items-center justify-between shrink-0">
-        <Link to="/painel" className="flex items-center gap-2 min-w-0">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent shrink-0">
-            <Building2 className="h-4 w-4 text-accent-foreground" />
-          </div>
-          {!collapsed && (
-            <span className="text-sm font-bold text-foreground truncate">
-              PME<span className="text-accent">.B3</span>
-            </span>
-          )}
+        <Link to="/painel" className="flex items-center min-w-0 text-foreground">
+          <MariLogo size={28} showWordmark={!collapsed} />
         </Link>
         <button
           onClick={onToggleCollapse}
