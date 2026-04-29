@@ -100,14 +100,26 @@ export function JarvisGraph3D() {
   const [selectedNode, setSelectedNode] = useState<JarvisNode | null>(null);
 
   // ---------- Visual prefs (ajustes de fundo, persistidos em localStorage) ----------
+  // Defaults LEVES — abre o painel rápido; usuário aumenta efeitos quando quiser.
   const VISUAL_DEFAULTS = {
+    glow: 0,
+    scanlines: 0,
+    vignette: 0,
+    brightness: 10,
+    curvatureMin: 0,
+    curvatureRange: 0,
+    linkSegments: 4,
+    arcStyle: "quad" as "quad" | "sine",
+  };
+  // Valores ricos antigos — aplicados pelo botão "Ativar tudo".
+  const VISUAL_FULL = {
     glow: 70,
     scanlines: 50,
     vignette: 60,
     brightness: 30,
-    curvatureMin: 18, // 0-80
-    curvatureRange: 24, // 0-60
-    linkSegments: 12, // 4-24
+    curvatureMin: 18,
+    curvatureRange: 24,
+    linkSegments: 12,
     arcStyle: "quad" as "quad" | "sine",
   };
   const [visualPrefs, setVisualPrefs] = useState(() => {
