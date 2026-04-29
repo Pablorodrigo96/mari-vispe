@@ -110,6 +110,11 @@ serve(async (req) => {
     const cnaePrefixes: string[] = Array.isArray(body.cnae_prefixes) ? body.cnae_prefixes : [];
     const limit: number = Math.min(Number(body.limit ?? 1000), 5000);
     const offset: number = Math.max(Number(body.offset ?? 0), 0);
+    // NEW (Oráculo v3 / Bloco 2): lista de CNPJs específicos + dry-run
+    const cnpjsFilter: string[] = Array.isArray(body.cnpjs)
+      ? body.cnpjs.map((c: string) => String(c).replace(/[^0-9]/g, "")).filter((c: string) => c.length === 14)
+      : [];
+    const dryRun: boolean = body.dry_run === true;
 
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
