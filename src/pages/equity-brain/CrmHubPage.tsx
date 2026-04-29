@@ -49,14 +49,14 @@ export default function CrmHubPage() {
           <TasksWidget />
         </div>
       </div>
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded p-4">
-          <div className="text-[10px] uppercase text-zinc-400">Como o motor está aprendendo</div>
-          <p className="text-xs text-zinc-300 mt-2 leading-relaxed">
-            Cada interesse marcado, teaser enviado, follow-up no WhatsApp e mudança
-            de preferência alimenta o <span className="text-emerald-300 font-medium">Equity Brain v2</span>.
-            O matching recalcula em segundos quando algo muda — você não precisa refazer nada manualmente.
-          </p>
-        </div>
+
+      <div className="bg-zinc-900/40 border border-zinc-800 rounded p-4">
+        <div className="text-[10px] uppercase text-zinc-400">Como o motor está aprendendo</div>
+        <p className="text-xs text-zinc-300 mt-2 leading-relaxed">
+          Cada interesse marcado, teaser enviado, follow-up no WhatsApp e mudança
+          de preferência alimenta o <span className="text-emerald-300 font-medium">Equity Brain v2</span>.
+          O matching recalcula em segundos quando algo muda — você não precisa refazer nada manualmente.
+        </p>
       </div>
 
       <div className="flex items-center gap-1 border-b border-zinc-800">
