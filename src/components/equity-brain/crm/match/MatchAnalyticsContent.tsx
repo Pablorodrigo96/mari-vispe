@@ -181,9 +181,9 @@ function aggregateByLabel(arr: { label: string; Mandatos: number; Compradores: n
   return Array.from(m.values()).sort((a, b) => b.Mandatos + b.Compradores - (a.Mandatos + a.Compradores));
 }
 
-function CrossChart({ title, data }: { title: string; data: { label: string; Mandatos: number; Compradores: number }[] }) {
+function CrossChart({ title, data, info }: { title: string; data: { label: string; Mandatos: number; Compradores: number }[]; info?: any }) {
   return (
-    <ChartCard title={title}>
+    <ChartCard title={title} info={info}>
       {data.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data}>
