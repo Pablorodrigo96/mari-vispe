@@ -396,6 +396,84 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_pipeline_stages: {
+        Row: {
+          archived_at: string | null
+          color: string
+          created_at: string
+          id: string
+          is_terminal: boolean
+          key: string
+          label: string
+          position: number
+          sla_days: number
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          color?: string
+          created_at?: string
+          id?: string
+          is_terminal?: boolean
+          key: string
+          label: string
+          position?: number
+          sla_days?: number
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          color?: string
+          created_at?: string
+          id?: string
+          is_terminal?: boolean
+          key?: string
+          label?: string
+          position?: number
+          sla_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      eb_pipeline_transitions: {
+        Row: {
+          from_outcome: string | null
+          from_stage: string | null
+          id: string
+          mandate_id: string
+          moved_at: string
+          moved_by: string | null
+          note: string | null
+          time_in_previous_stage_seconds: number | null
+          to_outcome: string | null
+          to_stage: string | null
+        }
+        Insert: {
+          from_outcome?: string | null
+          from_stage?: string | null
+          id?: string
+          mandate_id: string
+          moved_at?: string
+          moved_by?: string | null
+          note?: string | null
+          time_in_previous_stage_seconds?: number | null
+          to_outcome?: string | null
+          to_stage?: string | null
+        }
+        Update: {
+          from_outcome?: string | null
+          from_stage?: string | null
+          id?: string
+          mandate_id?: string
+          moved_at?: string
+          moved_by?: string | null
+          note?: string | null
+          time_in_previous_stage_seconds?: number | null
+          to_outcome?: string | null
+          to_stage?: string | null
+        }
+        Relationships: []
+      }
       franchisee_regions: {
         Row: {
           categories: string[] | null

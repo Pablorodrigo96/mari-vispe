@@ -34,7 +34,7 @@ type Props = {
     contract_url?: string | null;
     data_inicio?: string | null;
     data_fechamento?: string | null;
-    data_assinatura_contrato?: string | null;
+    data_assinatura?: string | null;
   };
   onClose: () => void;
 };
@@ -73,7 +73,7 @@ export function QuickEditPopover({ mandateId, values, onClose }: Props) {
     contract_url: values.contract_url ?? "",
     data_inicio: values.data_inicio?.slice(0, 10) ?? "",
     data_fechamento: values.data_fechamento?.slice(0, 10) ?? "",
-    data_assinatura_contrato: values.data_assinatura_contrato?.slice(0, 10) ?? "",
+    data_assinatura: values.data_assinatura?.slice(0, 10) ?? "",
   });
 
   // Auto-fill regiao from UF
@@ -105,7 +105,7 @@ export function QuickEditPopover({ mandateId, values, onClose }: Props) {
       if (form.contract_url) patch.contract_url = form.contract_url;
       if (form.data_inicio) patch.data_inicio = form.data_inicio;
       if (form.data_fechamento) patch.data_fechamento = form.data_fechamento;
-      if (form.data_assinatura_contrato) patch.data_assinatura_contrato = form.data_assinatura_contrato;
+      if (form.data_assinatura) patch.data_assinatura = form.data_assinatura;
 
       const { error } = await supabase.from("eb_mandates" as any).update(patch).eq("id", mandateId);
       if (error) throw error;
@@ -231,7 +231,7 @@ export function QuickEditPopover({ mandateId, values, onClose }: Props) {
             </div>
             <div>
               <label className={labelCls}>Data assinatura contrato</label>
-              <input type="date" className={inputCls} value={form.data_assinatura_contrato} onChange={set("data_assinatura_contrato")} />
+              <input type="date" className={inputCls} value={form.data_assinatura} onChange={set("data_assinatura")} />
             </div>
           </div>
         </div>
