@@ -13,6 +13,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { formatNumber, relativeTime, eventIcon, scoreColor } from "@/lib/equityBrain";
 import { rowsToCsv, downloadCsv } from "@/lib/exportCsv";
+import { MatchHotHero } from "@/components/equity-brain/match/MatchHotHero";
 import { cn } from "@/lib/utils";
 
 const REFRESH_MS = 60_000;
@@ -187,6 +188,8 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      <MatchHotHero />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <EBStatCard label="Empresas no banco" value={formatNumber(kpis.data?.companies)} hint="situação ativa" Icon={Building2} accent="zinc" />

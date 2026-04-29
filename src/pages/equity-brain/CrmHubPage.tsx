@@ -8,14 +8,16 @@ import { NextActionsPanel } from "@/components/equity-brain/crm/NextActionsPanel
 import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
 import { ExecutiveDashboardContent } from "@/components/equity-brain/crm/exec/ExecutiveDashboardContent";
 import { MatchAnalyticsContent } from "@/components/equity-brain/crm/match/MatchAnalyticsContent";
-import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, Kanban, Plus, Download, LayoutDashboard } from "lucide-react";
+import { MatchHotHero } from "@/components/equity-brain/match/MatchHotHero";
+import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, Kanban, Plus, Download, LayoutDashboard, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SubTab = "mandates" | "buyers" | "activity";
-type TopTab = "geral" | "executivo" | "matching";
+type TopTab = "geral" | "matches" | "executivo" | "matching";
 
 const TOP_TABS: { key: TopTab; label: string; Icon: any }[] = [
   { key: "geral", label: "Visão Geral", Icon: LayoutDashboard },
+  { key: "matches", label: "Matches IA", Icon: Flame },
   { key: "executivo", label: "Dashboard Executivo", Icon: TrendingUp },
   { key: "matching", label: "Match Analytics", Icon: ArrowLeftRight },
 ];
@@ -158,6 +160,7 @@ export default function CrmHubPage() {
           </>
         )}
 
+        {topTab === "matches" && <MatchHotHero />}
         {topTab === "executivo" && <ExecutiveDashboardContent />}
         {topTab === "matching" && <MatchAnalyticsContent />}
       </div>
