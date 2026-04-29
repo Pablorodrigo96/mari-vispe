@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Download, FileSpreadsheet, Briefcase, Target, Activity } from "lucide-react";
+import { ArrowLeft, Download, FileSpreadsheet, Briefcase, Target, Activity, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadCsv } from "@/lib/csvExport";
 import { toast } from "sonner";
@@ -86,11 +86,16 @@ export default function ExportsPage() {
         <ArrowLeft className="h-3 w-3" /> Voltar ao CRM
       </Link>
 
-      <header className="border-b border-zinc-800 pb-4">
-        <h1 className="text-xl font-bold text-zinc-100">Exports</h1>
-        <p className="text-[11px] text-zinc-500 mt-1">
-          Baixe os dados em CSV (separador ;, codificação UTF-8 com BOM — abre direto no Excel).
-        </p>
+      <header className="border-b border-zinc-800 pb-4 flex items-end justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-zinc-100">Exports</h1>
+          <p className="text-[11px] text-zinc-500 mt-1">
+            Baixe os dados em CSV (separador ;, codificação UTF-8 com BOM — abre direto no Excel).
+          </p>
+        </div>
+        <Link to="/equity-brain/crm/imports" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/10">
+          <Upload className="h-3 w-3" /> Imports (subir planilha)
+        </Link>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

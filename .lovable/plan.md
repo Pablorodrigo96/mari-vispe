@@ -1,90 +1,100 @@
-# Promoção automática de leads qualificados ao Equity Brain (dual-role)
+## Imports do Equity Brain (espelho do Exports)
 
-## Objetivo
-Ao qualificar um lead, garantir que ele entre no pool ativo do Equity Brain com o(s) papel(éis) corretos: **target** (empresa à venda potencial) e/ou **buyer** (comprador potencial). Isso amplia o universo de matches futuros sem depender de cadastro manual.
+Hoje o `/equity-brain/crm/exports` gera 4 CSVs (Deals, Mandatos enriquecidos, Buyers enriquecidos, Atividades CRM). Vamos criar o caminho inverso: `/equity-brain/crm/imports` aceitando os mesmos formatos (mais Empresas e Contatos) para popular o sistema em massa, com validação, preview e disparo automático dos pipelines (matches, scores, market waves, gráficos).
 
-## Modelo conceitual
+### Páginas / componentes novos
 
-Um contato qualificado pode ser:
-- **Apenas target** — empresa operacional sem apetite declarado de comprar (default da maioria dos leads RFB).
-- **Apenas buyer** — investidor/holding/family office sem operação alvo.
-- **Dual-role** — grupo consolidador que tanto opera quanto adquire (ex: rede que cresce por M&A).
+- `src/pages/equity-brain/ImportsPage.tsx` — espelho visual do `ExportsPage`, com 6 cards (Empresas, Mandatos/Deals, Buyers, Contatos, Atividades CRM, **Pacote completo .xlsx multi-aba**) abrindo cada um o `ImportDialog`.
+- `src/components/equity-brain/crm/ImportDialog.tsx` — modal reutilizável (baseado em `BulkUploadDialog`):
+  1. Botão **"Baixar modelo"** gera .xlsx com cabeçalhos exatos da view de export correspondente + linha-exemplo + aba "Instruções" com enums válidos.
+  2. Drag-and-drop / file picker (.xlsx, .csv) — parse via `XLSX.read` (já no projeto).
+  3. **Preview com validação linha-a-linha** (Zod schemas por entidade): mostra "X válidas / Y com erro" e badges por erro, igual ao BulkUpload.
+  4. Toggle **"Dry-run"** (default ON) — chama edge function só validando, sem inserir.
+  5. Botão **"Importar N linhas"** — chama edge function em modo commit.
+- Link "Imports" adicionado no header do `ExportsPage` e na sidebar do CRM.
 
-O advisor decide o papel no momento da qualificação.
+### Edge function `eb-import`
 
-## Mudanças no banco
+`supabase/functions/eb-import/index.ts` — única função, validação server-side com Zod, recebe `{ entity, rows, dry_run, dedupe_strategy }` onde `entity ∈ {companies, mandates, buyers, contacts, activities, bundle}`.
 
-### 1. Estender `qualify_lead` RPC
-Adicionar parâmetros:
-- `p_promote_to_buyer boolean default false`
-- `p_promote_to_company boolean default false`
-- `p_buyer_profile jsonb default null` — quando promove a buyer, recebe `{ thesis, sectors, regions, ticket_min, ticket_max, instruments }`
-- `p_company_profile jsonb default null` — quando promove a company a partir de um buyer, recebe `{ cnpj, sector, revenue_brl, location }`
+Pipeline por entidade:
 
-A função:
-1. Atualiza `qualification_status = 'qualified'` na entidade de origem (igual hoje).
-2. Se `p_promote_to_buyer = true` e a entidade origem é `company`: cria registro em `equity_brain.buyers` com `qualification_status = 'qualified'`, `source = 'promoted_from_company'`, `source_company_id = <id>`.
-3. Se `p_promote_to_company = true` e a entidade origem é `buyer`: cria registro em `equity_brain.companies` com `qualification_status = 'qualified'`, `source = 'promoted_from_buyer'`, `source_buyer_id = <id>`.
-4. Registra evento em `equity_brain.deal_events` (`event_type = 'lead_promoted'`) para o loop adaptativo Bayesiano aprender.
+```
+text
+companies   → upsert equity_brain.companies (key: cnpj)
+              qualification_status = 'qualified', source = 'import'
+mandates    → resolve company by cnpj (cria stub se faltar)
+              upsert equity_brain.mandates (key: id ou cnpj+data_assinatura)
+              + insere contato primário se vier nas colunas contato_*
+buyers      → upsert equity_brain.buyers (key: id ou cnpj+name)
+              qualification_status = 'qualified'
+contacts    → upsert equity_brain.contacts (key: entity_type+entity_id+email)
+activities  → insert equity_brain.crm_activities (append-only, dedupe por hash)
+bundle      → processa abas na ordem: companies → buyers → mandates
+              → contacts → activities, em transação única
+```
 
-### 2. Colunas de rastreamento
-Adicionar a `equity_brain.companies` e `equity_brain.buyers`:
-- `promoted_from text` — `'rfb'`, `'company'`, `'buyer'`, `'manual'`
-- `promoted_at timestamptz`
-- `linked_entity_id uuid` — id da entidade-irmã (company ↔ buyer) quando dual-role
+Resposta (mesmo formato em dry-run e commit):
+```json
+{ "inserted": 12, "updated": 3, "skipped": 1, "errors": [{row, field, msg}], "ids": [...] }
+```
 
-Permite navegar nos dois sentidos e evitar duplicidade (constraint: `unique (cnpj, role)` lógica via índice parcial).
+### Auto-recálculo pós-import (o "popular gráficos")
 
-### 3. Trigger de re-matching
-Quando uma entidade vira `qualified` ou ganha papel novo, agendar (via `pg_notify` ou tabela `equity_brain.match_queue`) um recálculo de matches assíncrono — o worker existente (`match-buyer` / `match-company-v2`) consome a fila.
+Ao final de um commit bem-sucedido, a function enfileira jobs nas funções já existentes para que dashboards/gráficos atualizem sozinhos:
 
-## Mudanças na UI
+- `match-batch` para cada mandato/buyer novo → alimenta `MatchAnalyticsPage` e `PipelineKanban`.
+- `calculate-scores` para empresas novas → alimenta `equity_score` no Dashboard/Grafo.
+- `compute-market-waves` (debounce 30s) → atualiza `MarketWavesCard`.
+- `compute-mandate-active-proba` para mandatos novos → temperatura/probabilidade.
+- `crm-detect-new-matches` → notificações.
+- Insere row em `equity_brain.match_queue` (já existe da fase de qualificação) marcando entidades para reprocessamento assíncrono.
 
-### `QualifyLeadButton.tsx` (extensão)
-Hoje é um popover simples com escolha de fonte. Vira um diálogo curto em 2 passos:
-1. **Fonte da qualificação** (já existe): WhatsApp, indicação de parceiro, contrato assinado, etc.
-2. **Papel no Equity Brain** (novo): checkboxes
-   - `[x] Manter como alvo de aquisição` (default ligado se origem = company)
-   - `[ ] Adicionar também como comprador potencial` → expande mini-form com tese, setores, ticket
-   - `[ ] Promover a empresa-alvo` (só aparece se origem = buyer e ele declarou operar)
+Tudo é fire-and-forget (`Promise.allSettled`, sem bloquear a resposta). UI mostra toast: "12 mandatos importados — recalculando matches em background (~2 min)."
 
-### Badge de papel
-Novo componente `RoleBadges.tsx` — mostra chips lado a lado: `Target`, `Buyer`, `Dual` em listagens do CRM Hub. Clique no chip leva à entidade-irmã.
+### Schemas de validação (Zod, por entidade)
 
-### MatchesPanel
-Já filtra qualificados — sem mudança visual, mas agora o pool inclui buyers/companies promovidos (ganho automático de cobertura).
+Cada schema espelha as colunas baixáveis no Exports + aceita aliases comuns (pt-BR ↔ snake_case). Campos obrigatórios mínimos:
 
-## Edge Function
+- **companies**: `cnpj` (14 dígitos, validado), `razao_social`, `uf`. Resto opcional.
+- **mandates**: `company_cnpj`, `valor_pedido`, `data_assinatura`. Enums: `status`, `deal_type`, `pipeline_stage`, `outcome` validados contra valores aceitos pela view `eb_mandates`.
+- **buyers**: `name`, `setores[]` (parseado de string separada por `|`), `ticket_min`, `ticket_max`, `ufs[]`.
+- **contacts**: `entity_type`, `entity_id` OU `entity_cnpj`, `nome`, `email|telefone` (pelo menos um).
+- **activities**: `entity_type`, `entity_id`, `kind`, `created_at`, `note`.
+- **bundle**: arquivo .xlsx com abas nomeadas exatamente `companies|mandates|buyers|contacts|activities`.
 
-Nenhuma nova. A `qualify_lead` RPC concentra toda a lógica transacional. O `expand-companies-from-rfb` continua igual (importa apenas como `unqualified`, papel `company`).
+### Permissões
 
-## Observabilidade
+- Rota protegida por `RequireRole role="admin|advisor"` (mesmo padrão do Exports).
+- Edge function valida JWT + `has_role('admin'|'advisor')` antes de qualquer write.
+- Imports são logados em `equity_brain.deal_events` com `event_type='bulk_import'`, payload com contagens — auditável no `AccessAuditPage`.
 
-- Métrica nova no painel admin: "Leads promovidos a buyer" / "Leads promovidos a company" no último período.
-- `deal_events` registra cada promoção, alimentando o aprendizado adaptativo (Phase 4 do Equity Brain v2).
+### Detalhes técnicos relevantes
 
-## Arquivos afetados
+- **Idempotência**: upserts usam `ON CONFLICT DO UPDATE` nas chaves naturais (cnpj, id quando informado). Reimportar a mesma planilha não duplica.
+- **Tamanho**: chunking de 500 linhas por chamada (XLSX em browser comporta milhares; a function processa em lotes para respeitar timeout de 60s).
+- **CSV vs XLSX**: ambos suportados (`xlsx` lib já lê os dois). Separador `;` ou `,` autodetectado.
+- **Datas**: aceita `dd/mm/aaaa`, `aaaa-mm-dd` e serial number do Excel (normalizado para ISO no parse).
+- **Colunas extras**: ignoradas silenciosamente (não quebra se o CSV exportado tiver colunas calculadas como `regiao`).
+- **Erros parciais**: em modo commit, transação por linha — uma linha ruim não bloqueia as outras; erros vão num CSV de download "falhas_import_<data>.csv".
 
-**Migration nova**
-- Estende `qualify_lead`, adiciona colunas de promoção, cria índice de unicidade lógica e tabela `match_queue` (se ainda não existir).
+### Arquivos a criar/editar
 
-**Frontend**
-- `src/components/equity-brain/crm/QualifyLeadButton.tsx` — vira diálogo com 2 passos.
-- `src/components/equity-brain/crm/RoleBadges.tsx` — novo.
-- `src/pages/equity-brain/MandateDetailPage.tsx` e `BuyerDetailPage.tsx` — exibem badges e link para entidade-irmã quando promovido.
-- `src/pages/admin/...` painel de métricas — adiciona contadores.
+Criar:
+- `src/pages/equity-brain/ImportsPage.tsx`
+- `src/components/equity-brain/crm/ImportDialog.tsx`
+- `src/lib/ebImportSchemas.ts` (Zod + aliases)
+- `src/lib/ebImportTemplates.ts` (gerador de modelo .xlsx por entidade)
+- `supabase/functions/eb-import/index.ts`
 
-**Memória**
-- Atualiza `mem://features/lead-qualification-rfb-expand` cobrindo o dual-role.
+Editar:
+- `src/App.tsx` (rota `/equity-brain/crm/imports`)
+- `src/pages/equity-brain/ExportsPage.tsx` (botão "Imports" no header, simétrico)
+- `src/components/equity-brain/EBSidebar.tsx` (item de menu)
+- `.lovable/memory/index.md` + nova memória `mem://features/eb-bulk-imports.md`
 
-## Fora de escopo
+### Fora do escopo (próxima rodada se quiser)
 
-- Promoção automática sem confirmação humana (mantemos sempre um clique do advisor — evita poluir o pool).
-- Importação de buyers da RFB (decisão anterior: buyers nascem só de cadastro real ou promoção).
-- Migração retroativa em massa de companies qualificadas para virar buyers — não faz sentido sem julgamento humano caso a caso.
-
-## Perguntas antes de implementar
-
-1. **Default do checkbox "Manter como alvo"** ao qualificar uma company: deixo marcado (ele já é target por origem) ou desmarco para o advisor confirmar conscientemente?
-2. **Promoção a buyer exige mini-form (tese, setores, ticket)** — OK em deixar campos opcionais e o advisor preenche depois no `BuyerDetailPage`, ou prefere bloquear até preencher tese mínima?
-3. **Re-matching assíncrono via fila** — OK ou prefere recálculo síncrono no momento da promoção (mais lento, mas resultado imediato visível)?
+- Mapeamento visual coluna→campo (assume cabeçalhos = nomes das colunas das views de export).
+- Importar imagens/anexos (só metadados textuais por enquanto).
+- Importar `deal_events` históricos para retroalimentar a Bayesian update do Equity Brain v2 (já existe `backfill-deal-events-from-history` separadamente).

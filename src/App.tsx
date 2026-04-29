@@ -79,6 +79,7 @@ import MatchAnalyticsPage from "./pages/equity-brain/MatchAnalyticsPage";
 import PipelineKanbanPage from "./pages/equity-brain/PipelineKanbanPage";
 import MandateFormPage from "./pages/equity-brain/MandateFormPage";
 import ExportsPage from "./pages/equity-brain/ExportsPage";
+import ImportsPage from "./pages/equity-brain/ImportsPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
@@ -201,6 +202,7 @@ const App = () => (
               <Route path="crm/matching"         element={<MatchAnalyticsPage />} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
               <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />
+              <Route path="crm/imports"          element={<RequireRole roles={["admin", "advisor"]}><ImportsPage /></RequireRole>} />
               <Route path="crm/mandate/new"      element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
               <Route path="crm/mandate/:id/edit" element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
             </Route>

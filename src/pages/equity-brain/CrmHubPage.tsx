@@ -67,6 +67,9 @@ export default function CrmHubPage() {
               <Link to="/equity-brain/crm/mandate/new" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded bg-[#D9F564] text-zinc-900 font-semibold hover:opacity-90">
                 <Plus className="h-3 w-3" /> Novo mandato
               </Link>
+              <Link to="/equity-brain/crm/imports" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
+                <Download className="h-3 w-3 rotate-180" /> Imports
+              </Link>
               <Link to="/equity-brain/crm/exports" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
                 <Download className="h-3 w-3" /> Exports
               </Link>
