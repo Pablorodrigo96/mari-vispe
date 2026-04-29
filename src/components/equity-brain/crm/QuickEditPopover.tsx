@@ -95,6 +95,19 @@ export function QuickEditPopover({ mandateId, values, onClose }: Props) {
             </div>
           </div>
           <div className="col-span-2">
+            <label className="block text-[9px] uppercase text-zinc-500 mb-1">Status do mandato</label>
+            <select
+              className={inputCls}
+              value={form.outcome}
+              onChange={set("outcome")}
+            >
+              <option value="">— manter atual —</option>
+              {OUTCOME_OPTIONS.map((o) => (
+                <option key={o} value={o}>{OUTCOME_LABEL[o] || o}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-span-2">
             <label className="block text-[9px] uppercase text-zinc-500 mb-1">Contato</label>
             <input className={inputCls} value={form.contato_nome} onChange={set("contato_nome")} placeholder="Nome do contato" />
           </div>
