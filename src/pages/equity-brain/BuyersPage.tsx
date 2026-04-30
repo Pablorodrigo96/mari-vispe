@@ -28,7 +28,11 @@ export default function BuyersPage() {
         .select(`*, theses:buyer_theses(count), matches:matches(count)`)
         .order("prioridade_global", { ascending: true, nullsFirst: false })
         .order("nome");
-      if (buyerVerticalKey) q = q.eq("vertical_principal", buyerVerticalKey);
+      // Quando uma vertical específica está selecionada, inclui também os buyers
+      // ainda sem vertical preenchida (recém-criados ou importados sem tag).
+      if (buyerVerticalKey) {
+        q = q.or(`vertical_principal.eq.${buyerVerticalKey},vertical_principal.is.null`);
+      }
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as any[];
@@ -51,6 +55,8 @@ export default function BuyersPage() {
           observacoes: form.observacoes || null,
           status: "ativo",
           source: "manual",
+          // Já tagueia o buyer na vertical ativa do cockpit (quando não for "Todos").
+          vertical_principal: buyerVerticalKey ?? null,
         }).select("id").single();
       if (error) throw error;
       return data;

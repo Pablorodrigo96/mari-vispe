@@ -203,24 +203,41 @@ export function JarvisGraph3D() {
     }
   }, [toast]);
 
-  // Resize
+  // Resize — mede no mount, em rAF duplo (para pegar o layout do AppShell estabilizado),
+  // depois via ResizeObserver. Também força refresh do ForceGraph quando o tamanho muda.
   useEffect(() => {
     const update = () => {
       if (containerRef.current) {
         const r = containerRef.current.getBoundingClientRect();
-        setSize({ w: r.width, h: r.height });
+        if (r.width > 0 && r.height > 0) {
+          setSize({ w: r.width, h: r.height });
+        }
       }
       setIsMobile(window.innerWidth < 768);
     };
+    // Mede agora, depois em rAF duplo (sidebar/topbar acomodando), depois com 100/300/600ms.
     update();
+    requestAnimationFrame(() => requestAnimationFrame(update));
+    const t1 = setTimeout(update, 100);
+    const t2 = setTimeout(update, 300);
+    const t3 = setTimeout(update, 600);
     const ro = new ResizeObserver(update);
     if (containerRef.current) ro.observe(containerRef.current);
     window.addEventListener("resize", update);
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", update);
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
     };
   }, []);
+
+  // Refresh ForceGraph quando o tamanho muda (corrige render cortado no primeiro abrir).
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      try { fgRef.current?.refresh?.(); } catch { /* noop */ }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [size.w, size.h]);
 
   // ---------- Data queries (mesmas do 2D) ----------
   const queries = useQueries({

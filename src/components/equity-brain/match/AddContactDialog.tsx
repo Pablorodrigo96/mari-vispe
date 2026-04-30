@@ -35,9 +35,44 @@ export function AddContactDialog({ entityType, entityId, entityLabel, trigger, o
     mutationFn: async () => {
       const phone = normalizeBrPhone(telefone);
       const { data: { user } } = await supabase.auth.getUser();
+
+      // contacts.entity_id é UUID. Para entityType="company", o entityId pode vir
+      // como CNPJ (14 dígitos) ou codename — precisamos resolver para companies.id.
+      let resolvedEntityId: string = entityId;
+      if (entityType === "company") {
+        const cnpj14 = (entityId ?? "").replace(/\D/g, "");
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entityId);
+        if (!isUuid) {
+          let companyRow: any = null;
+          if (cnpj14.length === 14) {
+            const { data } = await (supabase as any)
+              .schema("equity_brain")
+              .from("companies")
+              .select("id")
+              .eq("cnpj", cnpj14)
+              .maybeSingle();
+            companyRow = data;
+          }
+          if (!companyRow) {
+            // Tenta por codename
+            const { data } = await (supabase as any)
+              .schema("equity_brain")
+              .from("companies")
+              .select("id")
+              .eq("codename", entityId)
+              .maybeSingle();
+            companyRow = data;
+          }
+          if (!companyRow?.id) {
+            throw new Error("Empresa não encontrada na base do Equity Brain. Cadastre a empresa antes de adicionar contato.");
+          }
+          resolvedEntityId = companyRow.id as string;
+        }
+      }
+
       const payload: any = {
         entity_type: entityType,
-        entity_id: entityId,
+        entity_id: resolvedEntityId,
         nome: nome.trim() || null,
         cargo: cargo.trim() || null,
         telefone_e164: phone,
