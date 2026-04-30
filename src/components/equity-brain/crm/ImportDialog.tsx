@@ -24,6 +24,7 @@ interface ImportResult {
   updated: number;
   skipped: number;
   errors: { row: number; field?: string; msg: string }[];
+  warnings?: { row: number; field?: string; msg: string }[];
 }
 
 export function ImportDialog({ open, onOpenChange, entity, onSuccess }: Props) {
@@ -69,10 +70,11 @@ export function ImportDialog({ open, onOpenChange, entity, onSuccess }: Props) {
       setResults(data.results);
       const totalIn = (data.results || []).reduce((s: number, r: ImportResult) => s + r.inserted, 0);
       const totalErr = (data.results || []).reduce((s: number, r: ImportResult) => s + r.errors.length, 0);
+      const totalWarn = (data.results || []).reduce((s: number, r: ImportResult) => s + (r.warnings?.length || 0), 0);
       if (asDry) {
-        toast.success(`Validação: ${totalIn} OK · ${totalErr} erros`);
+        toast.success(`Validação: ${totalIn} OK · ${totalWarn} avisos · ${totalErr} erros`);
       } else {
-        toast.success(`${totalIn} registros importados — recálculo em background`);
+        toast.success(`${totalIn} importados · ${totalWarn} avisos · ${totalErr} erros — recálculo em background`);
         onSuccess?.();
       }
     } catch (err: any) {
@@ -131,17 +133,30 @@ export function ImportDialog({ open, onOpenChange, entity, onSuccess }: Props) {
               <ScrollArea className="max-h-72 border border-zinc-800 rounded-lg p-3">
                 {results.map((r, idx) => (
                   <div key={idx} className="mb-3 pb-3 border-b border-zinc-800 last:border-0">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className="text-sm font-medium text-zinc-100">{ENTITY_LABELS[r.entity as keyof typeof ENTITY_LABELS] || r.entity}</span>
                       <Badge className="bg-emerald-950 text-emerald-300 border-emerald-900"><CheckCircle className="w-3 h-3 mr-1" />{r.inserted} OK</Badge>
+                      {(r.warnings?.length || 0) > 0 && (
+                        <Badge className="bg-amber-950 text-amber-300 border-amber-900">⚠ {r.warnings!.length} avisos</Badge>
+                      )}
                       {r.errors.length > 0 && <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />{r.errors.length} erros</Badge>}
                     </div>
                     {r.errors.slice(0, 10).map((e, i) => (
-                      <div key={i} className="text-[11px] text-rose-300 ml-2">
+                      <div key={`e${i}`} className="text-[11px] text-rose-300 ml-2 break-words">
                         Linha {e.row}{e.field ? ` · ${e.field}` : ""}: {e.msg}
                       </div>
                     ))}
                     {r.errors.length > 10 && <div className="text-[11px] text-zinc-500 ml-2">+ {r.errors.length - 10} outros erros…</div>}
+                    {(r.warnings?.length || 0) > 0 && (
+                      <div className="mt-2">
+                        {r.warnings!.slice(0, 8).map((w, i) => (
+                          <div key={`w${i}`} className="text-[11px] text-amber-300/80 ml-2 break-words">
+                            Linha {w.row}{w.field ? ` · ${w.field}` : ""}: {w.msg}
+                          </div>
+                        ))}
+                        {r.warnings!.length > 8 && <div className="text-[11px] text-zinc-500 ml-2">+ {r.warnings!.length - 8} outros avisos…</div>}
+                      </div>
+                    )}
                   </div>
                 ))}
               </ScrollArea>
