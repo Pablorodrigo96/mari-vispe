@@ -12,6 +12,7 @@ const KB_FILES = [
   "08-metas-e-prioridades.md",
 ];
 
+const KB_PER_FILE_MAX = 5000; // chars
 let _kbCache: string | null = null;
 async function loadKnowledgeBase(): Promise<string> {
   if (_kbCache) return _kbCache;
@@ -20,7 +21,7 @@ async function loadKnowledgeBase(): Promise<string> {
     try {
       const url = new URL(`./kb/${f}`, import.meta.url);
       const text = await Deno.readTextFile(url);
-      parts.push(text);
+      parts.push(text.length > KB_PER_FILE_MAX ? text.slice(0, KB_PER_FILE_MAX) + "\n…[truncado]" : text);
     } catch (e) {
       console.warn(`KB load fail ${f}`, e);
     }
