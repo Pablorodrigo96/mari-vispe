@@ -38,6 +38,8 @@ export default function IspImportPage() {
   const [dry, setDry] = useState<DryResult | null>(null);
   const [committed, setCommitted] = useState<{ inserted: number; rejected: number } | null>(null);
   const [history, setHistory] = useState<ImportRecord[]>([]);
+  const [computing, setComputing] = useState(false);
+  const [computeResult, setComputeResult] = useState<{ period_ref: string; cities_computed: number; companies_computed: number } | null>(null);
 
   useEffect(() => { loadHistory(); }, []);
 
