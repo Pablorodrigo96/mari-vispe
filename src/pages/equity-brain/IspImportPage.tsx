@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Upload, FileSpreadsheet, Loader2, CheckCircle, AlertTriangle, Database, History, Snowflake, Calculator } from "lucide-react";
+import { ArrowLeft, Upload, FileSpreadsheet, Loader2, CheckCircle, AlertTriangle, Database, History, Snowflake, Calculator, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,8 @@ export default function IspImportPage() {
   const [history, setHistory] = useState<ImportRecord[]>([]);
   const [computing, setComputing] = useState(false);
   const [computeResult, setComputeResult] = useState<{ period_ref: string; cities_computed: number; companies_computed: number } | null>(null);
+  const [matching, setMatching] = useState(false);
+  const [matchResult, setMatchResult] = useState<{ period_ref: string; matches_inserted: number; thesis_links_upserted: number; companies_with_thesis_fit: number; buyers_targeted: number } | null>(null);
 
   useEffect(() => { loadHistory(); }, []);
 
@@ -102,6 +104,32 @@ export default function IspImportPage() {
     } catch (e: any) {
       toast.error("Erro ao calcular stats: " + (e.message || "desconhecido"));
     } finally { setComputing(false); }
+  }
+
+  async function generateColdMatches(asDry: boolean) {
+    setMatching(true); if (!asDry) setMatchResult(null);
+    try {
+      const periodIso = periodRef ? `${periodRef}-01` : null;
+      const { data, error } = await supabase.functions.invoke("eb-match-isp-cold", {
+        body: { period_ref: periodIso, dry_run: asDry },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (asDry) {
+        toast.success(`Preview: ${data.candidate_matches} candidatos · ${data.companies_with_thesis_fit} empresas com fit · ${data.active_buyers} buyers`);
+      } else {
+        setMatchResult({
+          period_ref: data.period_ref,
+          matches_inserted: data.matches_inserted ?? 0,
+          thesis_links_upserted: data.thesis_links_upserted ?? 0,
+          companies_with_thesis_fit: data.companies_with_thesis_fit ?? 0,
+          buyers_targeted: data.buyers_targeted ?? 0,
+        });
+        toast.success(`${data.matches_inserted} sugestões frias geradas (não criam companies, sem notificações)`);
+      }
+    } catch (e: any) {
+      toast.error("Erro ao gerar matches: " + (e.message || "desconhecido"));
+    } finally { setMatching(false); }
   }
 
   return (
@@ -248,6 +276,56 @@ export default function IspImportPage() {
         )}
         {computeResult && (
           <p className="text-[10px] text-zinc-500">Período computado: <span className="text-zinc-300">{computeResult.period_ref}</span></p>
+        )}
+      </div>
+
+      {/* Fase 4 — Match cold */}
+      <div className="rounded border border-fuchsia-900/60 bg-fuchsia-950/10 p-5 space-y-3">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-[260px] flex-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-fuchsia-300" />
+              <span className="text-sm text-zinc-100 font-medium">Fase 4 — Sugestões frias × buyers (tese ISPs)</span>
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-1 break-words max-w-2xl">
+              Cruza ISPs com fit nas 5 teses ISP × buyers ativos com setor/UF/ticket compatível. Grava em{" "}
+              <code>matches</code> com <code>is_cold_suggestion=true</code>. <strong>Não cria companies, não dispara notificações.</strong>{" "}
+              Cada execução substitui o batch anterior de matches frios das teses ISP.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => generateColdMatches(true)}
+              disabled={matching}
+              className="bg-transparent border-fuchsia-800 text-fuchsia-200 hover:bg-fuchsia-950/40"
+            >
+              {matching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-2" />}
+              Preview
+            </Button>
+            <Button
+              onClick={() => generateColdMatches(false)}
+              disabled={matching}
+              className="bg-fuchsia-700 text-white hover:bg-fuchsia-600"
+            >
+              {matching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Gerar sugestões
+            </Button>
+          </div>
+        </div>
+        {matchResult && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-fuchsia-900/40">
+            <Stat label="Matches gerados" value={matchResult.matches_inserted} tone="ok" />
+            <Stat label="Empresas com fit" value={matchResult.companies_with_thesis_fit} />
+            <Stat label="Vínculos tese↔CNPJ" value={matchResult.thesis_links_upserted} />
+            <Stat label="Buyers alvo" value={matchResult.buyers_targeted} />
+          </div>
+        )}
+        {matchResult && (
+          <p className="text-[10px] text-zinc-500">
+            Período: <span className="text-zinc-300">{matchResult.period_ref}</span>{" "}
+            · Próxima fase: tela <code>/equity-brain/isp/sugestoes</code> e fluxo <code>promote-cold-isp</code>.
+          </p>
         )}
       </div>
 
