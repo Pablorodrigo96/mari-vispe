@@ -75,7 +75,7 @@ export function useMatchInbox(filters: Filters = {}) {
         .schema("equity_brain")
         .from("matches")
         .select(
-          "id,cnpj,buyer_id,match_score,thesis_key,status,setor_fit,geografia_fit,porte_fit,tese_fit,computed_at"
+          "id,cnpj,buyer_id,match_score,thesis_key,status,setor_fit,geografia_fit,porte_fit,tese_fit,computed_at,feature_contributions,p_close_12m,engine_version"
         )
         .eq("is_current", true)
         .gte("match_score", minScore)
@@ -146,6 +146,9 @@ export function useMatchInbox(filters: Filters = {}) {
           ticket_max: b.ticket_max ?? null,
           mandate_id: m.id ?? null,
           mandate_outcome: m.outcome ?? null,
+          feature_contributions: r.feature_contributions ?? null,
+          p_close_12m: r.p_close_12m ?? null,
+          engine_version: r.engine_version ?? null,
         };
       });
 
