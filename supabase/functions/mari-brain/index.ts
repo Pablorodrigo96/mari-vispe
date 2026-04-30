@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     const auth = req.headers.get("Authorization");
     if (!auth) return new Response(JSON.stringify({ error: "no auth" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { thread_id, message, route, entity_type, entity_id } = await req.json();
+    const { thread_id, message, route, entity_type, entity_id, model: modelOverride } = await req.json();
     if (!message) {
       return new Response(JSON.stringify({ error: "message obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
