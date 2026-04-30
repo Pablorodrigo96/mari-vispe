@@ -217,6 +217,41 @@ export default function IspImportPage() {
         </div>
       )}
 
+      {/* Compute Stats (Fase 3) */}
+      <div className="rounded border border-zinc-800 bg-zinc-900/40 p-5 space-y-3">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-[260px] flex-1">
+            <div className="flex items-center gap-2">
+              <Calculator className="h-4 w-4 text-[#D9F564]" />
+              <span className="text-sm text-zinc-100 font-medium">Fase 3 — Calcular stats de mercado</span>
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-1 break-words max-w-2xl">
+              Recalcula HHI, share do líder, fragmentação e <code>rollup_target_score</code> /{" "}
+              <code>local_leader_score</code> / <code>sellability_score</code> por cidade e por CNPJ.
+              Usa o período acima ou, se vazio, o mais recente disponível. Idempotente — reprocessa em cima.
+            </p>
+          </div>
+          <Button
+            onClick={recomputeStats}
+            disabled={computing}
+            className="bg-[#D9F564] text-zinc-900 hover:bg-[#D9F564]/90"
+          >
+            {computing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />}
+            Recalcular agora
+          </Button>
+        </div>
+        {computeResult && (
+          <div className="grid grid-cols-3 gap-3 pt-3 border-t border-zinc-800">
+            <Stat label="Período" value={0} />
+            <Stat label="Cidades" value={computeResult.cities_computed} tone="ok" />
+            <Stat label="Empresas (CNPJ)" value={computeResult.companies_computed} tone="ok" />
+          </div>
+        )}
+        {computeResult && (
+          <p className="text-[10px] text-zinc-500">Período computado: <span className="text-zinc-300">{computeResult.period_ref}</span></p>
+        )}
+      </div>
+
       {/* History */}
       <div className="rounded border border-zinc-800 bg-zinc-900/40 p-4">
         <div className="flex items-center gap-2 mb-3">
