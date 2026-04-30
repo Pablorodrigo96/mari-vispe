@@ -24,6 +24,7 @@ interface ImportResult {
   updated: number;
   skipped: number;
   errors: { row: number; field?: string; msg: string }[];
+  warnings?: { row: number; field?: string; msg: string }[];
 }
 
 export function ImportDialog({ open, onOpenChange, entity, onSuccess }: Props) {
