@@ -9,6 +9,8 @@ import { useIdentityVisibility } from "@/hooks/useIdentityVisibility";
 import { getWhatsAppLink, normalizeBrPhone } from "@/lib/whatsapp";
 import { QuickStartMandateDialog } from "./QuickStartMandateDialog";
 import { AddContactDialog } from "./AddContactDialog";
+import { MatchWhyCard } from "./MatchWhyCard";
+import { useMatchById } from "@/hooks/useMatchById";
 import { RequestDisclosureDialog } from "@/components/equity-brain/RequestDisclosureDialog";
 import { cn } from "@/lib/utils";
 
@@ -89,7 +91,11 @@ export function MatchDetailDrawer({ row, onClose, percentiles }: Props) {
   const open = !!row;
   const { data: canSee } = useIdentityVisibility({ cnpj: row?.cnpj });
   const { data: contacts, isLoading: loadingContacts } = useMatchContacts(row?.cnpj, row?.buyer_id);
+  // Enrich the row with explainability fields if missing (inbox row may not include them).
+  const needsEnrich = !!row && row.feature_contributions == null && row.ai_thesis_summary == null;
+  const { data: enriched } = useMatchById(needsEnrich ? row?.id : undefined);
   if (!row) return null;
+  const fullRow = enriched ?? row;
   const tier = tierForScore(row.match_score, percentiles);
 
   const sellerName = canSee
@@ -191,22 +197,9 @@ export function MatchDetailDrawer({ row, onClose, percentiles }: Props) {
           </div>
         </div>
 
-        {/* Por que esse match */}
-        <div className="mt-5 rounded border border-zinc-800 bg-zinc-900/40 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 inline-flex items-center gap-1">
-            <Sparkles className="h-3 w-3 text-[#D9F564]" /> Por que esse match
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <FitBar label="Setor" value={row.setor_fit} />
-            <FitBar label="Geografia" value={row.geografia_fit} />
-            <FitBar label="Porte" value={row.porte_fit} />
-            <FitBar label="Tese" value={row.tese_fit} />
-          </div>
-          {row.thesis_key && (
-            <div className="mt-2 text-[10px] text-zinc-400">
-              Tese acionada: <span className="px-1.5 py-0.5 rounded bg-blue-950/40 text-blue-300 border border-blue-900/60">{row.thesis_key}</span>
-            </div>
-          )}
+        {/* Por que esse match — versão compacta com SHAP + cenários */}
+        <div className="mt-5">
+          <MatchWhyCard match={fullRow} compact />
         </div>
 
         {/* Contatos */}

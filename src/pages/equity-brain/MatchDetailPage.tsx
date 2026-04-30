@@ -14,6 +14,7 @@ import { getWhatsAppLink, normalizeBrPhone } from "@/lib/whatsapp";
 import { QuickStartMandateDialog } from "@/components/equity-brain/match/QuickStartMandateDialog";
 import { AddContactDialog } from "@/components/equity-brain/match/AddContactDialog";
 import { RequestDisclosureDialog } from "@/components/equity-brain/RequestDisclosureDialog";
+import { MatchWhyCard } from "@/components/equity-brain/match/MatchWhyCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { OUTCOMES, relativeTime } from "@/lib/equityBrain";
@@ -256,23 +257,8 @@ export default function MatchDetailPage() {
         </div>
       </div>
 
-      {/* Por que esse match */}
-      <div className="rounded border border-zinc-800 bg-zinc-900/40 p-4">
-        <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 inline-flex items-center gap-1">
-          <Sparkles className="h-3 w-3 text-[#D9F564]" /> Por que esse match
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <FitBar label="Setor" value={row.setor_fit} />
-          <FitBar label="Geografia" value={row.geografia_fit} />
-          <FitBar label="Porte" value={row.porte_fit} />
-          <FitBar label="Tese" value={row.tese_fit} />
-        </div>
-        {row.thesis_key && (
-          <div className="mt-2 text-[10px] text-zinc-400">
-            Tese acionada: <span className="px-1.5 py-0.5 rounded bg-blue-950/40 text-blue-300 border border-blue-900/60">{row.thesis_key}</span>
-          </div>
-        )}
-      </div>
+      {/* Por que esse match — agora com SHAP completo, p_close, EV, razões e contrafactual */}
+      <MatchWhyCard match={row} />
 
       {/* Contatos */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
