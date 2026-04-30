@@ -106,6 +106,32 @@ export default function IspImportPage() {
     } finally { setComputing(false); }
   }
 
+  async function generateColdMatches(asDry: boolean) {
+    setMatching(true); if (!asDry) setMatchResult(null);
+    try {
+      const periodIso = periodRef ? `${periodRef}-01` : null;
+      const { data, error } = await supabase.functions.invoke("eb-match-isp-cold", {
+        body: { period_ref: periodIso, dry_run: asDry },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (asDry) {
+        toast.success(`Preview: ${data.candidate_matches} candidatos · ${data.companies_with_thesis_fit} empresas com fit · ${data.active_buyers} buyers`);
+      } else {
+        setMatchResult({
+          period_ref: data.period_ref,
+          matches_inserted: data.matches_inserted ?? 0,
+          thesis_links_upserted: data.thesis_links_upserted ?? 0,
+          companies_with_thesis_fit: data.companies_with_thesis_fit ?? 0,
+          buyers_targeted: data.buyers_targeted ?? 0,
+        });
+        toast.success(`${data.matches_inserted} sugestões frias geradas (não criam companies, sem notificações)`);
+      }
+    } catch (e: any) {
+      toast.error("Erro ao gerar matches: " + (e.message || "desconhecido"));
+    } finally { setMatching(false); }
+  }
+
   return (
     <div className="p-6 space-y-5 bg-zinc-950 min-h-full">
       <Link to="/equity-brain/crm/imports" className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100">
