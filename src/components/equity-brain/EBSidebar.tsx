@@ -49,7 +49,7 @@ export function EBSidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {items.map(({ to, label, Icon, end, badge }) => (
           <NavLink
             key={to}
@@ -73,6 +73,31 @@ export function EBSidebar() {
             )}
           </NavLink>
         ))}
+
+        {canSeeData && (
+          <>
+            <div className="pt-4 pb-1 px-3 text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">
+              Dados
+            </div>
+            {dataItems.map(({ to, label, Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                    isActive
+                      ? "bg-emerald-950/40 text-emerald-300 border border-emerald-900/60"
+                      : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
+                  )
+                }
+              >
+                <Icon className="h-4 w-4" />
+                <span className="flex-1">{label}</span>
+              </NavLink>
+            ))}
+          </>
+        )}
       </nav>
 
       <div className="border-t border-zinc-800 p-3 space-y-1">
