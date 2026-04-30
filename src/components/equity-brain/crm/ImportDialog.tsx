@@ -70,10 +70,11 @@ export function ImportDialog({ open, onOpenChange, entity, onSuccess }: Props) {
       setResults(data.results);
       const totalIn = (data.results || []).reduce((s: number, r: ImportResult) => s + r.inserted, 0);
       const totalErr = (data.results || []).reduce((s: number, r: ImportResult) => s + r.errors.length, 0);
+      const totalWarn = (data.results || []).reduce((s: number, r: ImportResult) => s + (r.warnings?.length || 0), 0);
       if (asDry) {
-        toast.success(`Validação: ${totalIn} OK · ${totalErr} erros`);
+        toast.success(`Validação: ${totalIn} OK · ${totalWarn} avisos · ${totalErr} erros`);
       } else {
-        toast.success(`${totalIn} registros importados — recálculo em background`);
+        toast.success(`${totalIn} importados · ${totalWarn} avisos · ${totalErr} erros — recálculo em background`);
         onSuccess?.();
       }
     } catch (err: any) {
