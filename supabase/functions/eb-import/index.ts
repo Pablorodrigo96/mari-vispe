@@ -410,6 +410,11 @@ async function processMandates(
   }
   if (dry || !valid.length) {
     result.inserted = valid.length;
+    if (dry) {
+      valid.forEach((m, i) => {
+        cnpjToId[m.company_cnpj] = `00000000-0000-0000-0000-${String(1000 + i).padStart(12, "0")}`;
+      });
+    }
     return { result, cnpjToId };
   }
 
