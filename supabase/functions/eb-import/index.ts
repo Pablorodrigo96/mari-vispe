@@ -432,6 +432,33 @@ async function processMandates(
   return { result, cnpjToId };
 }
 
+// Normaliza nome para chave de lookup: lowercase, sem acento, sem pontuação leve, espaços colapsados.
+const nkey = (s: any) => String(s ?? "")
+  .toLowerCase()
+  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/[.,;:'"`´]/g, "")
+  .replace(/\s+/g, " ")
+  .trim();
+
+// Variações úteis para lookup:
+// "EBT (ENORMITY)" -> ["ebt (enormity)", "ebt", "enormity"]
+// "CEUNET + 8G TELECOM + LIVE CONNECT" -> [..., "ceunet", "8g telecom", "live connect"]
+function nameVariants(raw: string): string[] {
+  const out = new Set<string>();
+  const s = String(raw || "");
+  if (!s.trim()) return [];
+  out.add(nkey(s));
+  const stripped = s.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  if (stripped) out.add(nkey(stripped));
+  for (const m of s.matchAll(/\(([^)]+)\)/g)) {
+    const inside = m[1].trim();
+    if (inside) out.add(nkey(inside));
+  }
+  const parts = s.split(/\s*[+,/]\s*| - /).map((p) => p.replace(/\([^)]*\)/g, "").trim()).filter(Boolean);
+  if (parts.length > 1) parts.forEach((p) => out.add(nkey(p)));
+  return Array.from(out).filter(Boolean);
+}
+
 async function processContacts(
   supabase: any,
   rows: Record<string, any>[],
@@ -441,47 +468,56 @@ async function processContacts(
 ): Promise<EntityResult> {
   const result: EntityResult = { entity: "contacts", inserted: 0, updated: 0, skipped: 0, errors: [], warnings: [], ids: [] };
 
-  // Pré-carrega buyers e companies que possam ser referenciados mas não estejam no mapa local.
-  // Isso permite importar contatos isoladamente, referenciando entidades já no banco.
-  const referencedBuyerNames = new Set<string>();
-  const referencedCompanyCnpjs = new Set<string>();
-  const referencedMandateRefs = new Set<string>();
-  rows.forEach((r) => {
-    const et = normEntityType(pick(r, "entity_type"));
-    const eid = pick(r, "entity_id");
-    if (!et || !eid) return;
-    if (et === "buyer" && !ctx.buyerNameToId[String(eid).toLowerCase()]) {
-      // pode já ser um UUID
-      if (!/^[0-9a-f-]{36}$/i.test(String(eid))) referencedBuyerNames.add(String(eid));
+  // 1) Pré-carrega tudo do banco e indexa em memória.
+  const { data: allBuyers } = await supabase.schema("equity_brain").from("buyers").select("id,nome");
+  const buyerIdx: Record<string, string> = {};
+  (allBuyers || []).forEach((b: any) => {
+    nameVariants(b.nome).forEach((v) => { if (v && !buyerIdx[v]) buyerIdx[v] = b.id; });
+  });
+  Object.entries(ctx.buyerNameToId).forEach(([k, v]) => { if (!buyerIdx[k]) buyerIdx[k] = v; });
+
+  // Mandates: indexa por cnpj e pelas variações da razão social/nome_fantasia da empresa.
+  const { data: allMandates } = await supabase.schema("equity_brain").from("mandates")
+    .select("id, company_cnpj");
+  const mandateIdx: Record<string, string> = {};
+  const mandateCnpjs: string[] = [];
+  (allMandates || []).forEach((m: any) => {
+    if (m.company_cnpj) { mandateIdx[`cnpj:${m.company_cnpj}`] = m.id; mandateCnpjs.push(m.company_cnpj); }
+  });
+  Object.entries(ctx.mandateCnpjToId).forEach(([cnpj, id]) => { mandateIdx[`cnpj:${cnpj}`] = id; mandateCnpjs.push(cnpj); });
+
+  // Companies: por cnpj e por nome_fantasia/razão_social.
+  const { data: allCompanies } = await supabase.schema("equity_brain").from("companies")
+    .select("id, cnpj, razao_social, nome_fantasia");
+  const companyIdx: Record<string, string> = {};
+  const cnpjToCompany: Record<string, { razao_social: string|null; nome_fantasia: string|null }> = {};
+  (allCompanies || []).forEach((c: any) => {
+    if (c.cnpj) {
+      companyIdx[`cnpj:${c.cnpj}`] = c.id;
+      cnpjToCompany[c.cnpj] = { razao_social: c.razao_social, nome_fantasia: c.nome_fantasia };
     }
-    if (et === "company") {
-      const c = normalizeCnpj(eid);
-      if (c) referencedCompanyCnpjs.add(c);
-    }
-    if (et === "mandate") {
-      const c = normalizeCnpj(eid);
-      if (c && !ctx.mandateCnpjToId[c] && !/^[0-9a-f-]{36}$/i.test(String(eid))) referencedMandateRefs.add(c);
-    }
+    [...nameVariants(c.razao_social || ""), ...nameVariants(c.nome_fantasia || "")].forEach((v) => {
+      if (v && !companyIdx[`name:${v}`]) companyIdx[`name:${v}`] = c.id;
+    });
+  });
+  // Cruza mandates × companies para indexar mandates por nome também.
+  (allMandates || []).forEach((m: any) => {
+    const c = m.company_cnpj ? cnpjToCompany[m.company_cnpj] : null;
+    if (!c) return;
+    [...nameVariants(c.razao_social || ""), ...nameVariants(c.nome_fantasia || "")].forEach((v) => {
+      if (v && !mandateIdx[`name:${v}`]) mandateIdx[`name:${v}`] = m.id;
+    });
   });
 
-  if (referencedBuyerNames.size > 0) {
-    const { data } = await supabase.schema("equity_brain").from("buyers")
-      .select("id,nome").in("nome", Array.from(referencedBuyerNames));
-    (data || []).forEach((b: any) => { ctx.buyerNameToId[b.nome.toLowerCase()] = b.id; });
-  }
-  const companyCnpjToId: Record<string, string> = {};
-  if (referencedCompanyCnpjs.size > 0) {
-    const { data } = await supabase.schema("equity_brain").from("companies")
-      .select("id,cnpj").in("cnpj", Array.from(referencedCompanyCnpjs));
-    (data || []).forEach((c: any) => { companyCnpjToId[c.cnpj] = c.id; });
-  }
-  if (referencedMandateRefs.size > 0) {
-    const { data } = await supabase.schema("equity_brain").from("mandates")
-      .select("id,company_cnpj").in("company_cnpj", Array.from(referencedMandateRefs));
-    (data || []).forEach((m: any) => { ctx.mandateCnpjToId[m.company_cnpj] = m.id; });
-  }
+  // 2) Resolver linha-a-linha. Buyers que falharem viram stubs em batch.
+  const buyersToStub: Record<string, { rowIdx: number; original: string }> = {};
+  type Pending = {
+    row: number; entity_type: "buyer"|"company"|"mandate"; entity_id: string|null;
+    nome: string; email: string|null; phone: string|null; cargo: string|null;
+    is_primary: boolean; pendingStubKey?: string;
+  };
+  const pending: Pending[] = [];
 
-  const valid: any[] = [];
   rows.forEach((r, i) => {
     const et = normEntityType(pick(r, "entity_type"));
     const eidRaw = pick(r, "entity_id");
@@ -490,42 +526,117 @@ async function processContacts(
     const phone = pick(r, "telefone", "phone");
     if (!et || !eidRaw) { result.errors.push({ row: i + 2, msg: "entity_type e entity_id obrigatórios" }); return; }
     if (!nome) { result.errors.push({ row: i + 2, field: "nome", msg: "Nome obrigatório" }); return; }
+    if (!email && !phone) result.warnings.push({ row: i + 2, msg: "sem email/telefone — contato criado só com nome+cargo" });
 
-    // Resolver entity_id → UUID
-    let entity_id: string | null = null;
     const eidStr = String(eidRaw).trim();
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eidStr)) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eidStr);
+    let entity_id: string | null = null;
+    let pendingStubKey: string | undefined;
+
+    if (isUuid) {
       entity_id = eidStr;
     } else if (et === "buyer") {
-      entity_id = ctx.buyerNameToId[eidStr.toLowerCase()] || null;
+      for (const v of nameVariants(eidStr)) { if (buyerIdx[v]) { entity_id = buyerIdx[v]; break; } }
+      if (!entity_id) {
+        const key = nkey(eidStr) || `stub-${i}`;
+        pendingStubKey = key;
+        if (!buyersToStub[key]) buyersToStub[key] = { rowIdx: i + 2, original: eidStr };
+      }
     } else if (et === "company") {
       const c = normalizeCnpj(eidStr);
-      entity_id = c ? (companyCnpjToId[c] || null) : null;
+      if (c && companyIdx[`cnpj:${c}`]) entity_id = companyIdx[`cnpj:${c}`];
+      else for (const v of nameVariants(eidStr)) { if (companyIdx[`name:${v}`]) { entity_id = companyIdx[`name:${v}`]; break; } }
     } else if (et === "mandate") {
       const c = normalizeCnpj(eidStr);
-      entity_id = c ? (ctx.mandateCnpjToId[c] || null) : null;
+      if (c && mandateIdx[`cnpj:${c}`]) entity_id = mandateIdx[`cnpj:${c}`];
+      else for (const v of nameVariants(eidStr)) { if (mandateIdx[`name:${v}`]) { entity_id = mandateIdx[`name:${v}`]; break; } }
     }
-    if (!entity_id) {
-      result.errors.push({ row: i + 2, field: "entity_id", msg: `${et} '${eidStr}' não encontrado (nem na planilha, nem no banco)` });
+
+    if (!entity_id && !pendingStubKey) {
+      result.errors.push({ row: i + 2, field: "entity_id", msg: `${et} '${eidStr}' não encontrado (busquei UUID, CNPJ, nome exato, alias entre parênteses e variações)` });
       return;
     }
 
-    if (!email && !phone) {
-      result.warnings.push({ row: i + 2, msg: "sem email/telefone — contato criado só com nome+cargo" });
-    }
-
-    valid.push({
-      entity_type: et,
+    pending.push({
+      row: i + 2,
+      entity_type: et as any,
       entity_id,
       nome: String(nome),
       email: email || null,
-      telefone_e164: phone ? String(phone) : null,
+      phone: phone ? String(phone) : null,
       cargo: pick(r, "cargo") || null,
       is_primary: toBool(pick(r, "is_primary")),
+      pendingStubKey,
+    });
+  });
+
+  // 3) Cria buyer-stubs em batch (real ou simulado em dry-run).
+  const stubKeys = Object.keys(buyersToStub);
+  const stubResolved: Record<string, string> = {};
+  if (stubKeys.length) {
+    if (dry) {
+      stubKeys.forEach((k, i) => {
+        stubResolved[k] = `00000000-0000-0000-0000-${String(900000 + i).padStart(12, "0")}`;
+        result.warnings.push({
+          row: buyersToStub[k].rowIdx, field: "entity_id",
+          msg: `buyer '${buyersToStub[k].original}' não existia — será criado stub para revisão (qualification_status=pending)`,
+        });
+      });
+    } else {
+      const stubRows = stubKeys.map((k) => ({
+        nome: buyersToStub[k].original,
+        tipo: "estrategico",
+        status: "ativo",
+        qualification_status: "pending",
+        qualification_source: "import_contact_stub",
+        qualified_at: new Date().toISOString(),
+        qualified_by: userId,
+        source: "import_contact_stub",
+        observacoes: `Stub criado automaticamente em ${new Date().toISOString().slice(0, 10)} via import de contatos. Buyer não existia. Revisar e completar dados (tese, ticket, setores, regiões).`,
+      }));
+      const { data: stubData, error: stubErr } = await supabase
+        .schema("equity_brain").from("buyers").insert(stubRows).select("id, nome");
+      if (stubErr) {
+        result.errors.push({ row: 0, msg: `falha ao criar buyer-stubs: ${stubErr.message}` });
+      } else {
+        (stubData || []).forEach((b: any) => {
+          const k = nkey(b.nome);
+          stubResolved[k] = b.id;
+          buyerIdx[k] = b.id;
+        });
+        stubKeys.forEach((k) => {
+          if (stubResolved[k]) {
+            result.warnings.push({
+              row: buyersToStub[k].rowIdx, field: "entity_id",
+              msg: `buyer '${buyersToStub[k].original}' não existia — stub criado (qualification_status=pending). Revisar em CRM › Buyers.`,
+            });
+          }
+        });
+      }
+    }
+  }
+
+  // 4) Monta valid list resolvendo stubs pendentes.
+  const valid: any[] = [];
+  for (const p of pending) {
+    let eid = p.entity_id;
+    if (!eid && p.pendingStubKey) eid = stubResolved[p.pendingStubKey] || null;
+    if (!eid) {
+      result.errors.push({ row: p.row, field: "entity_id", msg: "stub não pôde ser resolvido" });
+      continue;
+    }
+    valid.push({
+      entity_type: p.entity_type,
+      entity_id: eid,
+      nome: p.nome,
+      email: p.email,
+      telefone_e164: p.phone,
+      cargo: p.cargo,
+      is_primary: p.is_primary,
       source: "import",
       created_by: userId,
     });
-  });
+  }
 
   if (dry || !valid.length) { result.inserted = valid.length; return result; }
   const { data, error } = await supabase.schema("equity_brain").from("contacts").insert(valid).select("id");
