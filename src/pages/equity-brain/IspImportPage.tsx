@@ -40,6 +40,8 @@ export default function IspImportPage() {
   const [history, setHistory] = useState<ImportRecord[]>([]);
   const [computing, setComputing] = useState(false);
   const [computeResult, setComputeResult] = useState<{ period_ref: string; cities_computed: number; companies_computed: number } | null>(null);
+  const [matching, setMatching] = useState(false);
+  const [matchResult, setMatchResult] = useState<{ period_ref: string; matches_inserted: number; thesis_links_upserted: number; companies_with_thesis_fit: number; buyers_targeted: number } | null>(null);
 
   useEffect(() => { loadHistory(); }, []);
 
