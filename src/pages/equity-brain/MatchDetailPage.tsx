@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Building2, Target, MessageCircle, Phone, Mail,
-  Eye, Rocket, ShieldCheck, Sparkles, Copy, Loader2, Hash,
+  Eye, Rocket, ShieldCheck, Copy, Loader2, Hash,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,21 +19,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { OUTCOMES, relativeTime } from "@/lib/equityBrain";
 import { cn } from "@/lib/utils";
-
-function FitBar({ label, value }: { label: string; value: number | null }) {
-  const pct = value == null ? 0 : Math.round(Number(value) * 100);
-  return (
-    <div>
-      <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
-        <span>{label}</span>
-        <span className="tabular-nums text-zinc-200">{value == null ? "—" : `${pct}%`}</span>
-      </div>
-      <div className="h-1.5 rounded bg-zinc-800 overflow-hidden">
-        <div className="h-full bg-[#D9F564]" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
 
 function ContactRow({ c, side }: { c: MatchContact; side: "buyer" | "seller" }) {
   const phone = normalizeBrPhone(c.telefone_e164);
