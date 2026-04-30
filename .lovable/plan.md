@@ -1,72 +1,60 @@
-## Diagnóstico (com a planilha já aberta)
+Cinco correções pontuais. Todas independentes — podem ir num único deploy.
 
-A aba `contacts` tem **450 linhas** referenciando 3 tipos de entidade:
+## 1. Buyers não aparecem após cadastro
 
-| entity_type | linhas | situação atual |
-|---|---|---|
-| buyer | 294 | 179 referem buyers que existem; **112 buyers únicos** referenciados não estão na planilha nem no banco (ex.: `EBT (ENORMITY)`, `FIX FIBRA`, `CEUNET + 8G TELECOM + LIVE CONNECT`, `D'CESARY`) |
-| mandates | 115 | `entity_id` é o **alias entre parens** da razão social do mandato (ex.: `ABENET` casa com `Abenet Provedora de Acesso a Internet Ltda (ABENET)`) — resolver atual procura só por CNPJ → falha 100% |
-| companies | 41 | `entity_id` é nome curto/fantasia (ex.: `GESTOR PDV`, `VUCA SOLUTION`) — resolver atual procura só por CNPJ → falha 100% |
+**Causa real:** Os 200 buyers da ANATEL e os recém-criados manualmente nascem com `vertical_principal = NULL`. O `useVertical` tem default `isp` (mapeado para `'telecom'`), e a query filtra `.eq("vertical_principal","telecom")`, escondendo todos os 484 buyers sem vertical preenchido. No banco temos 503 buyers, só 19 com `telecom`.
 
-Por isso o dry-run mostrou 181 OK · 269 erros.
+**Fix:**
+- Em `src/pages/equity-brain/BuyersPage.tsx`, mudar o filtro para incluir `vertical_principal IS NULL` quando uma vertical específica está selecionada: `q = q.or('vertical_principal.eq.${buyerVerticalKey},vertical_principal.is.null')`.
+- Ao criar buyer manualmente, preencher `vertical_principal` com `buyerVerticalKey` (quando não for `null`), para os novos já caírem na vertical correta.
+- Migração leve: `UPDATE equity_brain.buyers SET vertical_principal='telecom' WHERE vertical_principal IS NULL AND source IN ('import_anatel','anatel_promote')` — para a base ANATEL aparecer no filtro ISP.
 
-## O que vou fazer
+## 2. Adicionar contato falha com "invalid input syntax for type uuid"
 
-### 1. Reescrever `processContacts` em `supabase/functions/eb-import/index.ts`
+**Causa:** `equity_brain.contacts.entity_id` é coluna `uuid`. O `AddContactDialog` é chamado com `entityType="company" entityId={cnpj}` (DealCard linhas 257, 276, 300; MatchDetailDrawer; MatchDetailPage), passando o CNPJ (14 dígitos) — ou pior, o codename — para uma coluna UUID.
 
-Resolver multi-camada com índice em memória (1 query por tipo, depois tudo on-the-fly):
-
-- **Pré-carrega** todos buyers, companies e mandates do banco e indexa por:
-  - UUID exato
-  - CNPJ
-  - nome normalizado (lowercase, sem acento, sem pontuação leve)
-  - **strip de parênteses** (`EBT (ENORMITY)` → tenta também `EBT` e `ENORMITY`)
-  - **splits por `+`, `,`, `/`, ` - `** (`CEUNET + 8G TELECOM + LIVE CONNECT` → tenta cada parte)
-  - para mandates: também usa `parens(razao_social)` da empresa do mandato
-  - para companies: também usa `nome_fantasia`
-
-- Para `buyer` que mesmo assim não casar: **auto-cria stub** em batch com:
-  - `tipo='estrategico'`, `qualification_status='pending'`, `source='import_contact_stub'`
-  - `observacoes` registrando que precisa revisão
-  - vira **warning** (não erro) na resposta
-
-- Para `mandate`/`company` que não casar: continua **erro** (não dá para criar stub seguro de mandato/empresa sem CNPJ).
-
-### 2. Atualizar `ImportDialog.tsx`
-
-Hoje só renderiza `errors`. Vou adicionar bloco **warnings** (laranja) ao lado, mostrando contagem e detalhes (até 10 visíveis). Toast final passa a mostrar `X OK · Y warnings · Z erros`.
-
-### 3. Deploy automático do edge function
-
-Lovable já deploya sozinho ao salvar; vou aguardar 5–10s e validar que está vivo.
-
-### 4. Subir a planilha eu mesmo via `supabase--curl_edge_functions`
-
-- Leio `/tmp/monday.xlsx` que já está no sandbox.
-- Converto cada aba para o formato `bundle` esperado.
-- Chamo `POST /functions/v1/eb-import` com `dry_run=true` primeiro → mostro relatório.
-- Se passar, chamo de novo com `dry_run=false` → import real, dispara recálculo de matches/scores em background.
-
-### 5. Relatório final
-
-Vou reportar (em chat):
-- inseridos por entidade
-- buyers stubs criados (lista)
-- erros remanescentes (se houver) com linha + motivo
-- onde revisar (CRM › Buyers › filtro `qualification_status=pending`)
-
-## Resultado esperado
-
+**Fix em `AddContactDialog.tsx`:** quando `entityType === "company"`, resolver o `company.id` (uuid) a partir do CNPJ antes do insert:
 ```
-companies:  48 OK · 0 erros · 48 warnings (placeholder CNPJ)
-buyers:    179 OK · 0 erros
-mandates:  115 OK · 0 erros · 62 warnings (valor_pedido vazio)
-contacts:  450 OK · 0 erros · ~180 warnings (~112 stubs + sem email/telefone)
-activities:  0 OK · 1 erro (linha de exemplo "uuid-do-mandato")
+const { data: comp } = await supabase.schema("equity_brain")
+  .from("companies").select("id").eq("cnpj", cnpj14).maybeSingle();
+if (!comp) throw new Error("Empresa não encontrada na base");
+payload.entity_id = comp.id;
 ```
+Manter o `entityId` da prop como input (CNPJ ou codename) e fazer `cnpj14 = entityId.replace(/\D/g,'')`. Se não for CNPJ válido, tentar resolver via `codename`.
 
-Total: **792 registros importados, 0 erros bloqueantes**.
+## 3. Jarvis 3D abre cortado na primeira vez
 
-Sem mudança de schema. Sem migration. Tudo reversível: stubs de buyers ficam isolados pelo `qualification_status='pending'` e podem ser deletados/mesclados depois.
+**Causa:** `JarvisGraph3D` mede `containerRef.current.clientWidth/Height` no mount, mas o sidebar/topbar do AppShell ainda estão se acomodando, então pega largura menor. Não há observer.
 
-Posso seguir?
+**Fix:** adicionar `ResizeObserver` no `containerRef` que dispara `setSize(...)` e `fgRef.current?.refresh()` em qualquer mudança. Também forçar um re-measure após `requestAnimationFrame` 2x no mount (`rAF → rAF → measure`) para pegar o layout estabilizado.
+
+## 4. Não consigo registrar call
+
+**Causa:** Edge function `feedback-from-call` valida `raw_notes.length >= 20` e rejeita com 400. O usuário digitou `"aassdasa"` (8 chars). O frontend só mostra "Edge Function returned a non-2xx status code", sem o detalhe.
+
+**Fix duplo:**
+- **UI (`QuickCallModal.tsx`):** se `notes.length > 0 && notes.length < 20`, desabilitar botão e mostrar hint "Mínimo 20 caracteres ou deixe vazio". Se vazio, enviar `raw_notes: undefined` (já faz). Atualizar o label "≥ 50 chars dispara IA" para "≥ 20 chars (≥ 50 dispara IA)".
+- **Mostrar erro real:** ao receber `error` do `supabase.functions.invoke`, tentar ler `error.context?.body` ou `error.message` e exibir no toast em vez de só "non-2xx".
+
+## 5. Stripe Upgrade off
+
+**Causa:** Botão "Fazer Upgrade" em `MyProfile.tsx:533` está com `onClick={() => toast.info('Integração de pagamento em breve!')}`. Já existe edge function `create-checkout` deployada e a integração Stripe está enabled.
+
+**Fix:** trocar o handler por `handleUpgrade` que chama:
+```
+const { data, error } = await supabase.functions.invoke('create-checkout');
+if (data?.url) window.open(data.url, '_blank');
+```
+Conferir se `create-checkout` já tem o `price_id` do plano Master configurado; se não, perguntar ao usuário qual price_id usar (ou criar produto Master R$99/mês na Stripe).
+
+## Bonus — busca "Vispe Capital" na Matching
+
+A imagem 114 mostra "Edge Function returned a non-2xx status code" para Vispe Capital. O `company-lookup` retorna 404 quando não encontra listing — frontend deveria capturar e mostrar "Nenhum negócio encontrado", mas o `supabase-js` trata 404 como `fnError` e `data` fica null, gerando o toast genérico. Fix: no edge function, trocar 404 por 200 com `{ error: "..." }` (que o frontend já trata em `if (data.error)`).
+
+## Ordem de execução
+1. SQL migration (UPDATE vertical_principal ANATEL).
+2. Edits de UI (BuyersPage, AddContactDialog, JarvisGraph3D, QuickCallModal, MyProfile, CompanySearchCard).
+3. Editar `company-lookup/index.ts` (404 → 200 + error).
+4. Deploy automático das edge functions.
+
+Sem novas tabelas, sem novos secrets. Tempo: ~10 min de implementação.
