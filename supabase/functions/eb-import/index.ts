@@ -278,6 +278,12 @@ async function processBuyers(
   const nameToId: Record<string, string> = {};
   if (dry || !valid.length) {
     result.inserted = valid.length;
+    // Em dry-run, popular nameToId com UUIDs sintéticos para que o lookup de contacts valide.
+    if (dry) {
+      valid.forEach((b, i) => {
+        nameToId[String(b.nome).toLowerCase()] = `00000000-0000-0000-0000-${String(i).padStart(12, "0")}`;
+      });
+    }
     return { result, nameToId };
   }
 
