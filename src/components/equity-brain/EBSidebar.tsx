@@ -1,9 +1,10 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight } from "lucide-react";
+import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
 import { useMatchPercentiles, useMatchInbox } from "@/hooks/useMatchInbox";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
 const items = [
   { to: "/equity-brain",                label: "Dashboard",       Icon: LayoutDashboard, end: true },
@@ -20,12 +21,21 @@ const items = [
   { to: "/equity-brain/shadow",         label: "Shadow v1↔v2",    Icon: Sparkles },
 ];
 
+const dataItems = [
+  { to: "/equity-brain/crm/imports",    label: "Imports",         Icon: Upload },
+  { to: "/equity-brain/isp/import",     label: "ISP Anatel",      Icon: Wifi },
+  { to: "/equity-brain/isp/sugestoes",  label: "ISP Sugestões",   Icon: Zap },
+  { to: "/equity-brain/isp/mercado",    label: "ISP Mercado",     Icon: BarChart3 },
+];
+
 export function EBSidebar() {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const { data: pcts } = useMatchPercentiles();
   const { data: hotMatches = [] } = useMatchInbox({ minScore: pcts?.hot ?? 70, limit: 200 });
   const hotCount = hotMatches.length;
+  const { roles } = useUserRoles();
+  const canSeeData = roles.includes("admin") || roles.includes("advisor");
 
   return (
     <aside className="w-60 shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
