@@ -722,10 +722,12 @@ Deno.serve(async (req) => {
     const auth = req.headers.get("Authorization");
     if (!auth) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    // Admin client (service role) — NO user Authorization header,
+    // otherwise PostgREST honors the user JWT and falls back to RLS.
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { global: { headers: { Authorization: auth } } },
+      { auth: { persistSession: false, autoRefreshToken: false } },
     );
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
