@@ -1,9 +1,10 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight } from "lucide-react";
+import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
 import { useMatchPercentiles, useMatchInbox } from "@/hooks/useMatchInbox";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
 const items = [
   { to: "/equity-brain",                label: "Dashboard",       Icon: LayoutDashboard, end: true },
@@ -20,12 +21,21 @@ const items = [
   { to: "/equity-brain/shadow",         label: "Shadow v1↔v2",    Icon: Sparkles },
 ];
 
+const dataItems = [
+  { to: "/equity-brain/crm/imports",    label: "Imports",         Icon: Upload },
+  { to: "/equity-brain/isp/import",     label: "ISP Anatel",      Icon: Wifi },
+  { to: "/equity-brain/isp/sugestoes",  label: "ISP Sugestões",   Icon: Zap },
+  { to: "/equity-brain/isp/mercado",    label: "ISP Mercado",     Icon: BarChart3 },
+];
+
 export function EBSidebar() {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const { data: pcts } = useMatchPercentiles();
   const { data: hotMatches = [] } = useMatchInbox({ minScore: pcts?.hot ?? 70, limit: 200 });
   const hotCount = hotMatches.length;
+  const { roles } = useUserRoles();
+  const canSeeData = roles.includes("admin") || roles.includes("advisor");
 
   return (
     <aside className="w-60 shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
@@ -39,7 +49,7 @@ export function EBSidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {items.map(({ to, label, Icon, end, badge }) => (
           <NavLink
             key={to}
@@ -63,6 +73,31 @@ export function EBSidebar() {
             )}
           </NavLink>
         ))}
+
+        {canSeeData && (
+          <>
+            <div className="pt-4 pb-1 px-3 text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">
+              Dados
+            </div>
+            {dataItems.map(({ to, label, Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                    isActive
+                      ? "bg-emerald-950/40 text-emerald-300 border border-emerald-900/60"
+                      : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
+                  )
+                }
+              >
+                <Icon className="h-4 w-4" />
+                <span className="flex-1">{label}</span>
+              </NavLink>
+            ))}
+          </>
+        )}
       </nav>
 
       <div className="border-t border-zinc-800 p-3 space-y-1">
