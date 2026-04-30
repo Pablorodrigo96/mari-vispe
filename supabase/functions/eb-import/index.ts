@@ -741,7 +741,14 @@ Deno.serve(async (req) => {
     const allowed = (roles || []).some((r: any) => r.role === "admin" || r.role === "advisor");
     if (!allowed) return new Response(JSON.stringify({ error: "forbidden: admin or advisor required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const payload = (await req.json()) as ImportPayload;
+    let payload = (await req.json()) as ImportPayload & { bundle_url?: string };
+    // Support fetching a large bundle from a URL to avoid inline payload limits
+    if ((payload as any).bundle_url) {
+      const r = await fetch((payload as any).bundle_url);
+      if (!r.ok) return new Response(JSON.stringify({ error: `bundle_url fetch failed: ${r.status}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const fetched = await r.json();
+      payload = { entity: "bundle", bundle: fetched, dry_run: payload.dry_run };
+    }
     const dry = !!payload.dry_run;
     const userId = userData.user.id;
 
