@@ -12,6 +12,7 @@ const KB_FILES = [
   "08-metas-e-prioridades.md",
 ];
 
+const KB_PER_FILE_MAX = 5000; // chars
 let _kbCache: string | null = null;
 async function loadKnowledgeBase(): Promise<string> {
   if (_kbCache) return _kbCache;
@@ -20,7 +21,7 @@ async function loadKnowledgeBase(): Promise<string> {
     try {
       const url = new URL(`./kb/${f}`, import.meta.url);
       const text = await Deno.readTextFile(url);
-      parts.push(text);
+      parts.push(text.length > KB_PER_FILE_MAX ? text.slice(0, KB_PER_FILE_MAX) + "\n…[truncado]" : text);
     } catch (e) {
       console.warn(`KB load fail ${f}`, e);
     }
@@ -61,10 +62,10 @@ async function getLiveContext(supabase: any, userId: string, route?: string, ent
       .from("eb_matches_enriched")
       .select("id, match_score, codename, buyer_nome")
       .order("match_score", { ascending: false })
-      .limit(5);
+      .limit(3);
     if (matchErr) console.error("matches ctx err:", matchErr);
     if (matches?.length) {
-      parts.push(`TOP 5 MATCHES AGORA:\n${matches.map((m: any) => `- ${m.codename ?? "?"} ↔ ${m.buyer_nome ?? "?"} (score ${m.match_score})`).join("\n")}`);
+      parts.push(`TOP MATCHES AGORA:\n${matches.map((m: any) => `- ${m.codename ?? "?"} ↔ ${m.buyer_nome ?? "?"} (score ${m.match_score})`).join("\n")}`);
     }
   } catch (e) { console.error("matches ctx fail", e); }
 
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
     const auth = req.headers.get("Authorization");
     if (!auth) return new Response(JSON.stringify({ error: "no auth" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { thread_id, message, route, entity_type, entity_id } = await req.json();
+    const { thread_id, message, route, entity_type, entity_id, model: modelOverride } = await req.json();
     if (!message) {
       return new Response(JSON.stringify({ error: "message obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -132,7 +133,7 @@ Deno.serve(async (req) => {
       .select("role, content")
       .eq("thread_id", threadId)
       .order("created_at", { ascending: true })
-      .limit(20);
+      .limit(10);
 
     // Persiste mensagem do usuário
     await supabase.from("mari_brain_messages").insert({
@@ -181,7 +182,9 @@ ${liveCtx}`;
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        // Flash: ~3-5x mais rápido que Pro, suficiente para Q&A operacional.
+        // Cliente pode passar `model: "google/gemini-2.5-pro"` para análises pesadas.
+        model: modelOverride || "google/gemini-2.5-flash",
         messages,
         stream: true,
       }),
