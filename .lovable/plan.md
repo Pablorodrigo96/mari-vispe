@@ -1,265 +1,79 @@
+## Auditoria das Fases 1–6 — pontas soltas encontradas
 
-# Etapa 1 — Fundação de dados (migration única)
+Varredura completa do que foi entregue contra o plano original. Schema, edge functions, views, seeds, bucket e enum estão todos OK. Mas dois problemas reais ficaram:
 
-Antes de qualquer edge function ou tela, vamos preparar o schema. Tudo em uma migration só, idempotente, em `equity_brain`.
+---
 
-## 1.1 Estender enum `qualification_status`
+### Problema 1 — Trigger de proteção `guard_isp_promotion` não foi criado (CRÍTICO)
 
-Hoje só tem `qualified` / `unqualified`. Adicionar:
+O plano (item 1.7) previa um trigger `BEFORE UPDATE` em `equity_brain.companies` que bloqueia qualquer mudança de `qualification_status` em ISPs Anatel sem que haja um registro recente em `isp_promotion_log` (janela de 5s).
 
-```sql
-ALTER TYPE equity_brain.qualification_status ADD VALUE IF NOT EXISTS 'cold_market_map';
-ALTER TYPE equity_brain.qualification_status ADD VALUE IF NOT EXISTS 'cold_prospect';
-ALTER TYPE equity_brain.qualification_status ADD VALUE IF NOT EXISTS 'contacted';
-ALTER TYPE equity_brain.qualification_status ADD VALUE IF NOT EXISTS 'relationship_started';
-ALTER TYPE equity_brain.qualification_status ADD VALUE IF NOT EXISTS 'lost';
-ALTER TYPE equity_brain.qualification_status ADD VALUE IF NOT EXISTS 'do_not_contact';
+Verificação:
+```text
+SELECT trigger_name FROM information_schema.triggers
+ WHERE trigger_schema='equity_brain' AND trigger_name LIKE '%isp%';
+→ 0 rows
 ```
 
-`qualified` continua sendo "lead qualificado / em mandato".
+Impacto: a edge function `eb-promote-cold-isp` foi escrita assumindo que o trigger existe (linhas 128 e 173 do código: comentário "libera o trigger por 5s"). Hoje:
+- Qualquer admin/advisor pode dar `UPDATE` direto em `companies.qualification_status` de um ISP Anatel pulando o fluxo controlado.
+- Promoções fora do `eb-promote-cold-isp` não geram entrada em `isp_promotion_log` → perdemos auditoria, snapshot e rastreabilidade.
+- O `is_company_visible_in_crm()` da Fase 6 ainda funciona (porque ele lê o log), então uma promoção burlada **nem aparece no CRM**, deixando dados inconsistentes (status mudado mas empresa invisível).
 
-## 1.2 Tabelas novas
+Correção: criar a função `equity_brain.guard_isp_promotion()` e o trigger `trg_guard_isp_promotion` exatamente como no plano 1.7.
 
-```sql
--- Auditoria de cada upload
-CREATE TABLE equity_brain.isp_anatel_imports (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  file_name text NOT NULL,
-  file_url text,
-  period_ref date NOT NULL,
-  uploaded_by uuid NOT NULL,
-  uploaded_at timestamptz NOT NULL DEFAULT now(),
-  total_rows int DEFAULT 0,
-  inserted_rows int DEFAULT 0,
-  rejected_rows int DEFAULT 0,
-  dedup_rows int DEFAULT 0,
-  status text NOT NULL DEFAULT 'pending',
-  error_log jsonb DEFAULT '[]'::jsonb,
-  calc_version text DEFAULT 'v1'
-);
+---
 
--- Fato: provedor × município × período
-CREATE TABLE equity_brain.isp_market_entries (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  period_ref date NOT NULL,
-  source text NOT NULL DEFAULT 'ANATEL_BANDA_LARGA_FIXA',
-  cnpj varchar(14),
-  provider_name text NOT NULL,
-  provider_name_norm text NOT NULL,
-  uf char(2),
-  municipio text,
-  ibge_code text,
-  technology text,
-  service_type text DEFAULT 'banda_larga_fixa',
-  accesses int,
-  raw jsonb,
-  import_id uuid REFERENCES equity_brain.isp_anatel_imports(id) ON DELETE SET NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE UNIQUE INDEX isp_market_entries_uniq
-  ON equity_brain.isp_market_entries
-  (COALESCE(cnpj,''), COALESCE(ibge_code, provider_name_norm), period_ref, COALESCE(technology,''));
-CREATE INDEX isp_market_entries_cnpj ON equity_brain.isp_market_entries(cnpj);
-CREATE INDEX isp_market_entries_ibge ON equity_brain.isp_market_entries(ibge_code);
-CREATE INDEX isp_market_entries_period ON equity_brain.isp_market_entries(period_ref);
+### Problema 2 — Sidebar do Equity Brain sem links para Imports e ISP
 
--- Agregado por cidade × período
-CREATE TABLE equity_brain.isp_city_market_stats (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  period_ref date NOT NULL,
-  ibge_code text,
-  municipio text,
-  uf char(2),
-  total_accesses bigint,
-  n_providers int,
-  leader_cnpj varchar(14),
-  leader_share numeric,
-  top3_share numeric,
-  hhi numeric,
-  fragmentation_score numeric,
-  rollup_opportunity_score numeric,
-  dominant_player boolean DEFAULT false,
-  computed_at timestamptz NOT NULL DEFAULT now(),
-  calc_version text DEFAULT 'v1',
-  UNIQUE (period_ref, ibge_code)
-);
+`src/components/equity-brain/EBSidebar.tsx` lista 12 itens (Dashboard, Match Inbox, CRM, Board, Oportunidades, Mapa, Grafo, Jarvis, Buyers, Teses, Calls, Shadow). Não há entrada para:
 
--- Agregado por CNPJ × período
-CREATE TABLE equity_brain.isp_company_market_stats (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  period_ref date NOT NULL,
-  cnpj varchar(14) NOT NULL,
-  provider_name_norm text,
-  total_accesses bigint,
-  n_municipios int,
-  n_ufs int,
-  main_city_ibge text,
-  main_city_share numeric,
-  geographic_density numeric,
-  regional_presence_score numeric,
-  growth_vs_prev numeric,
-  fragmentation_exposure numeric,
-  rollup_target_score numeric,
-  local_leader_score numeric,
-  subscale_pressure_score numeric,
-  sellability_score numeric,
-  platform_potential_score numeric,
-  computed_at timestamptz NOT NULL DEFAULT now(),
-  calc_version text DEFAULT 'v1',
-  UNIQUE (period_ref, cnpj)
-);
+- `/equity-brain/crm/imports` (Bulk Imports — feature anterior, mas mesmo assim sem link na sidebar EB)
+- `/equity-brain/isp/import` (Anatel)
+- `/equity-brain/isp/sugestoes` (cold matches a revisar)
+- `/equity-brain/isp/mercado` (dashboard de mercado)
 
--- Vínculo lista-fria → tese rosa
-CREATE TABLE equity_brain.isp_thesis_link (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  cnpj varchar(14) NOT NULL,
-  thesis_key varchar NOT NULL REFERENCES equity_brain.investment_theses(thesis_key) ON DELETE CASCADE,
-  fit_score numeric,
-  reasons jsonb,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (cnpj, thesis_key)
-);
+Hoje o usuário só chega nas 3 páginas ISP via URL direta ou via card dentro de `ImportsPage`. Para um módulo que envolve 6 fases de trabalho, isso é descoberta zero.
 
--- Rastro de promoções
-CREATE TABLE equity_brain.isp_promotion_log (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  cnpj varchar(14) NOT NULL,
-  from_status equity_brain.qualification_status,
-  to_status equity_brain.qualification_status NOT NULL,
-  reason text,
-  thesis_key varchar,
-  promoted_by uuid NOT NULL,
-  promoted_at timestamptz NOT NULL DEFAULT now(),
-  snapshot jsonb
-);
-```
+Correção: adicionar grupo "Dados & ISP" na sidebar com:
+- Imports (`/equity-brain/crm/imports`) — ícone `Upload`
+- ISP Anatel (`/equity-brain/isp/import`) — ícone `Wifi` ou `Radio`
+- ISP Sugestões (`/equity-brain/isp/sugestoes`) — ícone `Sparkles` (badge se houver cold matches pendentes — opcional, fica fora do escopo)
+- ISP Mercado (`/equity-brain/isp/mercado`) — ícone `BarChart3`
 
-## 1.3 Flag de "match a partir de lista fria"
+Visíveis só para admin/advisor (já são as roles do RequireRole nas rotas; sidebar pode esconder se `useUserRoles` não tiver nenhuma das duas).
 
-```sql
-ALTER TABLE equity_brain.matches
-  ADD COLUMN IF NOT EXISTS is_cold_suggestion boolean NOT NULL DEFAULT false;
-CREATE INDEX IF NOT EXISTS matches_cold_idx ON equity_brain.matches(is_cold_suggestion);
-```
+---
 
-Usado pelo `match-company-v2` (etapa 4) para impedir que sugestões frias virem mandato/notificação automática.
+### Itens já OK (sem ação necessária)
 
-## 1.4 RLS — admin/advisor only
+- 6 tabelas `isp_*` criadas e com RLS
+- 4 views públicas `eb_isp_*` criadas (Fase 6)
+- 3 views legadas `v_isp_universe`, `v_opportunities_by_municipio`, `v_opportunities_by_uf` recriadas
+- 10 signal_catalog seeds `isp_*` populados
+- Enum `qualification_status` com 8 valores
+- Bucket `isp-anatel` criado e privado
+- Coluna `matches.is_cold_suggestion` existe
+- 4 edge functions ISP deployadas (`eb-import-anatel`, `eb-compute-isp-stats`, `eb-match-isp-cold`, `eb-promote-cold-isp`)
+- 3 páginas frontend criadas e roteadas
 
-Mesmo padrão de `equity_brain.companies`. Para cada uma das 6 tabelas novas:
+---
 
-```sql
-ALTER TABLE equity_brain.isp_anatel_imports ENABLE ROW LEVEL SECURITY;
-CREATE POLICY admin_advisor_all ON equity_brain.isp_anatel_imports
-  FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(),'admin') OR public.has_role(auth.uid(),'advisor'))
-  WITH CHECK (public.has_role(auth.uid(),'admin') OR public.has_role(auth.uid(),'advisor'));
--- (idem para isp_market_entries, isp_city_market_stats, isp_company_market_stats,
---  isp_thesis_link, isp_promotion_log)
-```
+## Plano de correção
 
-## 1.5 Recriar as 3 views ISP
+### Migration (1 arquivo)
+Criar `equity_brain.guard_isp_promotion()` (SECURITY DEFINER, search_path=public) + trigger `trg_guard_isp_promotion BEFORE UPDATE OF qualification_status ON equity_brain.companies`. Idempotente (DROP TRIGGER IF EXISTS antes).
 
-`v_isp_universe`, `v_opportunities_by_municipio`, `v_opportunities_by_uf` hoje existem como views vazias / sem definição válida. Recriar com `security_invoker = true` apontando para as novas tabelas:
+Teste embutido na própria migration (DO block) que tenta um UPDATE proibido em uma linha fictícia e confirma que levanta a EXCEPTION esperada — depois faz ROLLBACK do teste.
 
-```sql
-DROP VIEW IF EXISTS equity_brain.v_isp_universe CASCADE;
-CREATE VIEW equity_brain.v_isp_universe
-  WITH (security_invoker = true) AS
-SELECT
-  c.cnpj, c.razao_social, c.nome_fantasia, c.uf, c.municipio,
-  c.qualification_status, c.codename,
-  s.period_ref, s.total_accesses, s.n_municipios, s.n_ufs,
-  s.rollup_target_score, s.local_leader_score, s.subscale_pressure_score,
-  s.sellability_score, s.platform_potential_score
-FROM equity_brain.companies c
-JOIN equity_brain.isp_company_market_stats s ON s.cnpj = c.cnpj
-WHERE c.source = 'ANATEL_BANDA_LARGA_FIXA';
+### Frontend (1 arquivo)
+Editar `src/components/equity-brain/EBSidebar.tsx`:
+- Adicionar separador visual + label "Dados" entre "Shadow" e o footer
+- Adicionar 4 NavLinks (Imports, ISP Anatel, ISP Sugestões, ISP Mercado)
+- Esconder o grupo inteiro se o usuário não for admin nem advisor (via `useUserRoles`)
 
-DROP VIEW IF EXISTS equity_brain.v_opportunities_by_municipio CASCADE;
-CREATE VIEW equity_brain.v_opportunities_by_municipio
-  WITH (security_invoker = true) AS
-SELECT period_ref, ibge_code, municipio, uf,
-       total_accesses, n_providers, leader_cnpj, leader_share,
-       top3_share, hhi, fragmentation_score,
-       rollup_opportunity_score, dominant_player
-FROM equity_brain.isp_city_market_stats;
+Sem mexer em mais nada.
 
-DROP VIEW IF EXISTS equity_brain.v_opportunities_by_uf CASCADE;
-CREATE VIEW equity_brain.v_opportunities_by_uf
-  WITH (security_invoker = true) AS
-SELECT period_ref, uf,
-       SUM(total_accesses)            AS total_accesses,
-       SUM(n_providers)               AS n_providers_sum,
-       AVG(hhi)                       AS avg_hhi,
-       AVG(fragmentation_score)       AS avg_fragmentation,
-       AVG(rollup_opportunity_score)  AS avg_rollup_opportunity
-FROM equity_brain.isp_city_market_stats
-GROUP BY period_ref, uf;
-```
+---
 
-## 1.6 Seeds em `signal_catalog` (10 novos)
-
-Inserir sem sobrescrever existentes:
-
-```sql
-INSERT INTO equity_brain.signal_catalog (signal_key, category, description, default_weight, affects_scores)
-VALUES
- ('isp_rollup_target_score',         'consolidacao', 'ISP candidato a addon de plataforma regional',         0.10, ARRAY['thesis_fit','market_waves']),
- ('isp_local_leader_score',          'premium_asset','ISP líder municipal — ativo premium / plataforma',     0.10, ARRAY['strategic_fit','platform_addon']),
- ('isp_subscale_pressure_score',     'distress',     'ISP subescala em cidade dominada — pressão para vender',0.10,ARRAY['seller_intent']),
- ('isp_market_fragmentation_score',  'market',       'Cidade fragmentada (HHI baixo) — onda de roll-up',     0.08, ARRAY['market_waves','geographic_expansion']),
- ('isp_density_opportunity_score',   'sinergia',     'Buyer já atua na cidade → densidade local',            0.08, ARRAY['buyer_acquires_seller']),
- ('isp_geographic_expansion_score',  'sinergia',     'Buyer atua em UF/cidade próxima → expansão',           0.08, ARRAY['geographic_expansion']),
- ('isp_platform_potential_score',    'platform',     'ISP com base/regional para virar plataforma',          0.08, ARRAY['platform_addon']),
- ('isp_addon_candidate_score',       'platform',     'ISP pequeno ideal como addon de plataforma existente', 0.08, ARRAY['platform_addon']),
- ('isp_consolidation_wave_score',    'market',       'Onda de consolidação ativa no cluster regional',       0.08, ARRAY['market_waves','thesis_fit']),
- ('isp_sellability_score',           'seller',       'Probabilidade de o ISP aceitar venda no curto prazo',  0.10, ARRAY['seller_intent'])
-ON CONFLICT (signal_key) DO NOTHING;
-```
-
-## 1.7 Trigger defensivo — proteger CRM
-
-Garante que ISP Anatel só sai de `cold_market_map` via fluxo controlado (etapa 5). Bloqueia UPDATE direto que pule estágios sem registro em `isp_promotion_log`:
-
-```sql
-CREATE OR REPLACE FUNCTION equity_brain.guard_isp_promotion()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  IF OLD.source = 'ANATEL_BANDA_LARGA_FIXA'
-     AND OLD.qualification_status IS DISTINCT FROM NEW.qualification_status
-     AND NOT EXISTS (
-       SELECT 1 FROM equity_brain.isp_promotion_log
-       WHERE cnpj = NEW.cnpj
-         AND to_status = NEW.qualification_status
-         AND promoted_at > now() - interval '5 seconds'
-     ) THEN
-    RAISE EXCEPTION 'ISP Anatel: mudança de qualification_status só via promote-cold-isp (cnpj=%)', NEW.cnpj;
-  END IF;
-  RETURN NEW;
-END $$;
-
-CREATE TRIGGER trg_guard_isp_promotion
-  BEFORE UPDATE OF qualification_status ON equity_brain.companies
-  FOR EACH ROW EXECUTE FUNCTION equity_brain.guard_isp_promotion();
-```
-
-## 1.8 Validações pós-migration (read-only)
-
-Vou rodar:
-
-- `\dt equity_brain.isp_*` — confirmar 6 tabelas criadas
-- `SELECT signal_key FROM equity_brain.signal_catalog WHERE signal_key LIKE 'isp_%'` — confirmar 10 seeds
-- `SELECT enum_range(NULL::equity_brain.qualification_status)` — confirmar 8 valores
-- `SELECT * FROM equity_brain.v_isp_universe LIMIT 1` — view recriada (vazia, ok)
-
-## O que NÃO entra nesta etapa
-
-- Edge functions (etapas 2–4)
-- Telas / componentes (etapa 5)
-- Storage bucket (etapa 2)
-- Filtros defensivos no CRM (etapa 5)
-
-## Resultado esperado da Etapa 1
-
-Schema pronto para receber a base Anatel. Nenhuma UI, nenhum dado entrando ainda — só o "esqueleto" no banco, idempotente e com guarda de promoção. Após sua aprovação, sigo para a Etapa 2 (ingestão).
+Aprovando, executo as duas correções em sequência (migration + edit de sidebar).
