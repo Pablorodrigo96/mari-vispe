@@ -1,86 +1,64 @@
-## O que vamos resolver
+## Diagnóstico — 3 bugs reais confirmados no banco
 
-Hoje, ao clicar num match, três coisas estão quebradas:
-1. **Não existe uma página do match** — só um drawer lateral. Sem URL, sem ID, sem como compartilhar.
-2. **A "ficha da empresa" abre vazia** — a rota `/equity-brain/empresa/:cnpj` exige CNPJ, mas o link às vezes envia o **codename** (ex.: `VL60b55c58449f`) ou um `listing_id`. O `DealCard` não encontra nada e mostra "empresa não encontrada".
-3. **Botões da ficha são fake** — WhatsApp, Email e Salvar do `DealCard` não usam os contatos reais (estão sem handler).
+### 1. "Criar mandato" → erro `invalid` (3 enums errados)
+`QuickStartMandateDialog` envia valores que **não existem** nos enums de `equity_brain.mandates`:
 
-## O que vamos entregar
+| Campo enviado | Valor enviado | Enum real (banco) |
+|---|---|---|
+| `pipeline_stage` | `"qualificacao"` ❌ | `match \| nbo \| due_diligence \| spa \| closing \| closed` |
+| `outcome` | `"ativo"` ❌ | `em_andamento \| em_negociacao \| vigente \| vendemos \| vendeu_sozinho \| concluido \| cancelado \| vencido` |
+| `deal_type` | `"venda"` ❌ | `sellside \| buyside \| spa \| due_diligence \| cisao \| fusao \| nbo \| match` |
 
-### 1. Página dedicada do match: `/equity-brain/match/:matchId`
+**Correção:** trocar para `pipeline_stage='match'`, `outcome='em_andamento'`, `deal_type='sellside'`. Status `'vigente'` está OK.
 
-Cada linha do Match Inbox vira uma página própria com URL fixa que pode ser compartilhada/colada no CRM.
+### 2. "Empresa não encontrada" para `VL60b55c58449f`
+O `useCompanyResolver` só aceita 4 formatos canônicos. Na prática os matches gravam **CNPJs sintéticos** tipo `LST55316249134` (14 chars mas com letras), e alguns identificadores antigos vêm como `VL60xxxxxxxxxx` (ticker derivado de `listing.id`). Hoje o resolver:
+- rejeita `LST...` (não passa no `\d{14}`)
+- rejeita `VL60...` porque procura ticker exato em `listings.ticker`, mas isso **nunca foi gravado**
 
-```text
-┌────────────────────────────────────────────────────────────┐
-│ #MATCH-3f2a · Score 78 🔥 · Quente                         │
-│ MARI-VAR-0042 (vendedor) ──► Patria Equity (comprador)     │
-├──────────────────────┬─────────────────────────────────────┤
-│ VENDEDOR (ficha)     │ COMPRADOR (ficha)                   │
-│ • Razão / Codename   │ • Nome / Tipo                       │
-│ • Setor · UF · Fat.  │ • Ticket · Setores · UFs            │
-│ • Botão "Abrir 360"  │ • Botão "Abrir 360"                 │
-│ • WhatsApp / Tel /   │ • WhatsApp / Tel / Email REAIS      │
-│   Email REAIS        │                                     │
-├──────────────────────┴─────────────────────────────────────┤
-│ Por que esse match: barras Setor/Geo/Porte/Tese + thesis   │
-│ Próximos passos sugeridos (Mari Brain)                     │
-│ Histórico de contato (eb_call_feedback do CNPJ)            │
-│ Ações: [Iniciar mandato] [Solicitar abertura] [Snooze]     │
-└────────────────────────────────────────────────────────────┘
+**Correção do resolver:**
+- Tentar **lookup direto** em `equity_brain.companies.cnpj = raw` antes de validar formato (cobre `LST...`).
+- Para strings que começam com letras + dígitos (ex.: `VL60...`): pegar os 12 hex chars finais e tentar `listings.id ILIKE '<hex>%'` (o `VL` veio do prefixo + slice do UUID).
+- Em último caso, tentar `companies.razao_social ILIKE '%raw%'` limit 1.
+- Se o resolver achar via fuzzy mas NÃO bater 100%, mostrar uma página com sugestões (top 3 candidatos) em vez do "404 amigável".
+
+### 3. Mari Brain → "deu erro"
+Na `getLiveContext` da edge function `mari-brain`:
+```ts
+.from("mandates").select("id, codename, stage, asking_price, ...")
+```
+Mas `equity_brain.mandates` **não tem** `codename`, `stage` nem `asking_price` (tem `pipeline_stage`, `valor_pedido`, sem codename). Isso retorna erro silencioso só no `try/catch` — porém o segundo bloco também usa `eb_matches_enriched` com `.select("id, match_score, codename, buyer_nome")` que pode falhar se a view não tiver esses campos. Quando ambos falham + alguma exception escapa do try, o stream nunca abre e o cliente recebe erro genérico.
+
+**Correção:**
+- Trocar `codename, stage, asking_price` por `id, pipeline_stage, valor_pedido, updated_at, company_cnpj`.
+- Adicionar log explícito (`console.error`) com o erro do Supabase para a próxima depuração aparecer em `edge_function_logs`.
+- Garantir `try/catch` global retornando erro JSON (já tem) — mas adicionar fallback: se `liveCtx` falhar inteiro, ainda chamar o modelo só com KB.
+
+## Arquivos a editar
+
+```
+src/components/equity-brain/match/QuickStartMandateDialog.tsx
+  → trocar payload: pipeline_stage='match', outcome='em_andamento', deal_type='sellside'
+
+src/hooks/useCompanyResolver.ts
+  → aceitar CNPJs alfa-numéricos (LST..., qualquer 14 chars) com lookup direto em companies
+  → fallback de UUID parcial para VL60xxxx → listings.id ILIKE
+  → devolver candidatos top-3 quando não houver match exato
+
+src/pages/equity-brain/DealDetailPage.tsx
+  → quando resolved.source==='not_found' mas tem candidatos, mostrar lista clicável
+    "Você quis dizer: MARI-TELE-0037 · ISP - KZYR3"
+
+supabase/functions/mari-brain/index.ts
+  → corrigir colunas do select de mandates
+  → console.error nos catches
+  → fallback: se liveCtx falhar, segue só com KB
 ```
 
-- Usa o mesmo conteúdo do `MatchDetailDrawer` mas em modo página.
-- Inclui o histórico de contato do vendedor (mesma query usada no `DealCard`: `eb_call_feedback`).
-- Linka direto para mandato (se existir) ou abre `QuickStartMandateDialog` se ainda não existir.
-- Linka para `/equity-brain/empresa/:cnpj` e `/equity-brain/crm/buyer/:id` agora **funcionando**.
+Sem migrações de banco — só código.
 
-### 2. Resolver corretamente a rota da ficha
+## Verificação após implementar
 
-Trocar a rota `empresa/:cnpj` por `empresa/:idOrCode` que aceita 3 formatos e resolve no carregamento:
-
-| Formato detectado     | Como tratar                                                             |
-| --------------------- | ----------------------------------------------------------------------- |
-| 14 dígitos            | `cnpj` direto                                                           |
-| começa com `MARI-...` | buscar `equity_brain.companies` por `codename`                          |
-| UUID                  | tentar `equity_brain.companies.listing_id` → cair em `public.listings`  |
-| outros (ex.: `VL60…`) | buscar `public.listings.ticker` → pegar o `cnpj` do listing             |
-
-A página `DealDetailPage` ganha um hook `useCompanyResolver(idOrCode)` que devolve `{ cnpj, razao_social, codename }` ou redireciona para 404 com mensagem amigável. Todos os links espalhados (`MatchInboxRow`, `MatchHotHero`, `MatchDetailDrawer`, `DealCard`, `EquityBrainLayout`) passam a usar `cnpj` quando existe e `codename` como fallback — nunca mais `undefined`.
-
-### 3. Handlers reais nos botões da ficha (`DealCard`)
-
-- Buscar contatos via `useMatchContacts(cnpj)` (já existe — só usar o lado `seller`).
-- **WhatsApp**: `getWhatsAppLink(template, contacts.seller.telefone_e164)` com mensagem pré-preenchida ("Olá {nome}! Falo da mari sobre...").
-- **Email**: `mailto:${contacts.seller.email}?subject=...&body=...`
-- **Salvar**: persiste em `eb_saved_companies` (tabela nova, simples: `user_id, cnpj, created_at, note`) com toast "Salvo na sua lista".
-- Estado desabilitado quando não há contato + botão "Adicionar contato" abrindo o `AddContactDialog` existente.
-- Ligar continua abrindo o `QuickCallModal`.
-
-### 4. Linkagem da inbox para a nova página
-
-- Botão `Info` (ℹ) na linha → leva para `/equity-brain/match/:matchId` (em vez de só abrir o drawer).
-- Drawer mantém-se para preview rápido + ganha um link "Ver página completa do match".
-
-## Arquivos
-
-**Novos**
-- `src/pages/equity-brain/MatchDetailPage.tsx` — página `/equity-brain/match/:matchId`
-- `src/hooks/useMatchById.ts` — busca 1 match em `equity_brain.matches` + enriquece como o inbox
-- `src/hooks/useCompanyResolver.ts` — resolve `idOrCode` → CNPJ canônico
-- `src/hooks/useSavedCompanies.ts` — toggle salvar/remover
-- `supabase/migrations/<ts>_eb_saved_companies.sql` — tabela + RLS (advisor/admin own rows)
-
-**Editados**
-- `src/App.tsx` — rota `match/:matchId` + manter `empresa/:idOrCode` (renomeia o param)
-- `src/pages/equity-brain/DealDetailPage.tsx` — usa `useCompanyResolver`, mostra estados loading/not-found
-- `src/components/equity-brain/DealCard.tsx` — handlers reais nos 3 botões + Adicionar contato
-- `src/components/equity-brain/match/MatchInboxRow.tsx` — Info navega para a página do match
-- `src/components/equity-brain/match/MatchDetailDrawer.tsx` — link "Ver página completa"
-
-## Observações técnicas
-
-- Os links existentes que usam `row.cnpj` continuam funcionando (CNPJ é o caso mais comum). O resolver só entra em ação quando vier codename/listing_id/ticker.
-- Se um match não tiver `cnpj` válido (ainda acontece em listings sem enriquecimento), o resolver tenta `listing_id` → busca o `cnpj` lá e redireciona para a URL canônica `/equity-brain/empresa/<cnpj>` (via `navigate(replace: true)`).
-- LGPD: revelar CNPJ continua passando por `useIdentityVisibility` + log em `equity_brain.access_logs` (já existe, só reusar).
-- A tabela `eb_saved_companies` é nova mas pequena, com RLS por `user_id`.
+1. Match Inbox → "Iniciar" → preencher valor → "Criar mandato" → cair na 360 do mandato sem erro.
+2. Match Inbox → clicar empresa codinome `MARI-TELE-0037` → abrir ficha resolvendo via `cnpj=LST55316249134`.
+3. Abrir Mari Brain (FAB ⌘K) → perguntar "qual meu pipeline?" → resposta com streaming OK.

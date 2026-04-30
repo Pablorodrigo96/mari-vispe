@@ -39,32 +39,34 @@ async function getLiveContext(supabase: any, userId: string, route?: string, ent
 
   // Pipeline snapshot do usuário
   try {
-    const { data: mandates } = await supabase
+    const { data: mandates, error: mErr } = await supabase
       .schema("equity_brain")
       .from("mandates")
-      .select("id, codename, stage, asking_price, updated_at")
+      .select("id, pipeline_stage, valor_pedido, updated_at, company_cnpj")
       .limit(50);
+    if (mErr) console.error("mandates ctx err:", mErr);
     if (mandates?.length) {
       const byStage: Record<string, number> = {};
       for (const m of mandates) {
-        const s = m.stage ?? "sem_etapa";
+        const s = m.pipeline_stage ?? "sem_etapa";
         byStage[s] = (byStage[s] ?? 0) + 1;
       }
       parts.push(`PIPELINE SNAPSHOT (mandatos visíveis): total=${mandates.length}, por etapa=${JSON.stringify(byStage)}`);
     }
-  } catch (e) { console.warn("mandates ctx fail", e); }
+  } catch (e) { console.error("mandates ctx fail", e); }
 
   // Top matches
   try {
-    const { data: matches } = await supabase
+    const { data: matches, error: matchErr } = await supabase
       .from("eb_matches_enriched")
       .select("id, match_score, codename, buyer_nome")
       .order("match_score", { ascending: false })
       .limit(5);
+    if (matchErr) console.error("matches ctx err:", matchErr);
     if (matches?.length) {
       parts.push(`TOP 5 MATCHES AGORA:\n${matches.map((m: any) => `- ${m.codename ?? "?"} ↔ ${m.buyer_nome ?? "?"} (score ${m.match_score})`).join("\n")}`);
     }
-  } catch (e) { console.warn("matches ctx fail", e); }
+  } catch (e) { console.error("matches ctx fail", e); }
 
   // Contexto da entidade aberta
   if (entityType === "mandate" && entityId) {
@@ -141,10 +143,14 @@ Deno.serve(async (req) => {
     });
 
     // Contexto vivo + KB
-    const [liveCtx, KB] = await Promise.all([
-      getLiveContext(supabase, userId, route, entity_type, entity_id),
+    const [liveCtxRes, KB] = await Promise.all([
+      getLiveContext(supabase, userId, route, entity_type, entity_id).catch((e) => {
+        console.error("liveCtx total fail", e);
+        return "(contexto vivo indisponível neste momento)";
+      }),
       loadKnowledgeBase(),
     ]);
+    const liveCtx = liveCtxRes;
 
     const system = `Você é a **Mari Brain**, IA copilota oficial da plataforma mari (PME.B3 / Equity Brain).
 Você é especialista sênior em M&A de PMEs no Brasil E especialista total na plataforma.
