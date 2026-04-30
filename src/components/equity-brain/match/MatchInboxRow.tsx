@@ -172,16 +172,51 @@ export function MatchInboxRow({ row, percentiles, onOpenDetail }: Props) {
         </div>
       </div>
 
-      {/* Sub-row: signals */}
+      {/* Sub-row: signals + top razões do motor (quando v2) */}
       <div className="mt-2 flex items-center gap-3 flex-wrap text-[10px] text-zinc-500">
         {row.thesis_key && (
           <span className="px-1.5 py-0.5 rounded bg-blue-950/40 text-blue-300 border border-blue-900/60">
             tese: {row.thesis_key}
           </span>
         )}
-        {row.setor_fit !== null && <span>setor {(Number(row.setor_fit) * 100).toFixed(0)}%</span>}
-        {row.geografia_fit !== null && <span>geo {(Number(row.geografia_fit) * 100).toFixed(0)}%</span>}
-        {row.porte_fit !== null && <span>porte {(Number(row.porte_fit) * 100).toFixed(0)}%</span>}
+        {(() => {
+          const fc = Array.isArray(row.feature_contributions) ? row.feature_contributions : [];
+          if (fc.length > 0) {
+            const top = [...fc]
+              .sort((a, b) => Math.abs(Number(b?.contribution ?? 0)) - Math.abs(Number(a?.contribution ?? 0)))
+              .slice(0, 3);
+            return (
+              <span className="inline-flex items-center gap-1.5 flex-wrap">
+                <span className="text-zinc-600">por que:</span>
+                {top.map((c) => {
+                  const neg = Number(c?.contribution ?? 0) < 0;
+                  return (
+                    <span key={c.feature} className={cn(
+                      "px-1.5 py-0.5 rounded border tabular-nums",
+                      neg
+                        ? "bg-rose-950/30 text-rose-300 border-rose-900/60"
+                        : "bg-emerald-950/30 text-emerald-300 border-emerald-900/60"
+                    )}>
+                      {c.feature} {neg ? "" : "+"}{Number(c.contribution ?? 0).toFixed(2)}
+                    </span>
+                  );
+                })}
+              </span>
+            );
+          }
+          return (
+            <>
+              {row.setor_fit !== null && <span>setor {(Number(row.setor_fit) * 100).toFixed(0)}%</span>}
+              {row.geografia_fit !== null && <span>geo {(Number(row.geografia_fit) * 100).toFixed(0)}%</span>}
+              {row.porte_fit !== null && <span>porte {(Number(row.porte_fit) * 100).toFixed(0)}%</span>}
+            </>
+          );
+        })()}
+        {row.p_close_12m != null && (
+          <span className="px-1.5 py-0.5 rounded bg-emerald-950/30 text-emerald-300 border border-emerald-900/60 tabular-nums">
+            p(close) {(Number(row.p_close_12m) * 100).toFixed(0)}%
+          </span>
+        )}
         {!buyerPhone && !buyerEmail && (
           <span className="text-amber-400">⚠ comprador sem contato cadastrado</span>
         )}
