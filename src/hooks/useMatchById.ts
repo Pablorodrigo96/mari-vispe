@@ -16,7 +16,10 @@ export function useMatchById(matchId?: string | null) {
         .schema("equity_brain")
         .from("matches")
         .select(
-          "id,cnpj,buyer_id,match_score,thesis_key,status,setor_fit,geografia_fit,porte_fit,tese_fit,computed_at"
+          "id,cnpj,buyer_id,match_score,thesis_key,status,setor_fit,geografia_fit,porte_fit,tese_fit,computed_at," +
+          "reasons,ai_thesis_summary,ai_pitch,ai_confidence,p_close_12m,p_close_ci_lower,p_close_ci_upper," +
+          "ev_p10,ev_p50,ev_p90,multiple_p10,multiple_p50,multiple_p90,data_confidence,abstain,abstain_reason," +
+          "buyer_archetype,sector_cycle_phase,counterfactual,comparables,feature_contributions,engine_version,ma_score_emp"
         )
         .eq("id", matchId)
         .maybeSingle();
@@ -78,6 +81,29 @@ export function useMatchById(matchId?: string | null) {
         ticket_max: b.ticket_max ?? null,
         mandate_id: md.id ?? null,
         mandate_outcome: md.outcome ?? null,
+        reasons: m.reasons ?? null,
+        ai_thesis_summary: m.ai_thesis_summary ?? null,
+        ai_pitch: m.ai_pitch ?? null,
+        ai_confidence: m.ai_confidence ?? null,
+        p_close_12m: m.p_close_12m ?? null,
+        p_close_ci_lower: m.p_close_ci_lower ?? null,
+        p_close_ci_upper: m.p_close_ci_upper ?? null,
+        ev_p10: m.ev_p10 ?? null,
+        ev_p50: m.ev_p50 ?? null,
+        ev_p90: m.ev_p90 ?? null,
+        multiple_p10: m.multiple_p10 ?? null,
+        multiple_p50: m.multiple_p50 ?? null,
+        multiple_p90: m.multiple_p90 ?? null,
+        data_confidence: m.data_confidence ?? null,
+        abstain: m.abstain ?? null,
+        abstain_reason: m.abstain_reason ?? null,
+        buyer_archetype: m.buyer_archetype ?? null,
+        sector_cycle_phase: m.sector_cycle_phase ?? null,
+        counterfactual: m.counterfactual ?? null,
+        comparables: m.comparables ?? null,
+        feature_contributions: m.feature_contributions ?? null,
+        engine_version: m.engine_version ?? null,
+        ma_score_emp: m.ma_score_emp ?? null,
       };
     },
   });

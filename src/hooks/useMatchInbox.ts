@@ -31,6 +31,30 @@ export type MatchInboxRow = {
   // mandate (if any)
   mandate_id: string | null;
   mandate_outcome: string | null;
+  // ── Explainability (v2 engine, all optional — v1 rows leave them null)
+  reasons?: any[] | null;
+  ai_thesis_summary?: string | null;
+  ai_pitch?: string | null;
+  ai_confidence?: number | null;
+  p_close_12m?: number | null;
+  p_close_ci_lower?: number | null;
+  p_close_ci_upper?: number | null;
+  ev_p10?: number | null;
+  ev_p50?: number | null;
+  ev_p90?: number | null;
+  multiple_p10?: number | null;
+  multiple_p50?: number | null;
+  multiple_p90?: number | null;
+  data_confidence?: number | null;
+  abstain?: boolean | null;
+  abstain_reason?: string | null;
+  buyer_archetype?: string | null;
+  sector_cycle_phase?: number | null;
+  counterfactual?: string | null;
+  comparables?: any[] | null;
+  feature_contributions?: Array<{ feature: string; weight: number; value: number; contribution: number }> | null;
+  engine_version?: string | null;
+  ma_score_emp?: number | null;
 };
 
 type Filters = {
@@ -51,7 +75,7 @@ export function useMatchInbox(filters: Filters = {}) {
         .schema("equity_brain")
         .from("matches")
         .select(
-          "id,cnpj,buyer_id,match_score,thesis_key,status,setor_fit,geografia_fit,porte_fit,tese_fit,computed_at"
+          "id,cnpj,buyer_id,match_score,thesis_key,status,setor_fit,geografia_fit,porte_fit,tese_fit,computed_at,feature_contributions,p_close_12m,engine_version"
         )
         .eq("is_current", true)
         .gte("match_score", minScore)
@@ -122,6 +146,9 @@ export function useMatchInbox(filters: Filters = {}) {
           ticket_max: b.ticket_max ?? null,
           mandate_id: m.id ?? null,
           mandate_outcome: m.outcome ?? null,
+          feature_contributions: r.feature_contributions ?? null,
+          p_close_12m: r.p_close_12m ?? null,
+          engine_version: r.engine_version ?? null,
         };
       });
 
