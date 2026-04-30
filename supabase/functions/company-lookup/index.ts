@@ -39,9 +39,11 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     if (!data || data.length === 0) {
+      // Retorna 200 com error textual — o frontend trata via `data.error` e mostra
+      // mensagem amigável; evita o genérico "non-2xx status code" do supabase-js.
       return new Response(
         JSON.stringify({ error: "Nenhum negócio encontrado com esse termo." }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

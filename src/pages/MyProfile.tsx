@@ -258,6 +258,26 @@ const MyProfile = () => {
     }
   };
 
+  const handleUpgradeMaster = async () => {
+    setIsLoadingPortal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { type: 'master' },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      } else {
+        toast.error('Não foi possível iniciar o checkout');
+      }
+    } catch (err: any) {
+      console.error('Error starting checkout:', err);
+      toast.error('Erro ao iniciar pagamento', { description: err?.message });
+    } finally {
+      setIsLoadingPortal(false);
+    }
+  };
+
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -530,9 +550,14 @@ const MyProfile = () => {
                         <Button 
                           type="button" 
                           className="w-full bg-amber-500 hover:bg-amber-600"
-                          onClick={() => toast.info('Integração de pagamento em breve!')}
+                          onClick={handleUpgradeMaster}
+                          disabled={isLoadingPortal}
                         >
-                          <Crown className="h-4 w-4 mr-2" />
+                          {isLoadingPortal ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Crown className="h-4 w-4 mr-2" />
+                          )}
                           Fazer Upgrade
                         </Button>
                       ) : (

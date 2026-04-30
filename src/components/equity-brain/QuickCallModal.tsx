@@ -29,6 +29,9 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
 
   const m = useMutation({
     mutationFn: async () => {
+      // Edge function exige raw_notes >= 20 chars OU vazio. Se tiver pouca coisa, manda undefined.
+      const trimmed = notes.trim();
+      const safeNotes = trimmed.length >= 20 ? trimmed : undefined;
       const { data, error } = await supabase.functions.invoke("feedback-from-call", {
         body: {
           cnpj,
@@ -36,10 +39,21 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
           interest_level: interest,
           timing_estimado: timing,
           dor_principal: dor,
-          raw_notes: notes || undefined,
+          raw_notes: safeNotes,
         },
       });
-      if (error) throw error;
+      if (error) {
+        // Tenta extrair a mensagem real do edge function (vem em error.context.body).
+        let detail = error?.message ?? "Erro desconhecido";
+        try {
+          const body = (error as any)?.context?.body;
+          if (body) {
+            const parsed = typeof body === "string" ? JSON.parse(body) : body;
+            if (parsed?.error) detail = parsed.error;
+          }
+        } catch { /* noop */ }
+        throw new Error(detail);
+      }
       return data;
     },
     onSuccess: (data: any) => {
@@ -213,7 +227,7 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
 
           <div>
             <Label className="text-xs uppercase tracking-wider text-zinc-400">
-              Notas da call <span className="text-zinc-600">(≥ 50 chars dispara IA)</span>
+              Notas da call <span className="text-zinc-600">(opcional · ≥ 20 chars · ≥ 50 dispara IA)</span>
             </Label>
             <Textarea
               value={notes}
@@ -221,7 +235,12 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
               placeholder="Sócio fundador (62 anos), filhos não querem assumir, fatura ~R$ 8M/ano, EBITDA 18%…"
               className="mt-2 bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 min-h-[120px]"
             />
-            <div className="text-[10px] text-zinc-600 mt-1 text-right tabular-nums">{notes.length} chars</div>
+            <div className="flex items-center justify-between mt-1">
+              <div className="text-[10px] text-amber-400">
+                {notes.trim().length > 0 && notes.trim().length < 20 ? "Mínimo 20 caracteres ou deixe vazio." : ""}
+              </div>
+              <div className="text-[10px] text-zinc-600 tabular-nums">{notes.length} chars</div>
+            </div>
           </div>
         </div>
         )}
