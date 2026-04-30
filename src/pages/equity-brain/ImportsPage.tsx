@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Upload, FileSpreadsheet, Briefcase, Target, Activity, Building2, Users, Package } from "lucide-react";
+import { ArrowLeft, Upload, FileSpreadsheet, Briefcase, Target, Activity, Building2, Users, Package, Snowflake } from "lucide-react";
 import { useState } from "react";
 import { ImportDialog } from "@/components/equity-brain/crm/ImportDialog";
 
@@ -34,6 +34,25 @@ export default function ImportsPage() {
           <FileSpreadsheet className="h-3 w-3" /> Ver Exports
         </Link>
       </header>
+
+      {/* Lista fria — Anatel ISPs */}
+      <Link
+        to="/equity-brain/isp/import"
+        className="block rounded border border-blue-900/50 bg-gradient-to-r from-blue-950/40 to-zinc-900/40 p-4 hover:border-blue-700 transition-colors"
+      >
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded bg-blue-950/60 text-blue-300">
+            <Snowflake className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-zinc-100 font-medium">ISPs Anatel — Lista Fria</div>
+            <p className="text-[11px] text-zinc-400 mt-1 break-words">
+              Base de banda larga fixa da Anatel. Entra como inteligência de mercado (não vira CRM, não dispara workflows quentes). Conecta à tese ISPs e gera sugestões frias após cálculo.
+            </p>
+          </div>
+          <Upload className="h-4 w-4 text-blue-300 self-center" />
+        </div>
+      </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {cards.map(({ key, title, desc, Icon }) => (
