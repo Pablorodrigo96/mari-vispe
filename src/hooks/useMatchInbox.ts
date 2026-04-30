@@ -31,6 +31,30 @@ export type MatchInboxRow = {
   // mandate (if any)
   mandate_id: string | null;
   mandate_outcome: string | null;
+  // ── Explainability (v2 engine, all optional — v1 rows leave them null)
+  reasons?: any[] | null;
+  ai_thesis_summary?: string | null;
+  ai_pitch?: string | null;
+  ai_confidence?: number | null;
+  p_close_12m?: number | null;
+  p_close_ci_lower?: number | null;
+  p_close_ci_upper?: number | null;
+  ev_p10?: number | null;
+  ev_p50?: number | null;
+  ev_p90?: number | null;
+  multiple_p10?: number | null;
+  multiple_p50?: number | null;
+  multiple_p90?: number | null;
+  data_confidence?: number | null;
+  abstain?: boolean | null;
+  abstain_reason?: string | null;
+  buyer_archetype?: string | null;
+  sector_cycle_phase?: number | null;
+  counterfactual?: string | null;
+  comparables?: any[] | null;
+  feature_contributions?: Array<{ feature: string; weight: number; value: number; contribution: number }> | null;
+  engine_version?: string | null;
+  ma_score_emp?: number | null;
 };
 
 type Filters = {
