@@ -1759,6 +1759,8 @@ export type Database = {
           cnae_principal: string | null
           cnae_secundarios: Json | null
           cnpj: string | null
+          codename: string | null
+          codename_prefix: string | null
           created_at: string | null
           data_abertura: string | null
           data_situacao_cadastral: string | null
@@ -1816,6 +1818,8 @@ export type Database = {
           cnae_principal?: string | null
           cnae_secundarios?: Json | null
           cnpj?: string | null
+          codename?: string | null
+          codename_prefix?: string | null
           created_at?: string | null
           data_abertura?: string | null
           data_situacao_cadastral?: string | null
@@ -1873,6 +1877,8 @@ export type Database = {
           cnae_principal?: string | null
           cnae_secundarios?: Json | null
           cnpj?: string | null
+          codename?: string | null
+          codename_prefix?: string | null
           created_at?: string | null
           data_abertura?: string | null
           data_situacao_cadastral?: string | null
@@ -2294,6 +2300,156 @@ export type Database = {
           display_name?: string | null
           required_signals?: string[] | null
           thesis_key?: string | null
+        }
+        Relationships: []
+      }
+      eb_isp_city_stats: {
+        Row: {
+          calc_version: string | null
+          computed_at: string | null
+          dominant_player: boolean | null
+          fragmentation_score: number | null
+          hhi: number | null
+          ibge_code: string | null
+          id: string | null
+          leader_cnpj: string | null
+          leader_share: number | null
+          municipio: string | null
+          n_providers: number | null
+          period_ref: string | null
+          rollup_opportunity_score: number | null
+          top3_share: number | null
+          total_accesses: number | null
+          uf: string | null
+        }
+        Insert: {
+          calc_version?: string | null
+          computed_at?: string | null
+          dominant_player?: boolean | null
+          fragmentation_score?: number | null
+          hhi?: number | null
+          ibge_code?: string | null
+          id?: string | null
+          leader_cnpj?: string | null
+          leader_share?: number | null
+          municipio?: string | null
+          n_providers?: number | null
+          period_ref?: string | null
+          rollup_opportunity_score?: number | null
+          top3_share?: number | null
+          total_accesses?: number | null
+          uf?: string | null
+        }
+        Update: {
+          calc_version?: string | null
+          computed_at?: string | null
+          dominant_player?: boolean | null
+          fragmentation_score?: number | null
+          hhi?: number | null
+          ibge_code?: string | null
+          id?: string | null
+          leader_cnpj?: string | null
+          leader_share?: number | null
+          municipio?: string | null
+          n_providers?: number | null
+          period_ref?: string | null
+          rollup_opportunity_score?: number | null
+          top3_share?: number | null
+          total_accesses?: number | null
+          uf?: string | null
+        }
+        Relationships: []
+      }
+      eb_isp_company_stats: {
+        Row: {
+          best_thesis_key: string | null
+          best_thesis_score: number | null
+          calc_version: string | null
+          cnpj: string | null
+          computed_at: string | null
+          fragmentation_exposure: number | null
+          geographic_density: number | null
+          growth_vs_prev: number | null
+          id: string | null
+          local_leader_score: number | null
+          main_city_ibge: string | null
+          main_city_share: number | null
+          n_municipios: number | null
+          n_ufs: number | null
+          period_ref: string | null
+          platform_potential_score: number | null
+          provider_name_norm: string | null
+          regional_presence_score: number | null
+          rollup_target_score: number | null
+          sellability_score: number | null
+          subscale_pressure_score: number | null
+          total_accesses: number | null
+        }
+        Relationships: []
+      }
+      eb_isp_market_entries: {
+        Row: {
+          accesses: number | null
+          cnpj: string | null
+          created_at: string | null
+          ibge_code: string | null
+          id: string | null
+          import_id: string | null
+          municipio: string | null
+          period_ref: string | null
+          provider_name: string | null
+          provider_name_norm: string | null
+          raw: Json | null
+          service_type: string | null
+          source: string | null
+          technology: string | null
+          uf: string | null
+        }
+        Insert: {
+          accesses?: number | null
+          cnpj?: string | null
+          created_at?: string | null
+          ibge_code?: string | null
+          id?: string | null
+          import_id?: string | null
+          municipio?: string | null
+          period_ref?: string | null
+          provider_name?: string | null
+          provider_name_norm?: string | null
+          raw?: Json | null
+          service_type?: string | null
+          source?: string | null
+          technology?: string | null
+          uf?: string | null
+        }
+        Update: {
+          accesses?: number | null
+          cnpj?: string | null
+          created_at?: string | null
+          ibge_code?: string | null
+          id?: string | null
+          import_id?: string | null
+          municipio?: string | null
+          period_ref?: string | null
+          provider_name?: string | null
+          provider_name_norm?: string | null
+          raw?: Json | null
+          service_type?: string | null
+          source?: string | null
+          technology?: string | null
+          uf?: string | null
+        }
+        Relationships: []
+      }
+      eb_isp_uf_summary: {
+        Row: {
+          avg_fragmentation: number | null
+          avg_rollup_opportunity: number | null
+          n_cities: number | null
+          n_providers_sum: number | null
+          period_ref: string | null
+          total_accesses: number | null
+          uf: string | null
         }
         Relationships: []
       }
