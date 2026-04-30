@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
       .select("role, content")
       .eq("thread_id", threadId)
       .order("created_at", { ascending: true })
-      .limit(20);
+      .limit(10);
 
     // Persiste mensagem do usuário
     await supabase.from("mari_brain_messages").insert({
