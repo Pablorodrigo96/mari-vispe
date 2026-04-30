@@ -44,9 +44,9 @@ export function QuickStartMandateDialog({
       const payload: any = {
         company_cnpj: cnpj,
         status: "vigente",
-        outcome: "ativo",
-        pipeline_stage: "qualificacao",
-        deal_type: "venda",
+        outcome: "em_andamento",
+        pipeline_stage: "match",
+        deal_type: "sellside",
         match_buyer_id: buyerId ?? null,
         comprador_nome: buyerNome ?? null,
         setor: setor ?? null,
