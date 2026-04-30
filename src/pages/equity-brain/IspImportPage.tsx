@@ -84,6 +84,26 @@ export default function IspImportPage() {
     } finally { setBusy(false); }
   }
 
+  async function recomputeStats() {
+    setComputing(true); setComputeResult(null);
+    try {
+      const periodIso = periodRef ? `${periodRef}-01` : null;
+      const { data, error } = await supabase.functions.invoke("eb-compute-isp-stats", {
+        body: { period_ref: periodIso },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setComputeResult({
+        period_ref: data.period_ref,
+        cities_computed: data.cities_computed ?? 0,
+        companies_computed: data.companies_computed ?? 0,
+      });
+      toast.success(`Stats calculadas: ${data.cities_computed} cidades · ${data.companies_computed} empresas (${data.period_ref})`);
+    } catch (e: any) {
+      toast.error("Erro ao calcular stats: " + (e.message || "desconhecido"));
+    } finally { setComputing(false); }
+  }
+
   return (
     <div className="p-6 space-y-5 bg-zinc-950 min-h-full">
       <Link to="/equity-brain/crm/imports" className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100">
