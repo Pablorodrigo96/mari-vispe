@@ -469,7 +469,7 @@ async function processContacts(
   const result: EntityResult = { entity: "contacts", inserted: 0, updated: 0, skipped: 0, errors: [], warnings: [], ids: [] };
 
   // 1) Pré-carrega tudo do banco e indexa em memória.
-  const { data: allBuyers } = await supabase.schema("equity_brain").from("buyers").select("id,nome");
+  const { data: allBuyers } = await supabase.schema("equity_brain").from("buyers").select("id,nome").limit(50000);
   const buyerIdx: Record<string, string> = {};
   (allBuyers || []).forEach((b: any) => {
     nameVariants(b.nome).forEach((v) => { if (v && !buyerIdx[v]) buyerIdx[v] = b.id; });
@@ -478,7 +478,7 @@ async function processContacts(
 
   // Mandates: indexa por cnpj e pelas variações da razão social/nome_fantasia da empresa.
   const { data: allMandates } = await supabase.schema("equity_brain").from("mandates")
-    .select("id, company_cnpj");
+    .select("id, company_cnpj").limit(50000);
   const mandateIdx: Record<string, string> = {};
   const mandateCnpjs: string[] = [];
   (allMandates || []).forEach((m: any) => {
@@ -488,7 +488,7 @@ async function processContacts(
 
   // Companies: por cnpj e por nome_fantasia/razão_social.
   const { data: allCompanies } = await supabase.schema("equity_brain").from("companies")
-    .select("id, cnpj, razao_social, nome_fantasia");
+    .select("id, cnpj, razao_social, nome_fantasia").limit(50000);
   const companyIdx: Record<string, string> = {};
   const cnpjToCompany: Record<string, { razao_social: string|null; nome_fantasia: string|null }> = {};
   (allCompanies || []).forEach((c: any) => {
@@ -587,7 +587,7 @@ async function processContacts(
         nome: buyersToStub[k].original,
         tipo: "estrategico",
         status: "ativo",
-        qualification_status: "pending",
+        qualification_status: "cold_prospect",
         qualification_source: "import_contact_stub",
         qualified_at: new Date().toISOString(),
         qualified_by: userId,
@@ -741,7 +741,14 @@ Deno.serve(async (req) => {
     const allowed = (roles || []).some((r: any) => r.role === "admin" || r.role === "advisor");
     if (!allowed) return new Response(JSON.stringify({ error: "forbidden: admin or advisor required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const payload = (await req.json()) as ImportPayload;
+    let payload = (await req.json()) as ImportPayload & { bundle_url?: string };
+    // Support fetching a large bundle from a URL to avoid inline payload limits
+    if ((payload as any).bundle_url) {
+      const r = await fetch((payload as any).bundle_url);
+      if (!r.ok) return new Response(JSON.stringify({ error: `bundle_url fetch failed: ${r.status}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const fetched = await r.json();
+      payload = { entity: "bundle", bundle: fetched, dry_run: payload.dry_run };
+    }
     const dry = !!payload.dry_run;
     const userId = userData.user.id;
 
