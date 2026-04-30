@@ -328,6 +328,10 @@ export default function IspImportPage() {
             <Link to="/equity-brain/isp/sugestoes" className="text-fuchsia-300 hover:text-fuchsia-200 underline">
               Abrir tela de revisão de sugestões frias →
             </Link>
+            {" "}·{" "}
+            <Link to="/equity-brain/isp/mercado" className="text-emerald-300 hover:text-emerald-200 underline">
+              Ver dashboard de mercado ISP →
+            </Link>
           </p>
         )}
       </div>
