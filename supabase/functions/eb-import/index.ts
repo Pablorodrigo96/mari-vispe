@@ -587,7 +587,7 @@ async function processContacts(
         nome: buyersToStub[k].original,
         tipo: "estrategico",
         status: "ativo",
-        qualification_status: "pending",
+        qualification_status: "cold_prospect",
         qualification_source: "import_contact_stub",
         qualified_at: new Date().toISOString(),
         qualified_by: userId,
