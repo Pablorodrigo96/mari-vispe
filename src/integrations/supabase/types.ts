@@ -1785,7 +1785,16 @@ export type Database = {
           promoted_from: string | null
           qtd_socios: number | null
           qualification_source: string | null
-          qualification_status: "qualified" | "unqualified" | null
+          qualification_status:
+            | "qualified"
+            | "unqualified"
+            | "cold_market_map"
+            | "cold_prospect"
+            | "contacted"
+            | "relationship_started"
+            | "lost"
+            | "do_not_contact"
+            | null
           qualified_at: string | null
           qualified_by: string | null
           raw_data: Json | null
@@ -1833,7 +1842,16 @@ export type Database = {
           promoted_from?: string | null
           qtd_socios?: number | null
           qualification_source?: string | null
-          qualification_status?: "qualified" | "unqualified" | null
+          qualification_status?:
+            | "qualified"
+            | "unqualified"
+            | "cold_market_map"
+            | "cold_prospect"
+            | "contacted"
+            | "relationship_started"
+            | "lost"
+            | "do_not_contact"
+            | null
           qualified_at?: string | null
           qualified_by?: string | null
           raw_data?: Json | null
@@ -1881,7 +1899,16 @@ export type Database = {
           promoted_from?: string | null
           qtd_socios?: number | null
           qualification_source?: string | null
-          qualification_status?: "qualified" | "unqualified" | null
+          qualification_status?:
+            | "qualified"
+            | "unqualified"
+            | "cold_market_map"
+            | "cold_prospect"
+            | "contacted"
+            | "relationship_started"
+            | "lost"
+            | "do_not_contact"
+            | null
           qualified_at?: string | null
           qualified_by?: string | null
           raw_data?: Json | null
@@ -2820,51 +2847,6 @@ export type Database = {
           valor_operacao: number | null
           valor_pedido: number | null
           year_started: number | null
-        }
-        Relationships: []
-      }
-      eb_v_isp_universe: {
-        Row: {
-          buyer_fit_score: number | null
-          cnae_descricao: string | null
-          cnae_principal: string | null
-          cnpj: string | null
-          faturamento_estimado: number | null
-          has_listing: boolean | null
-          ma_score: number | null
-          municipio: string | null
-          nome_fantasia: string | null
-          porte: string | null
-          qtd_socios: number | null
-          razao_social: string | null
-          scores_computed_at: string | null
-          situacao_cadastral: string | null
-          sucessao_score: number | null
-          uf: string | null
-          vispe_score: number | null
-        }
-        Relationships: []
-      }
-      eb_v_opportunities_by_municipio: {
-        Row: {
-          avg_ma_score: number | null
-          lat_centroid: number | null
-          lng_centroid: number | null
-          municipio: string | null
-          premium_count: number | null
-          total: number | null
-          uf: string | null
-        }
-        Relationships: []
-      }
-      eb_v_opportunities_by_uf: {
-        Row: {
-          avg_ma_score: number | null
-          premium_count: number | null
-          strong_count: number | null
-          top_setor: string | null
-          total: number | null
-          uf: string | null
         }
         Relationships: []
       }
