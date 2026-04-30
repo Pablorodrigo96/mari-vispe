@@ -62,10 +62,10 @@ async function getLiveContext(supabase: any, userId: string, route?: string, ent
       .from("eb_matches_enriched")
       .select("id, match_score, codename, buyer_nome")
       .order("match_score", { ascending: false })
-      .limit(5);
+      .limit(3);
     if (matchErr) console.error("matches ctx err:", matchErr);
     if (matches?.length) {
-      parts.push(`TOP 5 MATCHES AGORA:\n${matches.map((m: any) => `- ${m.codename ?? "?"} ↔ ${m.buyer_nome ?? "?"} (score ${m.match_score})`).join("\n")}`);
+      parts.push(`TOP MATCHES AGORA:\n${matches.map((m: any) => `- ${m.codename ?? "?"} ↔ ${m.buyer_nome ?? "?"} (score ${m.match_score})`).join("\n")}`);
     }
   } catch (e) { console.error("matches ctx fail", e); }
 
