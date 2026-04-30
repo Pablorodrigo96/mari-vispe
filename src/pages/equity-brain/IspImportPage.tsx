@@ -241,9 +241,8 @@ export default function IspImportPage() {
           </Button>
         </div>
         {computeResult && (
-          <div className="grid grid-cols-3 gap-3 pt-3 border-t border-zinc-800">
-            <Stat label="Período" value={0} />
-            <Stat label="Cidades" value={computeResult.cities_computed} tone="ok" />
+          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-zinc-800">
+            <Stat label="Cidades calculadas" value={computeResult.cities_computed} tone="ok" />
             <Stat label="Empresas (CNPJ)" value={computeResult.companies_computed} tone="ok" />
           </div>
         )}
