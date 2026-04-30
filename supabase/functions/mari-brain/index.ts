@@ -182,7 +182,9 @@ ${liveCtx}`;
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        // Flash: ~3-5x mais rápido que Pro, suficiente para Q&A operacional.
+        // Cliente pode passar `model: "google/gemini-2.5-pro"` para análises pesadas.
+        model: modelOverride || "google/gemini-2.5-flash",
         messages,
         stream: true,
       }),
