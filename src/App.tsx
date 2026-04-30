@@ -84,6 +84,7 @@ import MandateFormPage from "./pages/equity-brain/MandateFormPage";
 import ExportsPage from "./pages/equity-brain/ExportsPage";
 import ImportsPage from "./pages/equity-brain/ImportsPage";
 import IspImportPage from "./pages/equity-brain/IspImportPage";
+import IspSuggestionsPage from "./pages/equity-brain/IspSuggestionsPage";
 import DisclosuresPage from "./pages/equity-brain/DisclosuresPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
@@ -212,6 +213,7 @@ const App = () => (
               <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />
               <Route path="crm/imports"          element={<RequireRole roles={["admin", "advisor"]}><ImportsPage /></RequireRole>} />
               <Route path="isp/import"           element={<RequireRole roles={["admin", "advisor"]}><IspImportPage /></RequireRole>} />
+              <Route path="isp/sugestoes"        element={<RequireRole roles={["admin", "advisor"]}><IspSuggestionsPage /></RequireRole>} />
               <Route path="crm/aberturas"        element={<RequireRole roles={["admin", "advisor"]}><DisclosuresPage /></RequireRole>} />
               <Route path="crm/mandate/new"      element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
               <Route path="crm/mandate/:id/edit" element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />

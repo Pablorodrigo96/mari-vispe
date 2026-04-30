@@ -324,7 +324,10 @@ export default function IspImportPage() {
         {matchResult && (
           <p className="text-[10px] text-zinc-500">
             Período: <span className="text-zinc-300">{matchResult.period_ref}</span>{" "}
-            · Próxima fase: tela <code>/equity-brain/isp/sugestoes</code> e fluxo <code>promote-cold-isp</code>.
+            ·{" "}
+            <Link to="/equity-brain/isp/sugestoes" className="text-fuchsia-300 hover:text-fuchsia-200 underline">
+              Abrir tela de revisão de sugestões frias →
+            </Link>
           </p>
         )}
       </div>
