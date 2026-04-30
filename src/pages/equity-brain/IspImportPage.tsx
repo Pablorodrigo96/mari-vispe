@@ -279,6 +279,56 @@ export default function IspImportPage() {
         )}
       </div>
 
+      {/* Fase 4 — Match cold */}
+      <div className="rounded border border-fuchsia-900/60 bg-fuchsia-950/10 p-5 space-y-3">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-[260px] flex-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-fuchsia-300" />
+              <span className="text-sm text-zinc-100 font-medium">Fase 4 — Sugestões frias × buyers (tese ISPs)</span>
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-1 break-words max-w-2xl">
+              Cruza ISPs com fit nas 5 teses ISP × buyers ativos com setor/UF/ticket compatível. Grava em{" "}
+              <code>matches</code> com <code>is_cold_suggestion=true</code>. <strong>Não cria companies, não dispara notificações.</strong>{" "}
+              Cada execução substitui o batch anterior de matches frios das teses ISP.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => generateColdMatches(true)}
+              disabled={matching}
+              className="bg-transparent border-fuchsia-800 text-fuchsia-200 hover:bg-fuchsia-950/40"
+            >
+              {matching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-2" />}
+              Preview
+            </Button>
+            <Button
+              onClick={() => generateColdMatches(false)}
+              disabled={matching}
+              className="bg-fuchsia-700 text-white hover:bg-fuchsia-600"
+            >
+              {matching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Gerar sugestões
+            </Button>
+          </div>
+        </div>
+        {matchResult && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-fuchsia-900/40">
+            <Stat label="Matches gerados" value={matchResult.matches_inserted} tone="ok" />
+            <Stat label="Empresas com fit" value={matchResult.companies_with_thesis_fit} />
+            <Stat label="Vínculos tese↔CNPJ" value={matchResult.thesis_links_upserted} />
+            <Stat label="Buyers alvo" value={matchResult.buyers_targeted} />
+          </div>
+        )}
+        {matchResult && (
+          <p className="text-[10px] text-zinc-500">
+            Período: <span className="text-zinc-300">{matchResult.period_ref}</span>{" "}
+            · Próxima fase: tela <code>/equity-brain/isp/sugestoes</code> e fluxo <code>promote-cold-isp</code>.
+          </p>
+        )}
+      </div>
+
       {/* History */}
       <div className="rounded border border-zinc-800 bg-zinc-900/40 p-4">
         <div className="flex items-center gap-2 mb-3">
