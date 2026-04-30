@@ -335,6 +335,25 @@ export const EB_TIPS = {
     what: "Histórico cronológico de todos os eventos: calls, emails, WhatsApp, mudanças de status.",
     action: "Use para auditoria e onboarding de novos advisors.",
   },
+
+  // ───────────────────── Match · Features do motor (decomposição SHAP)
+  feat_setor: { title: "Setor", what: "Aderência entre o setor da empresa e os setores declarados pelo comprador (1.0 = exato, 0.7 = subsetor próximo).", action: "Setor baixo é o principal motivo de descarte — confirme tese do buyer." },
+  feat_geografia: { title: "Geografia", what: "Match entre UF da empresa e UFs preferidas do buyer (1.0 = UF preferida, 0.5 = UF vizinha, 0.6 = buyer sem restrição).", action: "Buyers regionais penalizam fortemente UF distante." },
+  feat_densidade_local: { title: "Densidade local", what: "Concentração de buyers do mesmo arquétipo na UF da empresa (proxy de demanda local).", action: "Densidade alta acelera fechamento — sinaliza setor 'quente' regionalmente." },
+  feat_tamanho: { title: "Porte / Tamanho", what: "Ajuste entre porte da empresa e portes-alvo do buyer (1.0 = exato, 0.5 = porte adjacente).", action: "Porte fora do range geralmente vira 'rejeitou (size_mismatch)'." },
+  feat_timing: { title: "Timing", what: "Probabilidade de mandato ativo confirmado para a empresa (modelo p_active_mandate).", action: "Timing baixo? Faça call de descoberta antes de envolver buyer." },
+  feat_financeiro: { title: "Financeiro", what: "Saúde financeira (faturamento, EBITDA, qualidade dos sinais financeiros).", action: "Financeiro baixo derruba p(close) — peça documentação atualizada." },
+  feat_tese: { title: "Tese", what: "Quantos signals da tese do buyer (roll-up, plataforma, expansão, etc.) a empresa dispara (≥3 = 0.8; 1–2 = 0.5; 0 = 0.2).", action: "Sem tese acionada, score fica genérico — investigue narrativa." },
+  feat_recorrencia: { title: "Recorrência", what: "Receita recorrente / contratual da empresa.", action: "Alta recorrência puxa múltiplo para cima — destaque no teaser." },
+  feat_contratos_longos: { title: "Contratos longos", what: "Existência de contratos plurianuais com clientes-âncora.", action: "Reduz risco percebido e justifica ticket maior." },
+  feat_verticalizacao: { title: "Verticalização", what: "Grau de integração vertical da operação (cadeia controlada).", action: "Buyers estratégicos pagam prêmio por verticalização." },
+  feat_regulatorio: { title: "Regulatório", what: "Maturidade regulatória / barreiras de entrada do setor.", action: "Setores regulados favorecem consolidadores; setores livres favorecem PE." },
+  feat_semantic_fit: { title: "Semantic fit", what: "Similaridade semântica (cosseno entre embeddings da empresa e do buyer/tese) — captura sinergia que regras não veem.", action: "Alta similaridade indica fit cultural/estratégico mesmo com geografia/porte fora." },
+  feat_seller_intent: { title: "Seller intent", what: "Intenção declarada/inferida do vendedor de transacionar nos próximos 12m.", action: "Intent baixa = priorizar nutrição. Intent alta = abordagem agressiva." },
+  feat_wave_pressure: { title: "Wave pressure", what: "Tensão estrutural da célula (setor × UF) — combinação de pressão de venda e demanda.", action: "Alto = mercado aquecido, prazo curto para agir." },
+  feat_horizonte: { title: "Horizonte", what: "Horizonte de investimento esperado pelo buyer (curto/médio/longo prazo).", action: "Buyers de horizonte longo aceitam empresas em desenvolvimento." },
+  feat_governanca: { title: "Governança", what: "Maturidade de governança (board, controles, compliance).", action: "Governança baixa derruba múltiplo — ofereça consultoria de equity gap." },
+  feat_vertical_fit: { title: "Vertical fit", what: "Aderência ao vertical específico da tese (espelha setor em primeira aproximação).", action: "Use junto com semantic_fit para validar fit fino." },
 } as const satisfies Record<string, Tip>;
 
 export type EBTipKey = keyof typeof EB_TIPS;
