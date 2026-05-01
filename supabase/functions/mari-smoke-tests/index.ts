@@ -46,13 +46,17 @@ async function timed<T>(name: string, fn: () => Promise<T>): Promise<SmokeResult
       details: typeof out === "object" && out !== null ? (out as Record<string, unknown>) : { ok: true },
       error_text: null,
     };
-  } catch (err) {
+  } catch (err: any) {
+    const msg = err instanceof Error
+      ? err.message
+      : (err?.message || err?.hint || err?.code || JSON.stringify(err));
+    console.error(`[smoke] ${name} FAIL:`, msg, err);
     return {
       test_name: name,
       status: "fail",
       duration_ms: Math.round(performance.now() - start),
       details: {},
-      error_text: err instanceof Error ? err.message : String(err),
+      error_text: msg,
     };
   }
 }
