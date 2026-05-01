@@ -76,6 +76,7 @@ import BuyerDetailPage from "./pages/equity-brain/BuyerDetailPage";
 import AccessAuditPage from "./pages/equity-brain/AccessAuditPage";
 import CrmAuditPage from "./pages/equity-brain/CrmAuditPage";
 import MyCompaniesPage from "./pages/equity-brain/MyCompaniesPage";
+import CrmAssignmentsPage from "./pages/equity-brain/CrmAssignmentsPage";
 import NewsPage from "./pages/equity-brain/NewsPage";
 import ExecutiveDashboardPage from "./pages/equity-brain/ExecutiveDashboardPage";
 import MatchAnalyticsPage from "./pages/equity-brain/MatchAnalyticsPage";
