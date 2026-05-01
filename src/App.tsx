@@ -212,6 +212,9 @@ const App = () => (
               <Route path="crm/admin/auditoria"  element={<RequireRole roles={["admin"]}><AccessAuditPage /></RequireRole>} />
               <Route path="crm/executivo"        element={<ExecutiveDashboardPage />} />
               <Route path="crm/matching"         element={<MatchAnalyticsPage />} />
+              <Route path="crm/admin/auditoria-operacional" element={<RequireRole roles={["admin"]}><CrmAuditPage /></RequireRole>} />
+              <Route path="crm/minhas-empresas"  element={<MyCompaniesPage />} />
+              <Route path="news"                 element={<NewsPage />} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
               <Route path="crm/pipeline/historico" element={<PipelineHistoryPage />} />
               <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />
