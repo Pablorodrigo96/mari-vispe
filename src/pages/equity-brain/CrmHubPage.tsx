@@ -13,12 +13,11 @@ import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, K
 import { cn } from "@/lib/utils";
 
 type SubTab = "mandates" | "buyers" | "activity";
-type TopTab = "geral" | "matches" | "executivo" | "matching";
+type TopTab = "geral" | "matches" | "matching";
 
 const TOP_TABS: { key: TopTab; label: string; Icon: any }[] = [
   { key: "geral", label: "Visão Geral", Icon: LayoutDashboard },
   { key: "matches", label: "Matches IA", Icon: Flame },
-  { key: "executivo", label: "Dashboard Executivo", Icon: TrendingUp },
   { key: "matching", label: "Match Analytics", Icon: ArrowLeftRight },
 ];
 
