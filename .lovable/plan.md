@@ -1,278 +1,152 @@
-# Roadmap MARI / PME.B3 — 12 semanas, calibrado com diagnóstico real
 
-## Diagnóstico que muda o plano original
+# Fase 2 — Tela Hoje + WhatsApp Bridge + Resumo Mari
 
-Rodei queries contra o banco antes de escrever este plano. Três descobertas alteram materialmente o que você propôs:
+**Princípio carregado:** cada feature é filtrada por *"isso reduz o trabalho do advisor ou aumenta?"*. Inteligência fica no motor, simplicidade na superfície, Mari traduz.
 
-**1. CRM "não mostra suas empresas" — não é UI, é ownership**
-- 317 mandatos no total. **230 (73%) sem `responsavel_id`**. Apenas **1 advisor distinto** tem mandatos atribuídos.
-- A correção da Fase 2-3 anterior moveu pipeline_stage automaticamente, mas não distribuiu ownership. Quando você (ou qualquer advisor que não seja "o 1") abre "Minhas Empresas", aparece vazio. Isso é correção de **1-2 dias**, não de roadmap.
-
-**2. Labels para ML supervisionado — caso pior confirmado**
-- 221 deal_events: **220 são `contacted`** (sinal fraco), **1 `nda_signed`**, **0 outcomes terminais** (closed_won/closed_lost).
-- Logistic Regression treinado nisso aprende "todo mundo foi contatado" — zero valor preditivo. Bayesiano + active learning agressivo é o caminho correto, com supervisionado adiado para semana 10+ (ou trimestre seguinte) quando tivermos labels reais.
-
-**3. company_news = 0**
-- Confirmado. Pipeline de news está pronto mas sem fonte. Vamos com Google News RSS gratuito (sua escolha) e migrar para Firecrawl só se ROI exigir.
-
-## Definition of Done MARI (anti-padrão "80%")
-
-Todo entregável passa pelos 5 gates antes de fechar:
+## Diagnóstico do que já existe (verificado no banco agora)
 
 ```text
-G1 Schema       — migration aplicada + assertion no fim + rollback testado
-G2 Backend      — edge function com wrapper observability, sem erro em log
-G3 Pipeline     — dado real fluindo, volume dentro do esperado (não 0, não 10x)
-G4 UI           — usuário-alvo completa fluxo sem ajuda do dev
-G5 Observability — dashboard /admin/health verde por 48h + smoke test passando
+mandates_total          317   (todos ativos — pipeline_stage não tem 'closed' ainda)
+crm_activities          633   (última: hoje 03:12)
+contacts                741   (723 com telefone E.164 — 97.5%)
+matches.match_score≥70  4330  (todos current, todos abertos)
 ```
 
-Card só vira "done" com print do dashboard verde + smoke test 3x consecutivo.
+Tudo que precisamos para alimentar MATCH QUENTE e DEAL ESFRIANDO **já existe**. Não precisa criar dado, só ranquear, surfar e gerar texto.
+
+Twilio **não está conectado** — vamos conectar em paralelo na Semana 5 para ter pronto na Semana 8.
 
 ---
 
-## Cronograma consolidado
+## O que vamos construir
+
+### 1. Tela Hoje (`/hoje`)
+
+Rota nova, **não substitui** `/equity-brain`. Sidebar ganha um item **"Hoje"** (Volt) no topo, acima de Dashboard. Advisors vão naturalmente migrar; admins continuam podendo ir direto pro EB.
+
+Layout: lista vertical, máximo 7 cards, ranqueados por `priority_score`. Cada card é uma decisão. Frase em PT-BR, botão grande primário, sem ambiguidade.
+
+Tipos de card na v1 (Semana 5):
 
 ```text
-Semana | Fase 0 (infra)        | Fase 1 (modelo)      | Fase 2 (UX/CRM)         | Fase 3 (news)
--------|------------------------|----------------------|-------------------------|------------------
-1      | health_check + wrapper | -                    | CRM ownership fix       | -
-2      | dashboard /admin/health| -                    | Smart Pipeline (semáforo)| -
-3      | Smoke tests críticos   | Feature store v1     | Smart Pipeline (cont.)  | -
-4      | -                      | Active learning UI   | Unified Action Drawer   | -
-5      | -                      | Labels backfill+UI   | Unified Action Drawer   | -
-6      | -                      | Bayesiano refinado   | Daily Briefing          | -
-7      | -                      | Calibração + IC      | Daily Briefing          | Audit + RSS sources
-8      | -                      | Coarse layer 200k    | Alertas inteligentes    | Pipeline reforçado
-9      | -                      | -                    | Mari proativa           | Pipeline reforçado
-10     | -                      | Logistic se ≥150 lbl | Mari proativa           | UI /news + feedback
-11     | -                      | Coarse layer 1MM     | Polimento               | Loop feedback
-12     | Hardening + retros     | Hardening            | Hardening               | Hardening
+🔥 MATCH QUENTE       — match_score ≥ percentil 90 (~hot dinâmico),
+                        criado nos últimos 7d, ainda não actioned
+⚠️  DEAL ESFRIANDO    — mandate ativo + última atividade > 14d
+                        + estágio diferente de 'closed'
 ```
 
----
+Cards de NOTÍCIA ficam para Fase 3 (Semana 8). Não vamos mostrar mock — quando a fonte estiver viva, eles aparecem sozinhos.
 
-## FASE 0 — Fundação de Confiabilidade (Semanas 1-3, híbrida)
+Cada card tem 3 ações: **primária** (Apresentar/Mandar mensagem), secundária (Ver detalhes), e dismiss (Não é boa / Já falei). Dismiss grava em `today_card_dismissals` para não aparecer de novo por X dias.
 
-**Escopo escolhido:** wrapper universal automático + backfill apenas das 10 funções críticas + dashboard. Smoke tests só onde dá ROI claro.
+### 2. WhatsApp Bridge (dual-track)
 
-### Semana 1
-- Schema `mari_ops`: tabelas `health_check` (function_name, ts, status, duration_ms, payload_summary, error_text, request_id), `smoke_tests`, `alert_rules`.
-- Wrapper TypeScript `withObservability(handler, { name })` em `supabase/functions/_shared/observability.ts`. Captura início/fim, duração, erros, e escreve em `mari_ops.health_check` via service role.
-- Aplicar wrapper nas 10 funções críticas: `match-company-v2`, `calculate-scores`, `eb-import`, `mari-brain-chat`, `process-event`, `crawl-ma-sources`, `extract-news-event`, `news-to-crm-alert`, `setup-equity-brain-crons`, `valuation-pay`.
+**Track A — v1 imediata (Semana 5-6):** deep links com tracking.
+- Botão `[ MANDAR MENSAGEM ]` chama `openWhatsAppForContact(contactId, mandateId, draftedText)`.
+- Função: (a) registra `crm_activity` kind=`whatsapp_sent` direction=`outbound`; (b) abre `wa.me/{phone}?text={draft}` em nova aba; (c) atualiza `mandates.last_outreach_at`; (d) re-ranqueia `priority_score` do mandato.
+- Tracking honesto: marcamos "mensagem enviada" — não lemos conteúdo nem confirmação de entrega. Advisor pode ratificar com botão "Foi entregue / Foi respondida" no card que aparece na Hoje 24h depois.
 
-### Semana 2
-- Página `/equity-brain/admin/health` (admin-only): tabela com semáforo verde/amarelo/vermelho por função. Métricas últimas 24h: success rate, p50/p95 latência, último erro com stack truncado, último timestamp.
-- View `mari_ops.health_summary_24h` agregando.
-- Cron job a cada 15min que detecta funções com >5% erro nas últimas 24h ou ausentes do SLA → cria notification para admins.
+**Track B — v2 Twilio (Semana 5-10, paralelo):**
+- Conecto Twilio agora via standard connector.
+- Edge function `whatsapp-send-template` que dispara mensagem via Twilio Business API (template aprovado).
+- Webhook `/twilio-inbound` recebe respostas → grava `crm_activity` direction=`inbound` automaticamente.
+- Quando estiver vivo, alterno o feature flag por advisor: usuários piloto ganham Track B; resto fica em Track A.
 
-### Semana 3
-- Smoke tests SQL/edge das 5 cadeias críticas:
-  - `test_matching_v2_returns_results` (1 buyer ativo + 10 companies → ≥1 match score >50)
-  - `test_calculate_scores_produces_current` (≥80% companies com `scored_at` últimas 24h)
-  - `test_event_queue_drains` (deal_events processados em <5min)
-  - `test_news_pipeline` (depois da Fase 3 — placeholder agora)
-  - `test_crm_ownership_distribution` (≥3 advisors distintos com mandatos vivos)
-- Cron a cada 6h roda smoke tests, escreve em health_check com status='red' se falhar.
+**Mensagens pré-rascunhadas pela Mari:** edge function `mari-draft-message` recebe `{contact_id, mandate_id, intent}` e retorna texto curto e contextual (gemini-2.5-flash, não gasta gpt-5). 4 intents na v1: `retomar_contato`, `apresentar_match`, `marcar_reuniao`, `pedir_documentos`.
 
-**Aceite Fase 0:** dashboard mostra status de 10 funções; smoke tests rodando; pelo menos 1 alerta real disparado e resolvido; toda função nova já nasce com wrapper (template + lint rule).
+### 3. Resumo automático do deal (híbrido)
 
----
+**Background pros 50 deals ativos do advisor:**
+- Edge function `mari-summarize-deal` que pega `mandate_id` e gera 3 linhas + 1 ação sugerida usando gemini-2.5-flash.
+- Output salvo em nova tabela `mandate_summaries(mandate_id, summary_text, suggested_action_text, suggested_action_intent, suggested_contact_id, model, tokens_in, tokens_out, generated_at)`.
+- Cron a cada 4h re-roda só os mandatos com `last_activity_at > last_summary_at` (incremental, barato).
+- Trigger adicional dispara summarize quando `crm_activity` é inserida (debounce 5min via job na fila).
 
-## FASE 2 — UX/CRM (Semanas 1-11) — começa imediatamente
+**On-demand para o resto:**
+- Quando advisor abre um deal sem `summary` fresco, frontend chama `mari-summarize-deal` direto. UX: skeleton de 3 linhas + spinner ~2-3s. Cache por 2h.
 
-Suas 3 fricções (priorizar agora + saltar entre 5 telas + CRM incompleto) determinam a ordem.
+Componente `<DealSummaryCard mandateId>` reutilizável: usado na Tela Hoje (quando o advisor clica em "Ver detalhes") e na página `/equity-brain/crm/mandate/:id` (substitui o header existente).
 
-### 2.0 — Correção emergencial CRM (Semana 1, paralelo à Fase 0)
+### 4. priority_score do mandato
 
-**Não negociável. Resolve "CRM não mostra suas empresas".**
+Função SQL `compute_mandate_priority(mandate_id)` que retorna 0-100 combinando:
+- 30 pts: `max(match_score)` dos matches abertos do mandato (oportunidade quente)
+- 25 pts: inverso dos dias desde `last_activity` (recência)
+- 20 pts: `mandate_value` normalizado (deals maiores pesam)
+- 15 pts: estágio do pipeline (NBO > match > closing > due_diligence)
+- 10 pts: número de buyers no radar com `temperature='hot'`
 
-- Tela admin `/equity-brain/crm/admin/atribuicoes`: lista 230 mandatos sem responsável, ação bulk "atribuir a [advisor]". Filtros por origem, setor, valor.
-- Função `equity_brain.suggest_responsavel(mandate_id)` que sugere advisor baseado em: setor histórico, geografia, carga atual.
-- Botão "Auto-atribuir 50 próximos" usando a função.
-- View `eb_my_companies_v2` para `/equity-brain/crm/minhas-empresas` que retorna mandatos onde `responsavel_id = auth.uid()` OR `co_advisor_id = auth.uid()` OR `created_by = auth.uid()` OR `origin_advisor_id = auth.uid()`. Hoje só usa responsavel_id, daí o vazio.
-- Coluna `mandates.co_advisor_ids[]` para ownership compartilhado.
-
-### 2.1 — Smart Pipeline Triage (Semanas 2-3) — fricção "qual mandato priorizar"
-
-- Coluna calculada `priority_score` (0-100) por mandato:
-  - Stage stagnation (dias na fase atual / SLA da fase) — 30%
-  - Buyer interest signals (matches >75 nas últimas 7 dias) — 25%
-  - Document readiness (vdr_readiness, equity_score) — 15%
-  - Time decay (data assinatura mandato) — 15%
-  - Manual boost do advisor — 15%
-- Função `equity_brain.calc_priority_score()` em pg_cron 1h.
-- UI `/equity-brain/crm/triagem`: lista ordenada por priority_score, top 20 do dia. Cada card: empresa, codename, stage + dias parado, próxima ação sugerida, semáforo (vermelho >SLA, amarelo 70-100% SLA, verde <70%).
-- Pipeline Kanban existente ganha: badge de prioridade no canto do card, contador regressivo SLA, drag-drop com side effect (mover para NBO dispara checklist + atividade).
-
-### 2.2 — Unified Action Drawer (Semanas 4-5) — fricção "saltar entre 5 telas"
-
-- Componente global `<MariActionDrawer>` que abre lateralmente em qualquer página. Recebe `entityType` (mandate/buyer/match) + `entityId`.
-- Conteúdo em abas: Resumo · Match SHAP · Documentos · WhatsApp · Atividades · Notas.
-- Acessível via: clique em qualquer card de mandato/buyer/match em qualquer tela; atalho de teclado `Cmd+J`; CTA "Abrir 360" nos cards.
-- WhatsApp embed (já existe em mandate-360) + botão "Registrar atividade" em 1 clique gera `activity` + opcional `deal_event`.
-- Ação inline "Marcar fechou" / "Marcar perdeu" gera `deal_event` com label real (alimenta active learning da Fase 1).
-
-### 2.3 — Daily Briefing (Semanas 6-7)
-
-- Página inicial `/equity-brain` (atual DashboardPage) ganha bloco "Desde ontem" no topo, antes dos KPIs:
-  - Matches novos com score >85 na sua carteira
-  - Mandatos parados há >SLA na fase
-  - Buyers que atualizaram tese e agora encaixam em N companies suas
-  - Notícias relevantes (depois da Fase 3)
-- Cada item com CTA primário 1-clique → abre Action Drawer.
-- View `eb_advisor_briefing(advisor_id)` SECURITY DEFINER que agrega tudo.
-
-### 2.4 — Alertas inteligentes (Semana 8)
-
-- Tabela `equity_brain.alert_rules` configurável (rule_type, threshold, severity, action_template).
-- Engine `process-alerts` cron 15min consome rules, gera `mari_alerts` (advisor_id, severity, deep_link, expires_at).
-- Notificação in-app + opcional WhatsApp via Twilio (se conectar).
-- Categorias: deal_risk, new_match_high, news_event (Fase 3), score_change, theta_drift, sla_breach.
-
-### 2.5 — Mari Brain proativa (Semanas 9-10)
-
-- Cron diário 8h: para cada advisor, Mari analisa carteira via gemini-2.5-pro e gera 3 sugestões em `mari_proactive_suggestions`.
-- UI: chip "Mari sugere (3)" no AppShell topbar; modal com sugestões + botão "Aceitar" que executa ação (rascunhar email, agendar atividade, etc.).
-- Resumo semanal automático segunda 8h: "Sua semana — 3 wins, 2 risks, 5 ações sugeridas" via notification + email opcional.
-- Análise de call: upload de transcrição → Claude classifica tese, atualiza thetas, gera follow-up sugerido. (Já existe parte; adicionar gatilho automático e vinculação ao deal_event.)
+Refresh: trigger nas tabelas `matches`, `crm_activities`, `mandates` — recomputa em batch via job. Persistido em `mandates.priority_score` para ordenação rápida.
 
 ---
 
-## FASE 1 — Modelo (Semanas 3-11) — Bayesiano honesto + active learning
+## Cronograma (5 semanas)
 
-**Decisão calibrada:** com 220 contacted + 1 nda_signed + 0 outcomes, Logistic Regression é overfit garantido. Estratégia revisada:
+| Semana | Entrega                                                                  | Pra quem        | Gate (DoD) |
+|--------|--------------------------------------------------------------------------|-----------------|-----------|
+| 5      | Schema: `mandate_summaries`, `today_cards`, `today_card_dismissals`, `mandates.priority_score`. Função `compute_mandate_priority`. Job de recálculo. | Sistema         | G1+G3 |
+| 5      | Conectar Twilio. Setup número WhatsApp Business + template aprovado. | Você (config) | G1 |
+| 5      | Edge function `mari-draft-message` (4 intents, gemini-2.5-flash).        | Sistema         | G2 |
+| 5      | Edge function `mari-summarize-deal` (gera 3 linhas + ação sugerida).     | Sistema         | G2 |
+| 5      | Cron 4h `summarize-active-mandates` para os 50 mais ativos.              | Sistema         | G2+G5 |
+| 6      | Página `/hoje` com 2 tipos de card (MATCH QUENTE, DEAL ESFRIANDO). Item no sidebar com badge Volt. | Advisor | G4+G5 |
+| 6      | Helper `openWhatsAppForContact(contactId, mandateId, draftedText)` — Track A vivo. | Advisor | G3+G4 |
+| 6      | Botão `[ MANDAR MENSAGEM ]` em todo lugar relevante chama o helper com draft pré-gerado pela Mari. | Advisor | G4 |
+| 7      | Componente `<DealSummaryCard>` no header de `/equity-brain/crm/mandate/:id` substituindo o atual. | Advisor | G4 |
+| 7      | Card de "Já falei, atualizar" + dismiss + auto-refresh da Hoje. Notificação web push pra cards 🔥. | Advisor | G3+G5 |
+| 8      | Track B Twilio: edge function `whatsapp-send-template` + webhook `twilio-inbound`. Feature flag por advisor. | Sistema | G2+G3 |
+| 9      | Card "CLIENTE PEDIU RETORNO": LLM passa em `crm_activities` extraindo promessas explícitas. | Advisor | G3 |
 
-### 1.A — Feature Store (Semanas 3-4)
-- Tabelas `equity_brain.feature_store_pair`, `feature_store_company`, `feature_store_buyer` com `feature_set_version` e `snapshot_date`.
-- Job batch noturno materializa as 3.
-- Aceite: replicabilidade temporal exata (`AS OF '2026-04-01'` retorna mesmo score que aquele dia gerou).
-
-### 1.B — Active Learning UI (Semanas 4-5) — gera os labels que faltam
-
-**Sub-fase mais crítica.** Sem isto, ML nunca acontece.
-
-- Tabela `equity_brain.training_labels` (pair_id, label_type, label_value, label_date, labeled_by, confidence, is_synthetic).
-- UI 1-clique no Match Detail e no Action Drawer: 4 botões grandes "Fechou" / "Em andamento" / "Perdeu" / "Não relevante" → grava label + deal_event correspondente.
-- Backfill semi-automático dos 317 mandatos existentes: se `outcome IN ('vendemos','concluido')` → label closed_won; se `outcome IN ('cancelado','vendeu_sozinho')` → label closed_lost. Esperado: ~50-100 labels reais sem clique humano.
-- Synthetic negatives: 200 pares óbvios negativos (mineração + farmácia, geografia oposta) com `is_synthetic=true` e peso 0.3 no treino futuro.
-- Dashboard `/equity-brain/admin/labels`: contador de labels reais por tipo, meta visível (precisamos 150+ closed para tentar Logistic).
-
-### 1.C — Bayesiano refinado (Semanas 6-7)
-
-- Já existe `buyer_revealed_thetas` com update Bayesiano. Refinar:
-  - Adicionar **conformal prediction wrapper** ao redor do score atual: gera `score_lower_90` e `score_upper_90` honestos. Se incerteza alta → IC largo → UI mostra "explore mais antes de priorizar".
-  - **Calibração isotônica** mensal usando training_labels acumulados.
-  - Brier score tracking em `mari_ops.model_metrics`.
-- Entregável real: matching v2 ganha IC 90% que aparece na UI como banda em vez de número único.
-
-### 1.D — Coarse layer (Semana 8 + Semana 11)
-
-- Função `equity_brain.calc_coarse_score(cnpj)` com 5-7 features baratas (setor RFB, UF, idade, faturamento estimado, sucessão proxy).
-- Particionamento de companies por UF, paralelização via 27 edge function invocations concorrentes.
-- Semana 8: rodar nas 200k companies já no banco.
-- Semana 11: expandir para 1MM (Sul + Sudeste via import RFB chunked).
-- Aceite: batch noturno completa <4h, todas com `coarse_score` + IC.
-
-### 1.E — Logistic supervisionado (Semana 10, condicional)
-
-- **Só executa se `training_labels` tiver ≥150 labels reais (closed/lost).** Caso contrário, vira backlog e ficamos no Bayesiano + IC.
-- Logistic Regression L2 em Python via edge function ou export para serviço externo.
-- Ensemble: `p_final = α·p_bayes + (1-α)·p_supervised`, α aprendido por CV.
+Tudo passa pelos 5 gates de DoD (G1 schema + assertion · G2 edge + observability · G3 dado real fluindo · G4 advisor completa fluxo sozinho · G5 health verde 48h + smoke test 3x).
 
 ---
 
-## FASE 3 — Notícias gratuito (Semanas 7-12)
+## Detalhes técnicos
 
-**Decisão:** Google News RSS + crawl direto (sem Firecrawl). Aceitando trade-off de qualidade vs custo zero.
+**Stack já no projeto:** React + Tailwind + shadcn/ui (`Sidebar` colapsável existente em `EBSidebar.tsx`), helper `getWhatsAppLink(message, phone)` em `src/lib/whatsapp.ts`, `withObservability` wrapper das funções edge, schema `mari_ops` para health, `equity_brain.contacts.telefone_e164` (723 com phone), `equity_brain.matches` (4330 hot), `equity_brain.crm_activities` (633 com `kind` enum + `direction`).
 
-### Semana 7 — Audit + fontes RSS
-- Documento `news_pipeline_audit.md` com ponto exato de quebra das 4 funções existentes.
-- Edge function `crawl-google-news-rss` substitui parte do crawl-ma-sources. Para cada mandato vivo, query: `"<razao_social>" OR "<codename público>" site:valor.globo.com OR site:braziljournal.com OR site:neofeed.com.br`.
-- Cron hourly por batch de 50 mandatos.
-- Fallback: crawl direto via fetch + cheerio dos sitemaps de Brazil Journal, NeoFeed, Pipeline (gratuitos, públicos).
+**Extensão do enum `crm_activity.kind`:** adicionar valores `whatsapp_sent`, `whatsapp_delivered`, `whatsapp_replied` se ainda não existirem (verificar antes da migration).
 
-### Semana 8 — Pipeline reforçado
-- Reescrever cadeia com wrapper Fase 0:
-  ```text
-  crawl-google-news-rss (hourly)
-     ↓ news_raw
-  extract-news-event (5min batch, gemini-2.5-flash-lite)
-     ↓ company_news estruturado
-  classify-news-impact (NOVO, gemini-2.5-flash) — positivo/negativo/neutro + magnitude
-     ↓ company_signals
-  news-to-crm-alert (trigger INSERT)
-     ↓ mari_alerts
-  ```
-- Smoke test: ≥1 notícia/dia ingerida para ≥30% dos mandatos vivos.
-
-### Semanas 9-10 — UI /news
-- Feed cronológico filtrado por carteira do advisor.
-- Card por notícia: empresa, snippet, classificação, impacto sugerido no score, link original.
-- Ações inline: "Aplicar impacto" / "Descartar" / "Notificar buyer X".
-- Integração com timeline em `/empresa/:cnpj`.
-
-### Semanas 11-12 — Loop de feedback
-- Advisor marca útil/ruído → alimenta re-treino mensal do classifier.
-- Métrica em `mari_ops.model_metrics`: precisão das classificações.
-
----
-
-## Dependências e riscos
-
+**Tela Hoje — fonte de cada card:**
 ```text
-Fase 0 (infra) ─────────────┐
-                             ├──> tudo depende
-Fase 2.0 (CRM ownership) ───┘    de wrapper + dashboard
+MATCH QUENTE     ← equity_brain.matches WHERE is_current AND match_score ≥ p90
+                  AND status='new' AND assigned_bdr = current_user
+                  AND NOT EXISTS (today_card_dismissals)
+                  ORDER BY match_score DESC, computed_at DESC
 
-Fase 1.B (active learning) ──> Fase 1.E (Logistic) — bloqueada por labels
-Fase 2.2 (Action Drawer) ───> alimenta labels da Fase 1.B (sinergia)
-Fase 3 (RSS gratuito) ──────> risco de qualidade baixa; gate na semana 10
-                              decide se migramos para Firecrawl pago
+DEAL ESFRIANDO   ← equity_brain.mandates WHERE responsavel_id = current_user
+                  AND pipeline_stage <> 'closed'
+                  AND (NOW() - last_activity_at) > INTERVAL '14 days'
+                  AND priority_score >= 40
+                  ORDER BY priority_score DESC
 ```
 
-**Risco #1:** RSS gratuito pode entregar <30% de cobertura. Mitigação: gate na semana 10 com decisão go/no-go para Firecrawl (~US$ 50/mês).
+**Roteamento sem quebrar o atual:**
+- Adiciona `<Route path="/hoje" element={<RequireAuth><HojePage /></RequireAuth>} />` em `App.tsx`.
+- `EBSidebar` ganha item `{ to: "/hoje", label: "Hoje", Icon: Sparkles, end: true }` no topo, marcado em Volt (#D9F564), com badge da contagem de cards do dia.
+- Default de login continua `/equity-brain`. Advisors descobrem `/hoje` pelo sidebar e voltam por gosto.
 
-**Risco #2:** Active learning pode não gerar 150 labels em 6 semanas. Mitigação: backfill heurístico dos 317 mandatos existentes deve render 50-100 labels já na semana 5; advisor precisa tocar 1 botão para os outros 50-100.
+**Custos estimados (gemini-2.5-flash):** summarize de 50 mandatos a cada 4h = 300 calls/dia × ~800 tokens = ~240k tokens/dia ≈ **<$0.05/dia/advisor**. Drafts de mensagem ~300 tokens cada × ~50/dia/advisor ≈ **<$0.02/dia/advisor**.
 
-**Risco #3:** Fase 0 vira projeto-de-plataforma. Mitigação: escopo híbrido escolhido + deadline rígido semana 3.
+**Twilio setup (você faz):**
+1. Criar conta WhatsApp Business com número dedicado (~3-5 dias úteis).
+2. Aprovar 1 template inicial: `mari_followup_pt` ("Oi {{1}}, aqui é {{2}} da MARI. {{3}} — Posso te ligar amanhã?").
+3. Conectar via `standard_connectors--connect twilio` quando o número estiver ativo.
+
+Enquanto Twilio não está pronto, Track A entrega 70% do valor.
 
 ---
 
-## Próximos passos ao aprovar
+## O que NÃO vamos fazer nesta fase
 
-Começo pela **Semana 1 em paralelo**:
-1. Fase 0 — schema `mari_ops` + wrapper observability + aplicar nas 10 críticas.
-2. Fase 2.0 — schema `co_advisor_ids` + view `eb_my_companies_v2` + tela `/equity-brain/crm/admin/atribuicoes` para você distribuir os 230 mandatos órfãos em 1 sessão.
+- Cockpit advisor separado em rota nova (mantém EB acessível).
+- Notificações WhatsApp de saída (push web só).
+- Card NOTÍCIA com mock (fica pra Fase 3 com dado real).
+- Detecção de promessas em ativiades antigas (só novas, e só na Semana 9).
+- Substituir o Kanban atual (continua funcionando como segundo nível).
 
-Posso começar?
----
+## O que entrega no fim das 5 semanas
 
-## ✅ Fase 0 — entregue (01/05/2026)
+Um advisor logando vê **/hoje** no topo do sidebar, clica, vê 5-7 cards. Cada card tem botão grande. Clica em "Mandar mensagem" → WhatsApp abre com texto pronto. Manda. Volta. Card sumiu. Próximo card. Em 10 minutos resolveu o que antes levava 1 hora navegando entre 5 telas.
 
-**Observabilidade hybrid wrapper + dashboard + smoke tests + cron**
-
-- `mari_ops` schema com `health_check`, `smoke_tests`, `model_metrics` + view `health_summary_24h`.
-- `withObservability` wrapper aplicado nas **10 funções críticas**:
-  match-company-v2, calculate-scores, mari-brain, news-to-crm-alert,
-  crm-detect-new-matches, ingest-company-news, compute-mandate-active-proba,
-  update-buyer-revealed-thetas, eb-match-isp-cold, mari-suggest-actions.
-- RPCs públicas (SECURITY DEFINER) usadas para evitar exposição direta do schema:
-  `mari_ops_record_health`, `mari_ops_record_smoke`,
-  `mari_ops_health_volume_recent`, `get_health_summary_24h`,
-  `get_health_recent_errors`.
-- Edge function `mari-smoke-tests` com 6 checks E2E (DB, fn-alive, ops-self-check).
-  Validado: **6/6 pass, status 200**.
-- Cron `mari-smoke-tests-6h` agendado a cada 6h (`0 */6 * * *`).
-- Página `/equity-brain/admin/health` (admin-only) com KPIs + tabela por função +
-  últimos erros 7d. Auto-refresh 60s.
-- Sidebar atualizado com **Atribuições** (CRM admin) e **Health 24h**.
-
-**Validação E2E confirmada**: tráfego nas funções gera linhas em `health_check`
-com status correto (`ok` / `warning` / `error`).
-
-### Próximo (Fase 2.0 — CRM friction)
-1. `priority_score` (0-100) por mandato → semáforo no Kanban e em "Minhas Empresas".
-2. Unified Action Drawer (1 painel: match → buyer → docs → WhatsApp → activity).
-3. Daily Briefing page (`/equity-brain/briefing`).
-4. Fase 1: Feature Store + Active Learning UI (após dispersão de ownership concluída).
+Você (admin) continua com EB inteiro disponível. Pode entrar em `/hoje` para ver o mundo do advisor sempre que quiser auditar.
