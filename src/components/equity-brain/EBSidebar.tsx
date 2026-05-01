@@ -5,6 +5,7 @@ import {
   ChevronDown, ArrowLeft, LogOut, Sparkles,
   TrendingUp, Building2, GitMerge, FileSignature,
   Settings, Upload, Search, GitCompare, Globe, Activity, Users,
+  Table as TableIcon, Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,11 +14,12 @@ import { useMatchPercentiles, useMatchInbox } from "@/hooks/useMatchInbox";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
 const MAIN = [
-  { to: "/equity-brain/oportunidades", label: "Oportunidades", Icon: Mail, badge: "matches" as const },
-  { to: "/equity-brain/pipeline",      label: "Pipeline",      Icon: Briefcase },
-  { to: "/equity-brain/compradores",   label: "Compradores",   Icon: Target },
-  { to: "/equity-brain/calls",         label: "Calls",         Icon: PhoneCall },
-  { to: "/equity-brain/mercado",       label: "Mercado",       Icon: Newspaper },
+  { to: "/equity-brain/oportunidades",   label: "Oportunidades",    Icon: Mail, badge: "matches" as const },
+  { to: "/equity-brain/pipeline",        label: "Pipeline",         Icon: Briefcase },
+  { to: "/equity-brain/mandatos/tabela", label: "Mandatos · tabela",Icon: TableIcon },
+  { to: "/equity-brain/compradores",     label: "Compradores",      Icon: Target },
+  { to: "/equity-brain/calls",           label: "Calls",            Icon: PhoneCall },
+  { to: "/equity-brain/mercado",         label: "Mercado",          Icon: Newspaper },
 ];
 
 const DASHBOARDS = [
@@ -28,6 +30,7 @@ const DASHBOARDS = [
 ];
 
 const ADMIN_ITEMS = [
+  { to: "/equity-brain/admin/dashboard-coverage", label: "Cobertura dashboards", Icon: Gauge },
   { to: "/equity-brain/admin/imports",    label: "Importar",            Icon: Upload },
   { to: "/equity-brain/admin/auditoria",  label: "Auditoria",           Icon: Search },
   { to: "/equity-brain/admin/shadow",     label: "Shadow v1↔v2",        Icon: GitCompare },

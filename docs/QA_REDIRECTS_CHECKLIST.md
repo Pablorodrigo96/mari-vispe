@@ -43,6 +43,13 @@ a barra mostra a URL nova **sem 404** e o conteúdo correto carrega.
 - [ ] `/equity-brain/shadow` → `/equity-brain/admin/shadow`
 - [ ] `/equity-brain/grafo-jarvis` → `/equity-brain/admin/jarvis`
 
+## Mandatos · Tabela mestre (admin + advisor)
+
+- [ ] Sidebar do Equity Brain mostra item **"Mandatos · tabela"** entre Pipeline e Compradores (ícone Table).
+- [ ] Clicar abre `/equity-brain/mandatos/tabela` sem 404 e renderiza grid editável.
+- [ ] Accordion **Admin** mostra **"Cobertura dashboards"** (ícone Gauge) → abre `/equity-brain/admin/dashboard-coverage`.
+- [ ] Botão "Cobertura dashboards" dentro da tabela navega para a mesma URL.
+
 ## Sanity extra
 
 - [ ] Sidebar mostra **7 itens principais** + accordion "Dashboards" + accordion "Admin" (este último só para admin).
