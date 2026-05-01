@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Building2, CreditCard, ChartBar, TrendingUp, Clock, Heart, Brain, ArrowRight, LineChart, Sparkles } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { AdminRoute } from '@/components/admin/AdminRoute';
 import { StatsCard } from '@/components/admin/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -145,8 +144,7 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <AdminRoute>
-      <AdminLayout>
+    <AdminLayout>
         <div className="space-y-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
@@ -346,7 +344,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
-      </AdminLayout>
-    </AdminRoute>
+    </AdminLayout>
   );
 }
