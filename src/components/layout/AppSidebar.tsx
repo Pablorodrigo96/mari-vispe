@@ -100,6 +100,14 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
 
   if (eff.isAdmin || eff.isAdvisor) {
     groups.push({
+      id: 'mandatos_tabela', name: '🗂 Mandatos (tabela)', icon: ClipboardList,
+      children: [
+        { name: 'Tabela mestre (editar)', href: '/equity-brain/mandatos/tabela', icon: ClipboardList },
+        { name: 'Cobertura dashboards', href: '/equity-brain/admin/dashboard-coverage', icon: ChartBar },
+        { name: 'Novo mandato', href: '/equity-brain/crm/mandate/new', icon: Plus },
+      ],
+    },
+    {
       id: 'dashboards', name: '📊 Dashboards', icon: BarChart3,
       children: [
         { name: 'Executivo M&A', href: '/dashboard/executivo', icon: BarChart3 },

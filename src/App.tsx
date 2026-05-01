@@ -106,6 +106,8 @@ import DashboardNboPage from "./pages/dashboards/DashboardNboPage";
 import QuickFillPage from "./pages/equity-brain/QuickFillPage";
 import PipelinePage from "./pages/equity-brain/PipelinePage";
 import CompradoresPage from "./pages/equity-brain/CompradoresPage";
+import MandatosTablePage from "./pages/equity-brain/MandatosTablePage";
+import DashboardCoveragePage from "./pages/equity-brain/DashboardCoveragePage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
@@ -281,6 +283,8 @@ const App = () => (
               <Route path="crm/aberturas"        element={<RequireRole roles={["admin", "advisor"]}><DisclosuresPage /></RequireRole>} />
               <Route path="crm/mandate/new"      element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
               <Route path="crm/mandate/:id/edit" element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
+              <Route path="mandatos/tabela"      element={<RequireRole roles={["admin","advisor"]}><MandatosTablePage /></RequireRole>} />
+              <Route path="admin/dashboard-coverage" element={<RequireRole roles={["admin","advisor"]}><DashboardCoveragePage /></RequireRole>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
