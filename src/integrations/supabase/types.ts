@@ -3595,6 +3595,22 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      mari_ops_health_volume_recent: {
+        Args: { p_minutes?: number }
+        Returns: number
+      }
+      mari_ops_record_health: {
+        Args: {
+          p_duration_ms: number
+          p_error_text?: string
+          p_function_name: string
+          p_payload_summary?: Json
+          p_request_id?: string
+          p_source?: string
+          p_status: string
+        }
+        Returns: undefined
+      }
       mari_ops_record_smoke: {
         Args: {
           p_actual?: Json
