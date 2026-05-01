@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Building2, MapPin, Store, ClipboardList, Plus, Search,
   UserSearch, Target, ChartBar, FileText, Award, Calculator, DollarSign,
   Briefcase, Sparkles, Shield, Brain, ChevronDown, LogOut, User, ChevronLeft,
-  ChevronRight,
+  ChevronRight, BarChart3, FileSignature, Handshake, FileBarChart,
 } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
 import { cn } from '@/lib/utils';

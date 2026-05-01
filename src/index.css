@@ -368,3 +368,54 @@
 .dark .text-green-500,
 .dark .text-green-600 { color: hsl(74 84% 68%) !important; }
 
+/* ============ Dashboards (Bloomberg-grade) ============ */
+:root {
+  --carbon-deep: #0A0A0A;
+  --carbon-soft: #141414;
+  --carbon-light: #1F1F1F;
+  --graphite-border: #2A2A2A;
+  --volt-glow: 0 0 24px rgba(217, 245, 100, 0.3);
+  --status-green: #00D27F;
+  --status-red: #FF3B6B;
+  --status-amber: #FFB800;
+  --status-cyan: #00C2FF;
+  --status-purple: #8B5CF6;
+  --text-primary: #FAFAF7;
+  --text-secondary: #A8A8A3;
+  --text-tertiary: #6B6B68;
+  --text-muted: #404040;
+}
+.dashboard-page { background: var(--carbon-deep); color: var(--text-primary); min-height: 100vh; }
+.dashboard-card {
+  background: var(--carbon-soft);
+  border: 1px solid var(--graphite-border);
+  border-radius: 12px;
+  padding: 24px;
+  transition: border-color 200ms ease;
+}
+.dashboard-card:hover { border-color: #D9F564; }
+.kpi-display {
+  font-family: "Geist Mono", "JetBrains Mono", monospace;
+  font-weight: 200;
+  letter-spacing: -0.04em;
+  color: var(--text-primary);
+}
+.kpi-label {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+}
+.live-indicator {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--status-green);
+  animation: dash-pulse 2s infinite;
+  display: inline-block;
+}
+@keyframes dash-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
