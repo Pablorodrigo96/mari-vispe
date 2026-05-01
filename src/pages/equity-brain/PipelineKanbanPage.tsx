@@ -376,8 +376,9 @@ function DealCard({
         <Link
           to={`/equity-brain/crm/mandate/${m.id}`}
           className="text-[11px] text-zinc-100 font-medium leading-tight break-words flex-1 truncate hover:text-[#D9F564]"
+          title={m.razao_social ?? m.company_cnpj}
         >
-          {m.company_cnpj}
+          {m.display_name ?? m.codename ?? m.razao_social ?? m.company_cnpj}
         </Link>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
@@ -389,9 +390,19 @@ function DealCard({
         <GripVertical className="h-3 w-3 text-zinc-700 group-hover:text-zinc-500 shrink-0 mt-0.5" />
       </div>
       <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
-          {DEAL_TYPE_LABEL[m.deal_type] ?? m.deal_type}
-        </span>
+        {m.deal_kind && (
+          <span className={cn(
+            "text-[9px] uppercase px-1.5 py-0.5 rounded border font-semibold",
+            DEAL_KIND_COLOR[m.deal_kind] ?? "bg-zinc-800 text-zinc-400 border-zinc-700",
+          )}>
+            {DEAL_KIND_LABEL[m.deal_kind] ?? m.deal_kind}
+          </span>
+        )}
+        {m.needs_enrichment && (
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-700/40" title="Precisa enriquecer (CNPJ placeholder)">
+            ⚠ enrich
+          </span>
+        )}
         {m.uf && <span className="text-[9px] text-zinc-500">{m.uf}</span>}
         <StageTimeBadge stageChangedAt={m.stage_changed_at} slaDays={slaDays} isTerminal={isTerminal} compact />
         {status === "frozen" && !isTerminal && (
