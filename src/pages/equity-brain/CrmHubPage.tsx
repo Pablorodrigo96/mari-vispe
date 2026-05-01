@@ -172,7 +172,6 @@ export default function CrmHubPage() {
         )}
 
         {topTab === "matches" && <MatchHotHero />}
-        {topTab === "executivo" && <ExecutiveDashboardContent />}
         {topTab === "matching" && <MatchAnalyticsContent />}
       </div>
     </div>
