@@ -1,98 +1,101 @@
-# Fase 1/4 — Schema: Paridade Monday
+# Fase 2/4 — Importador Monday (plano de execução)
 
-## Achados da inspeção (ajustes vs. brief original)
+## Achados da inspeção (ajustes obrigatórios vs. brief)
 
-Inspecionei o banco antes de planejar e encontrei 3 divergências do brief que precisam ser endereçadas pra migration não falhar:
+Inspecionei o banco antes de planejar. Mantenho 100% do brief, com 4 ajustes técnicos para não quebrar nada:
 
-1. **`mari_ops` já existe** (Fase 0 de observabilidade já rodou). As tabelas `health_check`, `smoke_tests`, `model_metrics` e a view `health_summary_24h` já estão criadas. → **Pulo o bloco 4** do brief (idempotente já está garantido pela infra existente). Apenas valido que existem.
+1. **Schema `equity_brain.companies`** confirma `cnpj`(varchar PK), `razao_social`, `nome_fantasia`, `uf`, `raw_data jsonb`, `qualification_status` (enum: aceita `'unqualified'`), `needs_cnpj_enrichment bool`, `source varchar`. ✅ Compatível com `findOrCreateCompany`.
+2. **`buyers.nome`** é a coluna correta (não `nome_completo`). ✅
+3. **Enum `mandate_status`** NÃO tem `'ativo'` nem `'concluido'` — só `vigente|vencido|vendemos|em_negociacao|vendeu_sozinho|cancelado`. Brief já está alinhado (usa `vigente`/`vendemos`/`cancelado`).
+4. **Função `is_admin()` não existe** — uso `has_role(uid, 'admin'::app_role)` no edge function (igual à Fase 1).
 
-2. **`public.is_admin()` NÃO existe**. O projeto usa `public.has_role(auth.uid(), 'admin'::app_role)`. → **Substituo todas as chamadas `is_admin()`** das policies por `has_role(auth.uid(), 'admin'::app_role)` (padrão consistente com todas as outras tabelas do projeto — ver `eb_pipeline_stages`, `franchisee_regions`, etc.).
-
-3. **`equity_brain.mandates` já tem** `co_advisor_ids`, `origin_advisor_id`, `responsavel_id`. ✅ Compatível com a policy de subtasks proposta.
-
-Nenhum dos 5 campos novos em mandates (`padrinho_id`, `cross_sell_flags`, `monday_item_id`, `imported_from`, `imported_at`) existe — todos serão adicionados.
-
----
-
-## Migration: `20260501_monday_parity.sql`
-
-### Bloco 1 — Campos novos em `equity_brain.mandates`
-- `padrinho_id uuid` → FK para `auth.users(id)` ON DELETE SET NULL (executivo padrinho do Buyside Monday)
-- `cross_sell_flags text[]` default `'{}'` (valuation, captacao, sucessao…)
-- `monday_item_id text UNIQUE` (re-imports incrementais idempotentes)
-- `imported_from text` (origem do import: "monday_buyside", "monday_sellside"…)
-- `imported_at timestamptz`
-- 3 índices parciais: `padrinho_id`, `monday_item_id`, `(imported_from, imported_at)`
-- COMMENT em cada coluna nova
-
-### Bloco 2 — Tabela `equity_brain.mandate_subtasks`
-Subelementos do Monday. Colunas exatamente como no brief: `id`, `mandate_id` (FK CASCADE), `name`, `etapa`, `responsavel_id` (FK SET NULL), `status` (CHECK: pendente|em_andamento|concluido|cancelado|bloqueado), `data_entrega`, `arquivos_url text[]`, `anotacoes`, `monday_subitem_id`, `ordem`, `created_by`, `created_at`, `updated_at`.
-
-3 índices: `mandate_id`, `responsavel_id`, `monday_subitem_id` (parcial).
-
-**RLS** (ajustado pra usar `has_role` em vez de `is_admin`):
-- `SELECT`: usuário tem acesso ao mandato (responsavel/padrinho/origin_advisor/co_advisor) **OU** admin
-- `INSERT`: responsavel ou padrinho do mandato OU admin
-- `UPDATE`: o próprio responsável da subtask OU dono do mandato OU admin
-- `DELETE`: somente admin
-
-Trigger `tg_subtasks_updated_at` mantendo `updated_at`.
-
-### Bloco 3 — Tabela `equity_brain.advisors_pending_mapping`
-Buffer de nomes do Monday que ainda não foram resolvidos pra `auth.users`. Colunas como no brief: `monday_name UNIQUE`, `occurrences`, `resolved_user_id`, `resolved_at`, `resolved_by`, `first_seen_at`, `last_seen_at`.
-
-RLS: única policy `ALL` para admin (`has_role`).
-
-### Bloco 4 — `mari_ops` (PULADO)
-Já existe. Apenas adiciono no fim da migration uma verificação `DO $$ ... RAISE NOTICE` confirmando presença (não-bloqueante).
+A marca para resolver advisor depois fica como tag em `observacoes` no formato `[mari:monday_responsavel=Nome Completo]` e `[mari:monday_padrinho=Nome]` (em vez de `raw_data` que `mandates` não tem). A função SQL faz match dessa tag.
 
 ---
 
-## Rollback: `20260501_monday_parity_rollback.sql`
-Arquivo separado (apenas referência — não rodado automaticamente). Drop das 2 tabelas novas e das 5 colunas novas em mandates. **Não dropa `mari_ops`** (já existia antes da Fase 1).
+## Migration (curta) — `20260501_monday_import_helpers.sql`
 
-```sql
-DROP TABLE IF EXISTS equity_brain.mandate_subtasks CASCADE;
-DROP TABLE IF EXISTS equity_brain.advisors_pending_mapping CASCADE;
-ALTER TABLE equity_brain.mandates 
-  DROP COLUMN IF EXISTS padrinho_id,
-  DROP COLUMN IF EXISTS cross_sell_flags,
-  DROP COLUMN IF EXISTS monday_item_id,
-  DROP COLUMN IF EXISTS imported_from,
-  DROP COLUMN IF EXISTS imported_at;
-```
+Duas funções SQL:
+
+- **`public.find_user_by_meta_name(text) → uuid`** (SECURITY DEFINER, search_path fixo) — busca em `auth.users.raw_user_meta_data->>full_name|name`. Grant somente `service_role`.
+- **`public.eb_resolve_advisor_mapping(monday_name text, user_id uuid) → jsonb`** — admin-only (checa `has_role`), backfilla mandatos que têm tag `[mari:monday_responsavel=<nome>]` ou `[mari:monday_padrinho=<nome>]` em `observacoes`, e marca `advisors_pending_mapping` como resolvido. Grant `authenticated` (faz check interno).
 
 ---
 
-## Validação dos critérios de aceite
+## Edge function `eb-import-monday`
 
-| Critério | Como valido |
+**`supabase/functions/eb-import-monday/index.ts`**
+
+- Wrapper `withObservability({ name: "eb-import-monday" })` ✅ registra em `mari_ops.health_check`.
+- CORS + auth manual (verifica admin via `has_role` RPC) — função fica com JWT obrigatório implícito.
+- Multipart: `file` (xlsx), `type` (sellside|buyside), `mode` (preview|commit), `import_id`.
+- Parse com `npm:xlsx@0.18.5` via esm.sh, lê Sheet 1, headers na linha 3, dados a partir da linha 4. Auto-detect via A1.
+- **Helpers** (caches por execução): `findAdvisor` (4 passos: profiles exato → meta RPC → fuzzy first+last → registra pendente), `findBuyer` (ilike em `equity_brain.buyers.nome`), `findOrCreateCompany` (3 lookups + stub `PENDING-<sha8>` com `qualification_status='unqualified'`, `needs_cnpj_enrichment=true`, `source='import_monday'`).
+- **Parsers**: `parseMoney` (BR `R$ 1.234,56` e US), `parsePct` (`5%` → 5.0; aceita 0.05 → 5), `parseDate` (Excel serial via `XLSX.SSF`, `dd/mm/yyyy`, ISO), `parseUrl` (extrai do hyperlink).
+- **Mapeamento Sellside** — 18 colunas (Name, 2x Comprador, Fase, Drive, Status, Datas, Valor, R$ Vispe, %, Executivo, MATCH, Contrato, Estado, Região, Item ID). Refinos: contrato+Concluído→closed/vendemos; contrato+SPA→spa; drive+NBO→nbo. `temperature='cold'` se Fase="Aguardando retorno". Fixos: `deal_type=sellside`, `deal_kind=mandato_assinado`, `imported_from=monday_sellside`, `source=import_monday`.
+- **Mapeamento Buyside** — 25 colunas. Mapeia `padrinho_id` (campo NOVO da Fase 1). `cross_sell_flags` = split por `,` ou `;`. `Cliente`→company. `Operação(col 9)`→deal_type (Buyside/Cisão/Fusão/SPA→buyside+spa/Due Diligence→buyside+due_diligence). PT→uf=EX, regiao=Internacional. Fixos: `deal_kind=buyer_mandate`, `imported_from=monday_buyside`.
+- **Subitems**: linhas após "Subitems" e sem Item ID viram `mandate_subtasks` vinculadas ao mandato pai mais recente. Status mapeado (concluido/cancelado/bloqueado/em_andamento/pendente).
+- **Upsert idempotente**: se `monday_item_id` existe → UPDATE só campos não-null (preserva edições). Senão INSERT.
+- **Output preview**: 20 linhas + warnings + advisors_unmapped + companies_to_create.
+- **Output commit**: `{ mandates_created, mandates_updated, companies_created, subtasks_created }`.
+
+## Edge function `eb-resolve-advisor-mapping`
+
+**`supabase/functions/eb-resolve-advisor-mapping/index.ts`** — POST `{ monday_name, user_id }`. Auth admin. Chama RPC `eb_resolve_advisor_mapping`. Wrapped com observability.
+
+---
+
+## UIs (3 páginas admin)
+
+### `src/pages/admin/MondayImport.tsx` → rota `/admin/monday-import` (RequireRole admin)
+- Estado-máquina: `idle → preview → committing → done`.
+- Drag-drop XLSX (input file). Auto-select type via A1 do XLSX (lê client-side com mesma lib).
+- Botão "Pré-visualizar" → POST `mode=preview` → mostra: total/válidas/ignoradas, tabela 10 linhas, lista advisors_unmapped, lista companies_to_create, warnings.
+- Botão "Confirmar import" → POST `mode=commit` → progress + counters → tela sucesso com link `/admin/monday-parity` e `/admin/advisors-mapping`.
+
+### `src/pages/admin/MondayParity.tsx` → rota `/admin/monday-parity` (RequireRole admin)
+- Constante `MONDAY_REFERENCE` (do brief, exata).
+- Queries: `count(*)`, agregações por `outcome`/`deal_type`, `sum(valor_operacao)`, `sum(faturamento_vispe)`, `count by responsavel_id` em `equity_brain.mandates` filtrando `imported_from in (monday_sellside, monday_buyside)`.
+- Tabela 4 colunas (KPI | Monday | MARI | Δ%). Cores: ✓ verde se Δ=0; ⚠️ amarelo se |Δ|≤5%; 🟧 laranja se ≤15%; ❌ vermelho >15%.
+- Click em linha de executivo → drawer com lista de mandatos divergentes (apenas IDs + razao_social).
+
+### `src/pages/admin/AdvisorsMapping.tsx` → rota `/admin/advisors-mapping` (RequireRole admin)
+- Lista `equity_brain.advisors_pending_mapping` onde `resolved_user_id IS NULL` ordenado por `occurrences DESC`.
+- Cada linha: monday_name + ocorrências + `<select>` dos `profiles` (full_name) + botão "Aplicar".
+- Submit: `supabase.functions.invoke('eb-resolve-advisor-mapping', { body: { monday_name, user_id } })`. Toast com `updated_responsavel + updated_padrinho` retornado.
+- Refresh automático após cada mapping.
+
+### Navegação
+- Adicionar 3 entradas no `src/components/admin/AdminSidebar.tsx` em uma seção nova "Monday Migration": Importar / Paridade / Mapping advisors.
+- Adicionar 3 rotas em `src/App.tsx` envolvidas em `<RequireRole role="admin">`.
+
+---
+
+## Critérios de aceite — como vou validar
+
+| Critério | Validação |
 |---|---|
-| Migration aplica sem erro | Ferramenta de migration retorna sucesso |
-| Rollback testado | Rodar SQL do rollback manual em staging via `read_query` (DDL só roda em migration, então valido a sintaxe + idempotência dos `IF EXISTS`) |
-| `mandate_subtasks` criada | `SELECT FROM information_schema.tables` |
-| `advisors_pending_mapping` criada | idem |
-| `mari_ops.health_check` existe | já validado — existe |
-| `health_summary_24h` retorna | já validado — existe |
-| RLS subtasks isolada | Confirmar 4 policies criadas via `pg_policies` |
-| `monday_item_id` UNIQUE | Confirmar constraint via `information_schema.table_constraints` |
-| Trigger `updated_at` ativo | Confirmar via `pg_trigger` |
+| Preview retorna JSON válido | `supabase--curl_edge_functions` mock + verificar shape |
+| Commit insere/atualiza | `supabase--read_query` em `mandates` antes/depois |
+| Health check registra | `select * from mari_ops.health_check where function_name='eb-import-monday'` |
+| Re-import não duplica | Subir mesmo arquivo 2x e contar mandates por monday_item_id |
+| Estados nome→UF | "São Paulo"→"SP" (unit test inline + log no preview) |
+| `monday_item_id` único | Constraint da Fase 1 garante; valido com query |
+| Top-3 executivos batem | `/admin/monday-parity` mostra Δ=0 nos 3 |
+| Soma valor_operacao Δ≤1% | Δ exibido na página de paridade |
+
+Como **estamos em planejamento**, não consigo rodar os tests do XLSX real até você aprovar e o build mode liberar `code--exec`. Após approval, vou:
+1. Aplicar a migration (helpers SQL).
+2. Criar e deployar as 2 edge functions.
+3. Criar as 3 páginas + rotas + sidebar.
+4. Pedir pra você subir o XLSX em `/admin/monday-import` (preview) e me mostrar o JSON pra eu ajustar mapeamentos antes do commit final.
 
 ---
 
-## O que NÃO vou fazer (respeitando regras globais)
+## O que NÃO vou fazer
 - ❌ Não toco em edge functions existentes
-- ❌ Não invento campos extras
-- ❌ Não modifico mandates além das 5 colunas listadas
-- ❌ Não recrio `mari_ops` (já existe)
-- ❌ Não avanço pra Fase 2 — paro e aguardo seu OK
+- ❌ Não invento campos extras nem enums
+- ❌ Não chamo SQL raw client-side — toda escrita passa por edge function ou RPC
+- ❌ Não avanço pra Fase 3 — paro depois do critério "Top-3 executivos batem com Monday"
 
----
-
-## Detalhes técnicos finais
-- **1 arquivo** de migration: `supabase/migrations/<timestamp>_monday_parity.sql`
-- **1 arquivo** de referência: `supabase/migrations/_rollback/20260501_monday_parity_rollback.sql` (apenas documentação — não é migration ativa)
-- Todas as policies usam `has_role(auth.uid(), 'admin'::app_role)` no lugar de `is_admin()`
-- Sem mudanças em código TS/React nesta fase
-
-Aprova rodar a migration?
+Aprova?
