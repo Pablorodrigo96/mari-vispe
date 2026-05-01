@@ -178,7 +178,7 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
                     className="h-7 bg-[#D9F564]/10 border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/20"
                     onClick={async () => {
                       const dealId = await promote.mutateAsync(m.id);
-                      if (dealId) navigate(`/equity-brain/crm/pipeline?deal=${dealId}`);
+                      if (dealId) navigate(`/equity-brain/deal/${dealId}`);
                     }}>
                     <Rocket className="h-3 w-3 mr-1" /> Pipeline
                   </Button>

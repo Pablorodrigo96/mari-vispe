@@ -1,10 +1,11 @@
-import { useMemo } from "react";
-import { Sparkles, AlertTriangle, TrendingUp, Target, BarChart3, Brain, Microscope } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Sparkles, AlertTriangle, TrendingUp, Target, BarChart3, Brain, Microscope, Languages } from "lucide-react";
 import { brl } from "@/lib/dealFormatters";
 import { cn } from "@/lib/utils";
 import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { EB_TIPS, type EBTipKey } from "@/lib/ebTooltips";
 import type { MatchInboxRow } from "@/hooks/useMatchInbox";
+import { humanize, summarize } from "@/lib/matchWhyHumanizer";
 
 type Contribution = { feature: string; weight: number; value: number; contribution: number };
 
@@ -74,12 +75,17 @@ export interface MatchWhyCardProps {
 }
 
 export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
+  const [techMode, setTechMode] = useState(false);
+
   const contribs = useMemo<Contribution[]>(() => {
     const arr = asArray<Contribution>(match.feature_contributions);
     return arr
       .filter((c) => c && typeof c.feature === "string")
       .sort((a, b) => Math.abs(Number(b.contribution ?? 0)) - Math.abs(Number(a.contribution ?? 0)));
   }, [match.feature_contributions]);
+
+  const humanItems = useMemo(() => humanize(contribs as any), [contribs]);
+  const summary = useMemo(() => summarize(humanItems), [humanItems]);
 
   const maxAbs = useMemo(
     () => Math.max(0.001, ...contribs.map((c) => Math.abs(Number(c.contribution ?? 0)))),
@@ -111,6 +117,19 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
             <Sparkles className="h-3 w-3 text-[#D9F564]" /> Por que esse match
           </div>
           <div className="flex items-center gap-1.5 text-[10px]">
+            <button
+              onClick={() => setTechMode((v) => !v)}
+              className={cn(
+                "px-1.5 py-0.5 rounded border font-mono inline-flex items-center gap-1",
+                techMode
+                  ? "bg-fuchsia-950/40 text-fuchsia-300 border-fuchsia-800/60"
+                  : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:text-[#D9F564]"
+              )}
+              title={techMode ? "Voltar para linguagem simples" : "Ver decomposição técnica (SHAP)"}
+            >
+              <Languages className="h-3 w-3" />
+              {techMode ? "técnico" : "simples"}
+            </button>
             <span className={cn(
               "px-1.5 py-0.5 rounded border font-mono",
               isV2 ? "bg-fuchsia-950/40 text-fuchsia-300 border-fuchsia-800/60" : "bg-zinc-800 text-zinc-400 border-zinc-700",
@@ -130,8 +149,14 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
           </div>
         </div>
 
+        {!techMode && summary && (
+          <p className="text-[12px] text-[#D9F564] mt-2 break-words leading-relaxed font-medium">
+            {summary}
+          </p>
+        )}
+
         {match.ai_thesis_summary && (
-          <p className="text-xs text-zinc-200 mt-2 break-words leading-relaxed">
+          <p className="text-xs text-zinc-300 mt-2 break-words leading-relaxed italic">
             "{match.ai_thesis_summary}"
           </p>
         )}
@@ -164,13 +189,14 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
         )}
       </div>
 
-      {/* ── Decomposição SHAP ── */}
+      {/* ── Decomposição (plain por padrão / técnico no toggle) ── */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <div className="text-[10px] uppercase tracking-wider text-zinc-500 inline-flex items-center gap-1">
-            <Microscope className="h-3 w-3 text-fuchsia-400" /> Decomposição (peso × valor → impacto)
+            <Microscope className="h-3 w-3 text-fuchsia-400" />
+            {techMode ? "Decomposição (peso × valor → impacto)" : "Como cada peça contribui"}
           </div>
-          {hasFeatures && (
+          {hasFeatures && techMode && (
             <div className="text-[10px] text-zinc-400 font-mono">
               Σ Δ = <span className="text-zinc-200">{sumContrib.toFixed(3)}</span>
               {" → "}score <span className="text-[#D9F564] font-bold">{Math.round(Number(match.match_score ?? 0))}</span>
@@ -203,7 +229,37 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
               );
             })}
           </div>
+        ) : !techMode ? (
+          // ── Modo PLAIN (padrão) ──
+          <div className="space-y-1.5">
+            {humanItems.map((it) => (
+              <div
+                key={it.feature}
+                className={cn(
+                  "rounded border p-2 flex items-start gap-2.5",
+                  it.pullsDown
+                    ? "border-rose-900/40 bg-rose-950/10"
+                    : "border-zinc-800 bg-zinc-900/40",
+                )}
+              >
+                <span className="text-base leading-none mt-0.5">{it.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[12px] text-zinc-100 font-semibold">{it.label}</span>
+                    <span className={cn("text-[9px] px-1.5 py-0.5 rounded border font-mono shrink-0", it.badgeCls)}>
+                      {it.badge}
+                      {it.pullsDown && <span className="ml-1 text-rose-300">↓</span>}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400 mt-0.5 leading-snug break-words">
+                    {it.text}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
+          // ── Modo TÉCNICO (SHAP detalhado) ──
           <div className="space-y-2">
             {contribs.map((c) => {
               const widthPct = (Math.abs(Number(c.contribution ?? 0)) / maxAbs) * 100;
@@ -251,7 +307,7 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div className="rounded border border-emerald-900/40 bg-emerald-950/20 p-2.5">
             <div className="text-[9px] uppercase tracking-wider text-emerald-400/80 inline-flex items-center gap-1">
-              <Target className="h-3 w-3" /> p(close 12m)
+              <Target className="h-3 w-3" /> {techMode ? "p(close 12m)" : "Chance de fechar em 12 meses"}
             </div>
             <div className="text-base font-bold text-emerald-300 tabular-nums mt-0.5">
               {match.p_close_12m == null ? "—" : pct(match.p_close_12m, 1)}
@@ -265,7 +321,7 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
 
           <div className="rounded border border-zinc-700 bg-zinc-900/60 p-2.5">
             <div className="text-[9px] uppercase tracking-wider text-zinc-400 inline-flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" /> EV (p10/p50/p90)
+              <TrendingUp className="h-3 w-3" /> {techMode ? "EV (p10/p50/p90)" : "Valor estimado: pessimista / provável / otimista"}
             </div>
             <div className="text-xs font-semibold text-zinc-100 tabular-nums mt-0.5 break-words">
               {brl(match.ev_p10 ?? null, { compact: true })} / {brl(match.ev_p50 ?? null, { compact: true })} / {brl(match.ev_p90 ?? null, { compact: true })}
@@ -279,7 +335,7 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
 
           <div className="rounded border border-blue-900/40 bg-blue-950/20 p-2.5">
             <div className="text-[9px] uppercase tracking-wider text-blue-300/80 inline-flex items-center gap-1">
-              <Brain className="h-3 w-3" /> Tese & score M&A
+              <Brain className="h-3 w-3" /> {techMode ? "Tese & score M&A" : "Tese do comprador"}
             </div>
             <div className="text-xs font-semibold text-blue-200 mt-0.5 break-words">
               {match.thesis_key ?? "—"}
