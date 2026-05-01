@@ -148,8 +148,9 @@ async function findOrCreateCompany(db: DB, razao: string, uf: string|null): Prom
     r=await tbl().select("cnpj").ilike("razao_social",`%${cleanName}%`).limit(1).maybeSingle();
     if (r.data?.cnpj) { companyCache.set(key,r.data.cnpj as string); return r.data.cnpj as string; }
   }
-  const suffix=await sha256Hex(razao);
-  const stubCnpj=`PENDING-${suffix}`;
+  // Stub CNPJ must fit VARCHAR(14). Use "P" + 13 hex chars from sha256 = 14 chars.
+  const suffix=await sha256Hex(razao, 26); // 26 hex chars / 2 = 13 bytes hex
+  const stubCnpj=`P${suffix.slice(0,13)}`;
   await tbl().insert({
     cnpj:stubCnpj, razao_social:razao.trim(), uf:uf??null,
     needs_cnpj_enrichment:true, qualification_status:"unqualified",
