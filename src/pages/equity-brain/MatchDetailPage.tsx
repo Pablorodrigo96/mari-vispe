@@ -254,7 +254,7 @@ export default function MatchDetailPage() {
             <div className="text-[11px] text-zinc-500">carregando…</div>
           ) : contacts?.buyerAll?.length ? (
             <div className="space-y-1.5">
-              {contacts.buyerAll.map((c, i) => <ContactRow key={c.id ?? i} c={c} side="buyer" />)}
+              {contacts.buyerAll.map((c, i) => <ContactRow key={c.id ?? i} c={c} side="buyer" matchId={matchId} buyerId={row.buyer_id} />)}
             </div>
           ) : (
             <div className="text-[11px] text-zinc-500 italic">Sem contato cadastrado para este comprador.</div>
@@ -270,7 +270,7 @@ export default function MatchDetailPage() {
             <div className="text-[11px] text-zinc-500">carregando…</div>
           ) : contacts?.sellerAll?.length ? (
             <div className="space-y-1.5">
-              {contacts.sellerAll.map((c, i) => <ContactRow key={c.id ?? i} c={c} side="seller" />)}
+              {contacts.sellerAll.map((c, i) => <ContactRow key={c.id ?? i} c={c} side="seller" matchId={matchId} buyerId={row.buyer_id} />)}
             </div>
           ) : (
             <div className="text-[11px] text-zinc-500 italic">Sem contato cadastrado para este vendedor.</div>
