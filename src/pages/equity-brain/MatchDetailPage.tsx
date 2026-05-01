@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, ArrowRight, Building2, Target, MessageCircle, Phone, Mail,
+  ArrowLeft, ArrowRight, Building2, Target, Phone, Mail,
   Eye, Rocket, ShieldCheck, Copy, Loader2, Hash,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { useMatchById } from "@/hooks/useMatchById";
 import { tierForScore, useMatchPercentiles } from "@/hooks/useMatchInbox";
 import { useMatchContacts, type MatchContact } from "@/hooks/useMatchContacts";
 import { useIdentityVisibility } from "@/hooks/useIdentityVisibility";
-import { getWhatsAppLink, normalizeBrPhone } from "@/lib/whatsapp";
+import { normalizeBrPhone } from "@/lib/whatsapp";
 import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
 import { QuickStartMandateDialog } from "@/components/equity-brain/match/QuickStartMandateDialog";
 import { AddContactDialog } from "@/components/equity-brain/match/AddContactDialog";
