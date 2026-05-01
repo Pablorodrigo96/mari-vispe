@@ -1,40 +1,81 @@
-## Diagnóstico (cruzando dados reais)
 
-| Filtro da `eb_today_cards` | Realidade no banco | Mata o feed? |
-|---|---|---|
-| Inatividade > 14 dias (cooling_deal) | Atividade mais antiga é de **hoje cedo** (01/05 02:50) — 0 mandatos esfriados | ✅ Mata 100% dos `cooling_deal` |
-| Score ≥ 0.7 (hot_match) | 4.330 matches qualificam | ✅ Tem oferta |
-| Você ser `responsavel_id` / `co_advisor` / `origin_advisor` | 230 de 317 mandatos **sem responsável**; só 1 advisor cadastrado no banco | ✅ Mata os cards do seu user |
+## Fase 1 — Fixes básicos do WhatsApp (3 mudanças)
 
-**Conclusão:** Você é admin operando sobre uma base que ainda não foi distribuída entre advisors. O feed está vazio porque não tem mandato atribuído a você.
+### Fix 2 — Migration: estender CHECK em `equity_brain.deal_events.event_type`
 
-## Mudança proposta
+**Arquivo novo:** `supabase/migrations/20260501133500_extend_deal_events_event_type_check.sql`
 
-Atualizar a função `public.eb_today_cards` para que **admins enxerguem cards de TODOS os mandatos**, mantendo o comportamento normal pra advisors:
+```sql
+ALTER TABLE equity_brain.deal_events
+  DROP CONSTRAINT IF EXISTS deal_events_event_type_check;
 
-- Adicionar `v_is_admin := public.has_role(v_user, 'admin')` no início.
-- Em ambos os CTEs (`cooling` e `hot`), trocar a cláusula:
-  ```sql
-  WHERE (m.responsavel_id = v_user OR v_user = ANY(...) OR m.origin_advisor_id = v_user)
-  ```
-  por:
-  ```sql
-  WHERE (v_is_admin
-         OR m.responsavel_id = v_user
-         OR v_user = ANY(COALESCE(m.co_advisor_ids,'{}'::uuid[]))
-         OR m.origin_advisor_id = v_user)
-  ```
+ALTER TABLE equity_brain.deal_events
+  ADD CONSTRAINT deal_events_event_type_check
+  CHECK (event_type IN (
+    -- legacy mantidos
+    'rejected','contacted','reply_received','nda_signed',
+    'loi_received','term_sheet','closed','dropped',
+    -- novos canais de comunicação
+    'whatsapp_outbound','whatsapp_inbound',
+    'call_outbound','call_inbound',
+    'email','note','meeting_held'
+  ));
+```
 
-Tudo o mais permanece idêntico: filtro de score ≥0.7, cooling >14d, exclusão de `closed`, dismissals, ordenação por `priority_score DESC`, limite de 7 cards.
+Resultado: o `RPC eb_mark_whatsapp_action` para de quebrar com `deal_events_event_type_check` ao clicar **Mandei**.
 
-## Resultado esperado
+---
 
-- **Você (admin)**: feed `/equity-brain/hoje` deve passar a mostrar até 7 hot_match cards (dos 4.330 disponíveis), priorizados por `priority_score`. Cards do tipo cooling_deal continuam 0 até algum mandato passar 14 dias sem atividade — isso é correto.
-- **Advisors normais**: comportamento idêntico ao atual (vêem só seus mandatos).
-- **Sem mudança de schema, sem mudança de RLS, sem mudança de frontend.**
+### Fix 1A — Reescrever `generate-whatsapp-draft` com contexto real
 
-## Fora de escopo (deixar pra outro turno)
+**Arquivo:** `supabase/functions/generate-whatsapp-draft/index.ts` (substituição completa)
 
-- Distribuir os 230 mandatos órfãos entre advisors (problema operacional real).
-- Criar painel "Mandatos sem responsável" no admin.
-- Trocar fonte de inatividade de `mandates.last_activity_at` pra `crm_activities`.
+Mudanças vs versão atual:
+
+1. **Carrega histórico de 4 fontes** antes de chamar Gemini:
+   - `equity_brain.contacts` (nome, cargo, e a empresa via `entity_type='company'`+`entity_id`)
+   - `equity_brain.companies` (razão social, setor via cnae_descricao, UF/município)
+   - `equity_brain.mandates` (status, pipeline_stage, deal_type, valor, dias desde assinatura, último outreach). Se `mandate_id` não vier mas o contato estiver ligado a uma empresa com mandato vigente/em_negociação, **infere automaticamente**.
+   - `equity_brain.crm_activities` últimas 5 (data, kind, direction, body) — preferindo as ligadas ao mandato; fallback para o contato.
+   - `whatsapp_action_log` última mensagem efetivamente enviada (texto integral + data).
+
+2. **Decide o intent automaticamente** (sem o caller passar `draftType`):
+   - Se mandato com status `vigente` ou `em_negociacao` → **`followup`**
+   - Caso contrário → **`initial`**
+   - O caller pode opcionalmente sobrescrever via novo campo `force_intent` (`valuation_send` | `meeting_request` | `match_announcement`) — mantém compat com o `draft_type` antigo nesses 3 casos.
+
+3. **System prompts diferentes**:
+   - **`followup`**: instrução explícita "VOCÊ JÁ TEM RELAÇÃO ATIVA. NÃO se apresente. NÃO diga 'identificamos uma oportunidade' nem 'tenho um buyer'. Faça referência específica a algo concreto do histórico (status, último ponto, documento)."
+   - **`initial`**: apresentação curta com gancho de empresa/setor.
+
+4. **Resposta** ganha `mode: 'followup'|'initial'` e `resolved_mandate_id` para o front mostrar badge.
+
+---
+
+### Fix 1B — Simplificar `WhatsAppActionButton`
+
+**Arquivo:** `src/components/whatsapp/WhatsAppActionButton.tsx`
+
+- Remover o uso/passagem de `draft_type` no `invoke('generate-whatsapp-draft', ...)` (a edge function decide).
+- Manter prop `draftType` por compat, mas só repassar quando for um intent forçado (`valuation_send`/`meeting_request`/`match_announcement`) via novo campo `force_intent`.
+- Mostrar badge sutil no modal review: **"Continuação"** ou **"Primeiro contato"** vindo do `data.mode`.
+- Nenhuma mudança UX no botão em si.
+
+---
+
+### Critérios de aceite
+
+- [ ] Migration aplica sem erro.
+- [ ] `INSERT INTO equity_brain.deal_events(event_type) VALUES ('whatsapp_outbound')` passa.
+- [ ] Clicar **Mandei** no fluxo completo não dá mais erro `deal_events_event_type_check`.
+- [ ] Clicar "Falar com X" num contato com mandato vigente: rascunho menciona setor/status/valor/última atividade e NÃO se apresenta.
+- [ ] Clicar em contato sem mandato: rascunho é apresentação curta com gancho de empresa.
+- [ ] Badge "Continuação" / "Primeiro contato" aparece no modal review.
+
+### Detalhes técnicos
+
+- `withObservability` mantido.
+- Resolução de empresa do contato: assume `contacts.entity_type='company'` apontando para `companies.id` (ou via cnpj quando aplicável).
+- Para evitar leak de PII, a edge usa SERVICE_ROLE só para leitura, e o texto enviado ao Gemini contém apenas dados já visíveis ao advisor (via RLS) — o usuário só dispara para contatos que ele já vê.
+- Sem mudanças em `eb_open_whatsapp_action`/`eb_mark_whatsapp_action`.
+- Sem mudanças em outros componentes.
