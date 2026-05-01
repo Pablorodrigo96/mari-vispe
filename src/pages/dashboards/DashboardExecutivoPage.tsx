@@ -63,12 +63,20 @@ function DashboardExecutivoInner() {
     .slice(0, 3)
     .map((r, i) => ({ name: `#${i + 1}`, value: Number(r.valor_operacao) }));
 
+  const insightSnapshot = exec.data ? {
+    total: k.total_operacoes, buyside: k.buyside, sellside: k.sellside,
+    em_andamento: k.em_andamento, concluidas: k.concluidas, canceladas: k.canceladas,
+    valor_total: k.valor_total_operacoes, faturamento_vispe: k.faturamento_vispe, ticket_medio: k.ticket_medio,
+  } : null;
+  const insight = useDashboardInsight("executivo", insightSnapshot);
+
   return (
     <DashShell
       title="Visão Executiva M&A"
       subtitle="Visão consolidada de todas as operações Buyside e Sellside · refresh automático a cada 60s"
       onRefresh={() => { exec.refetch(); breakdowns.refetch(); }}
       liveAge={exec.dataUpdatedAt ? Math.floor((Date.now() - exec.dataUpdatedAt) / 1000) : undefined}
+      filters={<DashboardFilters />}
     >
       {/* Linha 1 — KPIs principais */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
