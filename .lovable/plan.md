@@ -1,85 +1,90 @@
-## Diagnóstico
+## Problema
 
-Varredura completa nas tabelas-chave detectou o seguinte volume de duplicatas:
+Ao rodar a limpeza em `/equity-brain/admin/dedupe`, o erro foi:
 
-| Entidade | Critério | Linhas extras |
-|---|---|---|
-| `equity_brain.companies` (CNPJ) | exato | 0 ✅ |
-| `equity_brain.listings` (CNPJ) | exato | 0 ✅ |
-| `equity_brain.buyers` (CNPJ) | exato | 0 ✅ |
-| **`equity_brain.mandates`** (mesmo `company_cnpj`, mesmo `deal_type`/`deal_kind`) | ativos: **134** · todos: **209** |
-| `equity_brain.buyers` (mesmo nome normalizado) | 5 |
-| `equity_brain.contacts` (mesmo email dentro da mesma entidade) | 38 |
-| `equity_brain.contacts` (mesmo telefone dentro da mesma entidade) | 354 |
-| `public.buyer_profiles` (mesmo user + nome) | 4 |
-
-Amostragem confirma que são **ruído real de import** (mandates com mesmo CNPJ, mesma fase, mesmo valor, criados com 2 minutos de diferença em 30/04 e re-importados em 01/05). Não são sellside vs buyside legítimos.
-
-Não existem foreign keys físicas, mas há referências lógicas em: `deals.mandate_id`, `mandate_subtasks`, `mandate_summaries`, `pipeline_transitions`, `whatsapp_*`, `crm_activities.contact_id`, `matches.buyer_id`, `deal_events.buyer_id`, `buyer_profiles.source_eb_buyer_id` etc. **Qualquer dedupe precisa repontar essas referências antes de apagar**, senão quebra o histórico.
-
-## Estratégia (segura e auditável)
-
-### Princípios
-1. **Eleger o "sobrevivente"** (canonical) por: mais antigo OU com mais dados preenchidos OU com `responsavel_id` definido.
-2. **Repontar** todas as FKs lógicas do duplicado → canonical antes de apagar.
-3. **Soft delete + auditoria** em vez de DELETE direto, para permitir reversão por 30 dias.
-
-### Implementação
-
-#### 1. Migration — infraestrutura de dedupe
-- Criar tabela `equity_brain.dedupe_audit` com colunas: `id`, `entity_type`, `kept_id`, `removed_id`, `merged_at`, `merged_by`, `reason`, `payload jsonb` (snapshot completo da linha removida).
-- Criar função `equity_brain.merge_mandates(p_keep uuid, p_drop uuid)` (SECURITY DEFINER, restrita a admin) que:
-  1. Loga a linha `p_drop` em `dedupe_audit`.
-  2. Atualiza `deals.mandate_id`, `mandate_subtasks.mandate_id`, `mandate_summaries.mandate_id`, `pipeline_transitions.mandate_id`, `whatsapp_action_log.mandate_id`, `whatsapp_messages.mandate_id`, `eb_pipeline_transitions.mandate_id` de `p_drop` → `p_keep`.
-  3. Faz "fill-up" em `p_keep`: para cada coluna NULL em `p_keep` mas preenchida em `p_drop`, copia o valor (não sobrescreve dados existentes).
-  4. DELETE da linha `p_drop`.
-- Criar funções equivalentes: `merge_buyers(p_keep, p_drop)`, `merge_contacts(p_keep, p_drop)`, `merge_buyer_profiles(p_keep, p_drop)`.
-
-#### 2. Migration — execução em lote
-SQL idempotente que, para cada grupo duplicado, escolhe o canonical por:
-```text
-ORDER BY (responsavel_id IS NOT NULL) DESC,
-         (valor_operacao IS NOT NULL) DESC,
-         (jsonb_count_non_nulls(row_to_jsonb(m))) DESC,
-         created_at ASC
-LIMIT 1
 ```
-e chama `merge_*` para cada `p_drop` do grupo. Regras por entidade:
+duplicate key value violates unique constraint "mandates_monday_item_id_key"
+```
 
-- **Mandates**: agrupar por `(company_cnpj, COALESCE(deal_type::text,''), COALESCE(deal_kind::text,''))`. **Excluir do grupo** os já cancelados (deixar como histórico). Esperado: ~134 linhas extras removidas.
-- **Buyers**: agrupar por `lower(trim(nome))` quando CNPJ NULL nos dois. Esperado: 5 linhas.
-- **Contacts**: agrupar por `(entity_type, entity_id, lower(email))` e por `(entity_type, entity_id, telefone normalizado)`. Esperado: ~390 linhas (muitas se sobrepõem).
-- **buyer_profiles**: agrupar por `(user_id, lower(buyer_name))`. Esperado: 4 linhas.
+### Causa raiz
 
-#### 3. Trigger anti-recidiva
-Criar UNIQUE INDEX parcial para impedir recriação:
-- `mandates`: `UNIQUE (company_cnpj, deal_type, deal_kind) WHERE status NOT IN ('cancelado','concluido') AND company_cnpj IS NOT NULL`
-- `contacts`: `UNIQUE (entity_type, entity_id, lower(email)) WHERE email IS NOT NULL`
-- `contacts`: `UNIQUE (entity_type, entity_id, telefone_normalizado) WHERE telefone_e164 IS NOT NULL` — usando coluna gerada `telefone_normalizado`.
-- `buyer_profiles`: `UNIQUE (user_id, lower(buyer_name))`.
+A função `equity_brain._merge_fillup` (helper usado por `merge_mandates`, `merge_buyers`, etc.) faz:
 
-#### 4. UI — painel "Limpeza de Duplicatas"
-Nova rota `/equity-brain/admin/dedupe` (admin only):
-- Cards por entidade mostrando "X grupos / Y duplicatas detectadas" em tempo real (RPC `get_dedupe_stats`).
-- Botão "Executar limpeza segura" → roda RPC `run_safe_dedupe()` (chama os `merge_*` em lote dentro de uma transação).
-- Tabela de histórico com últimos `dedupe_audit` (kept_id, removed_id, quem fez, quando, link "Restaurar" que recria a linha do payload).
-- Item no `EBSidebar` accordion Admin: "Limpeza de duplicatas" (ícone `Copy`).
+```sql
+UPDATE mandates t
+SET col = COALESCE(k.col, d.col)   -- para TODAS as colunas
+WHERE t.id = p_keep
+```
 
-### Confirmação antes de apagar
+Isso percorre **todas** as colunas, inclusive `monday_item_id`, que tem `UNIQUE`. Quando o canonical (`keep`) tem `monday_item_id = NULL` e o duplicado (`drop`) tem um valor preenchido, o UPDATE tenta gravar esse valor no canonical **antes** de deletar o drop — e a constraint dispara, abortando o merge inteiro.
 
-A migration #2 (execução em lote) **não roda automaticamente**. Após criar a infra, abro o painel e você clica "Executar limpeza segura" para os 4 escopos, individualmente. Cada execução fica auditada em `dedupe_audit` e pode ser revertida.
+O mesmo padrão afeta outras tabelas com colunas `UNIQUE` que o `_merge_fillup` também copia:
 
-## Arquivos a criar/editar
+- `equity_brain.mandates.monday_item_id` (UNIQUE) ← causou o erro
+- `equity_brain.advisors_pending_mapping.monday_name` (UNIQUE)
+- `equity_brain.company_news.dedupe_hash` (UNIQUE)
+- `equity_brain.deals.match_id` (UNIQUE)
+- `equity_brain.score_engine_versions.version` (UNIQUE)
+- `public.profiles.user_id` (UNIQUE)
+- `public.buyer_profiles.source_eb_buyer_id` (UNIQUE)
 
-- **Migration 1**: cria `dedupe_audit` + funções `merge_mandates/buyers/contacts/buyer_profiles` + `get_dedupe_stats()` + `run_safe_dedupe(p_entity text)`.
-- **Migration 2**: índices únicos parciais para prevenção.
-- `src/pages/equity-brain/DedupeAdminPage.tsx` (nova).
-- `src/App.tsx` — adicionar rota `admin/dedupe`.
-- `src/components/equity-brain/EBSidebar.tsx` — adicionar item no accordion Admin.
+## Solução
 
-## Fora do escopo
+Tornar o `_merge_fillup` **safe-by-default**: ignorar automaticamente colunas que façam parte de qualquer constraint `UNIQUE` (single ou composta) e da PRIMARY KEY. Esses campos não devem ser "preenchidos" pelo duplicado, porque por definição já são identificadores que pertencem a um único registro.
 
-- Não vou tocar em `valuation_history` (registros financeiros legais não devem ser deduplicados).
-- Não vou tocar em `crm_activities`, `whatsapp_messages`, `deals` diretamente — só repontar FKs.
-- Não vou apagar mandates **cancelados** (mesmo que duplicados de um vigente) — viram histórico.
-- Não vou alterar duplicidades de `companies` ou `listings` por enquanto (zero detectadas).
+### Migração SQL
+
+Substituir `equity_brain._merge_fillup` por uma versão que:
+
+1. Constrói a lista de colunas a partir de `information_schema.columns`.
+2. Subtrai as colunas que aparecem em qualquer constraint `PRIMARY KEY` ou `UNIQUE` (consultando `pg_constraint` + `pg_attribute`).
+3. Subtrai também `id`, `created_at`, `updated_at`.
+4. Se sobrar alguma coluna, executa o COALESCE como hoje. Senão, faz `RETURN`.
+
+Pseudocódigo da query auxiliar:
+
+```sql
+-- colunas "bloqueadas": pk + qualquer unique
+SELECT a.attname
+FROM pg_constraint c
+JOIN pg_attribute a
+  ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+WHERE c.conrelid = (p_schema||'.'||p_table)::regclass
+  AND c.contype IN ('p','u');
+```
+
+A coluna `monday_item_id` cairá nessa lista e será ignorada — o canonical mantém seu próprio valor (ou `NULL`), e o `monday_item_id` do drop vai junto com a linha deletada. Sem violação.
+
+### Reforço no `merge_mandates`
+
+Adicionar um passo extra antes do `_merge_fillup`, **dentro da própria transação**, para garantir consistência mesmo se algum duplicado tiver dado interessante:
+
+```sql
+-- se canonical não tem monday_item_id e drop tem, "rouba" antes de deletar
+UPDATE equity_brain.mandates
+SET monday_item_id = (SELECT monday_item_id FROM equity_brain.mandates WHERE id = p_drop)
+WHERE id = p_keep
+  AND monday_item_id IS NULL
+  AND EXISTS (SELECT 1 FROM equity_brain.mandates WHERE id = p_drop AND monday_item_id IS NOT NULL);
+
+-- limpa o duplicado para liberar a unique
+UPDATE equity_brain.mandates SET monday_item_id = NULL WHERE id = p_drop;
+```
+
+Esse padrão (steal-then-null) preserva o link com Monday quando útil e nunca colide com a unique. Aplicar o mesmo para `profiles.user_id` é desnecessário (PK lógica) e o helper já vai ignorar.
+
+### Tratamento do erro na UI
+
+Em `DedupeAdminPage.tsx`, envolver a chamada do RPC com try/catch que mostre `error.message` num toast detalhado e continue o batch (não abortar todos os 134 mandates por causa de 1 falha). Hoje um único erro derruba o lote.
+
+## Arquivos
+
+- `supabase/migrations/<novo>_dedupe_fix_unique.sql` — substitui `_merge_fillup` + ajusta `merge_mandates` com o passo steal-then-null.
+- `src/pages/equity-brain/DedupeAdminPage.tsx` — torna o batch resiliente: captura erro por par, exibe linha problemática no log e segue para o próximo.
+
+## Validação pós-deploy
+
+1. Rodar novamente "Limpar mandatos duplicados" — deve concluir sem erro.
+2. Conferir em `dedupe_audit` que `refs_updated` lista as tabelas repointadas.
+3. Verificar contagem: `SELECT COUNT(*) FROM equity_brain.mandates` deve cair em ~134.
+4. Confirmar que `monday_item_id` continua único e não-nulo nos sobreviventes que tinham link com Monday.
