@@ -68,7 +68,7 @@ export function TopMatchesHeader({ cnpj, buyerId }: Props) {
           action="Veja todos na Match Inbox e contate os mais quentes primeiro."
           className="!ml-0"
         />
-        <Link to="/equity-brain/match-inbox"
+        <Link to={cnpj ? "?tab=matches" : buyerId ? "?tab=matches" : "/equity-brain/match-inbox"}
           className="ml-auto text-[11px] inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#D9F564] text-zinc-900 font-semibold hover:opacity-90">
           Ver todos <ArrowRight className="h-3 w-3" />
         </Link>
