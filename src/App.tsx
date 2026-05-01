@@ -246,7 +246,6 @@ const App = () => (
               <Route path="shadow"        element={<Navigate to="/equity-brain/admin/shadow" replace />} />
               <Route path="grafo-jarvis"  element={<Navigate to="/equity-brain/admin/jarvis" replace />} />
               <Route path="match/:matchId" element={<MatchDetailPage />} />
-              <Route path="oportunidades" element={<EBOportunidadesPage />} />
               <Route
                 path="grafo-jarvis/guia"
                 element={
