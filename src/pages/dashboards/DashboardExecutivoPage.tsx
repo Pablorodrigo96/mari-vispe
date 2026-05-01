@@ -4,10 +4,21 @@ import { DashShell, DashCard } from "@/components/dashboards/DashShell";
 import { DashKpi } from "@/components/dashboards/DashKpi";
 import { DashDonut, DashStackedBar, DashLine, DashBar } from "@/components/dashboards/DashCharts";
 import { AIInsightCard } from "@/components/dashboards/AIInsightCard";
+import { DashboardFiltersProvider } from "@/components/dashboards/DashboardFiltersContext";
+import { DashboardFilters } from "@/components/dashboards/DashboardFilters";
+import { useDashboardInsight } from "@/hooks/useDashboardInsight";
 
 const REFRESH_MS = 60_000;
 
 export default function DashboardExecutivoPage() {
+  return (
+    <DashboardFiltersProvider>
+      <DashboardExecutivoInner />
+    </DashboardFiltersProvider>
+  );
+}
+
+function DashboardExecutivoInner() {
   const exec = useQuery({
     queryKey: ["dash-exec"],
     refetchInterval: REFRESH_MS,
@@ -52,12 +63,20 @@ export default function DashboardExecutivoPage() {
     .slice(0, 3)
     .map((r, i) => ({ name: `#${i + 1}`, value: Number(r.valor_operacao) }));
 
+  const insightSnapshot = exec.data ? {
+    total: k.total_operacoes, buyside: k.buyside, sellside: k.sellside,
+    em_andamento: k.em_andamento, concluidas: k.concluidas, canceladas: k.canceladas,
+    valor_total: k.valor_total_operacoes, faturamento_vispe: k.faturamento_vispe, ticket_medio: k.ticket_medio,
+  } : null;
+  const insight = useDashboardInsight("executivo", insightSnapshot);
+
   return (
     <DashShell
       title="Visão Executiva M&A"
       subtitle="Visão consolidada de todas as operações Buyside e Sellside · refresh automático a cada 60s"
       onRefresh={() => { exec.refetch(); breakdowns.refetch(); }}
       liveAge={exec.dataUpdatedAt ? Math.floor((Date.now() - exec.dataUpdatedAt) / 1000) : undefined}
+      filters={<DashboardFilters />}
     >
       {/* Linha 1 — KPIs principais */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -76,12 +95,18 @@ export default function DashboardExecutivoPage() {
         <DashKpi label="Ticket Médio" value={Number(k.ticket_medio ?? 0)} format="currency" size="hero" accent="cyan" loading={exec.isLoading} />
       </div>
 
-      {/* Insight IA */}
+      {/* Insight IA — gerado pela Mari (cache 1h) */}
       {(k.total_operacoes ?? 0) > 0 && (
         <AIInsightCard
-          body={`Você tem ${k.em_andamento ?? 0} operações em andamento gerando potencial de R$ ${((Number(k.valor_total_operacoes ?? 0)) / 1_000_000).toFixed(1)}M. ${k.sellside > k.buyside ? "Sellside lidera o portfólio." : "Buyside lidera o portfólio."}`}
+          body={
+            insight.body ??
+            (insight.loading
+              ? "Mari analisando o portfólio…"
+              : `Você tem ${k.em_andamento ?? 0} operações em andamento gerando potencial de R$ ${((Number(k.valor_total_operacoes ?? 0)) / 1_000_000).toFixed(1)}M. ${k.sellside > k.buyside ? "Sellside lidera o portfólio." : "Buyside lidera o portfólio."}`)
+          }
         />
       )}
+
 
       {/* Linha 3 — 3 donuts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

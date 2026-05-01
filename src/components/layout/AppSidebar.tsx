@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Building2, MapPin, Store, ClipboardList, Plus, Search,
   UserSearch, Target, ChartBar, FileText, Award, Calculator, DollarSign,
   Briefcase, Sparkles, Shield, Brain, ChevronDown, LogOut, User, ChevronLeft,
-  ChevronRight,
+  ChevronRight, BarChart3, FileSignature, Handshake, FileBarChart,
 } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
 import { cn } from '@/lib/utils';
@@ -82,6 +82,18 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         ...(eff.isAdmin
           ? [{ name: 'Head de Parcerias', href: '/admin/parcerias', icon: Shield }]
           : []),
+      ],
+    });
+  }
+
+  if (eff.isAdmin || eff.isAdvisor) {
+    groups.push({
+      id: 'dashboards', name: '📊 Dashboards', icon: BarChart3,
+      children: [
+        { name: 'Executivo M&A', href: '/dashboard/executivo', icon: BarChart3 },
+        { name: 'Mandato', href: '/dashboard/mandato', icon: FileSignature },
+        { name: 'Match', href: '/dashboard/match', icon: Handshake },
+        { name: 'NBO', href: '/dashboard/nbo', icon: FileBarChart },
       ],
     });
   }

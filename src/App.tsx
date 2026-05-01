@@ -155,6 +155,12 @@ const App = () => (
               <Route path="/potencial-carteira" element={<PortfolioPotential />} />
               <Route path="/parceiro" element={<PartnerDashboard />} />
 
+              {/* Top-level dashboards (admin/advisor) */}
+              <Route path="/dashboard/executivo" element={<RequireRole roles={["admin", "advisor"]}><DashboardExecutivoPage /></RequireRole>} />
+              <Route path="/dashboard/mandato"   element={<RequireRole roles={["admin", "advisor"]}><DashboardMandatoPage /></RequireRole>} />
+              <Route path="/dashboard/match"     element={<RequireRole roles={["admin", "advisor"]}><DashboardMatchPage /></RequireRole>} />
+              <Route path="/dashboard/nbo"       element={<RequireRole roles={["admin", "advisor"]}><DashboardNboPage /></RequireRole>} />
+
               {/* Admin (sidebar do AppShell + RequireRole) */}
               <Route path="/admin" element={<RequireRole roles={["admin"]}><AdminDashboard /></RequireRole>} />
               <Route path="/admin/crm" element={<RequireRole roles={["admin"]}><AdminCRM /></RequireRole>} />
