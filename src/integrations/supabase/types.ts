@@ -3595,6 +3595,16 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      mari_ops_record_smoke: {
+        Args: {
+          p_actual?: Json
+          p_duration_ms: number
+          p_message?: string
+          p_status: string
+          p_test_name: string
+        }
+        Returns: undefined
+      }
       qualify_lead:
         | {
             Args: {
