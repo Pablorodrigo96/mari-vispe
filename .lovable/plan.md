@@ -1,86 +1,98 @@
+# Fase 1/4 — Schema: Paridade Monday
 
-# Diagnóstico: por que 30 KPIs estão zerados
+## Achados da inspeção (ajustes vs. brief original)
 
-Rodei o banco. **O erro NÃO é seu — é dos dados importados.** Você tem 317 mandatos, mas eles vieram da planilha sem 8 campos críticos que os dashboards leem. Resumo:
+Inspecionei o banco antes de planejar e encontrei 3 divergências do brief que precisam ser endereçadas pra migration não falhar:
 
-| Campo no banco | Quantos preenchidos | O que ele alimenta |
-|---|---|---|
-| `deal_type` | 317 sellside · **0 buyside** | KPI Buyside, Tipos de operação |
-| `outcome` | 317 "em_andamento" · **0 won/lost/canceled** | Concluídas, Canceladas, Match status, NBO concluídos |
-| `valor_operacao` | **0** | Total das Operações, Ticket Médio, 3 maiores, NBO Valor Total/Médio |
-| `faturamento_vispe` | **0** | Faturamento Vispe, Comissão Vispe potencial, NBO Comissões |
-| `valor_pedido` | 107 de 317 | Equity sob gestão, Mandatos vigentes |
-| `status` | 317 "vigente" · **0 "ativo"** | Vigentes, Vendemos, "Mandatos vigentes por estado" |
-| `responsavel_id` | 87 de 317 | NBO por executivo (qtd e volume) |
-| `data_inicio` / `data_fechamento` | poucos | Tempo médio Match e NBO |
-| `deal_phase` | 1 nbo · 0 match | Match (todos KPIs), NBO (todos KPIs) |
+1. **`mari_ops` já existe** (Fase 0 de observabilidade já rodou). As tabelas `health_check`, `smoke_tests`, `model_metrics` e a view `health_summary_24h` já estão criadas. → **Pulo o bloco 4** do brief (idempotente já está garantido pela infra existente). Apenas valido que existem.
 
-A view está OK — ela só mostra o que o banco tem. Os KPIs zeram porque os campos chegaram vazios na importação.
+2. **`public.is_admin()` NÃO existe**. O projeto usa `public.has_role(auth.uid(), 'admin'::app_role)`. → **Substituo todas as chamadas `is_admin()`** das policies por `has_role(auth.uid(), 'admin'::app_role)` (padrão consistente com todas as outras tabelas do projeto — ver `eb_pipeline_stages`, `franchisee_regions`, etc.).
+
+3. **`equity_brain.mandates` já tem** `co_advisor_ids`, `origin_advisor_id`, `responsavel_id`. ✅ Compatível com a policy de subtasks proposta.
+
+Nenhum dos 5 campos novos em mandates (`padrinho_id`, `cross_sell_flags`, `monday_item_id`, `imported_from`, `imported_at`) existe — todos serão adicionados.
 
 ---
 
-# Solução em 2 frentes
+## Migration: `20260501_monday_parity.sql`
 
-## Frente 1 — Backfill automático (resolve ~70% dos KPIs imediatamente)
+### Bloco 1 — Campos novos em `equity_brain.mandates`
+- `padrinho_id uuid` → FK para `auth.users(id)` ON DELETE SET NULL (executivo padrinho do Buyside Monday)
+- `cross_sell_flags text[]` default `'{}'` (valuation, captacao, sucessao…)
+- `monday_item_id text UNIQUE` (re-imports incrementais idempotentes)
+- `imported_from text` (origem do import: "monday_buyside", "monday_sellside"…)
+- `imported_at timestamptz`
+- 3 índices parciais: `padrinho_id`, `monday_item_id`, `(imported_from, imported_at)`
+- COMMENT em cada coluna nova
 
-Migration que **infere valores** a partir do que já existe, sem você cadastrar nada:
+### Bloco 2 — Tabela `equity_brain.mandate_subtasks`
+Subelementos do Monday. Colunas exatamente como no brief: `id`, `mandate_id` (FK CASCADE), `name`, `etapa`, `responsavel_id` (FK SET NULL), `status` (CHECK: pendente|em_andamento|concluido|cancelado|bloqueado), `data_entrega`, `arquivos_url text[]`, `anotacoes`, `monday_subitem_id`, `ordem`, `created_by`, `created_at`, `updated_at`.
 
-1. **`status`**: traduzir `vigente` → `ativo` quando `outcome='em_andamento'` e sem `data_fechamento`. Marcar `concluido` quando `outcome='won'` e `cancelado` quando `outcome='lost'`. → Destrava: Vigentes, Vendemos, Mandatos vigentes por estado, status do Match.
+3 índices: `mandate_id`, `responsavel_id`, `monday_subitem_id` (parcial).
 
-2. **`deal_phase`**: copiar de `pipeline_stage` quando vazio (`match`→match, `nbo`→nbo, `closing`→closing). → Destrava: todos os KPIs de Match e NBO.
+**RLS** (ajustado pra usar `has_role` em vez de `is_admin`):
+- `SELECT`: usuário tem acesso ao mandato (responsavel/padrinho/origin_advisor/co_advisor) **OU** admin
+- `INSERT`: responsavel ou padrinho do mandato OU admin
+- `UPDATE`: o próprio responsável da subtask OU dono do mandato OU admin
+- `DELETE`: somente admin
 
-3. **`valor_operacao`**: quando vazio, usar `valor_pedido` como proxy (107 mandatos passam a ter valor). → Destrava: Total das Operações, Ticket Médio, 3 maiores, NBO Valor Total/Médio.
+Trigger `tg_subtasks_updated_at` mantendo `updated_at`.
 
-4. **`faturamento_vispe`**: calcular `valor_operacao × commission_pct/100` quando vazio (default 5% se sem `commission_pct`). → Destrava: Faturamento Vispe, Comissão potencial, NBO Comissões.
+### Bloco 3 — Tabela `equity_brain.advisors_pending_mapping`
+Buffer de nomes do Monday que ainda não foram resolvidos pra `auth.users`. Colunas como no brief: `monday_name UNIQUE`, `occurrences`, `resolved_user_id`, `resolved_at`, `resolved_by`, `first_seen_at`, `last_seen_at`.
 
-5. **`outcome`** específico: quando `data_fechamento` preenchida, marcar `won`. → Destrava: Concluídas, NBO Concluídos, Match Concluídos.
+RLS: única policy `ALL` para admin (`has_role`).
 
-6. **`deal_type` Buyside**: identificar mandatos com `deal_kind='buyer_mandate'` e setar `deal_type='buyside'`. → Destrava: KPI Buyside, Tipos de operação.
-
-Após esse backfill, o que fica zerado é só o que **ninguém preencheu nem na planilha**: Canceladas (precisa marcar manualmente quem foi cancelado), Tempo médio (precisa data_inicio + data_fechamento) e NBO por executivo (faltam responsáveis nos 230 sem `responsavel_id`).
-
-## Frente 2 — Tela de "Cadastro Rápido em Massa"
-
-Criar `/equity-brain/crm/quick-fill` — uma tabela editável estilo Excel com TODOS os mandatos e só as 8 colunas que faltam, para você preencher em lote os 30% restantes:
-
-| Codename | Empresa | deal_type | outcome | valor_operacao | faturamento_vispe | responsavel | data_inicio | data_fechamento |
-|---|---|---|---|---|---|---|---|---|
-
-- Filtros por status/outcome para focar nos pendentes.
-- Edição inline com salvamento automático.
-- Indicador "X de 317 com dados completos".
-- Botão "exportar pendentes" em CSV para preencher no Excel e reimportar via `/equity-brain/crm/imports`.
-
-## Frente 3 — Onde editar UM mandato individual (já existe, só te aponto)
-
-**`/equity-brain/crm/mandate/:id/edit`** (rota `MandateFormPage.tsx`) — formulário completo com TODOS os campos. Você acabou de abrir um (`d5de4012…`). Os campos que destravam KPIs estão lá:
-- "Tipo de operação" → `deal_type`
-- "Fase" → `deal_phase`
-- "Status" / "Resultado" → `status` + `outcome`
-- "Valor da operação" → `valor_operacao`
-- "Faturamento Vispe" → `faturamento_vispe`
-- "Responsável" → `responsavel_id`
-- "Data início" / "Data fechamento"
+### Bloco 4 — `mari_ops` (PULADO)
+Já existe. Apenas adiciono no fim da migration uma verificação `DO $$ ... RAISE NOTICE` confirmando presença (não-bloqueante).
 
 ---
 
-# Detalhes técnicos
+## Rollback: `20260501_monday_parity_rollback.sql`
+Arquivo separado (apenas referência — não rodado automaticamente). Drop das 2 tabelas novas e das 5 colunas novas em mandates. **Não dropa `mari_ops`** (já existia antes da Fase 1).
 
-**Migrations:**
-- `backfill_mandates_kpi_fields.sql` — 6 UPDATEs idempotentes na ordem acima, com `WHERE` defensivos (só preenche se NULL).
-
-**Novos arquivos:**
-- `src/pages/equity-brain/QuickFillPage.tsx` — tabela editável com TanStack Table + inline editing.
-- Rota em `src/App.tsx` sob `/equity-brain/crm/quick-fill` (RequireRole admin|advisor).
-- Link no `EBSidebar.tsx` em "DASHBOARDS M&A" → "Preencher dados rápido".
-
-**Sem mudanças** em: view `eb_v_mandates_full`, RPCs `get_dashboard_*`, dashboards já criados.
+```sql
+DROP TABLE IF EXISTS equity_brain.mandate_subtasks CASCADE;
+DROP TABLE IF EXISTS equity_brain.advisors_pending_mapping CASCADE;
+ALTER TABLE equity_brain.mandates 
+  DROP COLUMN IF EXISTS padrinho_id,
+  DROP COLUMN IF EXISTS cross_sell_flags,
+  DROP COLUMN IF EXISTS monday_item_id,
+  DROP COLUMN IF EXISTS imported_from,
+  DROP COLUMN IF EXISTS imported_at;
+```
 
 ---
 
-# O que você ganha
-- **Imediatamente após o backfill**: 21 dos 30 KPIs zerados ganham números.
-- **Após usar o Quick Fill** (≈15min para 317 mandatos): os 9 restantes (Canceladas, Tempo médio, NBO por executivo) também populam.
-- **Daqui pra frente**: importações novas via `/equity-brain/crm/imports` já vão preencher todos os campos se a planilha tiver as colunas certas (modelo já gera).
+## Validação dos critérios de aceite
 
-Aprova rodar?
+| Critério | Como valido |
+|---|---|
+| Migration aplica sem erro | Ferramenta de migration retorna sucesso |
+| Rollback testado | Rodar SQL do rollback manual em staging via `read_query` (DDL só roda em migration, então valido a sintaxe + idempotência dos `IF EXISTS`) |
+| `mandate_subtasks` criada | `SELECT FROM information_schema.tables` |
+| `advisors_pending_mapping` criada | idem |
+| `mari_ops.health_check` existe | já validado — existe |
+| `health_summary_24h` retorna | já validado — existe |
+| RLS subtasks isolada | Confirmar 4 policies criadas via `pg_policies` |
+| `monday_item_id` UNIQUE | Confirmar constraint via `information_schema.table_constraints` |
+| Trigger `updated_at` ativo | Confirmar via `pg_trigger` |
+
+---
+
+## O que NÃO vou fazer (respeitando regras globais)
+- ❌ Não toco em edge functions existentes
+- ❌ Não invento campos extras
+- ❌ Não modifico mandates além das 5 colunas listadas
+- ❌ Não recrio `mari_ops` (já existe)
+- ❌ Não avanço pra Fase 2 — paro e aguardo seu OK
+
+---
+
+## Detalhes técnicos finais
+- **1 arquivo** de migration: `supabase/migrations/<timestamp>_monday_parity.sql`
+- **1 arquivo** de referência: `supabase/migrations/_rollback/20260501_monday_parity_rollback.sql` (apenas documentação — não é migration ativa)
+- Todas as policies usam `has_role(auth.uid(), 'admin'::app_role)` no lugar de `is_admin()`
+- Sem mudanças em código TS/React nesta fase
+
+Aprova rodar a migration?
