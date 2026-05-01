@@ -182,8 +182,9 @@ const App = () => (
               <Route path="/admin/capital" element={<RequireRole roles={["admin"]}><AdminCapital /></RequireRole>} />
               <Route path="/admin/capital/providers" element={<RequireRole roles={["admin"]}><AdminCapitalProviders /></RequireRole>} />
               <Route path="/admin/monday-import" element={<RequireRole roles={["admin"]}><MondayImport /></RequireRole>} />
-              <Route path="/admin/monday-parity" element={<RequireRole roles={["admin"]}><MondayParity /></RequireRole>} />
-              <Route path="/admin/advisors-mapping" element={<RequireRole roles={["admin"]}><AdvisorsMapping /></RequireRole>} />
+              {/* legados — agora rodam dentro do shell EB */}
+              <Route path="/admin/monday-parity" element={<Navigate to="/equity-brain/admin/monday-parity" replace />} />
+              <Route path="/admin/advisors-mapping" element={<Navigate to="/equity-brain/admin/advisors-mapping" replace />} />
             </Route>
 
             
@@ -276,7 +277,8 @@ const App = () => (
               <Route path="admin/health" element={<RequireRole roles={["admin"]}><HealthDashboardPage /></RequireRole>} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
               <Route path="crm/pipeline/historico" element={<PipelineHistoryPage />} />
-              <Route path="deal/:id"             element={<UnifiedDealPage />} />
+              {/* deal/:id desativado até existir dado em equity_brain.deals; redireciona pro pipeline */}
+              <Route path="deal/:id"             element={<Navigate to="/equity-brain/pipeline" replace />} />
               <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />
               <Route path="isp/import"           element={<RequireRole roles={["admin", "advisor"]}><IspImportPage /></RequireRole>} />
               <Route path="isp/sugestoes"        element={<RequireRole roles={["admin", "advisor"]}><IspSuggestionsPage /></RequireRole>} />
@@ -287,6 +289,8 @@ const App = () => (
               <Route path="mandatos/tabela"      element={<RequireRole roles={["admin","advisor"]}><MandatosTablePage /></RequireRole>} />
               <Route path="admin/dashboard-coverage" element={<RequireRole roles={["admin","advisor"]}><DashboardCoveragePage /></RequireRole>} />
               <Route path="admin/dedupe" element={<RequireRole roles={["admin"]}><DedupeAdminPage /></RequireRole>} />
+              <Route path="admin/monday-parity"     element={<RequireRole roles={["admin"]}><MondayParity /></RequireRole>} />
+              <Route path="admin/advisors-mapping"  element={<RequireRole roles={["admin"]}><AdvisorsMapping /></RequireRole>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

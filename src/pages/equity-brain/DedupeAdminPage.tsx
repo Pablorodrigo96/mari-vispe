@@ -44,7 +44,20 @@ export default function DedupeAdminPage() {
       return data;
     },
     onSuccess: (data: any) => {
-      toast.success(`Limpeza concluída: ${data?.merged ?? 0} linhas mescladas em ${data?.entity}`);
+      const merged = data?.merged ?? 0;
+      const failed = data?.failed ?? 0;
+      const errs: any[] = Array.isArray(data?.errors) ? data.errors : [];
+      if (failed > 0) {
+        toast.warning(
+          `Limpeza parcial em ${data?.entity}: ${merged} mesclados · ${failed} falharam`,
+          { description: errs.slice(0, 3).map(e => e?.error).filter(Boolean).join(" · ") || undefined }
+        );
+        // log detalhado no console para o admin investigar
+        // eslint-disable-next-line no-console
+        console.warn("[dedupe] pares com erro:", errs);
+      } else {
+        toast.success(`Limpeza concluída: ${merged} linhas mescladas em ${data?.entity}`);
+      }
       qc.invalidateQueries({ queryKey: ["dedupe-stats"] });
       qc.invalidateQueries({ queryKey: ["dedupe-audit"] });
     },
