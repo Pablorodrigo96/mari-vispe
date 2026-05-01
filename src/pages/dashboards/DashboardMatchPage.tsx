@@ -11,9 +11,9 @@ export default function DashboardMatchPage() {
     queryKey: ["dash-match"],
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
-      const { data, error } = await supabase.from("mv_dashboard_match" as any).select("*").maybeSingle();
+      const { data, error } = await supabase.rpc("get_dashboard_match" as any);
       if (error) throw error;
-      return data as any;
+      return (Array.isArray(data) ? data[0] : data) as any;
     },
   });
 

@@ -11,9 +11,9 @@ export default function DashboardMandatoPage() {
     queryKey: ["dash-mandato"],
     refetchInterval: REFRESH_MS,
     queryFn: async () => {
-      const { data, error } = await supabase.from("mv_dashboard_mandato" as any).select("*").maybeSingle();
+      const { data, error } = await supabase.rpc("get_dashboard_mandato" as any);
       if (error) throw error;
-      return data as any;
+      return (Array.isArray(data) ? data[0] : data) as any;
     },
   });
 
