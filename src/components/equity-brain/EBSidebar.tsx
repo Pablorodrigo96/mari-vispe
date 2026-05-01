@@ -30,6 +30,7 @@ const DASHBOARDS = [
 ];
 
 const ADMIN_ITEMS = [
+  { to: "/equity-brain/admin/dashboard-coverage", label: "Cobertura dashboards", Icon: Gauge },
   { to: "/equity-brain/admin/imports",    label: "Importar",            Icon: Upload },
   { to: "/equity-brain/admin/auditoria",  label: "Auditoria",           Icon: Search },
   { to: "/equity-brain/admin/shadow",     label: "Shadow v1↔v2",        Icon: GitCompare },
