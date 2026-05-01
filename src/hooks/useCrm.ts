@@ -226,38 +226,91 @@ export function useRematchBuyer() {
   });
 }
 
+/**
+ * Lista os matches de 1 buyer enriquecidos com a empresa (companies) — preenche
+ * `qualification_status` e `source` da CONTRAPARTE (a empresa) no objeto, para
+ * o filtro do MatchesPanel funcionar.
+ */
 export function useBuyerMatches(buyer_id?: string) {
   return useQuery({
     queryKey: ["crm", "matches", buyer_id],
     enabled: !!buyer_id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("matches" as any)
+      const { data, error } = await (supabase as any)
+        .schema("equity_brain")
+        .from("matches")
         .select("*")
         .eq("buyer_id", buyer_id)
         .eq("is_current", true)
         .order("match_score", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data ?? []) as any[];
+      const rows = ((data ?? []) as any[]);
+      if (rows.length === 0) return rows;
+      const cnpjs = Array.from(new Set(rows.map((r) => r.cnpj).filter(Boolean)));
+      const { data: comps } = await (supabase as any)
+        .schema("equity_brain")
+        .from("companies")
+        .select("cnpj,razao_social,codename,uf,setor_ma,faturamento_estimado,qualification_status,source")
+        .in("cnpj", cnpjs);
+      const cMap = new Map((comps ?? []).map((c: any) => [c.cnpj, c]));
+      return rows.map((r) => {
+        const c: any = cMap.get(r.cnpj) ?? {};
+        return {
+          ...r,
+          razao_social: c.razao_social ?? null,
+          codename: c.codename ?? null,
+          uf: c.uf ?? null,
+          setor_ma: c.setor_ma ?? null,
+          counterpart_qualification_status: c.qualification_status ?? null,
+          counterpart_source: c.source ?? null,
+        };
+      });
     },
   });
 }
 
+/**
+ * Lista os matches de 1 mandato (CNPJ) enriquecidos com o BUYER — preenche
+ * `qualification_status` e `source` da CONTRAPARTE (o buyer) no objeto.
+ */
 export function useMandateMatches(cnpj?: string) {
   return useQuery({
     queryKey: ["crm", "mandate-matches", cnpj],
     enabled: !!cnpj,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("matches" as any)
+      const { data, error } = await (supabase as any)
+        .schema("equity_brain")
+        .from("matches")
         .select("*")
         .eq("cnpj", cnpj)
         .eq("is_current", true)
         .order("match_score", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data ?? []) as any[];
+      const rows = ((data ?? []) as any[]);
+      if (rows.length === 0) return rows;
+      const buyerIds = Array.from(new Set(rows.map((r) => r.buyer_id).filter(Boolean)));
+      const { data: buyers } = await (supabase as any)
+        .schema("equity_brain")
+        .from("buyers")
+        .select("id,nome,tipo,ufs_interesse,setores_interesse,ticket_min,ticket_max,qualification_status,source")
+        .in("id", buyerIds);
+      const bMap = new Map((buyers ?? []).map((b: any) => [b.id, b]));
+      return rows.map((r) => {
+        const b: any = bMap.get(r.buyer_id) ?? {};
+        return {
+          ...r,
+          buyer_name: b.nome ?? null,
+          buyer_tipo: b.tipo ?? null,
+          buyer_ufs: b.ufs_interesse ?? null,
+          buyer_setores: b.setores_interesse ?? null,
+          ticket_min: b.ticket_min ?? null,
+          ticket_max: b.ticket_max ?? null,
+          counterpart_qualification_status: b.qualification_status ?? null,
+          counterpart_source: b.source ?? null,
+        };
+      });
     },
   });
 }
