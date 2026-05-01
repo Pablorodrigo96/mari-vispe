@@ -5,7 +5,7 @@ import {
   ChevronDown, ArrowLeft, LogOut, Sparkles,
   TrendingUp, Building2, GitMerge, FileSignature,
   Settings, Upload, Search, GitCompare, Globe, Activity, Users,
-  Table as TableIcon, Gauge,
+  Table as TableIcon, Gauge, Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
