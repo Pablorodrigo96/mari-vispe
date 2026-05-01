@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap } from "lucide-react";
+import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap, Newspaper, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
