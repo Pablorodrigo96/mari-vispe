@@ -123,7 +123,7 @@ serve(withObservability(async (req: Request) => {
       );
     }
 
-    // Token + webhook
+    // Token
     const { access_token } = await adapter.issueAccessToken(
       pending.phone_number_id!,
     );
@@ -131,28 +131,14 @@ serve(withObservability(async (req: Request) => {
     const webhook_url =
       `${url}/functions/v1/whatsapp-webhook?advisor_id=${advisor_id}`;
 
-    // Guardar token no Vault via RPC. RPC é SECURITY DEFINER e checa admin.
-    const { data: secret_id_data, error: vaultErr } = await svc.rpc(
+    // Guardar token no Vault via RPC (RPC aceita service_role)
+    const { data: secret_id, error: vaultErr } = await svc.rpc(
       "eb_store_advisor_token",
       { p_advisor_id: advisor_id, p_token: access_token },
     );
-    // RPC checa admin via auth.uid(); como estamos no service_role e
-    // auth.uid() é null, fazemos fallback: chamar diretamente em SQL via
-    // create_secret. Para isso usamos um insert direto no vault.
-    let secret_id: string | null = secret_id_data ?? null;
     if (vaultErr || !secret_id) {
-      // Fallback: criar segredo diretamente via SQL (service_role pode)
-      const secretName = `advisor_wa_token_${advisor_id}`;
-      // delete-if-exists
-      await svc.rpc("noop_keep_compat" as any, {}).catch(() => {});
-      const { data: rows, error } = await svc
-        .from("vault.secrets" as any)
-        .select("id")
-        .eq("name", secretName);
-      // não dá pra usar from('vault.secrets') diretamente — usar SQL via PostgREST não funciona.
-      // Em vez disso, chamamos uma RPC alternativa criada inline:
       throw new Error(
-        "vault store failed: " + (vaultErr?.message ?? "no secret_id"),
+        "vault store failed: " + (vaultErr?.message ?? "no secret_id returned"),
       );
     }
 
