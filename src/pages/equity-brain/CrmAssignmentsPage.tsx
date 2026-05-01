@@ -73,16 +73,15 @@ export default function CrmAssignmentsPage() {
         .in("user_id", ids);
       const profMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.full_name]));
 
-      // Carga atual: contagem via RPC seria melhor, mas como já temos a view eb_my_companies_v2 com filtro RLS de admin, usamos query direta agregada
+      // Carga atual via view enriquecida pública
       const { data: loads } = await supabase
-        .schema("equity_brain")
-        .from("mandates")
+        .from("eb_mandates_enriched" as any)
         .select("responsavel_id")
         .in("responsavel_id", ids)
         .in("outcome", ["em_andamento", "vigente"]);
       const loadMap = new Map<string, number>();
-      (loads ?? []).forEach((m: any) => {
-        loadMap.set(m.responsavel_id, (loadMap.get(m.responsavel_id) ?? 0) + 1);
+      ((loads ?? []) as any[]).forEach((m) => {
+        if (m.responsavel_id) loadMap.set(m.responsavel_id, (loadMap.get(m.responsavel_id) ?? 0) + 1);
       });
 
       return ids.map((id) => ({
