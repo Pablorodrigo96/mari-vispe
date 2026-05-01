@@ -25,7 +25,7 @@ export default function BuyersPage() {
     queryFn: async () => {
       let q = supabase
         .from("eb_buyers" as any)
-        .select(`*, theses:buyer_theses(count), matches:matches(count)`)
+        .select("*")
         .order("prioridade_global", { ascending: true, nullsFirst: false })
         .order("nome");
       // Quando uma vertical específica está selecionada, inclui também os buyers
@@ -35,7 +35,24 @@ export default function BuyersPage() {
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as any[];
+      const rows = (data ?? []) as any[];
+      if (rows.length === 0) return rows;
+
+      const ids = rows.map((r) => r.id);
+      const [thesesRes, matchesRes] = await Promise.all([
+        supabase.from("eb_buyer_theses" as any).select("buyer_id").in("buyer_id", ids),
+        supabase.from("eb_matches" as any).select("buyer_id").in("buyer_id", ids),
+      ]);
+      const tCount: Record<string, number> = {};
+      const mCount: Record<string, number> = {};
+      (thesesRes.data ?? []).forEach((r: any) => { tCount[r.buyer_id] = (tCount[r.buyer_id] ?? 0) + 1; });
+      (matchesRes.data ?? []).forEach((r: any) => { mCount[r.buyer_id] = (mCount[r.buyer_id] ?? 0) + 1; });
+
+      return rows.map((r) => ({
+        ...r,
+        theses: [{ count: tCount[r.id] ?? 0 }],
+        matches: [{ count: mCount[r.id] ?? 0 }],
+      }));
     },
   });
 
