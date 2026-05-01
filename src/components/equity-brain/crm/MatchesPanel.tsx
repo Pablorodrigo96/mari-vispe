@@ -160,7 +160,7 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
                     {[m.uf, m.setor_ma, m.ticket_band].filter(Boolean).join(" · ") || "—"}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap">
                   {qual === "unqualified" && counterpartId && (
                     <QualifyLeadButton
                       entityType={counterpartType}
@@ -170,13 +170,27 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
                   )}
                   <Button size="sm" variant="outline"
                     className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                    onClick={() => navigate(`/equity-brain/match/${m.id}`)}>
+                    <ArrowUpRight className="h-3 w-3 mr-1" /> Abrir match
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    disabled={promote.isPending}
+                    className="h-7 bg-[#D9F564]/10 border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/20"
+                    onClick={async () => {
+                      const dealId = await promote.mutateAsync(m.id);
+                      if (dealId) navigate(`/equity-brain/crm/pipeline?deal=${dealId}`);
+                    }}>
+                    <Rocket className="h-3 w-3 mr-1" /> Pipeline
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
                     onClick={() => actMarkInterest(m)}>
-                    <Star className="h-3 w-3 mr-1" /> Interesse
+                    <Star className="h-3 w-3" />
                   </Button>
                   <Button size="sm" variant="outline"
                     className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
                     onClick={() => actSendTeaser(m)}>
-                    <Send className="h-3 w-3 mr-1" /> Teaser
+                    <Send className="h-3 w-3" />
                   </Button>
                   <Button size="sm" variant="outline"
                     className="h-7 bg-transparent border-zinc-700 text-zinc-400 hover:text-rose-300 hover:bg-zinc-800"
