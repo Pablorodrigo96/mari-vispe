@@ -286,6 +286,8 @@ async function processFile(db: DB, buf: ArrayBuffer, kind: "sellside"|"buyside")
   const type=parsed.type??kind;
   advisorCache.clear(); companyCache.clear(); buyerCache.clear();
   const mapped:Mapped[]=[];
+  const map_errors:{row:number;name:string;error:string}[]=[];
+  const upsert_errors:{name:string;error:string;payload_keys:string[]}[]=[];
   let total=0,skipped=0;
   for (let i=3; i<parsed.rows.length; i++) {
     const row=parsed.rows[i]??[];
@@ -297,12 +299,23 @@ async function processFile(db: DB, buf: ArrayBuffer, kind: "sellside"|"buyside")
       const m=type==="sellside"?await mapRowSellside(db,row):await mapRowBuyside(db,row);
       if (!m) { skipped++; continue; }
       mapped.push(m);
-    } catch { skipped++; }
+    } catch (e) {
+      skipped++;
+      map_errors.push({row:i,name,error:String((e as Error)?.message ?? e)});
+    }
   }
   let created=0,updated=0;
   for (const m of mapped) {
-    try { const r=await upsertMandate(db,m); if (r.action==="created") created++; else updated++; }
-    catch { /* swallow per-row */ }
+    try {
+      const r=await upsertMandate(db,m);
+      if (r.action==="created") created++; else updated++;
+    } catch (e) {
+      upsert_errors.push({
+        name:m.razao_social,
+        error:String((e as Error)?.message ?? e),
+        payload_keys:Object.keys(m.payload),
+      });
+    }
   }
   const stub=mapped.filter(m=>m.company_cnpj.startsWith("PENDING-"));
   const unmapped=new Map<string,number>();
@@ -312,7 +325,15 @@ async function processFile(db: DB, buf: ArrayBuffer, kind: "sellside"|"buyside")
       if (advisorCache.get(n.toLowerCase())===null) unmapped.set(n,(unmapped.get(n)??0)+1);
     }
   }
-  return { type, total_rows:total, parsed:mapped.length, skipped, created, updated, companies_stub:new Set(stub.map(s=>s.company_cnpj)).size, advisors_unmapped:Array.from(unmapped.entries()).map(([n,c])=>({name:n,count:c})) };
+  return {
+    type, total_rows:total, parsed:mapped.length, skipped, created, updated,
+    companies_stub:new Set(stub.map(s=>s.company_cnpj)).size,
+    advisors_unmapped:Array.from(unmapped.entries()).map(([n,c])=>({name:n,count:c})),
+    map_errors: map_errors.slice(0, 30),
+    map_errors_total: map_errors.length,
+    upsert_errors: upsert_errors.slice(0, 30),
+    upsert_errors_total: upsert_errors.length,
+  };
 }
 
 Deno.serve(async (req: Request) => {
