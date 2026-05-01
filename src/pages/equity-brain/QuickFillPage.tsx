@@ -86,9 +86,8 @@ export default function QuickFillPage() {
         }
       }
       const { error } = await supabase
-        .schema("equity_brain" as any)
-        .from("mandates")
-        .update(patch)
+        .from("eb_mandates")
+        .update(patch as any)
         .eq("id", id);
       if (error) throw error;
     },
@@ -118,9 +117,9 @@ export default function QuickFillPage() {
     if (search.trim()) {
       const s = search.toLowerCase();
       list = list.filter((m) =>
-        (m.codename ?? "").toLowerCase().includes(s) ||
         (m.contato_nome ?? "").toLowerCase().includes(s) ||
-        (m.comprador_nome ?? "").toLowerCase().includes(s),
+        (m.setor ?? "").toLowerCase().includes(s) ||
+        (m.uf ?? "").toLowerCase().includes(s),
       );
     }
     return list.slice(0, 200);
