@@ -57,7 +57,7 @@ export function MarketPulseWidget() {
         <div className="flex items-center gap-2">
           <Newspaper className="h-4 w-4 text-[#D9F564]" />
           <h3 className="text-sm font-bold text-zinc-100">Pulso de Mercado</h3>
-          <InfoHint text="Notícias de M&A, captação, IPO e mudança de liderança detectadas pela varredura automática nos últimos 30 dias." />
+          <InfoHint what="Notícias de M&A, captação, IPO e mudança de liderança detectadas pela varredura automática nos últimos 30 dias." action="Clique em 'Ver todas' para abrir o feed completo filtrável." />
         </div>
         <Link to="/equity-brain/news" className="text-[10px] text-emerald-300 hover:text-emerald-200 inline-flex items-center gap-1">
           Ver todas <ArrowRight className="h-3 w-3" />
