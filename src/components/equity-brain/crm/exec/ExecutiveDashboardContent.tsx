@@ -106,6 +106,7 @@ export function ExecutiveDashboardContent() {
 
   return (
     <div className="space-y-6">
+      <MarketPulseWidget />
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiTile label="Total Operações" value={fmt(k.total_operations)} loading={kpis.isLoading} info={EB_TIPS.total_operacoes} />
         <KpiTile label="Buyside" value={fmt(k.buyside)} accent="primary" loading={kpis.isLoading} info={EB_TIPS.kpi_buyside} />
