@@ -247,22 +247,6 @@ const App = () => (
               <Route path="grafo-jarvis"  element={<Navigate to="/equity-brain/admin/jarvis" replace />} />
               <Route path="match/:matchId" element={<MatchDetailPage />} />
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
-              <Route path="mapa"          element={<EBMapaPage />} />
-              <Route path="grafo"         element={<EBGrafoPage />} />
-              <Route
-                path="grafo-jarvis"
-                element={
-                  <Suspense
-                    fallback={
-                      <div className="flex items-center justify-center h-[calc(100vh-1px)] bg-zinc-950 text-emerald-300 text-sm">
-                        Carregando cérebro 3D…
-                      </div>
-                    }
-                  >
-                    <EBGrafoJarvisPage />
-                  </Suspense>
-                }
-              />
               <Route
                 path="grafo-jarvis/guia"
                 element={
@@ -271,40 +255,26 @@ const App = () => (
                   </Suspense>
                 }
               />
-              <Route path="buyers"        element={<EBBuyersPage />} />
-              <Route path="teses"         element={<EBTesesPage />} />
               <Route path="calls"         element={<EBCallsPage />} />
               <Route path="empresa/:cnpj" element={<EBDealDetailPage />} />
-              <Route path="board"         element={<EBBoardPage />} />
-              <Route path="shadow"        element={<EBShadowPage />} />
-              <Route path="crm"                  element={<CrmHubPage />} />
               <Route path="crm/mandate/:id"      element={<MandateDetailPage />} />
               <Route path="crm/buyer/:id"        element={<BuyerDetailPage />} />
               <Route path="crm/admin/permissoes" element={<PermissionsAdminPage />} />
               <Route path="crm/admin/auditoria"  element={<RequireRole roles={["admin"]}><AccessAuditPage /></RequireRole>} />
               <Route path="crm/executivo"        element={<ExecutiveDashboardPage />} />
               <Route path="crm/matching"         element={<MatchAnalyticsPage />} />
-              <Route path="crm/admin/auditoria-operacional" element={<RequireRole roles={["admin"]}><CrmAuditPage /></RequireRole>} />
-              <Route path="crm/minhas-empresas"  element={<MyCompaniesPage />} />
               <Route path="crm/admin/atribuicoes" element={<RequireRole roles={["admin"]}><CrmAssignmentsPage /></RequireRole>} />
               <Route path="admin/health" element={<RequireRole roles={["admin"]}><HealthDashboardPage /></RequireRole>} />
-              <Route path="news"                 element={<NewsPage />} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
               <Route path="crm/pipeline/historico" element={<PipelineHistoryPage />} />
               <Route path="deal/:id"             element={<UnifiedDealPage />} />
               <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />
-              <Route path="crm/imports"          element={<RequireRole roles={["admin", "advisor"]}><ImportsPage /></RequireRole>} />
               <Route path="isp/import"           element={<RequireRole roles={["admin", "advisor"]}><IspImportPage /></RequireRole>} />
               <Route path="isp/sugestoes"        element={<RequireRole roles={["admin", "advisor"]}><IspSuggestionsPage /></RequireRole>} />
               <Route path="isp/mercado"          element={<RequireRole roles={["admin", "advisor"]}><IspMarketPage /></RequireRole>} />
               <Route path="crm/aberturas"        element={<RequireRole roles={["admin", "advisor"]}><DisclosuresPage /></RequireRole>} />
               <Route path="crm/mandate/new"      element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
               <Route path="crm/mandate/:id/edit" element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
-              <Route path="dashboard/executivo"  element={<DashboardExecutivoPage />} />
-              <Route path="dashboard/mandato"    element={<DashboardMandatoPage />} />
-              <Route path="dashboard/match"      element={<DashboardMatchPage />} />
-              <Route path="dashboard/nbo"        element={<DashboardNboPage />} />
-              <Route path="crm/quick-fill"       element={<RequireRole roles={["admin", "advisor"]}><QuickFillPage /></RequireRole>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
