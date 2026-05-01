@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Building2, Target, Flame, PhoneCall, Sheet as SheetIcon, Download, RefreshCw } from "lucide-react";
+import { Building2, Target, Flame, PhoneCall, Sheet as SheetIcon, Download, RefreshCw, TrendingUp, Briefcase, ArrowLeftRight, FileSignature, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useVertical } from "@/hooks/useVertical";
@@ -187,6 +187,29 @@ export default function DashboardPage() {
             {exporting ? "Exportando…" : "Exportar Top 100 ISP CSV"}
           </Button>
         </div>
+      </div>
+
+      {/* Atalhos para os Dashboards M&A */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { to: "/equity-brain/dashboard/executivo", label: "Executivo M&A", desc: "Visão consolidada Buyside + Sellside", Icon: TrendingUp },
+          { to: "/equity-brain/dashboard/mandato",   label: "Mandatos",      desc: "Pipeline, status e geografia",         Icon: Briefcase },
+          { to: "/equity-brain/dashboard/match",     label: "Matching",      desc: "Compatibilidades e conversão",         Icon: ArrowLeftRight },
+          { to: "/equity-brain/dashboard/nbo",       label: "NBO",           desc: "Propostas por executivo e estado",     Icon: FileSignature },
+        ].map(({ to, label, desc, Icon }) => (
+          <button
+            key={to}
+            onClick={() => navigate(to)}
+            className="group text-left rounded-lg border border-zinc-800 bg-zinc-900/60 hover:border-[#D9F564]/50 hover:bg-zinc-900 p-4 transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <Icon className="h-4 w-4 text-[#D9F564]" />
+              <ArrowRight className="h-3.5 w-3.5 text-zinc-600 group-hover:text-[#D9F564] transition-colors" />
+            </div>
+            <div className="mt-3 text-sm font-semibold text-zinc-100">{label}</div>
+            <div className="text-[11px] text-zinc-500 mt-0.5">{desc}</div>
+          </button>
+        ))}
       </div>
 
       <MatchHotHero />
