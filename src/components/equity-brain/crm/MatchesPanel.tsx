@@ -1,11 +1,14 @@
 import { useState, useMemo } from "react";
-import { ChevronRight, Send, X, Star } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronRight, Send, X, Star, Rocket, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBuyerMatches, useMandateMatches, useLogActivity } from "@/hooks/useCrm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { QualificationBadge } from "./QualificationBadge";
 import { QualifyLeadButton } from "./QualifyLeadButton";
 import { ExpandRFBDialog } from "./ExpandRFBDialog";
+import { usePromoteMatchToDeal } from "@/hooks/useDeal";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
 
 type Mode =
   | { type: "buyer"; buyerId: string; buyerSetores?: string[]; buyerUfs?: string[] }
@@ -14,7 +17,8 @@ type Mode =
 type Filter = "qualified" | "all" | "rfb";
 
 /**
- * Lista ranqueada de matches com drawer SHAP-like de explicabilidade.
+ * Lista ranqueada de matches. Lê qualification_status e source da CONTRAPARTE
+ * (preenchidos por useBuyerMatches/useMandateMatches via join leve).
  */
 export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: string }) {
   const buyerQ = useBuyerMatches(mode.type === "buyer" ? mode.buyerId : undefined);
@@ -23,15 +27,19 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
   const isLoading = mode.type === "buyer" ? buyerQ.isLoading : mandateQ.isLoading;
   const refetch = mode.type === "buyer" ? buyerQ.refetch : mandateQ.refetch;
   const log = useLogActivity();
+  const promote = usePromoteMatchToDeal();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<any | null>(null);
   const [filter, setFilter] = useState<Filter>("qualified");
 
   // Quando modo=buyer, contraparte é company; quando modo=mandate, contraparte é buyer
   const counterpartType: "company" | "buyer" = mode.type === "buyer" ? "company" : "buyer";
-  const getQual = (m: any) => m.qualification_status as string | undefined;
+  const getQual = (m: any) =>
+    (m.counterpart_qualification_status ?? m.qualification_status) as string | undefined;
   const getCounterpartId = (m: any): string =>
     counterpartType === "company" ? (m.cnpj ?? "") : (m.buyer_id ?? "");
-  const isFromRfb = (m: any) => (m.source ?? "") === "rfb_expand";
+  const isFromRfb = (m: any) =>
+    (m.counterpart_source ?? m.source ?? "") === "rfb_expand";
 
   const counts = useMemo(() => ({
     qualified: allItems.filter((m: any) => getQual(m) === "qualified").length,
