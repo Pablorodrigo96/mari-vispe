@@ -23,6 +23,13 @@ const items = [
   { to: "/equity-brain/shadow",         label: "Shadow v1↔v2",    Icon: Sparkles },
 ];
 
+const dashboardItems = [
+  { to: "/dashboard/executivo", label: "Executivo",  Icon: TrendingUp },
+  { to: "/dashboard/mandato",   label: "Mandatos",   Icon: Briefcase },
+  { to: "/dashboard/match",     label: "Matching",   Icon: ArrowLeftRight },
+  { to: "/dashboard/nbo",       label: "NBO",        Icon: FileSignature },
+];
+
 const dataItems = [
   { to: "/equity-brain/crm/imports",                 label: "Imports",         Icon: Upload },
   { to: "/equity-brain/crm/admin/auditoria-operacional", label: "Auditoria CRM", Icon: ShieldAlert },
@@ -93,6 +100,27 @@ export function EBSidebar() {
                 {hotCount}
               </span>
             )}
+          </NavLink>
+        ))}
+
+        <div className="pt-4 pb-1 px-3 text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">
+          Dashboards
+        </div>
+        {dashboardItems.map(({ to, label, Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                isActive
+                  ? "bg-[#D9F564]/10 text-[#D9F564] border border-[#D9F564]/30"
+                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
+              )
+            }
+          >
+            <Icon className="h-4 w-4" />
+            <span className="flex-1">{label}</span>
           </NavLink>
         ))}
 
