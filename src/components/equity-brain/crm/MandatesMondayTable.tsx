@@ -317,10 +317,22 @@ export function MandatesMondayTable() {
                                 to={`/equity-brain/crm/mandate/${m.id}`}
                                 className="text-zinc-100 hover:text-[#D9F564] font-medium break-words"
                               >
-                                {m.company_cnpj}
+                                {m.display_name || m.razao_social || m.nome_fantasia || m.codename || m.company_cnpj}
                               </Link>
+                              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                {m.deal_kind && (
+                                  <span className={cn("text-[9px] px-1.5 py-0.5 rounded border", DEAL_KIND_COLOR[m.deal_kind] ?? "bg-zinc-800 text-zinc-400 border-zinc-700")}>
+                                    {DEAL_KIND_LABEL[m.deal_kind] ?? m.deal_kind}
+                                  </span>
+                                )}
+                                {m.needs_enrichment && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded border bg-rose-500/10 text-rose-300 border-rose-700/40">
+                                    enriquecer CNPJ
+                                  </span>
+                                )}
+                              </div>
                               {m.contato_nome && (
-                                <div className="text-[10px] text-zinc-500 truncate break-words">
+                                <div className="text-[10px] text-zinc-500 truncate break-words mt-0.5">
                                   {m.contato_nome}
                                 </div>
                               )}
