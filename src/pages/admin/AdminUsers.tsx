@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock, MessageSquare } from 'lucide-react';
 import { useAdvisorWhatsAppStatus } from '@/hooks/useAdvisorWhatsAppStatus';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { AdminRoute } from '@/components/admin/AdminRoute';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -308,8 +307,7 @@ export default function AdminUsers() {
   });
 
   return (
-    <AdminRoute>
-      <AdminLayout>
+    <AdminLayout>
         <div className="space-y-8">
           <div className="flex justify-between items-center">
             <div>
@@ -613,7 +611,6 @@ export default function AdminUsers() {
             </div>
           </DialogContent>
         </Dialog>
-      </AdminLayout>
-    </AdminRoute>
+    </AdminLayout>
   );
 }

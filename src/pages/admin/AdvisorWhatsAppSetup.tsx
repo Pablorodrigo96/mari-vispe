@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, Loader2, MessageSquare, AlertCircle, Phone } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { AdminRoute } from "@/components/admin/AdminRoute";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -116,8 +115,7 @@ export default function AdvisorWhatsAppSetup() {
   }
 
   return (
-    <AdminRoute>
-      <AdminLayout>
+    <AdminLayout>
         <div className="space-y-6 max-w-2xl">
           <Button variant="ghost" size="sm" onClick={() => navigate("/admin/users")} className="gap-2">
             <ArrowLeft className="h-4 w-4" /> Voltar para usuários
@@ -256,7 +254,6 @@ export default function AdvisorWhatsAppSetup() {
             </Card>
           )}
         </div>
-      </AdminLayout>
-    </AdminRoute>
+    </AdminLayout>
   );
 }

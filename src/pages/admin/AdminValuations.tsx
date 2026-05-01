@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ChartBar, Search, Calculator, TrendingUp } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { AdminRoute } from '@/components/admin/AdminRoute';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -104,8 +103,7 @@ export default function AdminValuations() {
   const dcfCount = valuations.filter(v => v.valuation_type === 'dcf').length;
 
   return (
-    <AdminRoute>
-      <AdminLayout>
+    <AdminLayout>
         <div className="space-y-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Valuations</h1>
@@ -256,7 +254,6 @@ export default function AdminValuations() {
             </CardContent>
           </Card>
         </div>
-      </AdminLayout>
-    </AdminRoute>
+    </AdminLayout>
   );
 }

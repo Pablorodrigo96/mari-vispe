@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Building2, Search, MoreHorizontal, Eye, CheckCircle, XCircle, Trash2, MapPin, BadgeCheck, BadgeX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { AdminRoute } from '@/components/admin/AdminRoute';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -186,8 +185,7 @@ export default function AdminListings() {
   });
 
   return (
-    <AdminRoute>
-      <AdminLayout>
+    <AdminLayout>
         <div className="space-y-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Anúncios</h1>
@@ -412,7 +410,6 @@ export default function AdminListings() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </AdminLayout>
-    </AdminRoute>
+    </AdminLayout>
   );
 }

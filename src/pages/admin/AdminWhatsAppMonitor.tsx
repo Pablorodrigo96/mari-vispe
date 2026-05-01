@@ -11,7 +11,6 @@ import {
   X,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { AdminRoute } from "@/components/admin/AdminRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -657,9 +656,5 @@ function AdminWhatsAppMonitorInner() {
 }
 
 export default function AdminWhatsAppMonitor() {
-  return (
-    <AdminRoute>
-      <AdminWhatsAppMonitorInner />
-    </AdminRoute>
-  );
+  return <AdminWhatsAppMonitorInner />;
 }

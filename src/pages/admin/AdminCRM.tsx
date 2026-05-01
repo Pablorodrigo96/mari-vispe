@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { AdminRoute } from '@/components/admin/AdminRoute';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -531,8 +530,7 @@ function FranchiseesTab() {
 // ── Main Page ──
 export default function AdminCRM() {
   return (
-    <AdminRoute>
-      <AdminLayout>
+    <AdminLayout>
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground">CRM Centralizado</h1>
@@ -557,7 +555,6 @@ export default function AdminCRM() {
             <TabsContent value="franchisees"><Card><CardHeader><CardTitle>Franqueados</CardTitle></CardHeader><CardContent><FranchiseesTab /></CardContent></Card></TabsContent>
           </Tabs>
         </div>
-      </AdminLayout>
-    </AdminRoute>
+    </AdminLayout>
   );
 }

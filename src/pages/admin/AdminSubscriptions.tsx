@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CreditCard, Search, Crown, Calendar } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { AdminRoute } from '@/components/admin/AdminRoute';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -118,8 +117,7 @@ export default function AdminSubscriptions() {
   const totalActive = subscriptions.filter(s => s.status === 'active').length;
 
   return (
-    <AdminRoute>
-      <AdminLayout>
+    <AdminLayout>
         <div className="space-y-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Assinaturas</h1>
@@ -287,7 +285,6 @@ export default function AdminSubscriptions() {
             </CardContent>
           </Card>
         </div>
-      </AdminLayout>
-    </AdminRoute>
+    </AdminLayout>
   );
 }
