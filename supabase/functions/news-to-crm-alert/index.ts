@@ -5,6 +5,7 @@
 //  - company_signals (sinal news_ma_signal/news_funding/news_leadership)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { withObservability } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,7 +20,7 @@ const SIGNAL_MAP: Record<string, string> = {
   leadership_change: "news_leadership",
 };
 
-serve(async (req) => {
+serve(withObservability(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -125,4 +126,4 @@ serve(async (req) => {
     return new Response(JSON.stringify({ ok: false, error: e instanceof Error ? e.message : "unknown" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-});
+}, { name: "news-to-crm-alert" }));

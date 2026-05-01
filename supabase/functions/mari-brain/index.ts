@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { withObservability } from "../_shared/observability.ts";
 
 // Knowledge Base — loaded at cold start from co-located markdown files
 const KB_FILES = [
@@ -89,7 +90,7 @@ async function getLiveContext(supabase: any, userId: string, route?: string, ent
   return parts.join("\n\n");
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withObservability(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -261,4 +262,4 @@ ${liveCtx}`;
     console.error("mari-brain error", e);
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-});
+}, { name: "mari-brain" }));

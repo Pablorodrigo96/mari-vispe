@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { withObservability } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,7 @@ const corsHeaders = {
 const FORMULA_VERSION = "v1.0";
 const NORM = { ma: 200, vispe: 80, sucessao: 100 };
 
-serve(async (req) => {
+serve(withObservability(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -73,7 +74,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
-    // 1) Carrega catálogo de signals (cache em memória)
+    // 1, { name: "calculate-scores" })) Carrega catálogo de signals (cache em memória)
     const { data: catalog, error: catErr } = await supabase
       .schema("equity_brain" as any)
       .from("signal_catalog")
