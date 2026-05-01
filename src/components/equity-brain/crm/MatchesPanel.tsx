@@ -1,11 +1,14 @@
 import { useState, useMemo } from "react";
-import { ChevronRight, Send, X, Star } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronRight, Send, X, Star, Rocket, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBuyerMatches, useMandateMatches, useLogActivity } from "@/hooks/useCrm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { QualificationBadge } from "./QualificationBadge";
 import { QualifyLeadButton } from "./QualifyLeadButton";
 import { ExpandRFBDialog } from "./ExpandRFBDialog";
+import { usePromoteMatchToDeal } from "@/hooks/useDeal";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
 
 type Mode =
   | { type: "buyer"; buyerId: string; buyerSetores?: string[]; buyerUfs?: string[] }
@@ -14,7 +17,8 @@ type Mode =
 type Filter = "qualified" | "all" | "rfb";
 
 /**
- * Lista ranqueada de matches com drawer SHAP-like de explicabilidade.
+ * Lista ranqueada de matches. Lê qualification_status e source da CONTRAPARTE
+ * (preenchidos por useBuyerMatches/useMandateMatches via join leve).
  */
 export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: string }) {
   const buyerQ = useBuyerMatches(mode.type === "buyer" ? mode.buyerId : undefined);
@@ -23,15 +27,19 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
   const isLoading = mode.type === "buyer" ? buyerQ.isLoading : mandateQ.isLoading;
   const refetch = mode.type === "buyer" ? buyerQ.refetch : mandateQ.refetch;
   const log = useLogActivity();
+  const promote = usePromoteMatchToDeal();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<any | null>(null);
   const [filter, setFilter] = useState<Filter>("qualified");
 
   // Quando modo=buyer, contraparte é company; quando modo=mandate, contraparte é buyer
   const counterpartType: "company" | "buyer" = mode.type === "buyer" ? "company" : "buyer";
-  const getQual = (m: any) => m.qualification_status as string | undefined;
+  const getQual = (m: any) =>
+    (m.counterpart_qualification_status ?? m.qualification_status) as string | undefined;
   const getCounterpartId = (m: any): string =>
     counterpartType === "company" ? (m.cnpj ?? "") : (m.buyer_id ?? "");
-  const isFromRfb = (m: any) => (m.source ?? "") === "rfb_expand";
+  const isFromRfb = (m: any) =>
+    (m.counterpart_source ?? m.source ?? "") === "rfb_expand";
 
   const counts = useMemo(() => ({
     qualified: allItems.filter((m: any) => getQual(m) === "qualified").length,
@@ -82,13 +90,19 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
         {([
           { k: "qualified", label: `Qualificados (${counts.qualified})` },
           { k: "all", label: `Todos (${counts.all})` },
-          { k: "rfb", label: `Base RFB (${counts.rfb})` },
+          { k: "rfb", label: `Vindos da Receita Federal (${counts.rfb})` },
         ] as { k: Filter; label: string }[]).map((t) => (
           <button key={t.k} onClick={() => setFilter(t.k)}
             className={`text-[11px] px-2.5 py-1 rounded transition-colors ${
               filter === t.k ? "bg-emerald-600 text-zinc-950 font-medium" : "text-zinc-400 hover:text-zinc-100"
             }`}>{t.label}</button>
         ))}
+        <InfoHint
+          title="O que é cada filtro?"
+          what="Qualificados: contraparte aprovada pela curadoria. Todos: tudo que o motor encontrou. Vindos da Receita Federal: matches gerados a partir da expansão na Base RFB (botão 'Expandir busca')."
+          action="Se 'Vindos da Receita Federal' está zerado, é porque ninguém rodou expansão para esse buyer ainda."
+          className="!ml-1"
+        />
       </div>
       {mode.type === "buyer" && (
         <ExpandRFBDialog
@@ -108,9 +122,14 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
       {Toolbar}
       {items.length === 0 ? (
         <div className="p-4 text-xs text-zinc-400 border border-dashed border-zinc-800 rounded">
-          Nenhum match {filter === "qualified" ? "qualificado" : filter === "rfb" ? "vindo da Base RFB" : ""} disponível ainda.
+          Nenhum match {filter === "qualified" ? "qualificado" : filter === "rfb" ? "vindo da Receita Federal" : ""} disponível ainda.
           {mode.type === "buyer" && filter !== "rfb" && (
             <span className="block mt-1 text-zinc-500">Use o botão "Expandir busca na Base RFB" para importar prospects.</span>
+          )}
+          {filter === "qualified" && counts.all > 0 && (
+            <span className="block mt-1 text-zinc-500">
+              Existem {counts.all} matches no total — mude o filtro para "Todos" se quiser ver os ainda não qualificados.
+            </span>
           )}
         </div>
       ) : (
@@ -141,7 +160,7 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
                     {[m.uf, m.setor_ma, m.ticket_band].filter(Boolean).join(" · ") || "—"}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap">
                   {qual === "unqualified" && counterpartId && (
                     <QualifyLeadButton
                       entityType={counterpartType}
@@ -151,13 +170,27 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
                   )}
                   <Button size="sm" variant="outline"
                     className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                    onClick={() => navigate(`/equity-brain/match/${m.id}`)}>
+                    <ArrowUpRight className="h-3 w-3 mr-1" /> Abrir match
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    disabled={promote.isPending}
+                    className="h-7 bg-[#D9F564]/10 border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/20"
+                    onClick={async () => {
+                      const dealId = await promote.mutateAsync(m.id);
+                      if (dealId) navigate(`/equity-brain/crm/pipeline?deal=${dealId}`);
+                    }}>
+                    <Rocket className="h-3 w-3 mr-1" /> Pipeline
+                  </Button>
+                  <Button size="sm" variant="outline"
+                    className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
                     onClick={() => actMarkInterest(m)}>
-                    <Star className="h-3 w-3 mr-1" /> Interesse
+                    <Star className="h-3 w-3" />
                   </Button>
                   <Button size="sm" variant="outline"
                     className="h-7 bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800"
                     onClick={() => actSendTeaser(m)}>
-                    <Send className="h-3 w-3 mr-1" /> Teaser
+                    <Send className="h-3 w-3" />
                   </Button>
                   <Button size="sm" variant="outline"
                     className="h-7 bg-transparent border-zinc-700 text-zinc-400 hover:text-rose-300 hover:bg-zinc-800"
