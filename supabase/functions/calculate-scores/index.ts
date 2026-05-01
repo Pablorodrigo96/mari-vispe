@@ -74,7 +74,7 @@ serve(withObservability(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
-    // 1, { name: "calculate-scores" })) Carrega catálogo de signals (cache em memória)
+    // 1) Carrega catálogo de signals (cache em memória)
     const { data: catalog, error: catErr } = await supabase
       .schema("equity_brain" as any)
       .from("signal_catalog")
@@ -245,4 +245,4 @@ serve(withObservability(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
-});
+}, { name: "calculate-scores" }));

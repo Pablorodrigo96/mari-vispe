@@ -365,4 +365,4 @@ Deno.serve(withObservability(async (req: Request) => {
     return new Response(JSON.stringify({ error: e.message ?? String(e) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-});
+}, { name: "eb-match-isp-cold" }));
