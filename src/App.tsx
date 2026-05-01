@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ViewAsProvider } from "@/contexts/ViewAsContext";
 import { ViewAsBanner } from "@/components/layout/ViewAsSwitcher";
@@ -104,6 +104,8 @@ import DashboardMandatoPage from "./pages/dashboards/DashboardMandatoPage";
 import DashboardMatchPage from "./pages/dashboards/DashboardMatchPage";
 import DashboardNboPage from "./pages/dashboards/DashboardNboPage";
 import QuickFillPage from "./pages/equity-brain/QuickFillPage";
+import PipelinePage from "./pages/equity-brain/PipelinePage";
+import CompradoresPage from "./pages/equity-brain/CompradoresPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
