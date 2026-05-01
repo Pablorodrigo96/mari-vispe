@@ -1,101 +1,98 @@
-# Fase 2/4 — Importador Monday (plano de execução)
 
-## Achados da inspeção (ajustes obrigatórios vs. brief)
+# Fase 3/4 — Dashboards Profissionais (Bloomberg-grade)
 
-Inspecionei o banco antes de planejar. Mantenho 100% do brief, com 4 ajustes técnicos para não quebrar nada:
+## Estado atual (já existe)
+- `src/pages/dashboards/DashboardExecutivoPage|MandatoPage|MatchPage|NboPage.tsx` montados em `/equity-brain/dashboard/*`.
+- Componentes base: `DashShell`, `DashKpi` (já tem count-up + sparkline + trend opcional), `DashCharts` (Donut/Bar/StackedBar/Line/Area com tooltip dark, paleta semântica), `AIInsightCard`.
+- KPIs hoje vêm de RPCs `get_dashboard_*` + leitura de `eb_v_mandates_full` (limit 2000).
+- Schema Fase 1+2: `equity_brain.mandates` com `deal_type`, `deal_phase`, `deal_kind`, `outcome`, `status`, `valor_operacao`, `faturamento_vispe`, `exclusividade`, `regiao`, `uf`, `responsavel_id`, `data_assinatura`, `data_fechamento`, `data_inicio`, `created_at`. `mari_ops.health_check` ativo.
 
-1. **Schema `equity_brain.companies`** confirma `cnpj`(varchar PK), `razao_social`, `nome_fantasia`, `uf`, `raw_data jsonb`, `qualification_status` (enum: aceita `'unqualified'`), `needs_cnpj_enrichment bool`, `source varchar`. ✅ Compatível com `findOrCreateCompany`.
-2. **`buyers.nome`** é a coluna correta (não `nome_completo`). ✅
-3. **Enum `mandate_status`** NÃO tem `'ativo'` nem `'concluido'` — só `vigente|vencido|vendemos|em_negociacao|vendeu_sozinho|cancelado`. Brief já está alinhado (usa `vigente`/`vendemos`/`cancelado`).
-4. **Função `is_admin()` não existe** — uso `has_role(uid, 'admin'::app_role)` no edge function (igual à Fase 1).
+## O que falta (gap vs spec Fase 3)
+1. Rotas top-level `/dashboard/*` (hoje só sob `/equity-brain/dashboard/*`).
+2. Grupo "📊 Dashboards" no `AppSidebar`.
+3. Materialized views + cron horário + função de refresh (substituem agregação client-side).
+4. Filtros (período, executivo, região, estado) propagados via context.
+5. Layouts ampliados (L1–L8) com cards financeiros separados, sparklines em todos os KPIs principais, charts adicionais (status stacked, evolução trimestral, BDR/Closer, success fee, projeção mandatos a vencer, etc.).
+6. Export CSV por dashboard.
+7. Edge function `generate-dashboard-insight` (Lovable AI Gateway, gemini-2.5-flash) com cache 1h em tabela.
+8. Tokens CSS e fonte Geist Mono carregada.
 
-A marca para resolver advisor depois fica como tag em `observacoes` no formato `[mari:monday_responsavel=Nome Completo]` e `[mari:monday_padrinho=Nome]` (em vez de `raw_data` que `mandates` não tem). A função SQL faz match dessa tag.
+## Entregáveis
 
----
+### 3.1 — CSS tokens + fonte
+`src/index.css`: adicionar variáveis `--carbon-*`, `--graphite-border`, `--volt-glow`, `--status-*`, `--text-*`, classes utilitárias `.dashboard-page`, `.dashboard-card`, `.kpi-display`, `.kpi-label`, `.live-indicator` + keyframes `pulse`. Importar Geist Mono via Google Fonts/CDN no `index.html` (`<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@200..600&display=swap">`).
+Ajustar `tailwind.config.ts` para adicionar `fontFamily.mono: ["Geist Mono", "JetBrains Mono", "monospace"]`.
 
-## Migration (curta) — `20260501_monday_import_helpers.sql`
+### 3.2 — Migration `2026050X_dashboard_views.sql`
+Cria as 4 materialized views (`mv_dashboard_executivo|mandato|match|nbo`) **derivadas de `equity_brain.mandates`**, cada uma com índice único `((1))` para permitir `REFRESH CONCURRENTLY`. Cria `public.refresh_dashboard_views()` SECURITY DEFINER que faz refresh das 4 e loga em `mari_ops.health_check`. Agenda `cron.schedule('refresh-dashboards-hourly','0 * * * *', ...)`. Concede `GRANT SELECT` para `authenticated` apenas via wrapper de RPC `get_dashboard_*` (mantém compat com hooks atuais — RPC passa a `SELECT * FROM mv_dashboard_*`).
 
-Duas funções SQL:
+Tabela auxiliar `public.dashboard_insight_cache (dashboard_type text PK, snapshot_hash text, body text, generated_at timestamptz)` para cache do insight da Mari.
 
-- **`public.find_user_by_meta_name(text) → uuid`** (SECURITY DEFINER, search_path fixo) — busca em `auth.users.raw_user_meta_data->>full_name|name`. Grant somente `service_role`.
-- **`public.eb_resolve_advisor_mapping(monday_name text, user_id uuid) → jsonb`** — admin-only (checa `has_role`), backfilla mandatos que têm tag `[mari:monday_responsavel=<nome>]` ou `[mari:monday_padrinho=<nome>]` em `observacoes`, e marca `advisors_pending_mapping` como resolvido. Grant `authenticated` (faz check interno).
+### 3.3 — Componentes compartilhados
+Criar `src/components/dashboards/`:
+- `DashboardFiltersContext.tsx` — context + hook `useDashboardFilters()` com `{ periodo, executivos[], regioes[], ufs[], setX }`.
+- `DashboardFilters.tsx` — barra com dropdown período (30d / 90d / Ano / Tudo / Custom), multi-select executivo (lista de `profiles` com role advisor/admin via `useEffectiveRoles`), região, estado, botões "Limpar" e "Exportar".
+- `ExportButton.tsx` — converte snapshot atual em CSV via `csvExport.ts`.
+- Ampliar `DashKpi` para sempre receber `spark` (último 12m) e `trend` (vs trimestre anterior); adicionar `LiveIndicator` no canto sup. direito de cada card (ponto verde pulsante).
+- `DashCharts.tsx`: ajustar Donut para `innerRadius=60 outerRadius=80` fixos (donut fino), hover com setor +4px e demais opacity 0.3 (custom `activeShape`); barras com paleta semântica volt/cyan/secondary; áreas com gradient stop em volt/cyan e opacity 0.08.
 
----
+### 3.4 — Reescrever as 4 páginas
 
-## Edge function `eb-import-monday`
+Wrapper comum: `<DashboardFiltersProvider>` → `<DashShell filters={<DashboardFilters/>} onExport={...}>`. Hooks `useQuery` consomem RPCs/views + aplicam filtros via params. Refetch a cada 60s (já existe).
 
-**`supabase/functions/eb-import-monday/index.ts`**
+**Executivo (`/dashboard/executivo`)**: 8 linhas conforme spec — 6 KPIs L1, 3 cards financeiros L2, 2 charts L3 (Status stacked Buyside vs Sellside + Evolução anual area), 3 donuts L4 (tipo/fase sellside/região), L5 estado horizontal full-width, L6 (Valor anual + Comissão anual area), L7 (Top 3 + Por responsável), L8 AI Insight.
 
-- Wrapper `withObservability({ name: "eb-import-monday" })` ✅ registra em `mari_ops.health_check`.
-- CORS + auth manual (verifica admin via `has_role` RPC) — função fica com JWT obrigatório implícito.
-- Multipart: `file` (xlsx), `type` (sellside|buyside), `mode` (preview|commit), `import_id`.
-- Parse com `npm:xlsx@0.18.5` via esm.sh, lê Sheet 1, headers na linha 3, dados a partir da linha 4. Auto-detect via A1.
-- **Helpers** (caches por execução): `findAdvisor` (4 passos: profiles exato → meta RPC → fuzzy first+last → registra pendente), `findBuyer` (ilike em `equity_brain.buyers.nome`), `findOrCreateCompany` (3 lookups + stub `PENDING-<sha8>` com `qualification_status='unqualified'`, `needs_cnpj_enrichment=true`, `source='import_monday'`).
-- **Parsers**: `parseMoney` (BR `R$ 1.234,56` e US), `parsePct` (`5%` → 5.0; aceita 0.05 → 5), `parseDate` (Excel serial via `XLSX.SSF`, `dd/mm/yyyy`, ISO), `parseUrl` (extrai do hyperlink).
-- **Mapeamento Sellside** — 18 colunas (Name, 2x Comprador, Fase, Drive, Status, Datas, Valor, R$ Vispe, %, Executivo, MATCH, Contrato, Estado, Região, Item ID). Refinos: contrato+Concluído→closed/vendemos; contrato+SPA→spa; drive+NBO→nbo. `temperature='cold'` se Fase="Aguardando retorno". Fixos: `deal_type=sellside`, `deal_kind=mandato_assinado`, `imported_from=monday_sellside`, `source=import_monday`.
-- **Mapeamento Buyside** — 25 colunas. Mapeia `padrinho_id` (campo NOVO da Fase 1). `cross_sell_flags` = split por `,` ou `;`. `Cliente`→company. `Operação(col 9)`→deal_type (Buyside/Cisão/Fusão/SPA→buyside+spa/Due Diligence→buyside+due_diligence). PT→uf=EX, regiao=Internacional. Fixos: `deal_kind=buyer_mandate`, `imported_from=monday_buyside`.
-- **Subitems**: linhas após "Subitems" e sem Item ID viram `mandate_subtasks` vinculadas ao mandato pai mais recente. Status mapeado (concluido/cancelado/bloqueado/em_andamento/pendente).
-- **Upsert idempotente**: se `monday_item_id` existe → UPDATE só campos não-null (preserva edições). Senão INSERT.
-- **Output preview**: 20 linhas + warnings + advisors_unmapped + companies_to_create.
-- **Output commit**: `{ mandates_created, mandates_updated, companies_created, subtasks_created }`.
+**Mandato (`/dashboard/mandato`)**: 4 KPIs L1, 2 charts L2 (assinados area + cancelados stacked VENCIDO/SOZINHO), L3 evolução trimestral full, L4 (equity por status + comissão por status), L5 3 donuts (status/exclusividade/região), L6 estado full, L7 (BDR stacked + Closer stacked), L8 timeline mandatos a vencer.
 
-## Edge function `eb-resolve-advisor-mapping`
+**Match (`/dashboard/match`)**: 5 KPIs L1, 2 line charts L2 (fechados + cancelados), 3 donuts L3, L4 estado full.
 
-**`supabase/functions/eb-resolve-advisor-mapping/index.ts`** — POST `{ monday_name, user_id }`. Auth admin. Chama RPC `eb_resolve_advisor_mapping`. Wrapped com observability.
+**NBO (`/dashboard/nbo`)**: 5 KPIs operacionais L1, 4 KPIs financeiros L2, 2 lines L3, L4 estado full, L5 (valor trimestre + valor anual), L6 (success fee trimestre + anual), L7 (donut qty exec + bar valor exec).
 
----
+### 3.5 — Edge function `generate-dashboard-insight`
+`supabase/functions/generate-dashboard-insight/index.ts`. Input `{ dashboard_type, snapshot_data }`. Faz hash SHA-1 do snapshot, lê cache em `dashboard_insight_cache` (TTL 1h); se miss, chama Lovable AI Gateway (`gemini-2.5-flash`, prompt da spec, máx 80 palavras pt-BR), upserta cache e loga em `mari_ops.health_check`. Trata 402/429. CORS headers padrão. `verify_jwt` default.
+Hook `useDashboardInsight(type, snapshot)` consumido pelo `AIInsightCard` no Executivo (e opcional nos demais).
 
-## UIs (3 páginas admin)
+### 3.6 — Navegação
+`src/components/layout/AppSidebar.tsx`: novo grupo "📊 Dashboards" (acima de Equity Brain) com 4 itens (`/dashboard/executivo|mandato|match|nbo`). Usar `NavLink` + ícone (BarChart3, FileSignature, Handshake, FileText).
+`src/App.tsx`: registrar 4 rotas top-level dentro do grupo `<AppShell>` autenticado, mantendo aliases existentes em `/equity-brain/dashboard/*` por compatibilidade (mesmo componente).
 
-### `src/pages/admin/MondayImport.tsx` → rota `/admin/monday-import` (RequireRole admin)
-- Estado-máquina: `idle → preview → committing → done`.
-- Drag-drop XLSX (input file). Auto-select type via A1 do XLSX (lê client-side com mesma lib).
-- Botão "Pré-visualizar" → POST `mode=preview` → mostra: total/válidas/ignoradas, tabela 10 linhas, lista advisors_unmapped, lista companies_to_create, warnings.
-- Botão "Confirmar import" → POST `mode=commit` → progress + counters → tela sucesso com link `/admin/monday-parity` e `/admin/advisors-mapping`.
+### 3.7 — Critérios de aceite (validação final)
+- Background `#0A0A0A`, cards border 1px `#2A2A2A`, sem shadow.
+- KPIs em Geist Mono, count-up 800ms, sparkline visível nos principais, trend vs trimestre anterior.
+- Volt restrito a destaques (top performer, indicadores).
+- Materialized views refrescam de hora em hora (verificar `mari_ops.health_check`).
+- Filtros propagam via context e refetcham todos os charts da página.
+- Botão "Exportar" gera CSV do snapshot atual.
+- AI Insight aparece no Executivo, cache de 1h.
+- Sidebar mostra grupo "Dashboards" com rota ativa destacada.
+- Render OK em 768px+.
 
-### `src/pages/admin/MondayParity.tsx` → rota `/admin/monday-parity` (RequireRole admin)
-- Constante `MONDAY_REFERENCE` (do brief, exata).
-- Queries: `count(*)`, agregações por `outcome`/`deal_type`, `sum(valor_operacao)`, `sum(faturamento_vispe)`, `count by responsavel_id` em `equity_brain.mandates` filtrando `imported_from in (monday_sellside, monday_buyside)`.
-- Tabela 4 colunas (KPI | Monday | MARI | Δ%). Cores: ✓ verde se Δ=0; ⚠️ amarelo se |Δ|≤5%; 🟧 laranja se ≤15%; ❌ vermelho >15%.
-- Click em linha de executivo → drawer com lista de mandatos divergentes (apenas IDs + razao_social).
+## Arquivos tocados
 
-### `src/pages/admin/AdvisorsMapping.tsx` → rota `/admin/advisors-mapping` (RequireRole admin)
-- Lista `equity_brain.advisors_pending_mapping` onde `resolved_user_id IS NULL` ordenado por `occurrences DESC`.
-- Cada linha: monday_name + ocorrências + `<select>` dos `profiles` (full_name) + botão "Aplicar".
-- Submit: `supabase.functions.invoke('eb-resolve-advisor-mapping', { body: { monday_name, user_id } })`. Toast com `updated_responsavel + updated_padrinho` retornado.
-- Refresh automático após cada mapping.
+Criados:
+- `supabase/migrations/2026050X_dashboard_views.sql`
+- `supabase/functions/generate-dashboard-insight/index.ts`
+- `src/components/dashboards/DashboardFiltersContext.tsx`
+- `src/components/dashboards/DashboardFilters.tsx`
+- `src/components/dashboards/ExportButton.tsx`
+- `src/hooks/useDashboardInsight.ts`
 
-### Navegação
-- Adicionar 3 entradas no `src/components/admin/AdminSidebar.tsx` em uma seção nova "Monday Migration": Importar / Paridade / Mapping advisors.
-- Adicionar 3 rotas em `src/App.tsx` envolvidas em `<RequireRole role="admin">`.
+Editados:
+- `src/index.css` (tokens + classes)
+- `index.html` (Geist Mono)
+- `tailwind.config.ts` (font mono)
+- `src/components/dashboards/DashKpi.tsx` (LiveIndicator + sparkline obrigatório)
+- `src/components/dashboards/DashCharts.tsx` (donut fino + hover + paleta semântica)
+- `src/pages/dashboards/Dashboard{Executivo,Mandato,Match,Nbo}Page.tsx` (layouts L1–L8 completos)
+- `src/components/layout/AppSidebar.tsx` (grupo Dashboards)
+- `src/App.tsx` (rotas `/dashboard/*` top-level)
+- `.lovable/plan.md` (registro Fase 3)
 
----
+## Notas técnicas
+- RPCs existentes (`get_dashboard_*`) serão reescritas para `SELECT row_to_json(mv) FROM mv_dashboard_*` — mantém assinatura, hooks atuais não quebram.
+- Filtros aplicados sobre `eb_v_mandates_full` (não sobre MV) para preservar agilidade dos KPIs principais (MV) + interatividade dos breakdowns.
+- AI Insight nunca bloqueia render: `Suspense`/`loading` no card, fallback texto neutro.
+- Sem alteração em edge functions existentes (calculate-scores, match-company-v2, mari-brain, claude-*).
+- Toda nova edge function registra em `mari_ops.health_check` no início e fim.
 
-## Critérios de aceite — como vou validar
-
-| Critério | Validação |
-|---|---|
-| Preview retorna JSON válido | `supabase--curl_edge_functions` mock + verificar shape |
-| Commit insere/atualiza | `supabase--read_query` em `mandates` antes/depois |
-| Health check registra | `select * from mari_ops.health_check where function_name='eb-import-monday'` |
-| Re-import não duplica | Subir mesmo arquivo 2x e contar mandates por monday_item_id |
-| Estados nome→UF | "São Paulo"→"SP" (unit test inline + log no preview) |
-| `monday_item_id` único | Constraint da Fase 1 garante; valido com query |
-| Top-3 executivos batem | `/admin/monday-parity` mostra Δ=0 nos 3 |
-| Soma valor_operacao Δ≤1% | Δ exibido na página de paridade |
-
-Como **estamos em planejamento**, não consigo rodar os tests do XLSX real até você aprovar e o build mode liberar `code--exec`. Após approval, vou:
-1. Aplicar a migration (helpers SQL).
-2. Criar e deployar as 2 edge functions.
-3. Criar as 3 páginas + rotas + sidebar.
-4. Pedir pra você subir o XLSX em `/admin/monday-import` (preview) e me mostrar o JSON pra eu ajustar mapeamentos antes do commit final.
-
----
-
-## O que NÃO vou fazer
-- ❌ Não toco em edge functions existentes
-- ❌ Não invento campos extras nem enums
-- ❌ Não chamo SQL raw client-side — toda escrita passa por edge function ou RPC
-- ❌ Não avanço pra Fase 3 — paro depois do critério "Top-3 executivos batem com Monday"
-
-Aprova?
+**Após implementação, paro e aguardo OK para Fase 4.**
