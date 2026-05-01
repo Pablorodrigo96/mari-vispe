@@ -5,7 +5,7 @@ import {
   ChevronDown, ArrowLeft, LogOut, Sparkles,
   TrendingUp, Building2, GitMerge, FileSignature,
   Settings, Upload, Search, GitCompare, Globe, Activity, Users,
-  Table as TableIcon, Gauge,
+  Table as TableIcon, Gauge, Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +31,7 @@ const DASHBOARDS = [
 
 const ADMIN_ITEMS = [
   { to: "/equity-brain/admin/dashboard-coverage", label: "Cobertura dashboards", Icon: Gauge },
+  { to: "/equity-brain/admin/dedupe",     label: "Limpeza duplicatas",  Icon: Copy },
   { to: "/equity-brain/admin/imports",    label: "Importar",            Icon: Upload },
   { to: "/equity-brain/admin/auditoria",  label: "Auditoria",           Icon: Search },
   { to: "/equity-brain/admin/shadow",     label: "Shadow v1↔v2",        Icon: GitCompare },
