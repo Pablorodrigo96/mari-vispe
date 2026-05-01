@@ -100,6 +100,7 @@ import DashboardExecutivoPage from "./pages/dashboards/DashboardExecutivoPage";
 import DashboardMandatoPage from "./pages/dashboards/DashboardMandatoPage";
 import DashboardMatchPage from "./pages/dashboards/DashboardMatchPage";
 import DashboardNboPage from "./pages/dashboards/DashboardNboPage";
+import QuickFillPage from "./pages/equity-brain/QuickFillPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
@@ -245,6 +246,7 @@ const App = () => (
               <Route path="dashboard/mandato"    element={<DashboardMandatoPage />} />
               <Route path="dashboard/match"      element={<DashboardMatchPage />} />
               <Route path="dashboard/nbo"        element={<DashboardNboPage />} />
+              <Route path="crm/quick-fill"       element={<RequireRole roles={["admin", "advisor"]}><QuickFillPage /></RequireRole>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

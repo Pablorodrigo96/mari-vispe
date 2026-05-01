@@ -3499,19 +3499,6 @@ export type Database = {
         }
         Relationships: []
       }
-      mv_dashboard_mandato: {
-        Row: {
-          com_exclusividade: number | null
-          comissao_vispe: number | null
-          em_negociacao: number | null
-          equity_sob_gestao: number | null
-          refreshed_at: string | null
-          total_mandatos: number | null
-          vendemos: number | null
-          vigentes: number | null
-        }
-        Relationships: []
-      }
       mv_dashboard_match: {
         Row: {
           cancelados: number | null
@@ -3893,7 +3880,7 @@ export type Database = {
       }
       get_dashboard_mandato: {
         Args: never
-        Returns: Database["public"]["Views"]["mv_dashboard_mandato"]["Row"][]
+        Returns: unknown[]
         SetofOptions: {
           from: "*"
           to: "mv_dashboard_mandato"
