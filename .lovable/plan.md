@@ -1,38 +1,55 @@
-## Problema
+## Diagnóstico (já confirmado no banco)
 
-`/equity-brain/hoje` quebra com:
+Os 317 mandatos estão todos com `status = 'vigente'`. A negociação real vive na coluna `pipeline_stage` (enum `equity_brain.pipeline_stage`):
+
+- `match` — 88
+- `nbo` — 1
+- `due_diligence` — 0
+- `spa` — 0
+- `closing` — 228
+- `closed` — 0
+
+O `PipelineFunnel` atual lê `m.status` com 3 categorias (Vigente / Em negociação / Vendemos) que ninguém atualiza — por isso aparece "317 / 0 / 0".
+
+## O que vai mudar
+
+### 1. `src/components/equity-brain/crm/PipelineFunnel.tsx`
+
+Reescrever o componente para:
+
+- **Ler `m.pipeline_stage`** (não `m.status`).
+- **5 estágios reais** + 1 macro de prospecção, totalizando 6 barras na ordem do funil M&A:
+
+```text
+Prospecção  →  Match  →  NBO  →  DD  →  SPA  →  Closing  →  Fechado
 ```
-invalid input value for enum pipeline_stage: ""
-```
 
-A RPC `public.eb_today_cards` usa:
-```sql
-COALESCE(m.pipeline_stage, '') NOT IN ('closed','won','lost','cancelled','archived')
-```
+- **Mapeamento das barras**:
 
-Dois bugs aí:
-1. `''` não é valor válido do enum `equity_brain.pipeline_stage` — Postgres tenta castear e falha.
-2. Os valores `won`, `lost`, `cancelled`, `archived` também não existem no enum. Os reais são: `match, nbo, due_diligence, spa, closing, closed`.
+  | Label exibido | Origem | Cor (Tailwind) |
+  |---|---|---|
+  | Prospecção (sem mandato) | `pipeline_stage IS NULL` ou `deal_origin = 'cold'` sem stage | `bg-zinc-500` |
+  | Match | `pipeline_stage = 'match'` | `bg-amber-500` |
+  | NBO | `pipeline_stage = 'nbo'` | `bg-orange-500` |
+  | Due Diligence | `pipeline_stage = 'due_diligence'` | `bg-blue-500` |
+  | SPA | `pipeline_stage = 'spa'` | `bg-indigo-500` |
+  | Closing | `pipeline_stage = 'closing'` | `bg-emerald-500` |
+  | Fechado | `pipeline_stage = 'closed'` | `bg-emerald-700` |
 
-## Correção
+- **Largura da barra**: proporcional ao maior estágio (igual ao atual), mantendo `Math.max(8, …%)`.
+- **Tooltip do header**: continua usando `EB_TIPS.funil_pipeline` (texto centralizado em `ebTooltips.ts` — não muda).
+- **Layout/visual**: mantém o mesmo card `bg-zinc-900/40 border border-zinc-800 rounded p-4`, mesma tipografia, só troca os dados e adiciona 4 linhas (de 3 para 7 barras).
 
-Migration única reescrevendo `eb_today_cards` para tratar o filtro de estágio finalizado de forma type-safe:
+### 2. `src/lib/ebTooltips.ts` (ajuste pequeno)
 
-```sql
-AND (m.pipeline_stage IS NULL OR m.pipeline_stage::text NOT IN ('closed'))
-```
+Atualizar o texto do tooltip `funil_pipeline` para refletir a nova semântica: "Distribuição dos mandatos pelos estágios reais do funil M&A — da prospecção até o fechamento. Atualizado quando o estágio muda no Pipeline operacional ou Kanban."
 
-Casto `pipeline_stage` para `text` antes do `NOT IN` (evita coerção do literal pro enum) e mantenho só `closed` que é o único terminal real do enum.
+### 3. Nada além disso
 
-Aplico nas duas CTEs (`cooling` e `hot`). Resto da função (joins com `companies` para resolver `codename`, dismissals, etc.) fica igual ao último migration.
+- **NÃO** mexer em `mandates.status` no banco — fica como rótulo macro legado, sem migration.
+- **NÃO** alterar o `PipelineKanban`, `MandatesMondayTable` ou `QuickEditPopover` — eles já leem `pipeline_stage` corretamente.
+- **NÃO** mudar a `eb_today_cards` nem o feed `/equity-brain/hoje` — o problema do feed vazio é outro tópico (filtros restritos), não está no escopo desta correção.
 
-## Arquivo
+## Por que isso resolve
 
-- `supabase/migrations/<timestamp>_fix_pipeline_stage_enum_cast.sql` — `CREATE OR REPLACE FUNCTION public.eb_today_cards` com o filtro corrigido + `GRANT EXECUTE`.
-
-Sem mudanças no frontend nem em edge functions.
-
-## Validação pós-deploy
-
-1. Recarregar `/equity-brain/hoje` — feed deve carregar (mesmo que vazio).
-2. `SELECT * FROM public.eb_today_cards(7);` direto no SQL para confirmar que não estoura mais.
+Hoje o widget "Pipeline operacional" logo abaixo do funil já mostra MATCH 88 / NBO 1 / CLOSING 228 corretamente. Após a mudança, o **funil de cima passa a contar a mesma história visualmente como funil**, com todos os estágios do playbook M&A — você enxerga onde os deals empilham e onde tem gargalo (228 presos em Closing, por exemplo, vira informação acionável).
