@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock, MessageSquare } from 'lucide-react';
+import { useAdvisorWhatsAppStatus } from '@/hooks/useAdvisorWhatsAppStatus';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminRoute } from '@/components/admin/AdminRoute';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,6 +72,7 @@ interface FranchiseeRequest {
 }
 
 export default function AdminUsers() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [franchiseeRequests, setFranchiseeRequests] = useState<FranchiseeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +81,12 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [newRole, setNewRole] = useState<AppRole | ''>('');
+
+  const advisorIds = useMemo(
+    () => users.filter(u => u.roles.includes('advisor') || u.roles.includes('admin')).map(u => u.user_id),
+    [users],
+  );
+  const { statusMap: waStatus } = useAdvisorWhatsAppStatus(advisorIds);
 
   useEffect(() => {
     fetchUsers();
@@ -415,6 +424,7 @@ export default function AdminUsers() {
                     <TableRow>
                       <TableHead>Usuário</TableHead>
                       <TableHead>Roles</TableHead>
+                      <TableHead>WhatsApp</TableHead>
                       <TableHead>Cadastro</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>

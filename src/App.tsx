@@ -39,6 +39,7 @@ import CapitalRequestDetail from "./pages/CapitalRequestDetail";
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdvisorWhatsAppSetup from "./pages/admin/AdvisorWhatsAppSetup";
 import AdminListings from "./pages/admin/AdminListings";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminValuations from "./pages/admin/AdminValuations";
@@ -151,6 +152,7 @@ const App = () => (
               <Route path="/admin" element={<RequireRole roles={["admin"]}><AdminDashboard /></RequireRole>} />
               <Route path="/admin/crm" element={<RequireRole roles={["admin"]}><AdminCRM /></RequireRole>} />
               <Route path="/admin/users" element={<RequireRole roles={["admin"]}><AdminUsers /></RequireRole>} />
+              <Route path="/admin/advisors/:advisorId/whatsapp-setup" element={<RequireRole roles={["admin"]}><AdvisorWhatsAppSetup /></RequireRole>} />
               <Route path="/admin/listings" element={<RequireRole roles={["admin"]}><AdminListings /></RequireRole>} />
               <Route path="/admin/subscriptions" element={<RequireRole roles={["admin"]}><AdminSubscriptions /></RequireRole>} />
               <Route path="/admin/valuations" element={<RequireRole roles={["admin"]}><AdminValuations /></RequireRole>} />

@@ -1,81 +1,112 @@
+## Fase 2 — Setup automático de WhatsApp por Advisor (modo MOCK)
 
-## Fase 1 — Fixes básicos do WhatsApp (3 mudanças)
+Decisão: a Meta Cloud API real **não permite** o fluxo "registrar advisor → SMS automático → confirma". Cada número exige WABA aprovado e cadastro manual no Business Manager. Por isso, esta fase entrega **toda a infra (DB, telas admin, edge functions, fluxo de status) usando um adapter MOCK**. Quando os números/credenciais reais chegarem, troca-se apenas o adapter — schema, RLS e UI permanecem idênticos.
 
-### Fix 2 — Migration: estender CHECK em `equity_brain.deal_events.event_type`
-
-**Arquivo novo:** `supabase/migrations/20260501133500_extend_deal_events_event_type_check.sql`
-
-```sql
-ALTER TABLE equity_brain.deal_events
-  DROP CONSTRAINT IF EXISTS deal_events_event_type_check;
-
-ALTER TABLE equity_brain.deal_events
-  ADD CONSTRAINT deal_events_event_type_check
-  CHECK (event_type IN (
-    -- legacy mantidos
-    'rejected','contacted','reply_received','nda_signed',
-    'loi_received','term_sheet','closed','dropped',
-    -- novos canais de comunicação
-    'whatsapp_outbound','whatsapp_inbound',
-    'call_outbound','call_inbound',
-    'email','note','meeting_held'
-  ));
-```
-
-Resultado: o `RPC eb_mark_whatsapp_action` para de quebrar com `deal_events_event_type_check` ao clicar **Mandei**.
+Números mock pré-cadastrados: Vitor `+5511999991111`, Pablo `+5511999992222`.
 
 ---
 
-### Fix 1A — Reescrever `generate-whatsapp-draft` com contexto real
+### 1. Schema (migration nova)
 
-**Arquivo:** `supabase/functions/generate-whatsapp-draft/index.ts` (substituição completa)
+Tabelas em `public`:
 
-Mudanças vs versão atual:
+- **`advisor_whatsapp_setup_pending`** — staging temporário do onboarding (advisor_id, phone, phone_number_id mock, status `awaiting_sms_confirmation|confirmed|failed`, `expires_at = now()+15min`, `error_message`, contador de tentativas).
+- **`advisor_whatsapp_config`** — config permanente por advisor (advisor_id UNIQUE, phone, phone_number_id, `access_token_secret_id` UUID apontando pro Vault, `verify_token`, `webhook_url`, `status pending|active|suspended|error`, `connected_at`, `last_message_received_at`, `total_messages_captured`, `is_mock` bool default true).
 
-1. **Carrega histórico de 4 fontes** antes de chamar Gemini:
-   - `equity_brain.contacts` (nome, cargo, e a empresa via `entity_type='company'`+`entity_id`)
-   - `equity_brain.companies` (razão social, setor via cnae_descricao, UF/município)
-   - `equity_brain.mandates` (status, pipeline_stage, deal_type, valor, dias desde assinatura, último outreach). Se `mandate_id` não vier mas o contato estiver ligado a uma empresa com mandato vigente/em_negociação, **infere automaticamente**.
-   - `equity_brain.crm_activities` últimas 5 (data, kind, direction, body) — preferindo as ligadas ao mandato; fallback para o contato.
-   - `whatsapp_action_log` última mensagem efetivamente enviada (texto integral + data).
+RLS:
+- Habilitar em ambas.
+- `advisor_can_view_own_config` (SELECT WHERE `advisor_id = auth.uid()` OR `has_role(uid,'admin')`).
+- `admin_full` (ALL via `has_role(uid,'admin')`) — admin gerencia tudo.
+- `advisor_whatsapp_setup_pending`: somente admin lê/escreve (advisor não vê staging).
 
-2. **Decide o intent automaticamente** (sem o caller passar `draftType`):
-   - Se mandato com status `vigente` ou `em_negociacao` → **`followup`**
-   - Caso contrário → **`initial`**
-   - O caller pode opcionalmente sobrescrever via novo campo `force_intent` (`valuation_send` | `meeting_request` | `match_announcement`) — mantém compat com o `draft_type` antigo nesses 3 casos.
-
-3. **System prompts diferentes**:
-   - **`followup`**: instrução explícita "VOCÊ JÁ TEM RELAÇÃO ATIVA. NÃO se apresente. NÃO diga 'identificamos uma oportunidade' nem 'tenho um buyer'. Faça referência específica a algo concreto do histórico (status, último ponto, documento)."
-   - **`initial`**: apresentação curta com gancho de empresa/setor.
-
-4. **Resposta** ganha `mode: 'followup'|'initial'` e `resolved_mandate_id` para o front mostrar badge.
+Token criptografado:
+- Habilitar extension **`vault`** (Supabase Vault).
+- Função `public.eb_store_advisor_token(advisor_id, token)` SECURITY DEFINER que faz `vault.create_secret(...)` e devolve UUID. Coluna `access_token_secret_id` guarda só esse UUID — token real fica no Vault.
+- Função `public.eb_read_advisor_token(secret_id)` SECURITY DEFINER restrita a service_role, usada pelas edge functions.
 
 ---
 
-### Fix 1B — Simplificar `WhatsAppActionButton`
+### 2. Edge Functions (com adapter MOCK)
 
-**Arquivo:** `src/components/whatsapp/WhatsAppActionButton.tsx`
+Estrutura compartilhada:
+- Novo arquivo `supabase/functions/_shared/metaWhatsappAdapter.ts` exportando `MetaAdapter` interface com `registerPhoneNumber`, `verifyCode`, `issueAccessToken`, `subscribeWebhook`. Duas implementações: `MockMetaAdapter` (default, usa código fixo `123456` e gera IDs/tokens fake) e `RealMetaAdapter` (stub com TODO + envvars `META_*`). Seleção via env `META_MODE=mock|real` (default mock enquanto secret `META_PERMANENT_ACCESS_TOKEN` ausente).
 
-- Remover o uso/passagem de `draft_type` no `invoke('generate-whatsapp-draft', ...)` (a edge function decide).
-- Manter prop `draftType` por compat, mas só repassar quando for um intent forçado (`valuation_send`/`meeting_request`/`match_announcement`) via novo campo `force_intent`.
-- Mostrar badge sutil no modal review: **"Continuação"** ou **"Primeiro contato"** vindo do `data.mode`.
-- Nenhuma mudança UX no botão em si.
+Funções novas (todas com `withObservability`):
+
+**`setup-advisor-whatsapp`** (POST `{advisor_id, phone_number}`)
+1. Valida admin (via JWT).
+2. Normaliza telefone, valida formato BR.
+3. Chama `adapter.registerPhoneNumber(...)` → recebe `phone_number_id` mock.
+4. Insere em `advisor_whatsapp_setup_pending` com status `awaiting_sms_confirmation`.
+5. Retorna `{status:'awaiting_confirmation', mock_code:'123456', mock_hint:'Use 123456 enquanto Meta real não configurada'}`.
+
+**`confirm-advisor-whatsapp`** (POST `{advisor_id, sms_code}`)
+1. Busca pending. Valida não expirado, contador de tentativas.
+2. Chama `adapter.verifyCode(phone_number_id, code)` (mock aceita só `123456`).
+3. Chama `adapter.issueAccessToken(...)` → token fake.
+4. Salva token via `eb_store_advisor_token` (Vault) → guarda `secret_id`.
+5. Insere em `advisor_whatsapp_config` (`status='active'`, `is_mock=true`, `connected_at=now()`).
+6. Apaga staging.
+7. Retorna `{status:'active', advisor_id, phone, is_mock:true}`.
+
+**`whatsapp-webhook`** (GET para verificação Meta + POST para mensagens) — **stub mock**
+- GET: valida `hub.verify_token` contra `advisor_whatsapp_config.verify_token` via `?advisor_id=`.
+- POST: por enquanto só registra payload em `mari_ops.health_check` e incrementa `total_messages_captured` + `last_message_received_at`. Captura real de mensagem entra na Fase 3.
 
 ---
 
-### Critérios de aceite
+### 3. UI Admin
 
-- [ ] Migration aplica sem erro.
-- [ ] `INSERT INTO equity_brain.deal_events(event_type) VALUES ('whatsapp_outbound')` passa.
-- [ ] Clicar **Mandei** no fluxo completo não dá mais erro `deal_events_event_type_check`.
-- [ ] Clicar "Falar com X" num contato com mandato vigente: rascunho menciona setor/status/valor/última atividade e NÃO se apresenta.
-- [ ] Clicar em contato sem mandato: rascunho é apresentação curta com gancho de empresa.
-- [ ] Badge "Continuação" / "Primeiro contato" aparece no modal review.
+**`src/pages/admin/AdvisorWhatsAppSetup.tsx`** (rota `/admin/advisors/:advisorId/whatsapp-setup`)
 
-### Detalhes técnicos
+Estados visuais (mesmo componente, máquina de estados local):
+- `idle` — input telefone + "Registrar e enviar SMS"
+- `registering` — spinner
+- `awaiting_sms` — aviso "MOCK: digite `123456`" + input código 6 dígitos + "Confirmar"
+- `confirming` — spinner
+- `active` — "✅ Operacional (modo mock)" + botões "Testar webhook" e "Reconectar" + badge `MOCK`
+- `error` — mensagem + "Tentar novamente"
 
-- `withObservability` mantido.
-- Resolução de empresa do contato: assume `contacts.entity_type='company'` apontando para `companies.id` (ou via cnpj quando aplicável).
-- Para evitar leak de PII, a edge usa SERVICE_ROLE só para leitura, e o texto enviado ao Gemini contém apenas dados já visíveis ao advisor (via RLS) — o usuário só dispara para contatos que ele já vê.
-- Sem mudanças em `eb_open_whatsapp_action`/`eb_mark_whatsapp_action`.
-- Sem mudanças em outros componentes.
+Comunicação via `supabase.functions.invoke('setup-advisor-whatsapp' | 'confirm-advisor-whatsapp')`.
+
+**`AdminUsers.tsx`** (extensão, sem nova página)
+- Filtrar usuários com role `advisor`/`admin` ganham coluna nova **WhatsApp**:
+  - `🟢 Ativo (mock)` se há config status active
+  - `🟡 Aguardando SMS` se há staging
+  - `⚪ Configurar` caso contrário
+- Clique na badge → navega para `/admin/advisors/:userId/whatsapp-setup`.
+- Hook novo `useAdvisorWhatsAppStatus(userIds)` faz um único query batch.
+
+Rota nova em `App.tsx` dentro do `AdminRoute`.
+
+---
+
+### 4. Critérios de aceite
+
+- [ ] Migration aplica (tabelas + vault + funções).
+- [ ] RLS impede que advisor X veja config do advisor Y.
+- [ ] Admin abre `/admin/users` e vê coluna WhatsApp populada (3 estados).
+- [ ] Admin clica advisor → setup → digita `+5511999991111` → SMS "enviado" (mock).
+- [ ] Admin digita código `123456` → vê tela `✅ Operacional (mock)`.
+- [ ] Linha em `advisor_whatsapp_config` existe com `is_mock=true` e token no Vault.
+- [ ] Coluna no AdminUsers vira `🟢 Ativo (mock)`.
+- [ ] Webhook GET responde challenge corretamente.
+- [ ] Tentar código errado incrementa attempts e bloqueia em 3.
+
+### 5. Pendências entregues junto (documentado, não codado)
+
+`docs/WHATSAPP_META_SWITCH.md` lista exatamente o que muda quando Meta real chegar:
+- Adicionar secrets `META_BUSINESS_ACCOUNT_ID`, `META_PERMANENT_ACCESS_TOKEN`, `META_APP_ID`, `META_APP_SECRET`.
+- Setar `META_MODE=real`.
+- Substituir `MockMetaAdapter` por `RealMetaAdapter` (já stub no código).
+- Re-rodar setup pra cada advisor (números mock apagados ou marcados `is_mock=false` após relink).
+
+---
+
+### Notas técnicas
+
+- Vault: `create extension if not exists vault with schema vault;` — disponível em Lovable Cloud.
+- Webhook URL gerada: `https://eiprjgotjruiutztjavp.supabase.co/functions/v1/whatsapp-webhook?advisor_id={uuid}`.
+- `whatsapp-webhook` precisa `verify_jwt = false` em `supabase/config.toml` (Meta não envia JWT). Outras 2 funções mantêm verify_jwt default.
+- Não tocar em `generate-whatsapp-draft` nem no fluxo "Mandei" da Fase 1.
+- Não criar números reais na Meta nesta fase — adapter mock simula tudo localmente.
