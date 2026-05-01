@@ -325,7 +325,15 @@ async function processFile(db: DB, buf: ArrayBuffer, kind: "sellside"|"buyside")
       if (advisorCache.get(n.toLowerCase())===null) unmapped.set(n,(unmapped.get(n)??0)+1);
     }
   }
-  return { type, total_rows:total, parsed:mapped.length, skipped, created, updated, companies_stub:new Set(stub.map(s=>s.company_cnpj)).size, advisors_unmapped:Array.from(unmapped.entries()).map(([n,c])=>({name:n,count:c})) };
+  return {
+    type, total_rows:total, parsed:mapped.length, skipped, created, updated,
+    companies_stub:new Set(stub.map(s=>s.company_cnpj)).size,
+    advisors_unmapped:Array.from(unmapped.entries()).map(([n,c])=>({name:n,count:c})),
+    map_errors: map_errors.slice(0, 30),
+    map_errors_total: map_errors.length,
+    upsert_errors: upsert_errors.slice(0, 30),
+    upsert_errors_total: upsert_errors.length,
+  };
 }
 
 Deno.serve(async (req: Request) => {
