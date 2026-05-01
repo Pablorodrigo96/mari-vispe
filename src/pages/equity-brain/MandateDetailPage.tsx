@@ -26,8 +26,21 @@ type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents";
 
 export default function MandateDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (searchParams.get("tab") as Tab) || "overview";
   const { data: mandate, isLoading } = useMandate(id);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(initialTab);
+  useEffect(() => {
+    const t = searchParams.get("tab") as Tab | null;
+    if (t && t !== tab) setTab(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+  function changeTab(next: Tab) {
+    setTab(next);
+    const sp = new URLSearchParams(searchParams);
+    if (next === "overview") sp.delete("tab"); else sp.set("tab", next);
+    setSearchParams(sp, { replace: true });
+  }
   useAccessLog("mandate", mandate?.id);
 
   if (isLoading) return <div className="p-8 text-zinc-400 text-sm">Carregando…</div>;
