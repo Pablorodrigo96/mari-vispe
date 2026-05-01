@@ -3894,6 +3894,15 @@ export type Database = {
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
       expire_old_reservations: { Args: never; Returns: undefined }
       find_user_by_meta_name: { Args: { search_name: string }; Returns: string }
+      get_dashboard_coverage: {
+        Args: never
+        Returns: {
+          empty: number
+          field: string
+          filled: number
+          total: number
+        }[]
+      }
       get_dashboard_executivo: {
         Args: never
         Returns: Database["public"]["Views"]["mv_dashboard_executivo"]["Row"][]
@@ -4028,6 +4037,10 @@ export type Database = {
             Returns: Json
           }
       refresh_dashboard_views: { Args: never; Returns: undefined }
+      update_mandate_field: {
+        Args: { p_field: string; p_mandate_id: string; p_value: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "seller" | "buyer" | "advisor" | "admin" | "franchisee"

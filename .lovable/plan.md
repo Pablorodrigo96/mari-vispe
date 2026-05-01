@@ -1,55 +1,124 @@
-## Diagnóstico
+## Como funcionam hoje os dashboards (a verdade nua)
 
-A navegação foi refatorada para 5 itens no menu (Hoje · Oportunidades · Pipeline · Compradores · Calls · Mercado), mas **links internos antigos** ainda apontam para caminhos que não existem mais e **não têm redirect**, deixando o usuário em telas em branco / 404 silencioso. É exatamente o que está acontecendo com você agora em `/equity-brain/mandate`.
+Todos os 4 dashboards (`Executivo`, `Mandato`, `Match`, `NBO`) leem de **uma única fonte**:
 
-### O que está quebrado
+```
+equity_brain.mandates  ──┐
+                         ├──►  view  public.eb_v_mandates_full  ──►  4 dashboards
+equity_brain.companies ──┘                                        (via materialized views + RPCs)
+```
 
-1. **`/equity-brain/mandate`** (sua URL atual) — não existe rota. O `App.tsx` só tem `crm/mandate/:id`, `crm/mandate/new` e `crm/mandate/:id/edit`. Sem `:id`, sem redirect → cai no layout vazio.
-2. **Quick-Fill (drawer "Preencher rápido")** abre `QuickFillPage`, mas a query usa `supabase.schema("equity_brain").from("mandates")`. Esse schema não está exposto via PostgREST padrão → retorna 0 mandatos, por isso o screenshot mostra "0 / Carregando…" mesmo havendo 529 registros. Hoje os outros lugares (CrmHubPage, Kanban) usam `eb_mandates` (público).
-3. **Botões "Novo Mandato" / "Editar"** continuam mandando para `/equity-brain/crm/mandate/new` e `/crm/mandate/:id/edit`. Isso ainda funciona, mas está **inconsistente** com a nova convenção (sem prefixo `crm/`). Não há atalho na sidebar.
-4. **Falta um redirect catch-all para `/equity-brain/mandate`** (singular, sem ID) — quem digita ou tem link antigo cai no limbo.
+Não existe "tabela do dashboard". Cada gráfico é **uma agregação ao vivo de uma coluna de `equity_brain.mandates`**. Para um KPI/gráfico aparecer, basta o campo correspondente estar preenchido no mandato.
 
-## Plano de correção
+**Status atual dos seus 529 mandatos:**
 
-### 1. Adicionar redirects das rotas antigas de mandato
-Em `src/App.tsx`, na seção "Redirects de rotas antigas":
-- `mandate` → `/equity-brain/pipeline` (lista)
-- `mandate/new` → `/equity-brain/crm/mandate/new` (mantém canônico atual)
-- `mandato` (PT) → `/equity-brain/pipeline`
-- `vendedores` → `/equity-brain/pipeline`
-- `vendedor/novo` → `/equity-brain/crm/mandate/new`
+| Campo que alimenta dashboards | Preenchidos | Vazios |
+|---|---:|---:|
+| `deal_type` (sellside/buyside) | 527 | 2 |
+| `deal_phase` (match/nbo/concluido…) | 245 | 284 |
+| `valor_operacao` | 137 | 392 |
+| `faturamento_vispe` (comissão) | 156 | 373 |
+| `responsavel_id` | 259 | 270 |
+| `data_assinatura` | 228 | 301 |
+| `uf` / `regiao` | 522 | 7 |
 
-Mantém `crm/mandate/:id` e `crm/mandate/:id/edit` como canônicos (não vou renomear agora pra evitar quebrar 360-views já linkadas em notificações, atalhos e WhatsApp).
+→ É por isso que vários gráficos parecem vazios: **os campos não foram preenchidos nos mandatos**.
 
-### 2. Consertar QuickFillPage (causa do "0 mandatos")
-Em `src/pages/equity-brain/QuickFillPage.tsx`:
-- Trocar `supabase.schema("equity_brain").from("mandates")` por `supabase.from("eb_mandates")` (mesmo padrão de `CrmHubPage.tsx` e `PipelineKanbanPage.tsx`).
-- Confirmar nomes de coluna existentes via `read_query` em `eb_mandates` antes do `.update()` para não quebrar persistência.
-- Atualizar invalidação de queryKeys (`eb-mandates`, `crm-hub-*`, `pipeline-kanban`) pra refletir nas outras telas.
+---
 
-### 3. Adicionar acesso direto a "Novo Mandato" no AppShell/sidebar
-Hoje só existe via Pipeline → "Preencher rápido" (que está quebrado) ou link interno do CrmHub. Vou adicionar:
-- Botão **"+ Novo mandato"** no topo da `PipelinePage` (ao lado do toggle Lista/Kanban/Mapa/Grafo) → vai pra `/equity-brain/crm/mandate/new`.
-- Mantém o "Preencher rápido" como drawer (depois do fix #2 ele finalmente carrega os 529 mandatos).
+## Lista: cada gráfico × campo que precisa ser preenchido
 
-### 4. QA manual
-Testar no preview as URLs:
-- `/equity-brain/mandate` → redireciona pra Pipeline ✓
-- `/equity-brain/pipeline` (Lista, Kanban, Mapa, Grafo) carrega
-- "+ Novo mandato" abre formulário e salva
-- "Preencher rápido" mostra os 529 mandatos
-- `/equity-brain/crm/mandate/<id>` continua abrindo Mandate 360
+### Dashboard Executivo (`/dashboard/executivo`)
+| Bloco | Coluna em `eb_mandates` | Onde preencher hoje |
+|---|---|---|
+| KPI Total Operações | qualquer linha | criar mandato |
+| KPI Buyside / Sellside | `deal_type` | form do mandato |
+| KPI Em Andamento / Concluídas / Canceladas | `outcome` + `deal_phase` | form do mandato |
+| KPI Valor Total das Operações | `valor_operacao` | form do mandato |
+| KPI Faturamento Vispe | `faturamento_vispe` | form do mandato |
+| KPI Ticket Médio | `valor_operacao` (calc) | — |
+| Donut Operações por Tipo | `deal_type` | form |
+| Donut Fase Sellside | `deal_phase` | form |
+| Donut por Região | `uf` (vira região auto) | form / company |
+| Bar Top 15 Estados | `uf` | form / company |
+| Linha Evolução Anual | `data_assinatura` + `deal_type` | form |
+| Top 3 maiores | `valor_operacao` | form |
 
-## Detalhes técnicos
+### Dashboard Mandato (`/dashboard/mandato`)
+| Bloco | Coluna |
+|---|---|
+| Total / Vigentes / Vendidos | `status` (`vigente`, `concluido`) |
+| Por executivo | `responsavel_id` |
+| Por região / estado | `uf` |
+| Por setor | `setor` (ou `companies.setor_ma`) |
 
-**Arquivos editados:**
-- `src/App.tsx` — adicionar 5 `<Route>` de redirect
-- `src/pages/equity-brain/QuickFillPage.tsx` — trocar schema/tabela + ajustar query keys
-- `src/pages/equity-brain/PipelinePage.tsx` — adicionar botão "+ Novo mandato"
+### Dashboard Match (`/dashboard/match`)
+| Bloco | Coluna |
+|---|---|
+| Aparecer aqui | `deal_phase = 'match'` |
+| Status do match | `outcome` |
+| Tempo médio | `data_assinatura` → `stage_changed_at` |
+| Por região / estado | `uf` |
 
-**Não vou mexer em:**
-- Nomes canônicos `/equity-brain/crm/mandate/:id` (alto risco — usado em notificações, deeplinks de WhatsApp e exports)
-- Esquema do banco
-- Sidebar (já está enxuta)
+### Dashboard NBO (`/dashboard/nbo`)
+| Bloco | Coluna |
+|---|---|
+| Aparecer aqui | `deal_phase = 'nbo'` |
+| Valor total / médio / ticket | `valor_operacao` |
+| Comissões total | `faturamento_vispe` |
+| Por executivo | `responsavel_id` |
 
-Quer que eu prossiga? Se preferir, posso também (a) renomear todas as rotas para `mandato/:id` (PT) com redirect das antigas, ou (b) adicionar "+ Novo mandato" no topbar global em vez de só na PipelinePage — me avisa se quer alguma dessas variações.
+---
+
+## O problema (e o que você quer, estilo Monday)
+
+Hoje o "preenchimento" desses campos está **espalhado**:
+- `/equity-brain/crm/mandate/new` — só pega ~10 campos básicos.
+- `/equity-brain/crm/mandate/:id` (Mandate 360) — edição parcial.
+- Imports CSV em `/equity-brain/imports`.
+- Quick Fill só edita 5 colunas.
+
+Não existe **uma única "planilha-mãe"** onde você abre o mandato e enxerga **todos os ~30 campos que alimentam os dashboards**.
+
+---
+
+## Plano (3 entregas — mantém Monday-like)
+
+### 1. Tabela mestre tipo Monday → `/equity-brain/mandatos/tabela`
+Página única, grid editável (uma linha por mandato, todas as colunas que alimentam dashboards), com edição inline igual Monday. Filtros por `deal_type`, `deal_phase`, `responsavel_id`, `uf`. Botão "Novo mandato" no topo. Export CSV.
+
+Colunas (na ordem): Codename · Razão Social · CNPJ · `deal_type` · `deal_kind` · `deal_phase` · `outcome` · `status` · `valor_pedido` · `valor_operacao` · `faturamento_vispe` · `comissao_pct` · `data_inicio` · `data_assinatura` · `data_fechamento` · `responsavel_id` (dropdown advisors) · `bdr_id` · `closer_id` · `uf` · `setor` · `comprador_nome` · `contato_nome` · `contato_telefone`.
+
+Save direto em `equity_brain.mandates` via RPC `public.update_mandate_field(id, field, value)` que já valida permissão admin/advisor.
+
+### 2. Form completo de mandato (substitui o atual `/mandate/new`)
+Mesmos campos da tabela, agrupados em 4 abas: **Identificação · Comercial · Financeiro · Pessoas**. Cada campo tem um (i) explicando "este campo aparece no Dashboard X, gráfico Y" — igual ao padrão `ebTooltips.ts` já usado no projeto.
+
+### 3. Painel "Saúde dos dashboards" → `/equity-brain/admin/dashboard-coverage`
+Mostra a tabela de "preenchidos × vazios" acima, com link "ver mandatos sem `valor_operacao`" → abre a Tabela Mestre já filtrada. Assim você sabe **exatamente o que preencher para destravar cada gráfico**.
+
+---
+
+## Arquivos a criar/editar
+
+**Novos:**
+- `src/pages/equity-brain/MandatosTablePage.tsx` (grid editável, ~tanstack-table)
+- `src/pages/equity-brain/DashboardCoveragePage.tsx`
+- `src/components/equity-brain/MandateFullForm.tsx` (4 abas)
+- migration: RPC `update_mandate_field` + GRANT admin/advisor
+
+**Editados:**
+- `src/App.tsx` (3 rotas novas)
+- `src/components/layout/AppSidebar.tsx` (item "Mandatos · Tabela" + "Cobertura dashboards" no grupo Dashboards)
+- `src/lib/ebTooltips.ts` (textos "este campo alimenta tal gráfico")
+- `src/pages/equity-brain/MandateFormPage.tsx` (passa a usar `MandateFullForm`)
+
+---
+
+## Resultado para você
+
+1. Abre **Mandatos · Tabela** → vê todos os 529 deals como uma planilha Monday, edita inline, qualquer mudança aparece nos dashboards no próximo refresh (≤ 60s).
+2. Abre **Cobertura Dashboards** → vê quantos mandatos estão faltando `valor_operacao`, `faturamento_vispe`, `responsavel_id` etc, e clica para corrigir em lote.
+3. Cada campo do form mostra "(i) este campo aparece no Donut X do Dashboard Executivo" — fim da dúvida sobre origem.
+
+Sem mexer nas materialized views nem nos dashboards: a estrutura de leitura já está certa, só faltava a **camada de input unificada**.
