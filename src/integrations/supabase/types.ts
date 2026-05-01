@@ -14,6 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      advisor_whatsapp_config: {
+        Row: {
+          access_token_secret_id: string
+          advisor_id: string
+          connected_at: string | null
+          created_at: string
+          id: string
+          is_mock: boolean
+          last_error: string | null
+          last_message_received_at: string | null
+          phone_number: string
+          phone_number_id: string
+          status: string
+          total_messages_captured: number
+          updated_at: string
+          verify_token: string
+          webhook_url: string
+        }
+        Insert: {
+          access_token_secret_id: string
+          advisor_id: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          is_mock?: boolean
+          last_error?: string | null
+          last_message_received_at?: string | null
+          phone_number: string
+          phone_number_id: string
+          status?: string
+          total_messages_captured?: number
+          updated_at?: string
+          verify_token: string
+          webhook_url: string
+        }
+        Update: {
+          access_token_secret_id?: string
+          advisor_id?: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          is_mock?: boolean
+          last_error?: string | null
+          last_message_received_at?: string | null
+          phone_number?: string
+          phone_number_id?: string
+          status?: string
+          total_messages_captured?: number
+          updated_at?: string
+          verify_token?: string
+          webhook_url?: string
+        }
+        Relationships: []
+      }
+      advisor_whatsapp_setup_pending: {
+        Row: {
+          advisor_id: string
+          created_at: string
+          error_message: string | null
+          expires_at: string
+          id: string
+          is_mock: boolean
+          max_attempts: number
+          phone_number: string
+          phone_number_id: string | null
+          sms_code_attempt_count: number
+          status: string
+        }
+        Insert: {
+          advisor_id: string
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string
+          id?: string
+          is_mock?: boolean
+          max_attempts?: number
+          phone_number: string
+          phone_number_id?: string | null
+          sms_code_attempt_count?: number
+          status?: string
+        }
+        Update: {
+          advisor_id?: string
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string
+          id?: string
+          is_mock?: boolean
+          max_attempts?: number
+          phone_number?: string
+          phone_number_id?: string | null
+          sms_code_attempt_count?: number
+          status?: string
+        }
+        Relationships: []
+      }
       buyer_profiles: {
         Row: {
           buyer_name: string
@@ -3580,6 +3676,7 @@ export type Database = {
         }
         Returns: string
       }
+      eb_read_advisor_token: { Args: { p_secret_id: string }; Returns: string }
       eb_request_disclosure: {
         Args: {
           p_reason?: string
@@ -3587,6 +3684,10 @@ export type Database = {
           p_target_kind: string
           p_target_listing_id?: string
         }
+        Returns: string
+      }
+      eb_store_advisor_token: {
+        Args: { p_advisor_id: string; p_token: string }
         Returns: string
       }
       eb_today_cards: {
