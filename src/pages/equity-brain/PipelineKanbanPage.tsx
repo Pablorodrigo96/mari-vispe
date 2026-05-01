@@ -223,6 +223,24 @@ export default function PipelineKanbanPage() {
         </div>
       </header>
 
+      <div className="flex items-center gap-1.5 flex-wrap border-b border-zinc-800 pb-2">
+        <span className="text-[10px] uppercase text-zinc-500 tracking-wider mr-1">Filtrar:</span>
+        {KIND_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setKindFilter(f.key)}
+            className={cn(
+              "text-[11px] px-2 py-1 rounded border transition-colors",
+              kindFilter === f.key
+                ? "border-[#D9F564] bg-[#D9F564]/10 text-[#D9F564]"
+                : "border-zinc-800 bg-transparent text-zinc-400 hover:text-zinc-100",
+            )}
+          >
+            {f.label} <span className="tabular-nums opacity-60">({kindCounts[f.key] ?? 0})</span>
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
         <div className="text-xs text-zinc-500 p-6">Carregando…</div>
       ) : (
