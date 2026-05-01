@@ -9,7 +9,7 @@ import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
 import { ExecutiveDashboardContent } from "@/components/equity-brain/crm/exec/ExecutiveDashboardContent";
 import { MatchAnalyticsContent } from "@/components/equity-brain/crm/match/MatchAnalyticsContent";
 import { MatchHotHero } from "@/components/equity-brain/match/MatchHotHero";
-import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, Kanban, Plus, Download, LayoutDashboard, Flame } from "lucide-react";
+import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, Kanban, Plus, Download, LayoutDashboard, Flame, Newspaper, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SubTab = "mandates" | "buyers" | "activity";
