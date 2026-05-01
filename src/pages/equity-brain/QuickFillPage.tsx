@@ -20,13 +20,10 @@ const STATUSES = ["vigente", "vencido", "vendemos", "em_negociacao", "vendeu_soz
 
 type Mandate = {
   id: string;
-  codename: string | null;
-  comprador_nome: string | null;
   contato_nome: string | null;
   uf: string | null;
   setor: string | null;
   deal_type: string | null;
-  deal_phase: string | null;
   status: string | null;
   outcome: string | null;
   valor_operacao: number | null;
@@ -37,7 +34,7 @@ type Mandate = {
   pipeline_stage: string | null;
 };
 
-const REQUIRED = ["deal_type", "deal_phase", "outcome", "valor_operacao", "responsavel_id"] as const;
+const REQUIRED = ["deal_type", "outcome", "valor_operacao", "responsavel_id"] as const;
 
 function isComplete(m: Mandate): boolean {
   return REQUIRED.every((k) => m[k] !== null && m[k] !== undefined && m[k] !== "");
@@ -53,9 +50,8 @@ export default function QuickFillPage() {
     queryKey: ["quick-fill-mandates"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any)
-        .from("mandates")
-        .select("id, codename, comprador_nome, contato_nome, uf, setor, deal_type, deal_phase, status, outcome, valor_operacao, faturamento_vispe, responsavel_id, data_inicio, data_fechamento, pipeline_stage")
+        .from("eb_mandates")
+        .select("id, contato_nome, uf, setor, deal_type, status, outcome, valor_operacao, faturamento_vispe, responsavel_id, data_inicio, data_fechamento, pipeline_stage")
         .order("created_at", { ascending: false })
         .limit(2000);
       if (error) throw error;
