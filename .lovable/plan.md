@@ -1,96 +1,128 @@
-## Contexto validado
+# Reorganização do Menu Lateral do Equity Brain
 
-Inspecionei os dois XLSX que você subiu:
+## Escopo
 
-**Sellside (`M_A_Sellside_1777655662.xlsx`)**
-- 215 mandatos reais (+ 11 group rows que o parser ignora)
-- Σ Valor Operação = R$ 129.436.657 ✅ bate com a spec da Fase 2
-- Σ R$ Vispe = R$ 4.512.085 ✅ bate
-- Top 3 advisors: Rafael=71, Lucas=34, Marieli=27 ✅ idêntico à spec
-- 5 linhas com `Executivo responsável = "Executivo responsável"` (header repetido) → vão cair em advisors_unmapped, ignorar
+Refatoração **somente de navegação** dentro do cockpit `/equity-brain/*`. Nenhuma página, componente ou lógica é removida. Tudo continua acessível — só muda onde o advisor encontra. Todas as rotas atuais passam a redirecionar para as novas, sem 404.
 
-**Buyside (`M_A_Buyside_1777655780.xlsx`)**
-- 40 mandatos (a spec dizia 24 ± 1; sua planilha inclui cancelados/concluídos antigos — vou importar tudo, dashboards filtram por status)
-- Σ Valor = R$ 5.200.000 · Σ Vispe = R$ 1.417.285
+O sidebar afetado é `src/components/equity-brain/EBSidebar.tsx` (cockpit interno). O `AppSidebar.tsx` (área pública/cliente) **não é tocado**.
 
-Headers batem com o que o parser de `eb-import-monday` espera (`Name`, `Fase`, `Status do projeto`, `Valor da Operação`, `R$ Vispe`, `Executivo responsável`, `Item ID (auto generated)`).
+## Mapa: rotas atuais → novas rotas
 
-## O que vou fazer
+Todas as rotas novas vivem dentro do `EquityBrainLayout` (prefixo `/equity-brain`), preservando guard de role e o shell atual.
 
-### 1. Subir os 2 XLSX para Storage (bucket privado `monday-imports`)
-- Migration cria o bucket com RLS admin-only
-- Copio `/tmp/sell.xlsx` e `/tmp/buy.xlsx` para o bucket via edge function setup
-- Mantém histórico do que foi importado
-
-### 2. Edge function `eb-admin-import-monday-files` (one-shot, service role)
-- Lê os 2 XLSX do Storage
-- Chama o parser interno do `eb-import-monday` em modo `commit`
-- Marca cada mandato com `imported_from='monday'`, `monday_item_id`, `imported_at=now()`
-- Registra em `mari_ops.health_check` (sucesso/erro + contagens)
-- **Nota de auditoria:** `imported_by=null` (service role). Vou registrar no `mari_ops.health_check` o motivo (`reason='admin-approved bulk import'`).
-
-### 3. Validação de paridade automática
-Após o import, rodo via `supabase--read_query`:
-
-```sql
-SELECT
-  deal_type,
-  COUNT(*) AS qtd,
-  SUM(valor_operacao) AS soma_valor,
-  SUM(faturamento_vispe) AS soma_vispe
-FROM equity_brain.mandates
-WHERE imported_from='monday'
-GROUP BY deal_type;
-
-SELECT m.responsavel_name, COUNT(*) AS qtd
-FROM equity_brain.mandates m
-WHERE m.imported_from='monday' AND m.deal_type='sellside'
-GROUP BY m.responsavel_name
-ORDER BY qtd DESC LIMIT 5;
+```text
+ATUAL                                       NOVA                                    AÇÃO
+/equity-brain/hoje                          /equity-brain/hoje                      mantém
+/equity-brain/match-inbox                   /equity-brain/oportunidades             redirect
+/equity-brain/oportunidades                 /equity-brain/oportunidades?tab=andamento  redirect (rota antiga reaproveitada como wrapper novo)
+/equity-brain/crm                           /equity-brain/pipeline                  redirect
+/equity-brain/crm/minhas-empresas           /equity-brain/pipeline?tab=empresas     redirect
+/equity-brain/mapa                          /equity-brain/pipeline?view=mapa        redirect
+/equity-brain/grafo                         /equity-brain/pipeline?view=grafo       redirect
+/equity-brain/crm/quick-fill                /equity-brain/pipeline (botão QuickFill no header) redirect
+/equity-brain/buyers                        /equity-brain/compradores               redirect
+/equity-brain/teses                         /equity-brain/compradores?tab=teses     redirect
+/equity-brain/calls                         /equity-brain/calls                     mantém
+/equity-brain/news                          /equity-brain/mercado                   redirect
+/equity-brain/                              /equity-brain/dashboards/executivo      redirect (index)
+/equity-brain/board                         /equity-brain/dashboards/executivo      redirect
+/equity-brain/dashboard/executivo           /equity-brain/dashboards/executivo      redirect
+/equity-brain/dashboard/mandato             /equity-brain/dashboards/mandatos       redirect
+/equity-brain/dashboard/match               /equity-brain/dashboards/match          redirect
+/equity-brain/dashboard/nbo                 /equity-brain/dashboards/propostas      redirect
+/equity-brain/crm/imports                   /equity-brain/admin/imports             redirect
+/equity-brain/crm/admin/auditoria-operacional /equity-brain/admin/auditoria         redirect
+/equity-brain/shadow                        /equity-brain/admin/shadow              redirect
+/equity-brain/grafo-jarvis                  /equity-brain/admin/jarvis              redirect
+/equity-brain/admin/health                  /equity-brain/admin/health              mantém
 ```
 
-**Critérios de aceite (auto-checados):**
-- Sellside: 215 ± 5, Σvalor R$ 129.4M ± 1%, Σvispe R$ 4.51M ± 1%
-- Buyside: 40 ± 2
-- Top 3 = Rafael=71, Lucas=34, Marieli=27
+Itens existentes que **não estão no menu novo mas continuam acessíveis** por links contextuais (deal detail, mandate detail, CRM admin, ISP, exports, disclosures, etc.) **mantêm rotas inalteradas** — só somem da sidebar.
 
-### 4. Refresh das materialized views dos dashboards
-`SELECT public.refresh_dashboard_views();` para popular Executivo/Mandato/Match/NBO com dados reais.
+## Estrutura nova do EBSidebar (7 + Admin)
 
-### 5. Resolver advisors pendentes
-Se houver advisors não mapeados, gero pré-mapeamento automático por **fuzzy match** (similaridade ≥ 0.85) entre `monday_responsavel_name` e `profiles.full_name` dos advisors. Os ambíguos sobram pra você resolver em `/admin/advisors-mapping`.
+```text
+🔥 Hoje
+📬 Oportunidades              [novos count]
+💼 Pipeline
+🎯 Compradores
+📞 Calls
+📰 Mercado
+📊 Dashboards            ▾
+   📈 Executivo
+   🏛 Mandatos
+   ≋  Match
+   📝 Propostas
+─────────────────────────
+⚙️  Admin                ▾    (apenas role admin)
+   ⬆ Importar
+   🔍 Auditoria
+   🔀 Shadow
+   🌐 Jarvis 3D
+   📊 Paridade Monday
+   👥 Mapeamento Advisors
+   💚 Health
+```
 
-### 6. Screenshots dos 4 dashboards
-Via `browser--navigate_to_sandbox` em `/dashboard/executivo`, `/dashboard/mandato`, `/dashboard/match`, `/dashboard/nbo` com viewport 1516×1091 (igual ao seu).
+Visual mantém o tema atual (zinc-950, accent Volt `#D9F564`, item Hoje em destaque).
 
-### 7. Cleanup
-- Removo a edge function `eb-admin-import-monday-files` após sucesso
-- Mantenho os XLSX no bucket pra histórico
+## Páginas-wrapper a criar
 
-## Detalhes técnicos
+### `OportunidadesPage` (substitui o arquivo atual `OportunidadesPage.tsx`)
+- Tabs no topo: **Novos** · **Em andamento** · **Todos**.
+- Tab `novos` (default) → renderiza `<MatchInboxPage />` (matches frescos).
+- Tab `andamento` → renderiza o componente da Oportunidades atual (extraído do arquivo atual, renomeado `OportunidadesEmAndamento`).
+- Tab `todos` → mostra ambos sem filtro de "novo".
+- Lê `?tab=` da URL via `useSearchParams`; badge do sidebar usa contagem hot do `useMatchInbox` já existente.
 
-**Migration nova:**
-- `storage.buckets` insert: `monday-imports` (private)
-- RLS: só admin lê/escreve
+### `PipelinePage` (nova)
+- Tabs: **Mandatos** (default) · **Empresas**.
+- Tab Mandatos: header com toggle `Lista | Kanban | Mapa | Grafo` + botão `⚡ Preencher rápido`.
+  - Lista → `<CrmHubPage />` (componente existente reusado embutido).
+  - Kanban → `<PipelineKanbanPage />`.
+  - Mapa → `<MapaPage />`.
+  - Grafo → `<GrafoPage />`.
+  - Botão QuickFill → abre `<Sheet>` (drawer shadcn) renderizando `<QuickFillPage />` em modo embedded.
+- Tab Empresas: `<MyCompaniesPage />`.
+- Estado controlado por `?tab=` e `?view=`.
 
-**Edge function nova (temporária):**
-- Path: `supabase/functions/eb-admin-import-monday-files/index.ts`
-- Auth: valida `getClaims` + `has_role(uid, 'admin')` → você precisa estar logado pra disparar
-- Lê arquivos do Storage com `service_role`, processa em memória
-- Reusa lógica do `eb-import-monday` (importa parser como módulo compartilhado OU duplica a função `parseMondayXlsx` — vou duplicar pra não tocar em código existente, conforme regra "NÃO altere edge functions existentes")
+### `CompradoresPage` (nova)
+- Tabs: **Compradores** (default) · **Teses**.
+- Renderiza `<BuyersPage />` ou `<TesesPage />` conforme `?tab=`.
 
-**Não vou:**
-- Alterar `eb-import-monday`
-- Alterar dashboards já criados na Fase 3
-- Mexer em RLS de tabelas existentes além do bucket novo
-- Avançar sem te confirmar paridade
+### Submenu Dashboards
+Sem wrapper — submenu accordion no sidebar aponta para 4 rotas novas que reusam os componentes existentes:
+- `/equity-brain/dashboards/executivo` → `DashboardExecutivoPage` (com `BoardPage` mesclado abaixo como seção "Board Executivo").
+- `/equity-brain/dashboards/mandatos` → `DashboardMandatoPage`.
+- `/equity-brain/dashboards/match` → `DashboardMatchPage`.
+- `/equity-brain/dashboards/propostas` → `DashboardNboPage`.
 
-## Entregáveis
+### Submenu Admin
+Aponta direto para rotas existentes (com renames quando necessário). Páginas Paridade/Mapeamento Advisors **já existem** em `/admin/monday-parity` e `/admin/advisors-mapping` (fora do `/equity-brain`); o submenu linka diretamente para essas rotas top-level. Health vai para `/equity-brain/admin/health` (existente).
 
-1. ✅ 215 Sellside + 40 Buyside em `equity_brain.mandates` com `imported_from='monday'`
-2. ✅ Relatório de paridade (tabela markdown) Monday vs MARI
-3. ✅ Lista de advisors auto-mapeados + pendentes pra você resolver
-4. ✅ 4 screenshots dos dashboards com dados reais
-5. ✅ Confirmação de smoke tests passando (`mari_ops.daily_smoke_tests()`)
+## Mudanças em arquivos
 
-Após sua aprovação, executo tudo de uma vez e te trago o relatório completo.
+**Reescrito**:
+- `src/components/equity-brain/EBSidebar.tsx` — nova estrutura com 7 itens, badge dinâmico, accordions Dashboards/Admin (Admin gated por `useUserRoles().isAdmin`).
+- `src/pages/equity-brain/OportunidadesPage.tsx` — vira wrapper com tabs (extrai conteúdo atual para subcomponente interno).
+
+**Novos**:
+- `src/pages/equity-brain/PipelinePage.tsx`
+- `src/pages/equity-brain/CompradoresPage.tsx`
+
+**Editado**:
+- `src/App.tsx` — adiciona rotas novas (`oportunidades`, `pipeline`, `compradores`, `mercado`, `dashboards/*`) dentro do bloco `<Route path="/equity-brain">`; adiciona `<Route ... element={<Navigate to=... replace />} />` para todas as rotas antigas listadas no mapa; mantém todas as rotas internas atuais (deal detail, mandate detail, CRM admin sub-rotas, ISP, exports, disclosures) intactas para não quebrar links profundos.
+
+## Critérios de aceite
+
+- [ ] Sidebar mostra exatamente 7 itens principais + seção Admin (admin only).
+- [ ] Badge de Oportunidades reflete `useMatchInbox` (hot count).
+- [ ] Tabs em Oportunidades, Pipeline e Compradores funcionam e refletem na URL.
+- [ ] Toggle de view em Pipeline troca entre Lista/Kanban/Mapa/Grafo sem recarregar a página.
+- [ ] Botão `⚡ Preencher rápido` abre drawer com QuickFill.
+- [ ] Accordion Dashboards expande inline e linka para 4 sub-rotas novas.
+- [ ] Accordion Admin só aparece para `isAdmin === true`.
+- [ ] Acessar qualquer rota antiga listada redireciona para a nova (sem 404, preservando queryparams quando aplicável).
+- [ ] Rotas profundas não listadas no menu (ex.: `/equity-brain/empresa/:cnpj`, `/equity-brain/crm/mandate/:id`) continuam funcionando normalmente.
+- [ ] Estado ativo do menu destaca o item correto em todas as novas rotas e nas tabs/views.
+- [ ] Sidebar permanece responsivo e mantém tema dark + accent Volt.
