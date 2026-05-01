@@ -182,8 +182,9 @@ const App = () => (
               <Route path="/admin/capital" element={<RequireRole roles={["admin"]}><AdminCapital /></RequireRole>} />
               <Route path="/admin/capital/providers" element={<RequireRole roles={["admin"]}><AdminCapitalProviders /></RequireRole>} />
               <Route path="/admin/monday-import" element={<RequireRole roles={["admin"]}><MondayImport /></RequireRole>} />
-              <Route path="/admin/monday-parity" element={<RequireRole roles={["admin"]}><MondayParity /></RequireRole>} />
-              <Route path="/admin/advisors-mapping" element={<RequireRole roles={["admin"]}><AdvisorsMapping /></RequireRole>} />
+              {/* legados — agora rodam dentro do shell EB */}
+              <Route path="/admin/monday-parity" element={<Navigate to="/equity-brain/admin/monday-parity" replace />} />
+              <Route path="/admin/advisors-mapping" element={<Navigate to="/equity-brain/admin/advisors-mapping" replace />} />
             </Route>
 
             
