@@ -36,8 +36,8 @@ const ADMIN_ITEMS = [
   { to: "/equity-brain/admin/auditoria",  label: "Auditoria",           Icon: Search },
   { to: "/equity-brain/admin/shadow",     label: "Shadow v1↔v2",        Icon: GitCompare },
   { to: "/equity-brain/admin/jarvis",     label: "Jarvis 3D",           Icon: Globe },
-  { to: "/admin/monday-parity",           label: "Paridade Monday",     Icon: BarChart3 },
-  { to: "/admin/advisors-mapping",        label: "Mapeamento Advisors", Icon: Users },
+  { to: "/equity-brain/admin/monday-parity",     label: "Paridade Monday",     Icon: BarChart3 },
+  { to: "/equity-brain/admin/advisors-mapping",  label: "Mapeamento Advisors", Icon: Users },
   { to: "/equity-brain/admin/health",     label: "Health",              Icon: Activity },
 ];
 
