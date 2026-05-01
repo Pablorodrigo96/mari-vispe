@@ -198,9 +198,53 @@ const App = () => (
                 </RequireRole>
               }
             >
-              <Route index               element={<EBDashboardPage />} />
+              <Route index               element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
               <Route path="hoje"          element={<TodayPage />} />
-              <Route path="match-inbox"   element={<MatchInboxPage />} />
+
+              {/* Novas páginas-wrapper */}
+              <Route path="oportunidades" element={<EBOportunidadesPage />} />
+              <Route path="pipeline"      element={<PipelinePage />} />
+              <Route path="compradores"   element={<CompradoresPage />} />
+              <Route path="mercado"       element={<NewsPage />} />
+
+              {/* Submenu Dashboards (novas rotas) */}
+              <Route path="dashboards/executivo" element={<DashboardExecutivoPage />} />
+              <Route path="dashboards/mandatos"  element={<DashboardMandatoPage />} />
+              <Route path="dashboards/match"     element={<DashboardMatchPage />} />
+              <Route path="dashboards/propostas" element={<DashboardNboPage />} />
+
+              {/* Submenu Admin (renames internos) */}
+              <Route path="admin/imports"   element={<RequireRole roles={["admin", "advisor"]}><ImportsPage /></RequireRole>} />
+              <Route path="admin/auditoria" element={<RequireRole roles={["admin"]}><CrmAuditPage /></RequireRole>} />
+              <Route path="admin/shadow"    element={<EBShadowPage />} />
+              <Route
+                path="admin/jarvis"
+                element={
+                  <Suspense fallback={<div className="flex items-center justify-center h-[calc(100vh-1px)] bg-zinc-950 text-emerald-300 text-sm">Carregando cérebro 3D…</div>}>
+                    <EBGrafoJarvisPage />
+                  </Suspense>
+                }
+              />
+
+              {/* Redirects de rotas antigas */}
+              <Route path="match-inbox"   element={<Navigate to="/equity-brain/oportunidades" replace />} />
+              <Route path="crm"           element={<Navigate to="/equity-brain/pipeline" replace />} />
+              <Route path="crm/minhas-empresas" element={<Navigate to="/equity-brain/pipeline?tab=empresas" replace />} />
+              <Route path="mapa"          element={<Navigate to="/equity-brain/pipeline?view=mapa" replace />} />
+              <Route path="grafo"         element={<Navigate to="/equity-brain/pipeline?view=grafo" replace />} />
+              <Route path="crm/quick-fill" element={<Navigate to="/equity-brain/pipeline" replace />} />
+              <Route path="buyers"        element={<Navigate to="/equity-brain/compradores" replace />} />
+              <Route path="teses"         element={<Navigate to="/equity-brain/compradores?tab=teses" replace />} />
+              <Route path="news"          element={<Navigate to="/equity-brain/mercado" replace />} />
+              <Route path="board"         element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
+              <Route path="dashboard/executivo" element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
+              <Route path="dashboard/mandato"   element={<Navigate to="/equity-brain/dashboards/mandatos" replace />} />
+              <Route path="dashboard/match"     element={<Navigate to="/equity-brain/dashboards/match" replace />} />
+              <Route path="dashboard/nbo"       element={<Navigate to="/equity-brain/dashboards/propostas" replace />} />
+              <Route path="crm/imports"   element={<Navigate to="/equity-brain/admin/imports" replace />} />
+              <Route path="crm/admin/auditoria-operacional" element={<Navigate to="/equity-brain/admin/auditoria" replace />} />
+              <Route path="shadow"        element={<Navigate to="/equity-brain/admin/shadow" replace />} />
+              <Route path="grafo-jarvis"  element={<Navigate to="/equity-brain/admin/jarvis" replace />} />
               <Route path="match/:matchId" element={<MatchDetailPage />} />
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
               <Route path="mapa"          element={<EBMapaPage />} />
