@@ -1,57 +1,59 @@
-## Objetivo
+## Plano — Corrigir tela branca em `/admin`
 
-Transformar `/admin/whatsapp-monitor` em uma ferramenta de inspeção real, com filtros por advisor, direção, status, sentimento, intent, busca textual e período — substituindo o limit fixo de 100 por uma query parametrizada.
+### Diagnóstico revisado
 
-## Mudanças
+Após reler o código, **NÃO há sidebar duplicada**. As rotas `/admin/*` em `App.tsx` estão envolvidas apenas em `<RequireRole roles={["admin"]}>` (não em `<AppShell>`), e cada página admin se auto-envolve em `<AdminRoute><AdminLayout>`. Estrutura consistente entre todas as 11 páginas.
 
-### 1. Barra de filtros (acima da tabela)
+A tela branca, portanto, **não é causada por wrappers conflitantes**. Causas prováveis (em ordem):
 
-Layout em grid responsivo (3 col desktop / 1 col mobile), dentro do mesmo Card "Mensagens recentes":
+1. **`RequireRole` + `AdminRoute` em série** podem estar travando em `loading` se o hook de roles dispara duas vezes. Se um deles redireciona para `/` antes do outro resolver, o usuário pode ver flash branco.
+2. **Erro runtime silencioso** em alguma página admin (ex.: query Supabase quebrada, import faltante após migrações recentes da Fase 3).
+3. **`useEffectiveRoles` vs `useUserRoles`**: AdminSidebar usa `useEffectiveRoles`, AdminRoute usa `useUserRoles`. Se divergirem, sidebar renderiza mas conteúdo redireciona.
 
-- **Busca textual** — input com ícone de lupa, debounce 300ms, aplica `ilike` em `content_text`, `phone_from`, `phone_to` e `meta_message_id`.
-- **Advisor** — `Select` populado via `advisor_whatsapp_config` join com `profiles.full_name` (carregado uma vez no mount). Inclui opção "Todos".
-- **Direção** — `Select`: Todas / Inbound / Outbound.
-- **Status** — `Select`: Todos / received / processed / failed / sent / delivered / read.
-- **Sentimento** — `Select`: Todos / positive / neutral / negative / urgent / sem classificação.
-- **Intent** — `Select` populado dinamicamente com `distinct intent` das últimas 500 msgs.
-- **Período** — dois `Input type=date` (de / até), default últimos 7 dias.
-- **Botão "Limpar filtros"** — reseta tudo para o default.
+### Etapas de correção
 
-### 2. Lógica de carregamento
+**Etapa 1 — Instrumentar para confirmar causa real**
+- Adicionar `console.log` temporários em `AdminRoute` (`user`, `isAdmin`, `loading`) e `RequireRole` para ver no replay qual guard está bloqueando.
+- Adicionar `ErrorBoundary` envolvendo `<main>` em `AdminLayout` para capturar runtime errors e exibir mensagem em vez de tela branca.
 
-Reescrever `load()` para construir a query Supabase com encadeamento condicional (`if (filters.advisor_id) query = query.eq(...)`). Limit elevado para 500 quando filtros estão ativos. Os 4 KPIs no topo passam a refletir o resultado filtrado (renomear "Total (últimas 100)" → "Total filtrado").
+**Etapa 2 — Unificar guards (remover redundância sem mudar layout)**
+- Remover `<AdminRoute>` interno de cada uma das 11 páginas admin (já existe `<RequireRole roles={["admin"]}>` em `App.tsx`).
+- **Manter** `<AdminLayout>` em todas (ele fornece a sidebar admin específica — sem ele, sidebar some).
+- Padronizar `useUserRoles` ↔ `useEffectiveRoles` (ambos consultam `user_roles`, mas `useEffectiveRoles` tem suporte a impersonation).
 
-Realtime continua escutando todas as mudanças, mas só refaz `load()` se a nova mensagem casaria com os filtros ativos (check leve client-side antes de chamar load).
+**Etapa 3 — Verificar import quebrado**
+- Rodar busca por imports de tabelas/colunas recém-criadas na Fase 3 (`whatsapp_messages`, `advisor_whatsapp_config`) que possam ter typo no `AdminWhatsAppMonitor` ou `AdminDashboard`.
 
-### 3. Coluna Advisor + Intent na tabela
+**Etapa 4 — Validar**
+- Acessar `/admin`, `/admin/users`, `/admin/whatsapp-monitor`, `/admin/crm` em sequência.
+- Confirmar sidebar admin renderizando + conteúdo carregando.
+- Remover `console.log` temporários.
 
-- Nova coluna **Advisor** logo após "Recebida em", mostrando `full_name` resolvido pelo map carregado nos filtros (fallback: `advisor_id` truncado).
-- Nova coluna **Intent** ao lado de Sentimento, com Badge outline.
+### Arquivos afetados
 
-### 4. Export CSV
+- `src/components/admin/AdminLayout.tsx` — adicionar ErrorBoundary
+- `src/components/admin/AdminRoute.tsx` — adicionar logs (depois remover)
+- `src/pages/admin/AdminDashboard.tsx`
+- `src/pages/admin/AdminUsers.tsx`
+- `src/pages/admin/AdminListings.tsx`
+- `src/pages/admin/AdminSubscriptions.tsx`
+- `src/pages/admin/AdminValuations.tsx`
+- `src/pages/admin/AdminCapital.tsx`
+- `src/pages/admin/AdminCapitalProviders.tsx`
+- `src/pages/admin/AdminCRM.tsx`
+- `src/pages/admin/AdvisorWhatsAppSetup.tsx`
+- `src/pages/admin/AdminWhatsAppMonitor.tsx`
 
-Botão "Exportar CSV" no header do Card, ao lado de "Atualizar" / "Reprocessar". Gera CSV client-side das linhas atualmente carregadas (respeitando filtros), com colunas: data, advisor, direção, de, para, tipo, conteúdo, sentimento, intent, status, mandate_id.
+(remover `<AdminRoute>` wrap de cada uma)
 
-### 5. Persistência leve
+### Riscos e mitigações
 
-Salvar o último estado dos filtros em `localStorage` (`wa_monitor_filters_v1`) para sobreviver a reload. Restaurar no mount.
+- **Risco**: usuário admin sem role correto perde acesso. **Mitigação**: `RequireRole` em `App.tsx` cobre exatamente o mesmo cheque.
+- **Risco**: ErrorBoundary mascarar erro real. **Mitigação**: ele exibe a mensagem do erro + stack na própria tela.
 
-## Detalhes técnicos
+### Fora de escopo
 
-- Arquivo único editado: `src/pages/admin/AdminWhatsAppMonitor.tsx`.
-- Componentes shadcn já disponíveis: `Select`, `Input`, `Button`, `Card`, `Table`, `Badge`, `Popover` (não necessário se usarmos `Input type=date`).
-- Estado de filtros num único objeto `filters` para facilitar persistência e dependency arrays.
-- Map `advisorNameById` carregado uma vez via:
-  ```sql
-  select c.advisor_id, p.full_name
-  from advisor_whatsapp_config c
-  left join profiles p on p.user_id = c.advisor_id
-  ```
-- Sem mudanças de schema, edge functions ou RLS — RLS atual em `whatsapp_messages` (admin-only) já cobre o caso.
-- Sem novas migrações.
+- Refatorar `AdminLayout` para usar `AppShell` global (mudaria UX da área admin — pode ser próxima iteração).
+- Corrigir warnings de `forwardRef` em `MariBrandStamp` / `Toaster` (cosmético, sem impacto).
 
-## Fora de escopo
-
-- Paginação real (offset/cursor) — fica para próxima fase se 500 linhas for insuficiente.
-- Drill-down por mensagem (modal de detalhes) — pode entrar em iteração futura.
-- Filtro por mandato — já existe link `abrir`, mantemos assim.
+Aprova?
