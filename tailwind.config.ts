@@ -95,6 +95,7 @@ export default {
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         display: ["Inter Tight", "Space Grotesk", "Inter", "system-ui", "sans-serif"],
+        mono: ["'JetBrains Mono'", "'Geist Mono'", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       keyframes: {
         "accordion-down": {
