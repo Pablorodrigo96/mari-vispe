@@ -4,10 +4,21 @@ import { DashShell, DashCard } from "@/components/dashboards/DashShell";
 import { DashKpi } from "@/components/dashboards/DashKpi";
 import { DashDonut, DashStackedBar, DashLine, DashBar } from "@/components/dashboards/DashCharts";
 import { AIInsightCard } from "@/components/dashboards/AIInsightCard";
+import { DashboardFiltersProvider } from "@/components/dashboards/DashboardFiltersContext";
+import { DashboardFilters } from "@/components/dashboards/DashboardFilters";
+import { useDashboardInsight } from "@/hooks/useDashboardInsight";
 
 const REFRESH_MS = 60_000;
 
 export default function DashboardExecutivoPage() {
+  return (
+    <DashboardFiltersProvider>
+      <DashboardExecutivoInner />
+    </DashboardFiltersProvider>
+  );
+}
+
+function DashboardExecutivoInner() {
   const exec = useQuery({
     queryKey: ["dash-exec"],
     refetchInterval: REFRESH_MS,
