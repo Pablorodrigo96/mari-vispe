@@ -30,17 +30,16 @@ async function recordHealth(args: {
 }) {
   if (!_client) return;
   try {
-    await _client.schema("mari_ops").from("health_check").insert({
-      function_name: args.name,
-      status: args.status,
-      duration_ms: args.duration_ms,
-      error_text: args.error_text ?? null,
-      payload_summary: args.payload_summary ?? null,
-      request_id: args.request_id ?? null,
-      source: "edge_function",
+    await _client.rpc("mari_ops_record_health", {
+      p_function_name: args.name,
+      p_status: args.status,
+      p_duration_ms: args.duration_ms,
+      p_error_text: args.error_text ?? null,
+      p_payload_summary: (args.payload_summary ?? null) as any,
+      p_request_id: args.request_id ?? null,
+      p_source: "edge_function",
     });
   } catch (err) {
-    // Não derrubar a função real se o log falhar
     console.error("[observability] failed to record:", err);
   }
 }

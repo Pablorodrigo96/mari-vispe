@@ -23,12 +23,12 @@ type SmokeResult = {
 
 async function record(r: SmokeResult) {
   try {
-    await admin.schema("mari_ops").from("smoke_tests").insert({
-      test_name: r.test_name,
-      status: r.status,
-      duration_ms: r.duration_ms,
-      details: r.details,
-      error_text: r.error_text,
+    await admin.rpc("mari_ops_record_smoke", {
+      p_test_name: r.test_name,
+      p_status: r.status,
+      p_duration_ms: r.duration_ms,
+      p_actual: r.details as any,
+      p_message: r.error_text,
     });
   } catch (e) {
     console.error("[smoke] failed to record", r.test_name, e);
@@ -73,11 +73,11 @@ async function test_eb_mandates_count(): Promise<Record<string, unknown>> {
 }
 
 async function test_health_check_writable(): Promise<Record<string, unknown>> {
-  const { error } = await admin.schema("mari_ops").from("health_check").insert({
-    function_name: "mari-smoke-tests",
-    status: "ok",
-    duration_ms: 0,
-    source: "smoke_test_self_check",
+  const { error } = await admin.rpc("mari_ops_record_health", {
+    p_function_name: "mari-smoke-tests",
+    p_status: "ok",
+    p_duration_ms: 0,
+    p_source: "smoke_test_self_check",
   });
   if (error) throw error;
   return { ok: true };
