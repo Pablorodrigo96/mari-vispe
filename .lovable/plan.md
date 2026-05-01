@@ -1,152 +1,229 @@
+## Diagnóstico: o que realmente existe hoje
 
-# Fase 2 — Tela Hoje + WhatsApp Bridge + Resumo Mari
+Antes de propor mudanças, fiz auditoria do que está no código:
 
-**Princípio carregado:** cada feature é filtrada por *"isso reduz o trabalho do advisor ou aumenta?"*. Inteligência fica no motor, simplicidade na superfície, Mari traduz.
+**Não existe Twilio neste projeto.**
+- Zero edge functions com nome `twilio*`, `sms*`, `whatsapp-send*`
+- Zero ocorrências da string `twilio` em `src/` ou `supabase/`
+- Zero connectors Twilio linkados no workspace (só Perplexity e ElevenLabs/Hitch estão linkados)
+- Tabela `meta_whatsapp_config` não existe; `whatsapp_messages` não existe
 
-## Diagnóstico do que já existe (verificado no banco agora)
+**O que existe da semana passada (WhatsApp Bridge v1 + Tela Hoje):**
+- `src/lib/whatsappBridge.ts` — `openWhatsAppForContact()` abre `wa.me` em nova aba e loga via RPC
+- `src/lib/whatsapp.ts` + `src/lib/crmWhatsapp.ts` — helpers de normalização de telefone e templates estáticos
+- `src/components/equity-brain/crm/WhatsAppPanel.tsx` — UI de templates + envio
+- RPC `eb_log_whatsapp_send` — grava em `crm_activities` (kind=whatsapp, direction=out)
+- Edge functions: `mari-draft-message` (AI draft on-demand) e `mari-summarize-deal` (resumo 3 linhas, cache 2h) — ambas **já usam Gemini 2.5-flash via Lovable AI Gateway**, exatamente como o briefing pede
+- Tela `/equity-brain/hoje` (`TodayPage.tsx`) com feed priorizado
+- Cron `mari-refresh-active-summaries` a cada 4h
+- Stack de observabilidade `mari_ops` + `withObservability` wrapper já operacional
+
+**Conclusão:** o briefing pede "remover Twilio e implementar deep links + AI draft + log + observabilidade". Isso já está 80% pronto sob outro nome. Reescrever do zero seria desperdício e quebraria o que está em produção. Proposta: reaproveitar a base existente, evoluí-la para os critérios de aceite do briefing, e seguir nas Etapas 2/3/4 que são genuinamente novas.
+
+---
+
+## Etapa 0 — "Reversão" (5 minutos, basicamente confirmação)
+
+Como não há código Twilio, esta etapa é só formalizar:
+
+1. Confirmar para você que nenhuma function/tabela Twilio será removida (não existe nada para remover)
+2. Manter o connector Twilio **disponível** no workspace (não está nem linkado, então não há ação)
+3. Decisão sua: o `whatsappBridge.ts` + `eb_log_whatsapp_send` + `mari-draft-message` atuais **viram a fundação da Etapa 1** (recomendado), ou apago tudo e refaço com a nomenclatura do briefing (`whatsapp_action_log`, `generate-whatsapp-draft`, `WhatsAppActionButton`)?
+
+**Minha recomendação:** reaproveitar e renomear/expandir, porque:
+- A lógica é idêntica
+- Já está instrumentado com `mari_ops`
+- Já está integrado na Tela Hoje
+- Reescrever quebra `TodayPage`, `WhatsAppPanel`, hooks, e o cron de resumos
+
+Se você concordar, sigo com **"Etapa 1 = evolução do Bridge v1 para atender 100% dos critérios de aceite do briefing"**. Se preferir reescrever do zero, faço também — só preciso saber.
+
+---
+
+## Etapa 1 — Deep links inteligentes (cobertura completa dos critérios de aceite)
+
+Gap analysis vs. o que o briefing pede:
+
+| Critério do briefing | Status atual | Ação |
+|---|---|---|
+| Edge function que gera draft via Gemini | ✅ `mari-draft-message` existe | Adicionar `draft_type` enum (`first_contact`, `followup`, `valuation_send`, `meeting_request`, `match_announcement`) e retornar `suggested_action_label` |
+| Componente UI de botão WhatsApp | ⚠️ Existe `WhatsAppPanel` (modal grande) | Criar `<WhatsAppActionButton>` reusável (botão + modal compacto edit-and-send) |
+| Aparece em deal/contact/match/mandate | ⚠️ Só em CRM detail | Plugar nos 4 lugares |
+| Modal pós-envio com `[✅ Mandei] [❌ Não foi] [⏰ Adiar]` | ❌ Falta | Implementar |
+| Tabela `whatsapp_action_log` com draft gerado vs. enviado | ⚠️ `crm_activities` loga só o final | Criar tabela dedicada com `draft_text_generated` + `draft_text_sent` para auditoria de edição |
+| Atualizar `last_contact_at` + `next_action_suggested_at` no deal | ⚠️ Trigger só atualiza `last_activity_at` | Estender trigger |
+| Integração com `deal_events` (`whatsapp_outbound`) | ❌ Falta | Adicionar emissão |
+| Observabilidade em `mari_ops.health_check` | ✅ Wrapper já existe | Garantir nas funções novas |
+
+**Entregáveis Etapa 1:**
 
 ```text
-mandates_total          317   (todos ativos — pipeline_stage não tem 'closed' ainda)
-crm_activities          633   (última: hoje 03:12)
-contacts                741   (723 com telefone E.164 — 97.5%)
-matches.match_score≥70  4330  (todos current, todos abertos)
+NOVO  supabase/functions/generate-whatsapp-draft/index.ts
+      (wrapper sobre mari-draft-message com draft_type tipado +
+       suggested_action_label; mantém mari-draft-message como fallback genérico)
+
+NOVO  src/components/whatsapp/WhatsAppActionButton.tsx
+      props: { contactId, dealId?, draftType, phone, label? }
+      fluxo: click → POST generate-whatsapp-draft → modal editável
+             → "Abrir no WhatsApp" (wa.me, nova aba)
+             → modal de marcação [✅ Mandei] [❌ Não foi] [⏰ Adiar]
+
+NOVO  src/components/whatsapp/WhatsAppDraftModal.tsx (subcomponente)
+
+NOVA migration:
+  - tabela whatsapp_action_log (advisor_id, contact_id, deal_id,
+    draft_type, draft_text_generated, draft_text_sent, phone_number,
+    opened_at, marked_action, marked_at) + RLS (advisor dono OR admin)
+  - extender trigger trg_bump_mandate_activity para também setar
+    deals.next_action_suggested_at = now() + interval calculado por draft_type
+  - função RPC eb_log_whatsapp_action(p_log_id, p_marked_action) que:
+      • atualiza whatsapp_action_log
+      • emite deal_events { type: 'whatsapp_outbound' } com snapshot
+      • bumpa last_contact_at no deal vinculado
+
+PLUGAR <WhatsAppActionButton> em:
+  - src/pages/equity-brain/MandateDetailPage.tsx
+  - src/pages/equity-brain/BuyerDetailPage.tsx
+  - src/pages/equity-brain/MatchDetailPage.tsx
+  - cards de matches no Today feed
 ```
 
-Tudo que precisamos para alimentar MATCH QUENTE e DEAL ESFRIANDO **já existe**. Não precisa criar dado, só ranquear, surfar e gerar texto.
+**Critérios de aceite (replicados do briefing, valido todos antes de fechar):**
+- Botão aparece em deal/buyer/match/mandate ✓
+- Draft em <5s via Lovable AI ✓
+- Modal editável ✓
+- `wa.me?text=` encoded corretamente ✓
+- `[✅ Mandei]` cria deal_event ✓
+- `whatsapp_action_log` registra draft gerado e enviado (diff visível) ✓
+- `mari_ops.health_check` registra cada execução ✓
+- Mobile + desktop ✓
+- Sem erros no console ✓
 
-Twilio **não está conectado** — vamos conectar em paralelo na Semana 5 para ter pronto na Semana 8.
+**Nada de:** webhook receiver, Cloud API, chat embutido, captura inbound, resumo automático novo (`mari-summarize-deal` que já existe continua rodando, mas não é escopo da Etapa 1).
 
 ---
 
-## O que vamos construir
+## Etapa 2 — Setup Meta Business (documentação + admin shell)
 
-### 1. Tela Hoje (`/hoje`)
+Só inicio depois que Etapa 1 estiver assinada.
 
-Rota nova, **não substitui** `/equity-brain`. Sidebar ganha um item **"Hoje"** (Volt) no topo, acima de Dashboard. Advisors vão naturalmente migrar; admins continuam podendo ir direto pro EB.
-
-Layout: lista vertical, máximo 7 cards, ranqueados por `priority_score`. Cada card é uma decisão. Frase em PT-BR, botão grande primário, sem ambiguidade.
-
-Tipos de card na v1 (Semana 5):
+**Entregáveis:**
 
 ```text
-🔥 MATCH QUENTE       — match_score ≥ percentil 90 (~hot dinâmico),
-                        criado nos últimos 7d, ainda não actioned
-⚠️  DEAL ESFRIANDO    — mandate ativo + última atividade > 14d
-                        + estágio diferente de 'closed'
+NOVO  docs/whatsapp-cloud-api-setup.md
+      passo a passo Meta Business Manager, Permanent Access Token,
+      webhook verify token, App Secret, e os 5 templates em PT-BR
+      ("primeiro_contato_advisor", "followup_reuniao",
+       "match_novo_buyer", "envio_valuation", "lembrete_documento")
+      com texto pronto para colar.
+
+NOVA migration:
+  - tabela meta_whatsapp_config (advisor_id, meta_phone_number_id,
+    meta_business_account_id, access_token_encrypted,
+    webhook_verify_token, status, connected_at) + RLS admin-only
+  - usar pgsodium ou pgcrypto para encrypt do access_token
+
+NOVO  src/pages/admin/AdminWhatsAppSetup.tsx em /admin/whatsapp-setup
+      apenas role admin (usar RequireRole)
+      formulário simples: phone_number_id, business_account_id, token,
+      verify_token; mostra status badge.
 ```
 
-Cards de NOTÍCIA ficam para Fase 3 (Semana 8). Não vamos mostrar mock — quando a fonte estiver viva, eles aparecem sozinhos.
-
-Cada card tem 3 ações: **primária** (Apresentar/Mandar mensagem), secundária (Ver detalhes), e dismiss (Não é boa / Já falei). Dismiss grava em `today_card_dismissals` para não aparecer de novo por X dias.
-
-### 2. WhatsApp Bridge (dual-track)
-
-**Track A — v1 imediata (Semana 5-6):** deep links com tracking.
-- Botão `[ MANDAR MENSAGEM ]` chama `openWhatsAppForContact(contactId, mandateId, draftedText)`.
-- Função: (a) registra `crm_activity` kind=`whatsapp_sent` direction=`outbound`; (b) abre `wa.me/{phone}?text={draft}` em nova aba; (c) atualiza `mandates.last_outreach_at`; (d) re-ranqueia `priority_score` do mandato.
-- Tracking honesto: marcamos "mensagem enviada" — não lemos conteúdo nem confirmação de entrega. Advisor pode ratificar com botão "Foi entregue / Foi respondida" no card que aparece na Hoje 24h depois.
-
-**Track B — v2 Twilio (Semana 5-10, paralelo):**
-- Conecto Twilio agora via standard connector.
-- Edge function `whatsapp-send-template` que dispara mensagem via Twilio Business API (template aprovado).
-- Webhook `/twilio-inbound` recebe respostas → grava `crm_activity` direction=`inbound` automaticamente.
-- Quando estiver vivo, alterno o feature flag por advisor: usuários piloto ganham Track B; resto fica em Track A.
-
-**Mensagens pré-rascunhadas pela Mari:** edge function `mari-draft-message` recebe `{contact_id, mandate_id, intent}` e retorna texto curto e contextual (gemini-2.5-flash, não gasta gpt-5). 4 intents na v1: `retomar_contato`, `apresentar_match`, `marcar_reuniao`, `pedir_documentos`.
-
-### 3. Resumo automático do deal (híbrido)
-
-**Background pros 50 deals ativos do advisor:**
-- Edge function `mari-summarize-deal` que pega `mandate_id` e gera 3 linhas + 1 ação sugerida usando gemini-2.5-flash.
-- Output salvo em nova tabela `mandate_summaries(mandate_id, summary_text, suggested_action_text, suggested_action_intent, suggested_contact_id, model, tokens_in, tokens_out, generated_at)`.
-- Cron a cada 4h re-roda só os mandatos com `last_activity_at > last_summary_at` (incremental, barato).
-- Trigger adicional dispara summarize quando `crm_activity` é inserida (debounce 5min via job na fila).
-
-**On-demand para o resto:**
-- Quando advisor abre um deal sem `summary` fresco, frontend chama `mari-summarize-deal` direto. UX: skeleton de 3 linhas + spinner ~2-3s. Cache por 2h.
-
-Componente `<DealSummaryCard mandateId>` reutilizável: usado na Tela Hoje (quando o advisor clica em "Ver detalhes") e na página `/equity-brain/crm/mandate/:id` (substitui o header existente).
-
-### 4. priority_score do mandato
-
-Função SQL `compute_mandate_priority(mandate_id)` que retorna 0-100 combinando:
-- 30 pts: `max(match_score)` dos matches abertos do mandato (oportunidade quente)
-- 25 pts: inverso dos dias desde `last_activity` (recência)
-- 20 pts: `mandate_value` normalizado (deals maiores pesam)
-- 15 pts: estágio do pipeline (NBO > match > closing > due_diligence)
-- 10 pts: número de buyers no radar com `temperature='hot'`
-
-Refresh: trigger nas tabelas `matches`, `crm_activities`, `mandates` — recomputa em batch via job. Persistido em `mandates.priority_score` para ordenação rápida.
+**Sem código de webhook ativo** — só schema + UI. Webhook é Etapa 3.
 
 ---
 
-## Cronograma (5 semanas)
+## Etapa 3 — Webhook receiver (só após Meta verificada)
 
-| Semana | Entrega                                                                  | Pra quem        | Gate (DoD) |
-|--------|--------------------------------------------------------------------------|-----------------|-----------|
-| 5      | Schema: `mandate_summaries`, `today_cards`, `today_card_dismissals`, `mandates.priority_score`. Função `compute_mandate_priority`. Job de recálculo. | Sistema         | G1+G3 |
-| 5      | Conectar Twilio. Setup número WhatsApp Business + template aprovado. | Você (config) | G1 |
-| 5      | Edge function `mari-draft-message` (4 intents, gemini-2.5-flash).        | Sistema         | G2 |
-| 5      | Edge function `mari-summarize-deal` (gera 3 linhas + ação sugerida).     | Sistema         | G2 |
-| 5      | Cron 4h `summarize-active-mandates` para os 50 mais ativos.              | Sistema         | G2+G5 |
-| 6      | Página `/hoje` com 2 tipos de card (MATCH QUENTE, DEAL ESFRIANDO). Item no sidebar com badge Volt. | Advisor | G4+G5 |
-| 6      | Helper `openWhatsAppForContact(contactId, mandateId, draftedText)` — Track A vivo. | Advisor | G3+G4 |
-| 6      | Botão `[ MANDAR MENSAGEM ]` em todo lugar relevante chama o helper com draft pré-gerado pela Mari. | Advisor | G4 |
-| 7      | Componente `<DealSummaryCard>` no header de `/equity-brain/crm/mandate/:id` substituindo o atual. | Advisor | G4 |
-| 7      | Card de "Já falei, atualizar" + dismiss + auto-refresh da Hoje. Notificação web push pra cards 🔥. | Advisor | G3+G5 |
-| 8      | Track B Twilio: edge function `whatsapp-send-template` + webhook `twilio-inbound`. Feature flag por advisor. | Sistema | G2+G3 |
-| 9      | Card "CLIENTE PEDIU RETORNO": LLM passa em `crm_activities` extraindo promessas explícitas. | Advisor | G3 |
+Gate: você confirma "Meta verificada, número conectado, webhook URL apontada".
 
-Tudo passa pelos 5 gates de DoD (G1 schema + assertion · G2 edge + observability · G3 dado real fluindo · G4 advisor completa fluxo sozinho · G5 health verde 48h + smoke test 3x).
+**Entregáveis:**
 
----
-
-## Detalhes técnicos
-
-**Stack já no projeto:** React + Tailwind + shadcn/ui (`Sidebar` colapsável existente em `EBSidebar.tsx`), helper `getWhatsAppLink(message, phone)` em `src/lib/whatsapp.ts`, `withObservability` wrapper das funções edge, schema `mari_ops` para health, `equity_brain.contacts.telefone_e164` (723 com phone), `equity_brain.matches` (4330 hot), `equity_brain.crm_activities` (633 com `kind` enum + `direction`).
-
-**Extensão do enum `crm_activity.kind`:** adicionar valores `whatsapp_sent`, `whatsapp_delivered`, `whatsapp_replied` se ainda não existirem (verificar antes da migration).
-
-**Tela Hoje — fonte de cada card:**
 ```text
-MATCH QUENTE     ← equity_brain.matches WHERE is_current AND match_score ≥ p90
-                  AND status='new' AND assigned_bdr = current_user
-                  AND NOT EXISTS (today_card_dismissals)
-                  ORDER BY match_score DESC, computed_at DESC
+NOVA edge function whatsapp-webhook (PUBLIC, verify_jwt = false em config.toml)
+  - GET: hub.mode/hub.verify_token/hub.challenge handshake
+  - POST: valida X-Hub-Signature-256 (HMAC-SHA256 com App Secret)
+  - decodifica payload Meta (entry[].changes[].value.messages[])
+  - identifica advisor por phone_number_id (lookup em meta_whatsapp_config)
+  - identifica contato por wa_id → buscar em eb_contacts
+  - tenta vincular a deal ativo (match contact + status=active)
+  - INSERT em whatsapp_messages
+  - mídia: salva metadata + URL temporária, NÃO baixa arquivo
+  - withObservability wrapper
 
-DEAL ESFRIANDO   ← equity_brain.mandates WHERE responsavel_id = current_user
-                  AND pipeline_stage <> 'closed'
-                  AND (NOW() - last_activity_at) > INTERVAL '14 days'
-                  AND priority_score >= 40
-                  ORDER BY priority_score DESC
+NOVA migration:
+  - tabela whatsapp_messages (schema completo do briefing)
+  - tabela whatsapp_messages_audit_log (quem leu o quê, LGPD)
+  - índices: (deal_id, timestamp_meta), (advisor_id, timestamp_meta), unique meta_message_id
+  - trigger tg_whatsapp_message_received:
+      • atualiza deals.last_contact_at se vinculado
+      • cria notification se inbound + deal com priority_score >= 70
+  - RLS: advisor dono OR admin (com log em audit table no read)
+
+NOVO  src/pages/admin/AdminWhatsAppMonitor.tsx em /admin/whatsapp-monitor
+      últimas 100 mensagens, filtros advisor/direction/status, realtime
 ```
-
-**Roteamento sem quebrar o atual:**
-- Adiciona `<Route path="/hoje" element={<RequireAuth><HojePage /></RequireAuth>} />` em `App.tsx`.
-- `EBSidebar` ganha item `{ to: "/hoje", label: "Hoje", Icon: Sparkles, end: true }` no topo, marcado em Volt (#D9F564), com badge da contagem de cards do dia.
-- Default de login continua `/equity-brain`. Advisors descobrem `/hoje` pelo sidebar e voltam por gosto.
-
-**Custos estimados (gemini-2.5-flash):** summarize de 50 mandatos a cada 4h = 300 calls/dia × ~800 tokens = ~240k tokens/dia ≈ **<$0.05/dia/advisor**. Drafts de mensagem ~300 tokens cada × ~50/dia/advisor ≈ **<$0.02/dia/advisor**.
-
-**Twilio setup (você faz):**
-1. Criar conta WhatsApp Business com número dedicado (~3-5 dias úteis).
-2. Aprovar 1 template inicial: `mari_followup_pt` ("Oi {{1}}, aqui é {{2}} da MARI. {{3}} — Posso te ligar amanhã?").
-3. Conectar via `standard_connectors--connect twilio` quando o número estiver ativo.
-
-Enquanto Twilio não está pronto, Track A entrega 70% do valor.
 
 ---
 
-## O que NÃO vamos fazer nesta fase
+## Etapa 4 — Inteligência automática (cron + digest + dashboard)
 
-- Cockpit advisor separado em rota nova (mantém EB acessível).
-- Notificações WhatsApp de saída (push web só).
-- Card NOTÍCIA com mock (fica pra Fase 3 com dado real).
-- Detecção de promessas em ativiades antigas (só novas, e só na Semana 9).
-- Substituir o Kanban atual (continua funcionando como segundo nível).
+Gate: Etapa 3 estável por pelo menos 48h capturando mensagens reais.
 
-## O que entrega no fim das 5 semanas
+**Entregáveis:**
 
-Um advisor logando vê **/hoje** no topo do sidebar, clica, vê 5-7 cards. Cada card tem botão grande. Clica em "Mandar mensagem" → WhatsApp abre com texto pronto. Manda. Volta. Card sumiu. Próximo card. Em 10 minutos resolveu o que antes levava 1 hora navegando entre 5 telas.
+```text
+NOVA edge function whatsapp-classify-batch (cron */30 min)
+  - pega messages com status='received' das últimas 30min, agrupa por deal
+  - Gemini 2.5-flash → JSON { sentiment, intent, confidence }
+  - INSERT em whatsapp_message_analysis
+  - marca processed
 
-Você (admin) continua com EB inteiro disponível. Pode entrar em `/hoje` para ver o mundo do advisor sempre que quiser auditar.
+NOVA edge function whatsapp-daily-digest (cron 0 22 * * * BRT)
+  - para cada deal com mensagens hoje
+  - Gemini 2.5-flash → JSON { summary_3_lines, phase_change_to,
+                              next_action, attention_points[] }
+  - UPSERT em deal_daily_summary
+  - se phase_change_to ≠ atual, dispara eb_pipeline_transitions
+
+NOVAS tabelas:
+  - whatsapp_message_analysis (message_id, sentiment, intent, confidence,
+    analyzed_at, model_used, prompt_version)
+  - deal_daily_summary (deal_id, summary_date UNIQUE, summary_text,
+    phase_change_detected, phase_change_to, next_action_suggested,
+    attention_points jsonb, generated_at, model_used)
+
+EVOLUIR src/pages/equity-brain/TodayPage.tsx
+  - adicionar 3 tipos de card novos:
+      🚨 ATENÇÃO URGENTE (sentiment=urgent OR intent=rejecting)
+      📈 DEAL AVANÇOU (phase_change_detected = true)
+      🎯 PRÓXIMA AÇÃO SUGERIDA (top 5 deals ativos)
+  - manter os 2 cards existentes (MATCH QUENTE, DEAL ESFRIANDO)
+
+NOVO smoke test em mari-smoke-tests/index.ts:
+  - "daily_digest_produces_summary": valida que se houve mensagens
+    no dia, há pelo menos 1 deal_daily_summary do dia
+```
+
+**IA usada:** apenas Lovable AI Gateway (Gemini 2.5-flash + flash-lite). **Claude API permanece intocado** (só `claude-analyze-call`, `claude-classify-thesis`, `claude-generate-pitch`).
+
+---
+
+## Regras gerais (aplicadas em todas as etapas)
+
+1. **Observabilidade obrigatória** — toda função nova nasce com `withObservability` (já temos wrapper + schema `mari_ops`)
+2. **RLS rigoroso** — `whatsapp_messages` e `whatsapp_action_log` só leem advisor dono OU admin (com log de acesso para admin)
+3. **LGPD** — `content_text` criptografado at-rest via `pgcrypto`/`pgsodium`; tabela de audit log de acesso; retenção configurável (default 365 dias) via cron de purge
+4. **Não pular etapas** — paro ao fim de cada uma e espero seu OK
+5. **Não mexer no que funciona** — `calculate-scores`, `match-company-v2`, `mari-brain`, `claude-*`, scores, embeddings: zero alteração
+6. **Rollback** — toda migration cria pareada com bloco de DOWN documentado
+
+---
+
+## Decisões que preciso de você ANTES de começar a Etapa 1
+
+1. **Reaproveitar Bridge v1 como base** (recomendado, preserva Tela Hoje funcionando) — ou **reescrever do zero** com nomes do briefing?
+2. **Confirmação:** o `whatsappBridge.ts` atual fica vivo até a Etapa 1 nova estar plugada nas 4 telas, depois aposento ele e migro `WhatsAppPanel.tsx` para usar `<WhatsAppActionButton>`. OK?
+3. **Confirmação:** posso considerar Etapa 0 fechada (não há Twilio para reverter) e começar Etapa 1 imediatamente após sua aprovação?
+
+Aguardo seu OK nessas 3 perguntas + aprovação geral do plano para começar a codar a Etapa 1.
