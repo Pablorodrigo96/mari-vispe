@@ -3374,6 +3374,47 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_v_mandates_full: {
+        Row: {
+          bdr_id: string | null
+          closer_id: string | null
+          codename: string | null
+          comissao_pct: number | null
+          commission_pct: number | null
+          company_cnpj: string | null
+          comprador_cnpj: string | null
+          comprador_nome: string | null
+          contato_email: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
+          created_at: string | null
+          data_assinatura: string | null
+          data_fechamento: string | null
+          data_inicio: string | null
+          data_vencimento: string | null
+          deal_kind: string | null
+          deal_phase: string | null
+          deal_type: string | null
+          exclusividade: boolean | null
+          faturamento_vispe: number | null
+          id: string | null
+          match_buyer_id: string | null
+          nome_fantasia: string | null
+          outcome: string | null
+          pipeline_stage: string | null
+          razao_social: string | null
+          regiao: string | null
+          responsavel_id: string | null
+          setor: string | null
+          stage_changed_at: string | null
+          status: string | null
+          uf: string | null
+          updated_at: string | null
+          valor_operacao: number | null
+          valor_pedido: number | null
+        }
+        Relationships: []
+      }
       listings_blind: {
         Row: {
           asking_price: number | null
