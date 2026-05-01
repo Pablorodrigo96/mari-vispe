@@ -3772,6 +3772,19 @@ export type Database = {
         }
         Returns: Json
       }
+      eb_dedupe_audit_recent: {
+        Args: { p_limit?: number }
+        Returns: {
+          entity_type: string
+          id: string
+          kept_id: string
+          merged_at: string
+          merged_by: string
+          reason: string
+          refs_updated: Json
+          removed_id: string
+        }[]
+      }
       eb_dismiss_today_card: {
         Args: {
           p_card_kind: string
@@ -3794,6 +3807,7 @@ export type Database = {
           retry_count: number
         }[]
       }
+      eb_get_dedupe_stats: { Args: never; Returns: Json }
       eb_get_drain_job: {
         Args: { p_job_id: string }
         Returns: {
@@ -3868,6 +3882,7 @@ export type Database = {
         Args: { p_monday_name: string; p_user_id: string }
         Returns: Json
       }
+      eb_run_safe_dedupe: { Args: { p_entity: string }; Returns: Json }
       eb_store_advisor_token: {
         Args: { p_advisor_id: string; p_token: string }
         Returns: string
