@@ -117,8 +117,8 @@ export default function MyCompaniesPage() {
         <div className="text-xs text-zinc-500 p-6">Carregando…</div>
       ) : (rows ?? []).length === 0 ? (
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-6 text-center">
-          <p className="text-sm text-zinc-300 mb-2">Nenhum deal atribuído a você ainda.</p>
-          <p className="text-xs text-zinc-500">Peça a um admin para te atribuir como responsável de mandatos no CRM.</p>
+          <p className="text-sm text-zinc-300 mb-2">Nenhum deal vinculado a você ainda.</p>
+          <p className="text-xs text-zinc-500">Você aparece aqui quando é responsável, co-advisor, originador ou criador de um mandato. Peça a um admin para te atribuir no CRM.</p>
         </div>
       ) : (
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 overflow-hidden">
@@ -126,21 +126,26 @@ export default function MyCompaniesPage() {
             <thead className="bg-zinc-900/80 text-zinc-400 text-[10px] uppercase tracking-wider">
               <tr>
                 <th className="text-left px-3 py-2 font-medium">Empresa</th>
+                <th className="text-left px-3 py-2 font-medium">Meu papel</th>
                 <th className="text-left px-3 py-2 font-medium">Tipo</th>
                 <th className="text-left px-3 py-2 font-medium">Etapa</th>
-                <th className="text-left px-3 py-2 font-medium">UF</th>
                 <th className="text-right px-3 py-2 font-medium">Valor</th>
-                <th className="text-left px-3 py-2 font-medium">Contato</th>
-                <th className="text-left px-3 py-2 font-medium">Comprador</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
               {(rows ?? []).map((r) => (
-                <tr key={r.id} className="hover:bg-zinc-900/60">
-                  <td className="px-3 py-2 text-zinc-100 font-medium break-words max-w-[220px]" title={r.razao_social ?? r.company_cnpj}>
-                    {r.display_name ?? r.codename ?? r.razao_social ?? r.company_cnpj}
+                <tr key={r.mandate_id} className="hover:bg-zinc-900/60">
+                  <td className="px-3 py-2 text-zinc-100 font-medium break-words max-w-[260px]" title={r.company_name ?? r.cnpj}>
+                    {r.company_name ?? r.codename ?? r.cnpj}
                     {r.needs_enrichment && <span className="ml-1 text-amber-400" title="Precisa enriquecer">⚠</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    {r.my_role && (
+                      <span className={cn("text-[9px] uppercase px-1.5 py-0.5 rounded border", ROLE_COLOR[r.my_role] ?? "bg-zinc-800 text-zinc-400 border-zinc-700")}>
+                        {ROLE_LABEL[r.my_role] ?? r.my_role}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     {r.deal_kind && (
@@ -150,12 +155,9 @@ export default function MyCompaniesPage() {
                     )}
                   </td>
                   <td className="px-3 py-2 text-zinc-300">{r.pipeline_stage}</td>
-                  <td className="px-3 py-2 text-zinc-400">{r.uf ?? "—"}</td>
-                  <td className="px-3 py-2 text-right text-emerald-300 tabular-nums">{r.valor_operacao ? brl(r.valor_operacao, { compact: true }) : "—"}</td>
-                  <td className="px-3 py-2 text-zinc-400 truncate max-w-[140px]">{r.contato_nome ?? "—"}</td>
-                  <td className="px-3 py-2 text-blue-300 truncate max-w-[140px]">{r.comprador_nome ?? "—"}</td>
+                  <td className="px-3 py-2 text-right text-emerald-300 tabular-nums">{(r.valor_operacao ?? r.valor_pedido) ? brl((r.valor_operacao ?? r.valor_pedido) as number, { compact: true }) : "—"}</td>
                   <td className="px-3 py-2">
-                    <Link to={`/equity-brain/crm/mandate/${r.id}`} className="text-zinc-500 hover:text-[#D9F564] inline-flex">
+                    <Link to={`/equity-brain/crm/mandate/${r.mandate_id}`} className="text-zinc-500 hover:text-[#D9F564] inline-flex">
                       <ExternalLink className="h-3 w-3" />
                     </Link>
                   </td>
