@@ -289,6 +289,8 @@ const App = () => (
               <Route path="mandatos/tabela"      element={<RequireRole roles={["admin","advisor"]}><MandatosTablePage /></RequireRole>} />
               <Route path="admin/dashboard-coverage" element={<RequireRole roles={["admin","advisor"]}><DashboardCoveragePage /></RequireRole>} />
               <Route path="admin/dedupe" element={<RequireRole roles={["admin"]}><DedupeAdminPage /></RequireRole>} />
+              <Route path="admin/monday-parity"     element={<RequireRole roles={["admin"]}><MondayParity /></RequireRole>} />
+              <Route path="admin/advisors-mapping"  element={<RequireRole roles={["admin"]}><AdvisorsMapping /></RequireRole>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
