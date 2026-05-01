@@ -277,7 +277,8 @@ const App = () => (
               <Route path="admin/health" element={<RequireRole roles={["admin"]}><HealthDashboardPage /></RequireRole>} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
               <Route path="crm/pipeline/historico" element={<PipelineHistoryPage />} />
-              <Route path="deal/:id"             element={<UnifiedDealPage />} />
+              {/* deal/:id desativado até existir dado em equity_brain.deals; redireciona pro pipeline */}
+              <Route path="deal/:id"             element={<Navigate to="/equity-brain/pipeline" replace />} />
               <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />
               <Route path="isp/import"           element={<RequireRole roles={["admin", "advisor"]}><IspImportPage /></RequireRole>} />
               <Route path="isp/sugestoes"        element={<RequireRole roles={["admin", "advisor"]}><IspSuggestionsPage /></RequireRole>} />
