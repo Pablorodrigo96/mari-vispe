@@ -28,7 +28,15 @@ import { cn } from "@/lib/utils";
 type Row = {
   id: string;
   company_cnpj: string;
+  display_name: string | null;
+  razao_social: string | null;
+  nome_fantasia: string | null;
+  codename: string | null;
   deal_type: string;
+  deal_kind: string | null;
+  deal_origin: string | null;
+  deal_confidence: string | null;
+  needs_enrichment: boolean | null;
   pipeline_stage: string;
   outcome: string;
   valor_operacao: number | null;
@@ -49,6 +57,22 @@ type Row = {
   comprador_nome: string | null;
   drive_url: string | null;
   contract_url: string | null;
+};
+
+const DEAL_KIND_LABEL: Record<string, string> = {
+  mandato_assinado: "Mandato",
+  vendedor_sem_mandato: "Vendedor",
+  buyer_mandate: "Buyside",
+  marketplace_listing: "Marketplace",
+  prospeccao: "Prospecção",
+};
+
+const DEAL_KIND_COLOR: Record<string, string> = {
+  mandato_assinado: "bg-emerald-500/15 text-emerald-300 border-emerald-700/40",
+  vendedor_sem_mandato: "bg-amber-500/15 text-amber-300 border-amber-700/40",
+  buyer_mandate: "bg-blue-500/15 text-blue-300 border-blue-700/40",
+  marketplace_listing: "bg-cyan-500/15 text-cyan-300 border-cyan-700/40",
+  prospeccao: "bg-zinc-500/15 text-zinc-300 border-zinc-700/40",
 };
 
 const STAGE_ACCENT: Record<string, string> = {
