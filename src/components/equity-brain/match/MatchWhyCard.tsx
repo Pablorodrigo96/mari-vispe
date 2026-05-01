@@ -335,7 +335,7 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
 
           <div className="rounded border border-blue-900/40 bg-blue-950/20 p-2.5">
             <div className="text-[9px] uppercase tracking-wider text-blue-300/80 inline-flex items-center gap-1">
-              <Brain className="h-3 w-3" /> Tese & score M&A
+              <Brain className="h-3 w-3" /> {techMode ? "Tese & score M&A" : "Tese do comprador"}
             </div>
             <div className="text-xs font-semibold text-blue-200 mt-0.5 break-words">
               {match.thesis_key ?? "—"}
