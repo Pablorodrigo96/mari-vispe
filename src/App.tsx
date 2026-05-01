@@ -95,6 +95,7 @@ import IspImportPage from "./pages/equity-brain/IspImportPage";
 import IspSuggestionsPage from "./pages/equity-brain/IspSuggestionsPage";
 import IspMarketPage from "./pages/equity-brain/IspMarketPage";
 import DisclosuresPage from "./pages/equity-brain/DisclosuresPage";
+import UnifiedDealPage from "./pages/equity-brain/UnifiedDealPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
@@ -227,6 +228,7 @@ const App = () => (
               <Route path="news"                 element={<NewsPage />} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
               <Route path="crm/pipeline/historico" element={<PipelineHistoryPage />} />
+              <Route path="deal/:id"             element={<UnifiedDealPage />} />
               <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />
               <Route path="crm/imports"          element={<RequireRole roles={["admin", "advisor"]}><ImportsPage /></RequireRole>} />
               <Route path="isp/import"           element={<RequireRole roles={["admin", "advisor"]}><IspImportPage /></RequireRole>} />
