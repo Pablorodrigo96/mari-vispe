@@ -56,15 +56,14 @@ export default function MyCompaniesPage() {
   const { user } = useAuth();
 
   const { data: rows, isLoading } = useQuery({
-    queryKey: ["my-companies", user?.id],
+    queryKey: ["my-companies-v2", user?.id],
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from("eb_mandates_enriched" as any)
-        .select("id,display_name,codename,razao_social,company_cnpj,pipeline_stage,deal_kind,deal_origin,outcome,valor_operacao,uf,contato_nome,comprador_nome,needs_enrichment,stage_changed_at")
-        .eq("responsavel_id", user.id)
+        .from("eb_my_companies_v2" as any)
+        .select("mandate_id,cnpj,company_name,codename,pipeline_stage,deal_kind,deal_origin,outcome,valor_pedido,valor_operacao,needs_enrichment,stage_changed_at,my_role")
         .neq("outcome", "cancelado")
-        .order("stage_changed_at", { ascending: false })
+        .order("stage_changed_at", { ascending: false, nullsFirst: false })
         .limit(500);
       if (error) throw error;
       return (data ?? []) as unknown as Row[];
