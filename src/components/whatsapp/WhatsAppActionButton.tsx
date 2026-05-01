@@ -57,6 +57,7 @@ export function WhatsAppActionButton({
   const [edited, setEdited] = useState("");
   const [logId, setLogId] = useState<string | null>(null);
   const [actionLabel, setActionLabel] = useState<string>("Falar no WhatsApp");
+  const [mode, setMode] = useState<"followup" | "initial" | null>(null);
 
   const phoneNorm = normalizeBrPhone(phone ?? "");
   const disabled = !phoneNorm;
@@ -68,12 +69,19 @@ export function WhatsAppActionButton({
     }
     setOpen(true);
     setStep("drafting");
-    setGenerated(""); setEdited(""); setLogId(null);
+    setGenerated(""); setEdited(""); setLogId(null); setMode(null);
+
+    // A edge function decide automaticamente followup vs initial olhando o histórico.
+    // Só repassamos um intent forçado se for um dos 3 casos específicos.
+    const forceableIntents = ["valuation_send", "meeting_request", "match_announcement"] as const;
+    const force_intent = (forceableIntents as readonly string[]).includes(draftType)
+      ? (draftType as (typeof forceableIntents)[number])
+      : undefined;
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-whatsapp-draft", {
         body: {
-          draft_type: draftType,
+          force_intent,
           contact_id: contactId ?? undefined,
           mandate_id: mandateId ?? undefined,
           buyer_id: buyerId ?? undefined,
@@ -87,6 +95,7 @@ export function WhatsAppActionButton({
       setGenerated(text);
       setEdited(text);
       setActionLabel(data?.suggested_action_label ?? actionLabel);
+      setMode((data?.mode as "followup" | "initial" | undefined) ?? null);
       setStep("review");
     } catch (e: any) {
       const msg = e?.message ?? String(e);
@@ -195,7 +204,19 @@ export function WhatsAppActionButton({
           {step === "review" && (
             <>
               <DialogHeader>
-                <DialogTitle>Revisar mensagem</DialogTitle>
+                <DialogTitle className="flex items-center gap-2">
+                  Revisar mensagem
+                  {mode === "followup" && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
+                      Continuação
+                    </span>
+                  )}
+                  {mode === "initial" && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 uppercase tracking-wider">
+                      Primeiro contato
+                    </span>
+                  )}
+                </DialogTitle>
                 <DialogDescription className="text-zinc-400">
                   Edite se quiser. Vai abrir o WhatsApp Web/App com este texto pronto.
                 </DialogDescription>
