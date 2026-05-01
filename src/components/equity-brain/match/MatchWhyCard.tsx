@@ -321,7 +321,7 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
 
           <div className="rounded border border-zinc-700 bg-zinc-900/60 p-2.5">
             <div className="text-[9px] uppercase tracking-wider text-zinc-400 inline-flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" /> EV (p10/p50/p90)
+              <TrendingUp className="h-3 w-3" /> {techMode ? "EV (p10/p50/p90)" : "Valor estimado: pessimista / provável / otimista"}
             </div>
             <div className="text-xs font-semibold text-zinc-100 tabular-nums mt-0.5 break-words">
               {brl(match.ev_p10 ?? null, { compact: true })} / {brl(match.ev_p50 ?? null, { compact: true })} / {brl(match.ev_p90 ?? null, { compact: true })}
