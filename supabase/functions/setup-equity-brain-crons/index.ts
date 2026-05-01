@@ -69,6 +69,31 @@ function buildJobs(supabaseUrl: string, serviceKey: string) {
       fn: "__inline_sql__",
       body: { sql: "DELETE FROM equity_brain.events WHERE processed_status IN ('success','skipped') AND processed_at < now() - interval '7 days'" },
     },
+    // ───── Equity Brain News — pipeline de notícias (Fase 8) ─────
+    {
+      name: "news-ingest-hourly-mandates",
+      schedule: "0 * * * *", // a cada hora cheia: notícias dos mandatos ativos
+      fn: "ingest-company-news",
+      body: { scope: "mandates", limit: 100 },
+    },
+    {
+      name: "news-ingest-daily-full",
+      schedule: "0 9 * * *", // 09:00 UTC = 06:00 BRT — varredura ampla diária
+      fn: "ingest-company-news",
+      body: { scope: "all", limit: 200 },
+    },
+    {
+      name: "news-extract-batch-5min",
+      schedule: "*/5 * * * *", // classifica e enriquece a cada 5 min
+      fn: "extract-news-event",
+      body: { limit: 30 },
+    },
+    {
+      name: "news-crawl-sources-daily",
+      schedule: "0 10 * * *", // 10:00 UTC = 07:00 BRT — varredura genérica de portais
+      fn: "crawl-ma-sources",
+      body: { lookback: "day" },
+    },
   ].map((j) => ({
     ...j,
     sql:
