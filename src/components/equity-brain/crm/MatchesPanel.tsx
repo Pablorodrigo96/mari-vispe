@@ -90,13 +90,19 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
         {([
           { k: "qualified", label: `Qualificados (${counts.qualified})` },
           { k: "all", label: `Todos (${counts.all})` },
-          { k: "rfb", label: `Base RFB (${counts.rfb})` },
+          { k: "rfb", label: `Vindos da Receita Federal (${counts.rfb})` },
         ] as { k: Filter; label: string }[]).map((t) => (
           <button key={t.k} onClick={() => setFilter(t.k)}
             className={`text-[11px] px-2.5 py-1 rounded transition-colors ${
               filter === t.k ? "bg-emerald-600 text-zinc-950 font-medium" : "text-zinc-400 hover:text-zinc-100"
             }`}>{t.label}</button>
         ))}
+        <InfoHint
+          title="O que é cada filtro?"
+          what="Qualificados: contraparte aprovada pela curadoria. Todos: tudo que o motor encontrou. Vindos da Receita Federal: matches gerados a partir da expansão na Base RFB (botão 'Expandir busca')."
+          action="Se 'Vindos da Receita Federal' está zerado, é porque ninguém rodou expansão para esse buyer ainda."
+          className="!ml-1"
+        />
       </div>
       {mode.type === "buyer" && (
         <ExpandRFBDialog
@@ -116,9 +122,14 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
       {Toolbar}
       {items.length === 0 ? (
         <div className="p-4 text-xs text-zinc-400 border border-dashed border-zinc-800 rounded">
-          Nenhum match {filter === "qualified" ? "qualificado" : filter === "rfb" ? "vindo da Base RFB" : ""} disponível ainda.
+          Nenhum match {filter === "qualified" ? "qualificado" : filter === "rfb" ? "vindo da Receita Federal" : ""} disponível ainda.
           {mode.type === "buyer" && filter !== "rfb" && (
             <span className="block mt-1 text-zinc-500">Use o botão "Expandir busca na Base RFB" para importar prospects.</span>
+          )}
+          {filter === "qualified" && counts.all > 0 && (
+            <span className="block mt-1 text-zinc-500">
+              Existem {counts.all} matches no total — mude o filtro para "Todos" se quiser ver os ainda não qualificados.
+            </span>
           )}
         </div>
       ) : (
