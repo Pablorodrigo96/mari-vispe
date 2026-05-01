@@ -48,6 +48,9 @@ import AdminPartnerships from "./pages/admin/AdminPartnerships";
 import AdminCapital from "./pages/admin/AdminCapital";
 import AdminCapitalProviders from "./pages/admin/AdminCapitalProviders";
 import AdminCRM from "./pages/admin/AdminCRM";
+import MondayImport from "./pages/admin/MondayImport";
+import MondayParity from "./pages/admin/MondayParity";
+import AdvisorsMapping from "./pages/admin/AdvisorsMapping";
 import MatchingBuyers from "./pages/MatchingBuyers";
 import CapitalCase from "./pages/CapitalCase";
 import CapitalBySegment from "./pages/CapitalBySegment";
@@ -173,6 +176,9 @@ const App = () => (
               <Route path="/admin/parcerias" element={<RequireRole roles={["admin"]}><AdminPartnerships /></RequireRole>} />
               <Route path="/admin/capital" element={<RequireRole roles={["admin"]}><AdminCapital /></RequireRole>} />
               <Route path="/admin/capital/providers" element={<RequireRole roles={["admin"]}><AdminCapitalProviders /></RequireRole>} />
+              <Route path="/admin/monday-import" element={<RequireRole roles={["admin"]}><MondayImport /></RequireRole>} />
+              <Route path="/admin/monday-parity" element={<RequireRole roles={["admin"]}><MondayParity /></RequireRole>} />
+              <Route path="/admin/advisors-mapping" element={<RequireRole roles={["admin"]}><AdvisorsMapping /></RequireRole>} />
             </Route>
 
             
