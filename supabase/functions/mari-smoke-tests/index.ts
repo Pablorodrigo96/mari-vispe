@@ -108,12 +108,9 @@ async function test_match_company_v2_endpoint(): Promise<Record<string, unknown>
 }
 
 async function test_recent_health_volume(): Promise<Record<string, unknown>> {
-  // Espera registros nos últimos 30min — se zero, observabilidade não está fluindo
-  const { count, error } = await admin.schema("mari_ops").from("health_check")
-    .select("*", { count: "exact", head: true })
-    .gt("ts", new Date(Date.now() - 30 * 60 * 1000).toISOString());
+  const { data, error } = await admin.rpc("mari_ops_health_volume_recent", { p_minutes: 30 });
   if (error) throw error;
-  return { runs_last_30min: count };
+  return { runs_last_30min: data };
 }
 
 Deno.serve(async (req) => {
