@@ -86,6 +86,18 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
     });
   }
 
+  if (eff.isAdmin || eff.isAdvisor) {
+    groups.push({
+      id: 'dashboards', name: '📊 Dashboards', icon: BarChart3,
+      children: [
+        { name: 'Executivo M&A', href: '/dashboard/executivo', icon: BarChart3 },
+        { name: 'Mandato', href: '/dashboard/mandato', icon: FileSignature },
+        { name: 'Match', href: '/dashboard/match', icon: Handshake },
+        { name: 'NBO', href: '/dashboard/nbo', icon: FileBarChart },
+      ],
+    });
+  }
+
   // Determine which groups should start open (the one containing active route)
   const initialOpen = groups.reduce((acc, g) => {
     acc[g.id] = g.children.some(c => location.pathname === c.href || location.pathname.startsWith(c.href + '/'));
