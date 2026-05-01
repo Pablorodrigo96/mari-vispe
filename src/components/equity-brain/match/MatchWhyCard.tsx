@@ -117,6 +117,19 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
             <Sparkles className="h-3 w-3 text-[#D9F564]" /> Por que esse match
           </div>
           <div className="flex items-center gap-1.5 text-[10px]">
+            <button
+              onClick={() => setTechMode((v) => !v)}
+              className={cn(
+                "px-1.5 py-0.5 rounded border font-mono inline-flex items-center gap-1",
+                techMode
+                  ? "bg-fuchsia-950/40 text-fuchsia-300 border-fuchsia-800/60"
+                  : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:text-[#D9F564]"
+              )}
+              title={techMode ? "Voltar para linguagem simples" : "Ver decomposição técnica (SHAP)"}
+            >
+              <Languages className="h-3 w-3" />
+              {techMode ? "técnico" : "simples"}
+            </button>
             <span className={cn(
               "px-1.5 py-0.5 rounded border font-mono",
               isV2 ? "bg-fuchsia-950/40 text-fuchsia-300 border-fuchsia-800/60" : "bg-zinc-800 text-zinc-400 border-zinc-700",
@@ -136,8 +149,14 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
           </div>
         </div>
 
+        {!techMode && summary && (
+          <p className="text-[12px] text-[#D9F564] mt-2 break-words leading-relaxed font-medium">
+            {summary}
+          </p>
+        )}
+
         {match.ai_thesis_summary && (
-          <p className="text-xs text-zinc-200 mt-2 break-words leading-relaxed">
+          <p className="text-xs text-zinc-300 mt-2 break-words leading-relaxed italic">
             "{match.ai_thesis_summary}"
           </p>
         )}
