@@ -23,6 +23,13 @@ const items = [
   { to: "/equity-brain/shadow",         label: "Shadow v1↔v2",    Icon: Sparkles },
 ];
 
+const dashboardItems = [
+  { to: "/dashboard/executivo", label: "Executivo",  Icon: TrendingUp },
+  { to: "/dashboard/mandato",   label: "Mandatos",   Icon: Briefcase },
+  { to: "/dashboard/match",     label: "Matching",   Icon: ArrowLeftRight },
+  { to: "/dashboard/nbo",       label: "NBO",        Icon: FileSignature },
+];
+
 const dataItems = [
   { to: "/equity-brain/crm/imports",                 label: "Imports",         Icon: Upload },
   { to: "/equity-brain/crm/admin/auditoria-operacional", label: "Auditoria CRM", Icon: ShieldAlert },
