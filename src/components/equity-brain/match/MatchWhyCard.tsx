@@ -189,13 +189,14 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
         )}
       </div>
 
-      {/* ── Decomposição SHAP ── */}
+      {/* ── Decomposição (plain por padrão / técnico no toggle) ── */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <div className="text-[10px] uppercase tracking-wider text-zinc-500 inline-flex items-center gap-1">
-            <Microscope className="h-3 w-3 text-fuchsia-400" /> Decomposição (peso × valor → impacto)
+            <Microscope className="h-3 w-3 text-fuchsia-400" />
+            {techMode ? "Decomposição (peso × valor → impacto)" : "Como cada peça contribui"}
           </div>
-          {hasFeatures && (
+          {hasFeatures && techMode && (
             <div className="text-[10px] text-zinc-400 font-mono">
               Σ Δ = <span className="text-zinc-200">{sumContrib.toFixed(3)}</span>
               {" → "}score <span className="text-[#D9F564] font-bold">{Math.round(Number(match.match_score ?? 0))}</span>
@@ -228,7 +229,37 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
               );
             })}
           </div>
+        ) : !techMode ? (
+          // ── Modo PLAIN (padrão) ──
+          <div className="space-y-1.5">
+            {humanItems.map((it) => (
+              <div
+                key={it.feature}
+                className={cn(
+                  "rounded border p-2 flex items-start gap-2.5",
+                  it.pullsDown
+                    ? "border-rose-900/40 bg-rose-950/10"
+                    : "border-zinc-800 bg-zinc-900/40",
+                )}
+              >
+                <span className="text-base leading-none mt-0.5">{it.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[12px] text-zinc-100 font-semibold">{it.label}</span>
+                    <span className={cn("text-[9px] px-1.5 py-0.5 rounded border font-mono shrink-0", it.badgeCls)}>
+                      {it.badge}
+                      {it.pullsDown && <span className="ml-1 text-rose-300">↓</span>}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400 mt-0.5 leading-snug break-words">
+                    {it.text}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
+          // ── Modo TÉCNICO (SHAP detalhado) ──
           <div className="space-y-2">
             {contribs.map((c) => {
               const widthPct = (Math.abs(Number(c.contribution ?? 0)) / maxAbs) * 100;
