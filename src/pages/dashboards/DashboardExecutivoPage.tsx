@@ -95,12 +95,18 @@ function DashboardExecutivoInner() {
         <DashKpi label="Ticket Médio" value={Number(k.ticket_medio ?? 0)} format="currency" size="hero" accent="cyan" loading={exec.isLoading} />
       </div>
 
-      {/* Insight IA */}
+      {/* Insight IA — gerado pela Mari (cache 1h) */}
       {(k.total_operacoes ?? 0) > 0 && (
         <AIInsightCard
-          body={`Você tem ${k.em_andamento ?? 0} operações em andamento gerando potencial de R$ ${((Number(k.valor_total_operacoes ?? 0)) / 1_000_000).toFixed(1)}M. ${k.sellside > k.buyside ? "Sellside lidera o portfólio." : "Buyside lidera o portfólio."}`}
+          body={
+            insight.body ??
+            (insight.loading
+              ? "Mari analisando o portfólio…"
+              : `Você tem ${k.em_andamento ?? 0} operações em andamento gerando potencial de R$ ${((Number(k.valor_total_operacoes ?? 0)) / 1_000_000).toFixed(1)}M. ${k.sellside > k.buyside ? "Sellside lidera o portfólio." : "Buyside lidera o portfólio."}`)
+          }
         />
       )}
+
 
       {/* Linha 3 — 3 donuts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
