@@ -39,6 +39,7 @@ import CapitalRequestDetail from "./pages/CapitalRequestDetail";
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdvisorWhatsAppSetup from "./pages/admin/AdvisorWhatsAppSetup";
 import AdminListings from "./pages/admin/AdminListings";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminValuations from "./pages/admin/AdminValuations";
