@@ -116,8 +116,8 @@ export const EB_TIPS = {
   },
   funil_pipeline: {
     title: "Funil de pipeline (mandatos)",
-    what: "Distribuição dos mandatos por estágio comercial (vigente, em negociação, vendemos).",
-    action: "Estágio inflado vira gargalo — investigue tempo médio e qualidade dos leads.",
+    what: "Distribuição dos mandatos pelos estágios reais do funil M&A — Prospecção → Match → NBO → DD → SPA → Closing → Fechado.",
+    action: "Atualizado em tempo real conforme o estágio muda no Pipeline operacional ou Kanban. Estágio inflado vira gargalo — investigue tempo médio e próximos passos.",
   },
   como_motor_aprende: {
     title: "Como o motor está aprendendo",
