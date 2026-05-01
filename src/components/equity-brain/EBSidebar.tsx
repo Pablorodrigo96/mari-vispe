@@ -1,54 +1,60 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap, Newspaper, ShieldAlert, Activity, UserCog, Flame, TrendingUp, FileSignature, Handshake, FileText } from "lucide-react";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
+import {
+  Flame, Mail, Briefcase, Target, PhoneCall, Newspaper, BarChart3,
+  ChevronDown, ArrowLeft, LogOut, Sparkles,
+  TrendingUp, Building2, GitMerge, FileSignature,
+  Settings, Upload, Search, GitCompare, Globe, Activity, Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
 import { useMatchPercentiles, useMatchInbox } from "@/hooks/useMatchInbox";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
-const items = [
-  { to: "/equity-brain",                label: "Dashboard",       Icon: LayoutDashboard, end: true },
-  { to: "/equity-brain/match-inbox",    label: "Match Inbox",     Icon: ArrowLeftRight, badge: "matches" as const },
-  { to: "/equity-brain/crm",            label: "CRM",             Icon: Briefcase },
-  { to: "/equity-brain/crm/minhas-empresas", label: "Minhas Empresas", Icon: Briefcase },
-  { to: "/equity-brain/news",           label: "Notícias M&A",    Icon: Newspaper },
-  { to: "/equity-brain/board",          label: "Board Executivo", Icon: LineChart },
-  { to: "/equity-brain/oportunidades",  label: "Oportunidades",   Icon: Target },
-  { to: "/equity-brain/mapa",           label: "Mapa",            Icon: MapIcon },
-  { to: "/equity-brain/grafo",          label: "Grafo 2D",        Icon: Network },
-  { to: "/equity-brain/grafo-jarvis",   label: "Jarvis 3D",       Icon: Brain },
-  { to: "/equity-brain/buyers",         label: "Buyers",          Icon: Users },
-  { to: "/equity-brain/teses",          label: "Teses",           Icon: Lightbulb },
-  { to: "/equity-brain/calls",          label: "Calls",           Icon: PhoneCall },
-  { to: "/equity-brain/shadow",         label: "Shadow v1↔v2",    Icon: Sparkles },
+const MAIN = [
+  { to: "/equity-brain/oportunidades", label: "Oportunidades", Icon: Mail, badge: "matches" as const },
+  { to: "/equity-brain/pipeline",      label: "Pipeline",      Icon: Briefcase },
+  { to: "/equity-brain/compradores",   label: "Compradores",   Icon: Target },
+  { to: "/equity-brain/calls",         label: "Calls",         Icon: PhoneCall },
+  { to: "/equity-brain/mercado",       label: "Mercado",       Icon: Newspaper },
 ];
 
-const dashboardItems = [
-  { to: "/equity-brain/dashboard/executivo", label: "Executivo M&A",      Icon: TrendingUp },
-  { to: "/equity-brain/dashboard/mandato",   label: "Mandatos",           Icon: Briefcase },
-  { to: "/equity-brain/dashboard/match",     label: "Matching",           Icon: ArrowLeftRight },
-  { to: "/equity-brain/dashboard/nbo",       label: "NBO",                Icon: FileSignature },
-  { to: "/equity-brain/crm/quick-fill",      label: "Preencher dados",    Icon: Zap },
+const DASHBOARDS = [
+  { to: "/equity-brain/dashboards/executivo", label: "Executivo", Icon: TrendingUp },
+  { to: "/equity-brain/dashboards/mandatos",  label: "Mandatos",  Icon: Building2 },
+  { to: "/equity-brain/dashboards/match",     label: "Match",     Icon: GitMerge },
+  { to: "/equity-brain/dashboards/propostas", label: "Propostas", Icon: FileSignature },
 ];
 
-const dataItems = [
-  { to: "/equity-brain/crm/imports",                 label: "Imports",         Icon: Upload },
-  { to: "/equity-brain/crm/admin/auditoria-operacional", label: "Auditoria CRM", Icon: ShieldAlert },
-  { to: "/equity-brain/crm/admin/atribuicoes",       label: "Atribuições",     Icon: UserCog },
-  { to: "/equity-brain/admin/health",                label: "Health 24h",      Icon: Activity },
-  { to: "/equity-brain/isp/import",                  label: "ISP Anatel",      Icon: Wifi },
-  { to: "/equity-brain/isp/sugestoes",               label: "ISP Sugestões",   Icon: Zap },
-  { to: "/equity-brain/isp/mercado",                 label: "ISP Mercado",     Icon: BarChart3 },
+const ADMIN_ITEMS = [
+  { to: "/equity-brain/admin/imports",    label: "Importar",            Icon: Upload },
+  { to: "/equity-brain/admin/auditoria",  label: "Auditoria",           Icon: Search },
+  { to: "/equity-brain/admin/shadow",     label: "Shadow v1↔v2",        Icon: GitCompare },
+  { to: "/equity-brain/admin/jarvis",     label: "Jarvis 3D",           Icon: Globe },
+  { to: "/admin/monday-parity",           label: "Paridade Monday",     Icon: BarChart3 },
+  { to: "/admin/advisors-mapping",        label: "Mapeamento Advisors", Icon: Users },
+  { to: "/equity-brain/admin/health",     label: "Health",              Icon: Activity },
 ];
 
 export function EBSidebar() {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: pcts } = useMatchPercentiles();
   const { data: hotMatches = [] } = useMatchInbox({ minScore: pcts?.hot ?? 70, limit: 200 });
   const hotCount = hotMatches.length;
   const { roles } = useUserRoles();
-  const canSeeData = roles.includes("admin") || roles.includes("advisor");
+  const isAdmin = roles.includes("admin");
+
+  const dashboardsActive = location.pathname.startsWith("/equity-brain/dashboards");
+  const adminActive =
+    location.pathname.startsWith("/equity-brain/admin") ||
+    location.pathname.startsWith("/admin/monday-parity") ||
+    location.pathname.startsWith("/admin/advisors-mapping");
+
+  const [dashOpen, setDashOpen] = useState(dashboardsActive);
+  const [adminOpen, setAdminOpen] = useState(adminActive);
 
   return (
     <aside className="w-60 shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
@@ -63,7 +69,7 @@ export function EBSidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {/* Tela Hoje — destaque Volt no topo da sidebar */}
+        {/* Hoje — destaque Volt */}
         <NavLink
           to="/equity-brain/hoje"
           className={({ isActive }) =>
@@ -80,11 +86,10 @@ export function EBSidebar() {
           <Sparkles className="h-3 w-3 opacity-70" />
         </NavLink>
 
-        {items.map(({ to, label, Icon, end, badge }) => (
+        {MAIN.map(({ to, label, Icon, badge }) => (
           <NavLink
             key={to}
             to={to}
-            end={end}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
@@ -104,49 +109,80 @@ export function EBSidebar() {
           </NavLink>
         ))}
 
-        <div className="pt-4 pb-1 px-3 text-[10px] uppercase tracking-wider text-[#D9F564]/70 font-semibold">
-          Dashboards M&A
-        </div>
-        {dashboardItems.map(({ to, label, Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                isActive
-                  ? "bg-[#D9F564]/10 text-[#D9F564] border border-[#D9F564]/30"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
-              )
-            }
-          >
-            <Icon className="h-4 w-4" />
-            <span className="flex-1">{label}</span>
-          </NavLink>
-        ))}
-
-        {canSeeData && (
-          <>
-            <div className="pt-4 pb-1 px-3 text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">
-              Dados
-            </div>
-            {dataItems.map(({ to, label, Icon }) => (
+        {/* Dashboards accordion */}
+        <button
+          onClick={() => setDashOpen((o) => !o)}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+            dashboardsActive
+              ? "bg-emerald-950/40 text-emerald-300 border border-emerald-900/60"
+              : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
+          )}
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span className="flex-1 text-left">Dashboards</span>
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", dashOpen && "rotate-180")} />
+        </button>
+        {dashOpen && (
+          <div className="ml-3 pl-3 border-l border-zinc-800 space-y-0.5">
+            {DASHBOARDS.map(({ to, label, Icon }) => (
               <NavLink
                 key={to}
                 to={to}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                    "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors",
                     isActive
-                      ? "bg-emerald-950/40 text-emerald-300 border border-emerald-900/60"
-                      : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
+                      ? "text-[#D9F564] bg-[#D9F564]/10"
+                      : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900",
                   )
                 }
               >
-                <Icon className="h-4 w-4" />
-                <span className="flex-1">{label}</span>
+                <Icon className="h-3.5 w-3.5" />
+                <span>{label}</span>
               </NavLink>
             ))}
+          </div>
+        )}
+
+        {/* Admin accordion (admin only) */}
+        {isAdmin && (
+          <>
+            <div className="my-3 border-t border-zinc-800" />
+            <button
+              onClick={() => setAdminOpen((o) => !o)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                adminActive
+                  ? "bg-zinc-800 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              <span className="flex-1 text-left">Admin</span>
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", adminOpen && "rotate-180")} />
+            </button>
+            {adminOpen && (
+              <div className="ml-3 pl-3 border-l border-zinc-800 space-y-0.5">
+                {ADMIN_ITEMS.map(({ to, label, Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors",
+                        isActive
+                          ? "text-zinc-100 bg-zinc-800"
+                          : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900",
+                      )
+                    }
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            )}
           </>
         )}
       </nav>
