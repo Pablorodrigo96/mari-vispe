@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap } from "lucide-react";
+import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap, Newspaper, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
@@ -10,6 +10,8 @@ const items = [
   { to: "/equity-brain",                label: "Dashboard",       Icon: LayoutDashboard, end: true },
   { to: "/equity-brain/match-inbox",    label: "Match Inbox",     Icon: ArrowLeftRight, badge: "matches" as const },
   { to: "/equity-brain/crm",            label: "CRM",             Icon: Briefcase },
+  { to: "/equity-brain/crm/minhas-empresas", label: "Minhas Empresas", Icon: Briefcase },
+  { to: "/equity-brain/news",           label: "Notícias M&A",    Icon: Newspaper },
   { to: "/equity-brain/board",          label: "Board Executivo", Icon: LineChart },
   { to: "/equity-brain/oportunidades",  label: "Oportunidades",   Icon: Target },
   { to: "/equity-brain/mapa",           label: "Mapa",            Icon: MapIcon },
@@ -22,10 +24,11 @@ const items = [
 ];
 
 const dataItems = [
-  { to: "/equity-brain/crm/imports",    label: "Imports",         Icon: Upload },
-  { to: "/equity-brain/isp/import",     label: "ISP Anatel",      Icon: Wifi },
-  { to: "/equity-brain/isp/sugestoes",  label: "ISP Sugestões",   Icon: Zap },
-  { to: "/equity-brain/isp/mercado",    label: "ISP Mercado",     Icon: BarChart3 },
+  { to: "/equity-brain/crm/imports",                 label: "Imports",         Icon: Upload },
+  { to: "/equity-brain/crm/admin/auditoria-operacional", label: "Auditoria CRM", Icon: ShieldAlert },
+  { to: "/equity-brain/isp/import",                  label: "ISP Anatel",      Icon: Wifi },
+  { to: "/equity-brain/isp/sugestoes",               label: "ISP Sugestões",   Icon: Zap },
+  { to: "/equity-brain/isp/mercado",                 label: "ISP Mercado",     Icon: BarChart3 },
 ];
 
 export function EBSidebar() {

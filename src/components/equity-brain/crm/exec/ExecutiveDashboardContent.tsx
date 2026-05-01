@@ -8,6 +8,7 @@ import { StatusBarChart, YearlyEvolutionChart } from "@/components/equity-brain/
 import { YearlyMoneyChart } from "@/components/equity-brain/crm/exec/YearlyMoneyChart";
 import { StackedLocalityChart } from "@/components/equity-brain/crm/exec/StackedLocalityChart";
 import { brl, DEAL_TYPE_LABEL, OUTCOME_LABEL, OUTCOME_COLOR, REGIAO_BY_UF, PIPELINE_STAGE_LABEL } from "@/lib/dealFormatters";
+import { MarketPulseWidget } from "@/components/equity-brain/news/MarketPulseWidget";
 import { EB_TIPS } from "@/lib/ebTooltips";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
@@ -105,6 +106,7 @@ export function ExecutiveDashboardContent() {
 
   return (
     <div className="space-y-6">
+      <MarketPulseWidget />
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiTile label="Total Operações" value={fmt(k.total_operations)} loading={kpis.isLoading} info={EB_TIPS.total_operacoes} />
         <KpiTile label="Buyside" value={fmt(k.buyside)} accent="primary" loading={kpis.isLoading} info={EB_TIPS.kpi_buyside} />

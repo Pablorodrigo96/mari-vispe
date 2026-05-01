@@ -74,6 +74,9 @@ import PermissionsAdminPage from "./pages/equity-brain/PermissionsAdminPage";
 import MandateDetailPage from "./pages/equity-brain/MandateDetailPage";
 import BuyerDetailPage from "./pages/equity-brain/BuyerDetailPage";
 import AccessAuditPage from "./pages/equity-brain/AccessAuditPage";
+import CrmAuditPage from "./pages/equity-brain/CrmAuditPage";
+import MyCompaniesPage from "./pages/equity-brain/MyCompaniesPage";
+import NewsPage from "./pages/equity-brain/NewsPage";
 import ExecutiveDashboardPage from "./pages/equity-brain/ExecutiveDashboardPage";
 import MatchAnalyticsPage from "./pages/equity-brain/MatchAnalyticsPage";
 import MatchInboxPage from "./pages/equity-brain/MatchInboxPage";
@@ -209,6 +212,9 @@ const App = () => (
               <Route path="crm/admin/auditoria"  element={<RequireRole roles={["admin"]}><AccessAuditPage /></RequireRole>} />
               <Route path="crm/executivo"        element={<ExecutiveDashboardPage />} />
               <Route path="crm/matching"         element={<MatchAnalyticsPage />} />
+              <Route path="crm/admin/auditoria-operacional" element={<RequireRole roles={["admin"]}><CrmAuditPage /></RequireRole>} />
+              <Route path="crm/minhas-empresas"  element={<MyCompaniesPage />} />
+              <Route path="news"                 element={<NewsPage />} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
               <Route path="crm/pipeline/historico" element={<PipelineHistoryPage />} />
               <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />

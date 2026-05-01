@@ -9,7 +9,7 @@ import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
 import { ExecutiveDashboardContent } from "@/components/equity-brain/crm/exec/ExecutiveDashboardContent";
 import { MatchAnalyticsContent } from "@/components/equity-brain/crm/match/MatchAnalyticsContent";
 import { MatchHotHero } from "@/components/equity-brain/match/MatchHotHero";
-import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, Kanban, Plus, Download, LayoutDashboard, Flame } from "lucide-react";
+import { Briefcase, Target, Activity, ShieldCheck, TrendingUp, ArrowLeftRight, Kanban, Plus, Download, LayoutDashboard, Flame, Newspaper, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SubTab = "mandates" | "buyers" | "activity";
@@ -83,6 +83,18 @@ export default function CrmHubPage() {
               </Link>
               <Link to="/equity-brain/crm/admin/auditoria" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
                 <ShieldCheck className="h-3 w-3" /> Auditoria
+              </Link>
+              <Link to="/equity-brain/crm/minhas-empresas" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
+                <Briefcase className="h-3 w-3" /> Minhas empresas
+              </Link>
+              <Link to="/equity-brain/news" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
+                <Newspaper className="h-3 w-3" /> Notícias
+              </Link>
+              <Link to="/equity-brain/crm/admin/auditoria-operacional" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-amber-700/60 bg-amber-500/10 text-amber-200 hover:border-amber-600 hover:text-amber-100">
+                <AlertTriangle className="h-3 w-3" /> Auditoria CRM
+              </Link>
+              <Link to="/equity-brain/crm/admin/auditoria"  className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
+                <ShieldCheck className="h-3 w-3" /> Aberturas (LGPD)
               </Link>
               <Link to="/equity-brain/crm/admin/permissoes" className="text-[11px] inline-flex items-center gap-1 px-3 py-1.5 rounded border border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 bg-transparent">
                 <ShieldCheck className="h-3 w-3" /> Permissões

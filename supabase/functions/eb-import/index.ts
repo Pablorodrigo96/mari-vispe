@@ -346,9 +346,20 @@ async function processMandates(
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    const cnpj = normalizeCnpj(pick(r, "company_cnpj", "cnpj"));
+    let cnpj = normalizeCnpj(pick(r, "company_cnpj", "cnpj"));
     const valor = toNum(pick(r, "valor_pedido", "valor"));
-    if (!cnpj) { result.errors.push({ row: i + 2, field: "company_cnpj", msg: "CNPJ inválido (precisa 13 ou 14 dígitos)" }); continue; }
+    const razaoOrName = pick(r, "razao_social", "nome", "company_name", "empresa") || null;
+    let needsEnrichment = false;
+
+    // Aceita mandato sem CNPJ — gera placeholder estável a partir de razão social/contato
+    if (!cnpj) {
+      const seed = String(razaoOrName || pick(r, "contato_nome") || pick(r, "contato_telefone") || `row${i}`)
+        .toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20).padEnd(20, "0");
+      const tail = Array.from(seed).reduce((s, c) => s + c.charCodeAt(0).toString(), "").slice(0, 9).padEnd(9, "0");
+      cnpj = "99999" + tail;
+      needsEnrichment = true;
+      result.warnings.push({ row: i + 2, field: "company_cnpj", msg: `CNPJ ausente — placeholder ${cnpj} criado (needs_enrichment=true). Enriqueça depois.` });
+    }
     if (!valor) {
       result.warnings.push({ row: i + 2, field: "valor_pedido", msg: "valor_pedido vazio — mandato será criado mesmo assim" });
     }
@@ -359,7 +370,7 @@ async function processMandates(
       const ufClean = ufRaw ? String(ufRaw).split(/[|,;]/)[0].trim().toUpperCase().slice(0, 2) : null;
       await supabase.schema("equity_brain").from("companies").upsert({
         cnpj,
-        razao_social: pick(r, "razao_social") || `Empresa ${cnpj}`,
+        razao_social: razaoOrName || `Empresa ${cnpj}`,
         uf: ufClean,
         municipio: pick(r, "municipio") || null,
         setor_ma: pick(r, "setor_ma", "setor") ? String(pick(r, "setor_ma", "setor")).split(",")[0].trim() : null,
@@ -368,6 +379,7 @@ async function processMandates(
         qualified_at: new Date().toISOString(),
         qualification_source: "import",
         source: "import",
+        needs_cnpj_enrichment: needsEnrichment,
       }, { onConflict: "cnpj", ignoreDuplicates: true });
     }
 
@@ -405,6 +417,7 @@ async function processMandates(
       contato_email: pick(r, "contato_email") || null,
       observacoes: [observacoesBase, ...obsExtras].filter(Boolean).join(" | ") || null,
       source: "import",
+      needs_enrichment: needsEnrichment,
       created_by: userId,
     });
   }

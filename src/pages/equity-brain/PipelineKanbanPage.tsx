@@ -16,7 +16,14 @@ import { cn } from "@/lib/utils";
 type Mandate = {
   id: string;
   company_cnpj: string;
+  display_name: string | null;
+  codename: string | null;
+  razao_social: string | null;
   deal_type: string;
+  deal_kind: string | null;
+  deal_origin: string | null;
+  deal_confidence: string | null;
+  needs_enrichment: boolean | null;
   pipeline_stage: string;
   outcome: string;
   valor_operacao: number | null;
@@ -24,7 +31,6 @@ type Mandate = {
   commission_pct: number | null;
   uf: string | null;
   regiao: string | null;
-  setor: string | null;
   contato_nome: string | null;
   contato_telefone: string | null;
   responsavel_id: string | null;
@@ -39,6 +45,22 @@ type Mandate = {
   contract_url: string | null;
 };
 
+const DEAL_KIND_LABEL: Record<string, string> = {
+  mandato_assinado: "Mandato",
+  vendedor_sem_mandato: "Sem mandato",
+  marketplace_listing: "Marketplace",
+  buyer_mandate: "Buyer",
+  prospeccao: "Prospecção",
+};
+
+const DEAL_KIND_COLOR: Record<string, string> = {
+  mandato_assinado: "bg-emerald-500/15 text-emerald-300 border-emerald-700/40",
+  vendedor_sem_mandato: "bg-amber-500/15 text-amber-300 border-amber-700/40",
+  marketplace_listing: "bg-blue-500/15 text-blue-300 border-blue-700/40",
+  buyer_mandate: "bg-purple-500/15 text-purple-300 border-purple-700/40",
+  prospeccao: "bg-zinc-500/15 text-zinc-300 border-zinc-700/40",
+};
+
 export default function PipelineKanbanPage() {
   const qc = useQueryClient();
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -46,17 +68,19 @@ export default function PipelineKanbanPage() {
   const [stagesOpen, setStagesOpen] = useState(false);
   const [onlyFrozen, setOnlyFrozen] = useState(false);
 
+  const [kindFilter, setKindFilter] = useState<string>("real");
+
   const { data: stages = [] } = usePipelineStages();
 
   const { data: mandates, isLoading } = useQuery({
-    queryKey: ["pipeline-kanban"],
+    queryKey: ["pipeline-kanban-v2"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("eb_mandates" as any)
-        .select("id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura,comprador_cnpj,comprador_nome,drive_url,contract_url")
+        .from("eb_mandates_enriched" as any)
+        .select("id,company_cnpj,display_name,codename,razao_social,deal_type,deal_kind,deal_origin,deal_confidence,needs_enrichment,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura,comprador_cnpj,comprador_nome,drive_url,contract_url")
         .neq("outcome", "cancelado")
         .order("stage_changed_at", { ascending: false })
-        .limit(500);
+        .limit(1000);
       if (error) throw error;
       return (data ?? []) as unknown as Mandate[];
     },
@@ -71,7 +95,7 @@ export default function PipelineKanbanPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["pipeline-kanban"] });
+      qc.invalidateQueries({ queryKey: ["pipeline-kanban-v2"] });
       toast.success("Estágio atualizado");
     },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao mover"),
@@ -86,7 +110,7 @@ export default function PipelineKanbanPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["pipeline-kanban"] });
+      qc.invalidateQueries({ queryKey: ["pipeline-kanban-v2"] });
       toast.success("SLA reiniciado");
     },
   });
@@ -97,16 +121,39 @@ export default function PipelineKanbanPage() {
     return m;
   }, [stages]);
 
+  const kindCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: 0, real: 0, marketplace: 0, sem_mandato: 0, buyer: 0 };
+    (mandates ?? []).forEach((m) => {
+      counts.all++;
+      if (m.deal_kind === "mandato_assinado") counts.real++;
+      else if (m.deal_kind === "marketplace_listing") counts.marketplace++;
+      else if (m.deal_kind === "vendedor_sem_mandato") counts.sem_mandato++;
+      else if (m.deal_kind === "buyer_mandate") counts.buyer++;
+    });
+    return counts;
+  }, [mandates]);
+
+  const matchesKindFilter = (m: Mandate) => {
+    if (kindFilter === "all") return true;
+    if (kindFilter === "real") return m.deal_kind === "mandato_assinado";
+    if (kindFilter === "marketplace") return m.deal_kind === "marketplace_listing";
+    if (kindFilter === "sem_mandato") return m.deal_kind === "vendedor_sem_mandato";
+    if (kindFilter === "buyer") return m.deal_kind === "buyer_mandate";
+    return true;
+  };
+
+  const filteredMandates = (mandates ?? []).filter(matchesKindFilter);
+
   const byStage: Record<string, Mandate[]> = {};
   stages.forEach((s) => (byStage[s.key] = []));
   const orphans: Mandate[] = [];
-  (mandates ?? []).forEach((m) => {
+  filteredMandates.forEach((m) => {
     const key = m.pipeline_stage || "match";
     if (byStage[key]) byStage[key].push(m);
     else orphans.push(m);
   });
 
-  const frozenCount = (mandates ?? []).filter((m) => {
+  const frozenCount = filteredMandates.filter((m) => {
     const s = stageMap[m.pipeline_stage];
     if (!s || s.is_terminal) return false;
     return getStageTimeState(m.stage_changed_at, s.sla_days).status === "frozen";
@@ -118,6 +165,14 @@ export default function PipelineKanbanPage() {
     if (!s || s.is_terminal) return false;
     return getStageTimeState(m.stage_changed_at, s.sla_days).status === "frozen";
   };
+
+  const KIND_FILTERS: { key: string; label: string }[] = [
+    { key: "real", label: "Mandatos reais" },
+    { key: "sem_mandato", label: "Sem mandato" },
+    { key: "marketplace", label: "Marketplace" },
+    { key: "buyer", label: "Buyers" },
+    { key: "all", label: "Todos" },
+  ];
 
   return (
     <div className="p-6 space-y-4 bg-zinc-950 min-h-full">
@@ -167,6 +222,24 @@ export default function PipelineKanbanPage() {
           </button>
         </div>
       </header>
+
+      <div className="flex items-center gap-1.5 flex-wrap border-b border-zinc-800 pb-2">
+        <span className="text-[10px] uppercase text-zinc-500 tracking-wider mr-1">Filtrar:</span>
+        {KIND_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setKindFilter(f.key)}
+            className={cn(
+              "text-[11px] px-2 py-1 rounded border transition-colors",
+              kindFilter === f.key
+                ? "border-[#D9F564] bg-[#D9F564]/10 text-[#D9F564]"
+                : "border-zinc-800 bg-transparent text-zinc-400 hover:text-zinc-100",
+            )}
+          >
+            {f.label} <span className="tabular-nums opacity-60">({kindCounts[f.key] ?? 0})</span>
+          </button>
+        ))}
+      </div>
 
       {isLoading ? (
         <div className="text-xs text-zinc-500 p-6">Carregando…</div>
@@ -303,8 +376,9 @@ function DealCard({
         <Link
           to={`/equity-brain/crm/mandate/${m.id}`}
           className="text-[11px] text-zinc-100 font-medium leading-tight break-words flex-1 truncate hover:text-[#D9F564]"
+          title={m.razao_social ?? m.company_cnpj}
         >
-          {m.company_cnpj}
+          {m.display_name ?? m.codename ?? m.razao_social ?? m.company_cnpj}
         </Link>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
@@ -316,9 +390,19 @@ function DealCard({
         <GripVertical className="h-3 w-3 text-zinc-700 group-hover:text-zinc-500 shrink-0 mt-0.5" />
       </div>
       <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
-          {DEAL_TYPE_LABEL[m.deal_type] ?? m.deal_type}
-        </span>
+        {m.deal_kind && (
+          <span className={cn(
+            "text-[9px] uppercase px-1.5 py-0.5 rounded border font-semibold",
+            DEAL_KIND_COLOR[m.deal_kind] ?? "bg-zinc-800 text-zinc-400 border-zinc-700",
+          )}>
+            {DEAL_KIND_LABEL[m.deal_kind] ?? m.deal_kind}
+          </span>
+        )}
+        {m.needs_enrichment && (
+          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-700/40" title="Precisa enriquecer (CNPJ placeholder)">
+            ⚠ enrich
+          </span>
+        )}
         {m.uf && <span className="text-[9px] text-zinc-500">{m.uf}</span>}
         <StageTimeBadge stageChangedAt={m.stage_changed_at} slaDays={slaDays} isTerminal={isTerminal} compact />
         {status === "frozen" && !isTerminal && (
