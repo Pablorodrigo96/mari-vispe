@@ -75,12 +75,17 @@ export interface MatchWhyCardProps {
 }
 
 export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
+  const [techMode, setTechMode] = useState(false);
+
   const contribs = useMemo<Contribution[]>(() => {
     const arr = asArray<Contribution>(match.feature_contributions);
     return arr
       .filter((c) => c && typeof c.feature === "string")
       .sort((a, b) => Math.abs(Number(b.contribution ?? 0)) - Math.abs(Number(a.contribution ?? 0)));
   }, [match.feature_contributions]);
+
+  const humanItems = useMemo(() => humanize(contribs as any), [contribs]);
+  const summary = useMemo(() => summarize(humanItems), [humanItems]);
 
   const maxAbs = useMemo(
     () => Math.max(0.001, ...contribs.map((c) => Math.abs(Number(c.contribution ?? 0)))),
