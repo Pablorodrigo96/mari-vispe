@@ -3,10 +3,17 @@ import { useMandates } from "@/hooks/useCrm";
 import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { EB_TIPS } from "@/lib/ebTooltips";
 
-const STAGES = [
-  { key: "vigente", label: "Vigente", color: "bg-amber-500" },
-  { key: "em_negociacao", label: "Em negociação", color: "bg-emerald-500" },
-  { key: "vendemos", label: "Vendemos", color: "bg-emerald-700" },
+// Lê pipeline_stage (enum equity_brain.pipeline_stage) dos mandatos.
+// Mandatos sem pipeline_stage caem em "Prospecção" — ainda não entraram
+// no funil M&A (cold leads, ANATEL não promovido, etc).
+const STAGES: { key: string; label: string; color: string }[] = [
+  { key: "__prospect__",   label: "Prospecção",     color: "bg-zinc-500" },
+  { key: "match",          label: "Match",          color: "bg-amber-500" },
+  { key: "nbo",            label: "NBO",            color: "bg-orange-500" },
+  { key: "due_diligence",  label: "Due Diligence",  color: "bg-blue-500" },
+  { key: "spa",            label: "SPA",            color: "bg-indigo-500" },
+  { key: "closing",        label: "Closing",        color: "bg-emerald-500" },
+  { key: "closed",         label: "Fechado",        color: "bg-emerald-700" },
 ];
 
 export function PipelineFunnel() {
@@ -14,7 +21,10 @@ export function PipelineFunnel() {
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
-    for (const m of mandates as any[]) c[m.status] = (c[m.status] ?? 0) + 1;
+    for (const m of mandates as any[]) {
+      const stage = m.pipeline_stage ? String(m.pipeline_stage) : "__prospect__";
+      c[stage] = (c[stage] ?? 0) + 1;
+    }
     return c;
   }, [mandates]);
 
