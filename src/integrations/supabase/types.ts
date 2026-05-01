@@ -3843,6 +3843,10 @@ export type Database = {
         }
         Returns: string
       }
+      eb_resolve_advisor_mapping: {
+        Args: { p_monday_name: string; p_user_id: string }
+        Returns: Json
+      }
       eb_store_advisor_token: {
         Args: { p_advisor_id: string; p_token: string }
         Returns: string
@@ -3868,6 +3872,7 @@ export type Database = {
       }
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
       expire_old_reservations: { Args: never; Returns: undefined }
+      find_user_by_meta_name: { Args: { search_name: string }; Returns: string }
       get_dashboard_executivo: {
         Args: never
         Returns: Database["public"]["Views"]["mv_dashboard_executivo"]["Row"][]
