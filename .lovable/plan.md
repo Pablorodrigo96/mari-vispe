@@ -246,3 +246,33 @@ Começo pela **Semana 1 em paralelo**:
 2. Fase 2.0 — schema `co_advisor_ids` + view `eb_my_companies_v2` + tela `/equity-brain/crm/admin/atribuicoes` para você distribuir os 230 mandatos órfãos em 1 sessão.
 
 Posso começar?
+---
+
+## ✅ Fase 0 — entregue (01/05/2026)
+
+**Observabilidade hybrid wrapper + dashboard + smoke tests + cron**
+
+- `mari_ops` schema com `health_check`, `smoke_tests`, `model_metrics` + view `health_summary_24h`.
+- `withObservability` wrapper aplicado nas **10 funções críticas**:
+  match-company-v2, calculate-scores, mari-brain, news-to-crm-alert,
+  crm-detect-new-matches, ingest-company-news, compute-mandate-active-proba,
+  update-buyer-revealed-thetas, eb-match-isp-cold, mari-suggest-actions.
+- RPCs públicas (SECURITY DEFINER) usadas para evitar exposição direta do schema:
+  `mari_ops_record_health`, `mari_ops_record_smoke`,
+  `mari_ops_health_volume_recent`, `get_health_summary_24h`,
+  `get_health_recent_errors`.
+- Edge function `mari-smoke-tests` com 6 checks E2E (DB, fn-alive, ops-self-check).
+  Validado: **6/6 pass, status 200**.
+- Cron `mari-smoke-tests-6h` agendado a cada 6h (`0 */6 * * *`).
+- Página `/equity-brain/admin/health` (admin-only) com KPIs + tabela por função +
+  últimos erros 7d. Auto-refresh 60s.
+- Sidebar atualizado com **Atribuições** (CRM admin) e **Health 24h**.
+
+**Validação E2E confirmada**: tráfego nas funções gera linhas em `health_check`
+com status correto (`ok` / `warning` / `error`).
+
+### Próximo (Fase 2.0 — CRM friction)
+1. `priority_score` (0-100) por mandato → semáforo no Kanban e em "Minhas Empresas".
+2. Unified Action Drawer (1 painel: match → buyer → docs → WhatsApp → activity).
+3. Daily Briefing page (`/equity-brain/briefing`).
+4. Fase 1: Feature Store + Active Learning UI (após dispersão de ownership concluída).
