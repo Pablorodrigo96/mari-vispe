@@ -1,10 +1,11 @@
-import { useMemo } from "react";
-import { Sparkles, AlertTriangle, TrendingUp, Target, BarChart3, Brain, Microscope } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Sparkles, AlertTriangle, TrendingUp, Target, BarChart3, Brain, Microscope, Languages } from "lucide-react";
 import { brl } from "@/lib/dealFormatters";
 import { cn } from "@/lib/utils";
 import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { EB_TIPS, type EBTipKey } from "@/lib/ebTooltips";
 import type { MatchInboxRow } from "@/hooks/useMatchInbox";
+import { humanize, summarize } from "@/lib/matchWhyHumanizer";
 
 type Contribution = { feature: string; weight: number; value: number; contribution: number };
 
