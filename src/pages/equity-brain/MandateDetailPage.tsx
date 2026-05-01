@@ -20,6 +20,7 @@ import { IdentityRevealCard } from "@/components/equity-brain/IdentityRevealCard
 import { BlindTeaserButton } from "@/components/equity-brain/BlindTeaserButton";
 import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
+import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
 
 type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents";
 
@@ -61,7 +62,16 @@ export default function MandateDetailPage() {
             <span className="text-[11px] text-zinc-400">· Ticket {formatBRL(mandate.valor_pretendido ?? mandate.ticket_alvo ?? 0)}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <WhatsAppActionButton
+            phone={(mandate as any).contato_telefone ?? null}
+            mandateId={mandate.id}
+            contactName={(mandate as any).contato_nome ?? null}
+            draftType={(mandate as any).last_outreach_at ? "followup" : "first_contact"}
+            source="mandate_detail"
+            label={(mandate as any).contato_nome ? `Falar com ${String((mandate as any).contato_nome).split(" ")[0]}` : "WhatsApp"}
+            className="bg-transparent border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/20"
+          />
           <BlindTeaserButton
             cnpj={mandate.company_cnpj}
             entityType="mandate"

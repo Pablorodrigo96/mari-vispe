@@ -20,6 +20,7 @@ import { IdentityRevealCard } from "@/components/equity-brain/IdentityRevealCard
 import { BlindTeaserButton } from "@/components/equity-brain/BlindTeaserButton";
 import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
+import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
 
 type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents";
 
@@ -64,11 +65,22 @@ export default function BuyerDetailPage() {
             </span>
           </div>
         </div>
-        <BlindTeaserButton
-          cnpj={(buyer as any).cnpj}
-          entityType="buyer"
-          entityId={buyer.id}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <WhatsAppActionButton
+            phone={(buyer as any).whatsapp ?? (buyer as any).telefone ?? null}
+            buyerId={buyer.id}
+            contactName={(buyer as any).nome ?? null}
+            draftType="match_announcement"
+            source="buyer_detail"
+            label={(buyer as any).nome ? `Falar com ${String((buyer as any).nome).split(" ")[0]}` : "WhatsApp"}
+            className="bg-transparent border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/20"
+          />
+          <BlindTeaserButton
+            cnpj={(buyer as any).cnpj}
+            entityType="buyer"
+            entityId={buyer.id}
+          />
+        </div>
       </header>
 
       <IdentityRevealCard
