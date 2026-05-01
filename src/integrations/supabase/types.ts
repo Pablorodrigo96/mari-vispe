@@ -3551,6 +3551,32 @@ export type Database = {
       }
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
       expire_old_reservations: { Args: never; Returns: undefined }
+      get_health_recent_errors: {
+        Args: { limit_n?: number }
+        Returns: {
+          duration_ms: number
+          error_text: string
+          function_name: string
+          request_id: string
+          status: string
+          ts: string
+        }[]
+      }
+      get_health_summary_24h: {
+        Args: never
+        Returns: {
+          error_runs: number
+          function_name: string
+          last_error: string
+          last_run_at: string
+          ok_runs: number
+          p50_ms: number
+          p95_ms: number
+          status_color: string
+          success_rate_pct: number
+          total_runs: number
+        }[]
+      }
       get_teaser_view_count: {
         Args: { p_listing_id: string }
         Returns: {
@@ -3567,6 +3593,32 @@ export type Database = {
       }
       increment_capital_view: {
         Args: { p_request_id: string }
+        Returns: undefined
+      }
+      mari_ops_health_volume_recent: {
+        Args: { p_minutes?: number }
+        Returns: number
+      }
+      mari_ops_record_health: {
+        Args: {
+          p_duration_ms: number
+          p_error_text?: string
+          p_function_name: string
+          p_payload_summary?: Json
+          p_request_id?: string
+          p_source?: string
+          p_status: string
+        }
+        Returns: undefined
+      }
+      mari_ops_record_smoke: {
+        Args: {
+          p_actual?: Json
+          p_duration_ms: number
+          p_message?: string
+          p_status: string
+          p_test_name: string
+        }
         Returns: undefined
       }
       qualify_lead:

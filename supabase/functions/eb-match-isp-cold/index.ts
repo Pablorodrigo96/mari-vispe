@@ -2,6 +2,7 @@
 // Gera sugestões frias (matches.is_cold_suggestion=true) cruzando isp_company_market_stats
 // com buyers que ativam teses ISP. NÃO cria companies, NÃO dispara notificações.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { withObservability } from "../_shared/observability.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -116,7 +117,7 @@ function buyerFit(buyer: any, c: any, footprintUfs: Set<string>): {
   return { setor: setorHit, geo, porte, reasons };
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withObservability(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -364,4 +365,4 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: e.message ?? String(e) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-});
+}, { name: "eb-match-isp-cold" }));
