@@ -108,6 +108,7 @@ import PipelinePage from "./pages/equity-brain/PipelinePage";
 import CompradoresPage from "./pages/equity-brain/CompradoresPage";
 import MandatosTablePage from "./pages/equity-brain/MandatosTablePage";
 import DashboardCoveragePage from "./pages/equity-brain/DashboardCoveragePage";
+import DedupeAdminPage from "./pages/equity-brain/DedupeAdminPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
