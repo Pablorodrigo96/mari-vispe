@@ -108,10 +108,13 @@ function AdminWhatsAppMonitorInner() {
   }, [rows]);
 
   return (
-    <AdminLayout
-      title="WhatsApp Monitor"
-      description="Mensagens capturadas pela integração Meta WhatsApp Cloud em tempo real."
-    >
+    <AdminLayout>
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold">WhatsApp Monitor</h1>
+        <p className="text-sm text-muted-foreground">
+          Mensagens capturadas pela integração Meta WhatsApp Cloud em tempo real.
+        </p>
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Total (últimas 100)", value: stats.total },
