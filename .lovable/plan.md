@@ -1,55 +1,40 @@
-## Diagnóstico (já confirmado no banco)
+## Diagnóstico (cruzando dados reais)
 
-Os 317 mandatos estão todos com `status = 'vigente'`. A negociação real vive na coluna `pipeline_stage` (enum `equity_brain.pipeline_stage`):
+| Filtro da `eb_today_cards` | Realidade no banco | Mata o feed? |
+|---|---|---|
+| Inatividade > 14 dias (cooling_deal) | Atividade mais antiga é de **hoje cedo** (01/05 02:50) — 0 mandatos esfriados | ✅ Mata 100% dos `cooling_deal` |
+| Score ≥ 0.7 (hot_match) | 4.330 matches qualificam | ✅ Tem oferta |
+| Você ser `responsavel_id` / `co_advisor` / `origin_advisor` | 230 de 317 mandatos **sem responsável**; só 1 advisor cadastrado no banco | ✅ Mata os cards do seu user |
 
-- `match` — 88
-- `nbo` — 1
-- `due_diligence` — 0
-- `spa` — 0
-- `closing` — 228
-- `closed` — 0
+**Conclusão:** Você é admin operando sobre uma base que ainda não foi distribuída entre advisors. O feed está vazio porque não tem mandato atribuído a você.
 
-O `PipelineFunnel` atual lê `m.status` com 3 categorias (Vigente / Em negociação / Vendemos) que ninguém atualiza — por isso aparece "317 / 0 / 0".
+## Mudança proposta
 
-## O que vai mudar
+Atualizar a função `public.eb_today_cards` para que **admins enxerguem cards de TODOS os mandatos**, mantendo o comportamento normal pra advisors:
 
-### 1. `src/components/equity-brain/crm/PipelineFunnel.tsx`
+- Adicionar `v_is_admin := public.has_role(v_user, 'admin')` no início.
+- Em ambos os CTEs (`cooling` e `hot`), trocar a cláusula:
+  ```sql
+  WHERE (m.responsavel_id = v_user OR v_user = ANY(...) OR m.origin_advisor_id = v_user)
+  ```
+  por:
+  ```sql
+  WHERE (v_is_admin
+         OR m.responsavel_id = v_user
+         OR v_user = ANY(COALESCE(m.co_advisor_ids,'{}'::uuid[]))
+         OR m.origin_advisor_id = v_user)
+  ```
 
-Reescrever o componente para:
+Tudo o mais permanece idêntico: filtro de score ≥0.7, cooling >14d, exclusão de `closed`, dismissals, ordenação por `priority_score DESC`, limite de 7 cards.
 
-- **Ler `m.pipeline_stage`** (não `m.status`).
-- **5 estágios reais** + 1 macro de prospecção, totalizando 6 barras na ordem do funil M&A:
+## Resultado esperado
 
-```text
-Prospecção  →  Match  →  NBO  →  DD  →  SPA  →  Closing  →  Fechado
-```
+- **Você (admin)**: feed `/equity-brain/hoje` deve passar a mostrar até 7 hot_match cards (dos 4.330 disponíveis), priorizados por `priority_score`. Cards do tipo cooling_deal continuam 0 até algum mandato passar 14 dias sem atividade — isso é correto.
+- **Advisors normais**: comportamento idêntico ao atual (vêem só seus mandatos).
+- **Sem mudança de schema, sem mudança de RLS, sem mudança de frontend.**
 
-- **Mapeamento das barras**:
+## Fora de escopo (deixar pra outro turno)
 
-  | Label exibido | Origem | Cor (Tailwind) |
-  |---|---|---|
-  | Prospecção (sem mandato) | `pipeline_stage IS NULL` ou `deal_origin = 'cold'` sem stage | `bg-zinc-500` |
-  | Match | `pipeline_stage = 'match'` | `bg-amber-500` |
-  | NBO | `pipeline_stage = 'nbo'` | `bg-orange-500` |
-  | Due Diligence | `pipeline_stage = 'due_diligence'` | `bg-blue-500` |
-  | SPA | `pipeline_stage = 'spa'` | `bg-indigo-500` |
-  | Closing | `pipeline_stage = 'closing'` | `bg-emerald-500` |
-  | Fechado | `pipeline_stage = 'closed'` | `bg-emerald-700` |
-
-- **Largura da barra**: proporcional ao maior estágio (igual ao atual), mantendo `Math.max(8, …%)`.
-- **Tooltip do header**: continua usando `EB_TIPS.funil_pipeline` (texto centralizado em `ebTooltips.ts` — não muda).
-- **Layout/visual**: mantém o mesmo card `bg-zinc-900/40 border border-zinc-800 rounded p-4`, mesma tipografia, só troca os dados e adiciona 4 linhas (de 3 para 7 barras).
-
-### 2. `src/lib/ebTooltips.ts` (ajuste pequeno)
-
-Atualizar o texto do tooltip `funil_pipeline` para refletir a nova semântica: "Distribuição dos mandatos pelos estágios reais do funil M&A — da prospecção até o fechamento. Atualizado quando o estágio muda no Pipeline operacional ou Kanban."
-
-### 3. Nada além disso
-
-- **NÃO** mexer em `mandates.status` no banco — fica como rótulo macro legado, sem migration.
-- **NÃO** alterar o `PipelineKanban`, `MandatesMondayTable` ou `QuickEditPopover` — eles já leem `pipeline_stage` corretamente.
-- **NÃO** mudar a `eb_today_cards` nem o feed `/equity-brain/hoje` — o problema do feed vazio é outro tópico (filtros restritos), não está no escopo desta correção.
-
-## Por que isso resolve
-
-Hoje o widget "Pipeline operacional" logo abaixo do funil já mostra MATCH 88 / NBO 1 / CLOSING 228 corretamente. Após a mudança, o **funil de cima passa a contar a mesma história visualmente como funil**, com todos os estágios do playbook M&A — você enxerga onde os deals empilham e onde tem gargalo (228 presos em Closing, por exemplo, vira informação acionável).
+- Distribuir os 230 mandatos órfãos entre advisors (problema operacional real).
+- Criar painel "Mandatos sem responsável" no admin.
+- Trocar fonte de inatividade de `mandates.last_activity_at` pra `crm_activities`.
