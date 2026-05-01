@@ -148,7 +148,7 @@ Deno.serve(withObservability(async (req: Request) => {
     const maxPerBuyer = body.max_per_buyer ?? 50;
     const dry = !!body.dry_run;
 
-    // 1, { name: "eb-match-isp-cold" })) Período
+    // 1) Período
     let period = body.period_ref;
     if (!period) {
       const { data: latest } = await admin.schema("equity_brain")
