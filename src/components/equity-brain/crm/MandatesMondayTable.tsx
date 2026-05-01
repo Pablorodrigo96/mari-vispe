@@ -84,23 +84,26 @@ const STAGE_ACCENT: Record<string, string> = {
   closed: "bg-emerald-500/10 border-l-emerald-500",
 };
 
+type KindFilter = "all" | "mandato_assinado" | "vendedor_sem_mandato" | "buyer_mandate" | "marketplace_listing" | "prospeccao" | "no_owner" | "needs_enrichment";
+
 export function MandatesMondayTable() {
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Row | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["mandates-monday"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("eb_mandates" as any)
+        .from("eb_mandates_enriched" as any)
         .select(
-          "id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura,comprador_cnpj,comprador_nome,drive_url,contract_url",
+          "id,company_cnpj,display_name,razao_social,nome_fantasia,codename,deal_type,deal_kind,deal_origin,deal_confidence,needs_enrichment,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor_ma,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura,comprador_cnpj,comprador_nome,drive_url,contract_url",
         )
         .order("stage_changed_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      return (data ?? []) as unknown as Row[];
+      return ((data ?? []) as any[]).map((r) => ({ ...r, setor: r.setor_ma })) as unknown as Row[];
     },
   });
 
@@ -117,15 +120,20 @@ export function MandatesMondayTable() {
   );
 
   const filtered = useMemo(() => {
-    if (!q) return rows;
-    const t = q.toLowerCase();
-    return rows.filter(
-      (r) =>
+    let out = rows;
+    if (kindFilter === "no_owner") out = out.filter((r) => !r.responsavel_id);
+    else if (kindFilter === "needs_enrichment") out = out.filter((r) => r.needs_enrichment);
+    else if (kindFilter !== "all") out = out.filter((r) => r.deal_kind === kindFilter);
+    if (q) {
+      const t = q.toLowerCase();
+      out = out.filter((r) =>
+        (r.display_name ?? "").toLowerCase().includes(t) ||
         (r.company_cnpj ?? "").includes(t.replace(/\D/g, "")) ||
         (r.comprador_nome ?? "").toLowerCase().includes(t) ||
-        (r.contato_nome ?? "").toLowerCase().includes(t),
-    );
-  }, [rows, q]);
+        (r.contato_nome ?? "").toLowerCase().includes(t));
+    }
+    return out;
+  }, [rows, q, kindFilter]);
 
   const grouped = useMemo(() => {
     const g: Record<string, Row[]> = {};
@@ -137,11 +145,33 @@ export function MandatesMondayTable() {
     return g;
   }, [filtered]);
 
+  const counts = useMemo(() => ({
+    all: rows.length,
+    mandato_assinado: rows.filter((r) => r.deal_kind === "mandato_assinado").length,
+    vendedor_sem_mandato: rows.filter((r) => r.deal_kind === "vendedor_sem_mandato").length,
+    buyer_mandate: rows.filter((r) => r.deal_kind === "buyer_mandate").length,
+    marketplace_listing: rows.filter((r) => r.deal_kind === "marketplace_listing").length,
+    prospeccao: rows.filter((r) => r.deal_kind === "prospeccao").length,
+    no_owner: rows.filter((r) => !r.responsavel_id).length,
+    needs_enrichment: rows.filter((r) => r.needs_enrichment).length,
+  }), [rows]);
+
+  const FILTERS: { key: KindFilter; label: string }[] = [
+    { key: "all", label: "Todos" },
+    { key: "mandato_assinado", label: "Mandatos" },
+    { key: "vendedor_sem_mandato", label: "Sem mandato" },
+    { key: "buyer_mandate", label: "Buyside" },
+    { key: "marketplace_listing", label: "Marketplace" },
+    { key: "prospeccao", label: "Prospecção" },
+    { key: "no_owner", label: "Sem dono" },
+    { key: "needs_enrichment", label: "Precisa enriquecer" },
+  ];
+
   return (
     <div className="bg-zinc-900/40 border border-zinc-800 rounded-lg overflow-hidden">
       <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2 flex-wrap">
         <h3 className="text-sm font-bold text-zinc-100 flex-1">
-          Mandatos M&amp;A{" "}
+          Pipeline operacional{" "}
           <span className="text-zinc-500 font-normal">({filtered.length})</span>
         </h3>
         <div className="relative w-64">
@@ -149,10 +179,26 @@ export function MandatesMondayTable() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar vendedor, comprador, contato…"
+            placeholder="Buscar nome, CNPJ, comprador, contato…"
             className="pl-7 h-8 text-xs bg-zinc-950 border-zinc-800 text-zinc-100"
           />
         </div>
+      </div>
+      <div className="px-4 py-2 border-b border-zinc-800 flex items-center gap-1 flex-wrap bg-zinc-950/40">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setKindFilter(f.key)}
+            className={cn(
+              "text-[10px] px-2 py-1 rounded border whitespace-nowrap",
+              kindFilter === f.key
+                ? "border-[#D9F564]/50 bg-[#D9F564]/10 text-[#D9F564]"
+                : "border-zinc-800 bg-transparent text-zinc-400 hover:text-zinc-200",
+            )}
+          >
+            {f.label} <span className="ml-1 text-zinc-500 tabular-nums">{counts[f.key as keyof typeof counts] ?? 0}</span>
+          </button>
+        ))}
       </div>
 
       <div className="overflow-auto max-h-[70vh]">
