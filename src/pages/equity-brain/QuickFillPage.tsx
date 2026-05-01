@@ -174,11 +174,11 @@ export default function QuickFillPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-[#A8A8A3] border-b border-zinc-800">
-                  <th className="text-left p-2 font-medium">Codename</th>
-                  <th className="text-left p-2 font-medium">Empresa / Contato</th>
+                  <th className="text-left p-2 font-medium">ID</th>
+                  <th className="text-left p-2 font-medium">Contato</th>
                   <th className="text-left p-2 font-medium">UF</th>
+                  <th className="text-left p-2 font-medium">Setor</th>
                   <th className="text-left p-2 font-medium">Tipo</th>
-                  <th className="text-left p-2 font-medium">Fase</th>
                   <th className="text-left p-2 font-medium">Status</th>
                   <th className="text-left p-2 font-medium">Resultado</th>
                   <th className="text-right p-2 font-medium">Valor (R$)</th>
@@ -226,15 +226,13 @@ function Row({ m, advisors, onSave }: { m: Mandate; advisors: { user_id: string;
 
   return (
     <tr className="border-b border-zinc-800/50 hover:bg-zinc-900/40">
-      <td className="p-2 font-mono text-[10px] text-[#D9F564]">{local.codename ?? "—"}</td>
-      <td className="p-2 text-[#FAFAF7] max-w-[180px] truncate">{local.comprador_nome ?? local.contato_nome ?? "—"}</td>
+      <td className="p-2 font-mono text-[10px] text-[#D9F564]">{local.id.slice(0, 8)}</td>
+      <td className="p-2 text-[#FAFAF7] max-w-[180px] truncate">{local.contato_nome ?? "—"}</td>
       <td className="p-2 text-[#A8A8A3]">{local.uf ?? "—"}</td>
+      <td className="p-2 text-[#A8A8A3] max-w-[120px] truncate">{local.setor ?? "—"}</td>
 
       <td className="p-1">
         <SmallSelect value={local.deal_type ?? ""} options={DEAL_TYPES} onChange={(v) => { set("deal_type", v); commit("deal_type", v); }} />
-      </td>
-      <td className="p-1">
-        <SmallSelect value={local.deal_phase ?? ""} options={DEAL_PHASES} onChange={(v) => { set("deal_phase", v); commit("deal_phase", v); }} />
       </td>
       <td className="p-1">
         <SmallSelect value={local.status ?? ""} options={STATUSES} onChange={(v) => { set("status", v); commit("status", v); }} />
