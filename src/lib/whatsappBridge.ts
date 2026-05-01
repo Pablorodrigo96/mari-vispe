@@ -45,22 +45,17 @@ export async function openWhatsAppForContact(args: BridgeOpenArgs): Promise<bool
     try { await navigator.clipboard.writeText(url); } catch { /* ignore */ }
   }
 
-  // 2. Log assíncrono
-  try {
-    await supabase.rpc("eb_log_whatsapp_send", {
-      p_entity_type: args.entityType ?? null,
-      p_entity_id: args.entityId ?? null,
-      p_contact_id: args.contactId ?? null,
-      p_phone: phone,
-      p_message: args.message ?? null,
-      p_metadata: {
-        ai_drafted: !!args.aiDrafted,
-        source: args.source ?? "unknown",
-        opened,
-      },
-    });
-  } catch (err) {
-    console.warn("[whatsapp-bridge] log falhou", err);
+  // 2. Log assíncrono — só se houver mandate vinculado (RPC atual exige p_mandate_id).
+  if (args.entityType === "mandate" && args.entityId) {
+    try {
+      await supabase.rpc("eb_log_whatsapp_send", {
+        p_mandate_id: args.entityId,
+        p_contact_id: args.contactId ?? null,
+        p_message_preview: args.message ?? null,
+      });
+    } catch (err) {
+      console.warn("[whatsapp-bridge] log falhou", err);
+    }
   }
 
   return opened;
