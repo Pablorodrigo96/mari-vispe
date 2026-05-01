@@ -1,128 +1,79 @@
-# Reorganização do Menu Lateral do Equity Brain
+# Validação dos redirects de navegação (rotas antigas → novas)
 
-## Escopo
+## Objetivo
 
-Refatoração **somente de navegação** dentro do cockpit `/equity-brain/*`. Nenhuma página, componente ou lógica é removida. Tudo continua acessível — só muda onde o advisor encontra. Todas as rotas atuais passam a redirecionar para as novas, sem 404.
+Garantir que toda rota antiga do cockpit Equity Brain redirecione para a nova rota correta após a reorganização do menu, sem 404 e preservando query params. Entregar dois artefatos complementares:
 
-O sidebar afetado é `src/components/equity-brain/EBSidebar.tsx` (cockpit interno). O `AppSidebar.tsx` (área pública/cliente) **não é tocado**.
+1. **Teste automatizado E2E** com Playwright (data-driven, roda contra o preview do sandbox).
+2. **Checklist manual** em Markdown para QA visual rápida.
 
-## Mapa: rotas atuais → novas rotas
+Nenhum código de produção é modificado — apenas arquivos novos de teste e documentação.
 
-Todas as rotas novas vivem dentro do `EquityBrainLayout` (prefixo `/equity-brain`), preservando guard de role e o shell atual.
-
-```text
-ATUAL                                       NOVA                                    AÇÃO
-/equity-brain/hoje                          /equity-brain/hoje                      mantém
-/equity-brain/match-inbox                   /equity-brain/oportunidades             redirect
-/equity-brain/oportunidades                 /equity-brain/oportunidades?tab=andamento  redirect (rota antiga reaproveitada como wrapper novo)
-/equity-brain/crm                           /equity-brain/pipeline                  redirect
-/equity-brain/crm/minhas-empresas           /equity-brain/pipeline?tab=empresas     redirect
-/equity-brain/mapa                          /equity-brain/pipeline?view=mapa        redirect
-/equity-brain/grafo                         /equity-brain/pipeline?view=grafo       redirect
-/equity-brain/crm/quick-fill                /equity-brain/pipeline (botão QuickFill no header) redirect
-/equity-brain/buyers                        /equity-brain/compradores               redirect
-/equity-brain/teses                         /equity-brain/compradores?tab=teses     redirect
-/equity-brain/calls                         /equity-brain/calls                     mantém
-/equity-brain/news                          /equity-brain/mercado                   redirect
-/equity-brain/                              /equity-brain/dashboards/executivo      redirect (index)
-/equity-brain/board                         /equity-brain/dashboards/executivo      redirect
-/equity-brain/dashboard/executivo           /equity-brain/dashboards/executivo      redirect
-/equity-brain/dashboard/mandato             /equity-brain/dashboards/mandatos       redirect
-/equity-brain/dashboard/match               /equity-brain/dashboards/match          redirect
-/equity-brain/dashboard/nbo                 /equity-brain/dashboards/propostas      redirect
-/equity-brain/crm/imports                   /equity-brain/admin/imports             redirect
-/equity-brain/crm/admin/auditoria-operacional /equity-brain/admin/auditoria         redirect
-/equity-brain/shadow                        /equity-brain/admin/shadow              redirect
-/equity-brain/grafo-jarvis                  /equity-brain/admin/jarvis              redirect
-/equity-brain/admin/health                  /equity-brain/admin/health              mantém
-```
-
-Itens existentes que **não estão no menu novo mas continuam acessíveis** por links contextuais (deal detail, mandate detail, CRM admin, ISP, exports, disclosures, etc.) **mantêm rotas inalteradas** — só somem da sidebar.
-
-## Estrutura nova do EBSidebar (7 + Admin)
+## Mapa autoritativo de redirects (extraído do `src/App.tsx`)
 
 ```text
-🔥 Hoje
-📬 Oportunidades              [novos count]
-💼 Pipeline
-🎯 Compradores
-📞 Calls
-📰 Mercado
-📊 Dashboards            ▾
-   📈 Executivo
-   🏛 Mandatos
-   ≋  Match
-   📝 Propostas
-─────────────────────────
-⚙️  Admin                ▾    (apenas role admin)
-   ⬆ Importar
-   🔍 Auditoria
-   🔀 Shadow
-   🌐 Jarvis 3D
-   📊 Paridade Monday
-   👥 Mapeamento Advisors
-   💚 Health
+/equity-brain/                                    → /equity-brain/dashboards/executivo
+/equity-brain/match-inbox                         → /equity-brain/oportunidades
+/equity-brain/crm                                 → /equity-brain/pipeline
+/equity-brain/crm/minhas-empresas                 → /equity-brain/pipeline?tab=empresas
+/equity-brain/mapa                                → /equity-brain/pipeline?view=mapa
+/equity-brain/grafo                               → /equity-brain/pipeline?view=grafo
+/equity-brain/crm/quick-fill                      → /equity-brain/pipeline
+/equity-brain/buyers                              → /equity-brain/compradores
+/equity-brain/teses                               → /equity-brain/compradores?tab=teses
+/equity-brain/news                                → /equity-brain/mercado
+/equity-brain/board                               → /equity-brain/dashboards/executivo
+/equity-brain/dashboard/executivo                 → /equity-brain/dashboards/executivo
+/equity-brain/dashboard/mandato                   → /equity-brain/dashboards/mandatos
+/equity-brain/dashboard/match                     → /equity-brain/dashboards/match
+/equity-brain/dashboard/nbo                       → /equity-brain/dashboards/propostas
+/equity-brain/crm/imports                         → /equity-brain/admin/imports
+/equity-brain/crm/admin/auditoria-operacional     → /equity-brain/admin/auditoria
+/equity-brain/shadow                              → /equity-brain/admin/shadow
+/equity-brain/grafo-jarvis                        → /equity-brain/admin/jarvis
 ```
 
-Visual mantém o tema atual (zinc-950, accent Volt `#D9F564`, item Hoje em destaque).
+## Arquivos a criar
 
-## Páginas-wrapper a criar
+### 1. `e2e/redirects.spec.ts`
 
-### `OportunidadesPage` (substitui o arquivo atual `OportunidadesPage.tsx`)
-- Tabs no topo: **Novos** · **Em andamento** · **Todos**.
-- Tab `novos` (default) → renderiza `<MatchInboxPage />` (matches frescos).
-- Tab `andamento` → renderiza o componente da Oportunidades atual (extraído do arquivo atual, renomeado `OportunidadesEmAndamento`).
-- Tab `todos` → mostra ambos sem filtro de "novo".
-- Lê `?tab=` da URL via `useSearchParams`; badge do sidebar usa contagem hot do `useMatchInbox` já existente.
+Suite Playwright única, usando `test.describe.parallel` + `for...of` sobre uma tabela de pares `{ from, to }`. Cada caso:
 
-### `PipelinePage` (nova)
-- Tabs: **Mandatos** (default) · **Empresas**.
-- Tab Mandatos: header com toggle `Lista | Kanban | Mapa | Grafo` + botão `⚡ Preencher rápido`.
-  - Lista → `<CrmHubPage />` (componente existente reusado embutido).
-  - Kanban → `<PipelineKanbanPage />`.
-  - Mapa → `<MapaPage />`.
-  - Grafo → `<GrafoPage />`.
-  - Botão QuickFill → abre `<Sheet>` (drawer shadcn) renderizando `<QuickFillPage />` em modo embedded.
-- Tab Empresas: `<MyCompaniesPage />`.
-- Estado controlado por `?tab=` e `?view=`.
+- Faz `page.goto(from)`.
+- Espera `page.waitForURL` casando `to` (com query params normalizados via `URL`).
+- Verifica que `response.status()` ≠ 404 e que o conteúdo renderizou (sem fallback de NotFound) checando que o `EBSidebar` está visível (`getByText('Equity Brain')`).
+- Para rotas que dependem de auth, o teste assume que o usuário já está logado no preview (mesma convenção do harness Lovable). Se o redirect levar a `/auth?redirect=...`, o teste registra como **skip com motivo** em vez de falhar — assim a suite ainda valida a maioria sem precisar de credenciais.
 
-### `CompradoresPage` (nova)
-- Tabs: **Compradores** (default) · **Teses**.
-- Renderiza `<BuyersPage />` ou `<TesesPage />` conforme `?tab=`.
+Estrutura:
 
-### Submenu Dashboards
-Sem wrapper — submenu accordion no sidebar aponta para 4 rotas novas que reusam os componentes existentes:
-- `/equity-brain/dashboards/executivo` → `DashboardExecutivoPage` (com `BoardPage` mesclado abaixo como seção "Board Executivo").
-- `/equity-brain/dashboards/mandatos` → `DashboardMandatoPage`.
-- `/equity-brain/dashboards/match` → `DashboardMatchPage`.
-- `/equity-brain/dashboards/propostas` → `DashboardNboPage`.
+```ts
+const REDIRECTS: Array<{ from: string; to: string; label: string }> = [ /* 19 entradas */ ];
 
-### Submenu Admin
-Aponta direto para rotas existentes (com renames quando necessário). Páginas Paridade/Mapeamento Advisors **já existem** em `/admin/monday-parity` e `/admin/advisors-mapping` (fora do `/equity-brain`); o submenu linka diretamente para essas rotas top-level. Health vai para `/equity-brain/admin/health` (existente).
+for (const r of REDIRECTS) {
+  test(`redirect: ${r.label}`, async ({ page }) => { ... });
+}
+```
 
-## Mudanças em arquivos
+A rota Admin (`/admin/imports`, `/admin/auditoria`, `/admin/shadow`, `/admin/jarvis`) só renderiza para `isAdmin`. O teste valida apenas o **redirect de URL** (chegou na nova rota), não o conteúdo da página, para funcionar com qualquer perfil.
 
-**Reescrito**:
-- `src/components/equity-brain/EBSidebar.tsx` — nova estrutura com 7 itens, badge dinâmico, accordions Dashboards/Admin (Admin gated por `useUserRoles().isAdmin`).
-- `src/pages/equity-brain/OportunidadesPage.tsx` — vira wrapper com tabs (extrai conteúdo atual para subcomponente interno).
+### 2. `e2e/README.md` (atualizado ou criado)
 
-**Novos**:
-- `src/pages/equity-brain/PipelinePage.tsx`
-- `src/pages/equity-brain/CompradoresPage.tsx`
+Como rodar:
 
-**Editado**:
-- `src/App.tsx` — adiciona rotas novas (`oportunidades`, `pipeline`, `compradores`, `mercado`, `dashboards/*`) dentro do bloco `<Route path="/equity-brain">`; adiciona `<Route ... element={<Navigate to=... replace />} />` para todas as rotas antigas listadas no mapa; mantém todas as rotas internas atuais (deal detail, mandate detail, CRM admin sub-rotas, ISP, exports, disclosures) intactas para não quebrar links profundos.
+```bash
+bunx playwright test e2e/redirects.spec.ts
+```
+
+Inclui a tabela de redirects e instruções para login manual no preview antes de rodar (caso queira cobrir as rotas gated).
+
+### 3. `docs/QA_REDIRECTS_CHECKLIST.md`
+
+Checklist manual com a mesma tabela em formato `- [ ] /rota/antiga → /rota/nova` agrupada por seção (Oportunidades, Pipeline, Compradores, Mercado, Dashboards, Admin), para QA passar visualmente em ~5 minutos clicando direto na barra de URL.
 
 ## Critérios de aceite
 
-- [ ] Sidebar mostra exatamente 7 itens principais + seção Admin (admin only).
-- [ ] Badge de Oportunidades reflete `useMatchInbox` (hot count).
-- [ ] Tabs em Oportunidades, Pipeline e Compradores funcionam e refletem na URL.
-- [ ] Toggle de view em Pipeline troca entre Lista/Kanban/Mapa/Grafo sem recarregar a página.
-- [ ] Botão `⚡ Preencher rápido` abre drawer com QuickFill.
-- [ ] Accordion Dashboards expande inline e linka para 4 sub-rotas novas.
-- [ ] Accordion Admin só aparece para `isAdmin === true`.
-- [ ] Acessar qualquer rota antiga listada redireciona para a nova (sem 404, preservando queryparams quando aplicável).
-- [ ] Rotas profundas não listadas no menu (ex.: `/equity-brain/empresa/:cnpj`, `/equity-brain/crm/mandate/:id`) continuam funcionando normalmente.
-- [ ] Estado ativo do menu destaca o item correto em todas as novas rotas e nas tabs/views.
-- [ ] Sidebar permanece responsivo e mantém tema dark + accent Volt.
+- [ ] `bunx playwright test e2e/redirects.spec.ts` roda sem flakes contra o preview.
+- [ ] 19 casos cobertos (15 obrigatórios + 4 admin como assert-only-de-URL).
+- [ ] Falha clara quando algum redirect quebra (mensagem indica `from` e `to` esperados).
+- [ ] Checklist em `docs/QA_REDIRECTS_CHECKLIST.md` espelha 100% da tabela.
+- [ ] Nenhuma alteração em código de produção (`src/App.tsx`, sidebar, páginas).
