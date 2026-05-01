@@ -3549,6 +3549,15 @@ export type Database = {
         }
         Returns: string
       }
+      eb_mark_whatsapp_action: {
+        Args: {
+          p_draft_text_sent?: string
+          p_log_id: string
+          p_marked_action: string
+          p_snooze_hours?: number
+        }
+        Returns: undefined
+      }
       eb_match_crosstab: {
         Args: { dim?: string }
         Returns: {
@@ -3556,6 +3565,20 @@ export type Database = {
           label: string
           mandates_count: number
         }[]
+      }
+      eb_open_whatsapp_action: {
+        Args: {
+          p_buyer_id?: string
+          p_contact_id?: string
+          p_draft_text_generated: string
+          p_draft_type: string
+          p_mandate_id?: string
+          p_match_id?: string
+          p_phone_number: string
+          p_source?: string
+          p_suggested_action_label?: string
+        }
+        Returns: string
       }
       eb_request_disclosure: {
         Args: {
