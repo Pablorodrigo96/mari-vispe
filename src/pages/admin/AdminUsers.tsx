@@ -72,6 +72,7 @@ interface FranchiseeRequest {
 }
 
 export default function AdminUsers() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [franchiseeRequests, setFranchiseeRequests] = useState<FranchiseeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +81,12 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [newRole, setNewRole] = useState<AppRole | ''>('');
+
+  const advisorIds = useMemo(
+    () => users.filter(u => u.roles.includes('advisor') || u.roles.includes('admin')).map(u => u.user_id),
+    [users],
+  );
+  const { statusMap: waStatus } = useAdvisorWhatsAppStatus(advisorIds);
 
   useEffect(() => {
     fetchUsers();
