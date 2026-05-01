@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZES = [25, 50, 100, 200];
 
-export default function OportunidadesPage() {
+export default function OportunidadesEmAndamentoPage() {
   const { isAdmin } = useUserRoles();
   const { cnaeFilter, isIsp } = useVertical();
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
