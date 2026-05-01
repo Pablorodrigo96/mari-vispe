@@ -1,79 +1,46 @@
-# Validação dos redirects de navegação (rotas antigas → novas)
+## Problema
 
-## Objetivo
+A página **Compradores** (`/equity-brain/buyers`, usada também pelo wrapper `/equity-brain/compradores`) mostra "0 cadastrados / Nenhum buyer cadastrado neste vertical", mesmo havendo **396 buyers** no banco.
 
-Garantir que toda rota antiga do cockpit Equity Brain redirecione para a nova rota correta após a reorganização do menu, sem 404 e preservando query params. Entregar dois artefatos complementares:
+**Causa raiz** (visível nos logs de rede):
 
-1. **Teste automatizado E2E** com Playwright (data-driven, roda contra o preview do sandbox).
-2. **Checklist manual** em Markdown para QA visual rápida.
-
-Nenhum código de produção é modificado — apenas arquivos novos de teste e documentação.
-
-## Mapa autoritativo de redirects (extraído do `src/App.tsx`)
-
-```text
-/equity-brain/                                    → /equity-brain/dashboards/executivo
-/equity-brain/match-inbox                         → /equity-brain/oportunidades
-/equity-brain/crm                                 → /equity-brain/pipeline
-/equity-brain/crm/minhas-empresas                 → /equity-brain/pipeline?tab=empresas
-/equity-brain/mapa                                → /equity-brain/pipeline?view=mapa
-/equity-brain/grafo                               → /equity-brain/pipeline?view=grafo
-/equity-brain/crm/quick-fill                      → /equity-brain/pipeline
-/equity-brain/buyers                              → /equity-brain/compradores
-/equity-brain/teses                               → /equity-brain/compradores?tab=teses
-/equity-brain/news                                → /equity-brain/mercado
-/equity-brain/board                               → /equity-brain/dashboards/executivo
-/equity-brain/dashboard/executivo                 → /equity-brain/dashboards/executivo
-/equity-brain/dashboard/mandato                   → /equity-brain/dashboards/mandatos
-/equity-brain/dashboard/match                     → /equity-brain/dashboards/match
-/equity-brain/dashboard/nbo                       → /equity-brain/dashboards/propostas
-/equity-brain/crm/imports                         → /equity-brain/admin/imports
-/equity-brain/crm/admin/auditoria-operacional     → /equity-brain/admin/auditoria
-/equity-brain/shadow                              → /equity-brain/admin/shadow
-/equity-brain/grafo-jarvis                        → /equity-brain/admin/jarvis
+```
+GET /rest/v1/eb_buyers?select=*,theses:buyer_theses(count),matches:matches(count)
+→ 400 PGRST200
+"Could not find a relationship between 'eb_buyers' and 'buyer_theses'"
+hint: "Perhaps you meant 'eb_buyer_theses' instead of 'buyer_theses'."
 ```
 
-## Arquivos a criar
+A query em `src/pages/equity-brain/BuyersPage.tsx:28` referencia tabelas com nomes errados:
+- `buyer_theses` → deveria ser `eb_buyer_theses`
+- `matches` → deveria ser `eb_matches`
 
-### 1. `e2e/redirects.spec.ts`
+Como a query falha, o `useQuery` retorna erro e a UI cai no fallback "Nenhum buyer".
 
-Suite Playwright única, usando `test.describe.parallel` + `for...of` sobre uma tabela de pares `{ from, to }`. Cada caso:
+## Correção
 
-- Faz `page.goto(from)`.
-- Espera `page.waitForURL` casando `to` (com query params normalizados via `URL`).
-- Verifica que `response.status()` ≠ 404 e que o conteúdo renderizou (sem fallback de NotFound) checando que o `EBSidebar` está visível (`getByText('Equity Brain')`).
-- Para rotas que dependem de auth, o teste assume que o usuário já está logado no preview (mesma convenção do harness Lovable). Se o redirect levar a `/auth?redirect=...`, o teste registra como **skip com motivo** em vez de falhar — assim a suite ainda valida a maioria sem precisar de credenciais.
+**Arquivo único:** `src/pages/equity-brain/BuyersPage.tsx` (linha 28)
 
-Estrutura:
-
+Trocar:
 ```ts
-const REDIRECTS: Array<{ from: string; to: string; label: string }> = [ /* 19 entradas */ ];
-
-for (const r of REDIRECTS) {
-  test(`redirect: ${r.label}`, async ({ page }) => { ... });
-}
+.select(`*, theses:buyer_theses(count), matches:matches(count)`)
+```
+por:
+```ts
+.select(`*, theses:eb_buyer_theses(count), matches:eb_matches(count)`)
 ```
 
-A rota Admin (`/admin/imports`, `/admin/auditoria`, `/admin/shadow`, `/admin/jarvis`) só renderiza para `isAdmin`. O teste valida apenas o **redirect de URL** (chegou na nova rota), não o conteúdo da página, para funcionar com qualquer perfil.
-
-### 2. `e2e/README.md` (atualizado ou criado)
-
-Como rodar:
-
-```bash
-bunx playwright test e2e/redirects.spec.ts
+Caso o relacionamento embutido em `eb_matches` não exista no schema cache (alguns ambientes não têm FK explícita), uso fallback equivalente:
+```ts
+.select(`*, theses:eb_buyer_theses(count)`)
 ```
+e contagem de matches via segunda query agregada por `buyer_id`. Verifico via `supabase--read_query` qual abordagem funciona antes de commitar.
 
-Inclui a tabela de redirects e instruções para login manual no preview antes de rodar (caso queira cobrir as rotas gated).
+## Validação
 
-### 3. `docs/QA_REDIRECTS_CHECKLIST.md`
+1. Recarregar `/equity-brain/buyers` → lista deve renderizar os 396 buyers.
+2. Verificar que `/equity-brain/compradores` (wrapper novo) também funciona, já que reutiliza a mesma página.
+3. Confirmar que filtros por vertical e busca continuam ok.
+4. Console limpo (sem PGRST200).
 
-Checklist manual com a mesma tabela em formato `- [ ] /rota/antiga → /rota/nova` agrupada por seção (Oportunidades, Pipeline, Compradores, Mercado, Dashboards, Admin), para QA passar visualmente em ~5 minutos clicando direto na barra de URL.
-
-## Critérios de aceite
-
-- [ ] `bunx playwright test e2e/redirects.spec.ts` roda sem flakes contra o preview.
-- [ ] 19 casos cobertos (15 obrigatórios + 4 admin como assert-only-de-URL).
-- [ ] Falha clara quando algum redirect quebra (mensagem indica `from` e `to` esperados).
-- [ ] Checklist em `docs/QA_REDIRECTS_CHECKLIST.md` espelha 100% da tabela.
-- [ ] Nenhuma alteração em código de produção (`src/App.tsx`, sidebar, páginas).
+Sem mudança de schema, sem migration, sem mexer em RLS — é só corrigir o nome das tabelas no `select` embutido.
