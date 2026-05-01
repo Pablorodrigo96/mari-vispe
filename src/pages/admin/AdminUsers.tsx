@@ -464,6 +464,57 @@ export default function AdminUsers() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          {(() => {
+                            const isAdvisor = user.roles.includes('advisor');
+                            if (!isAdvisor) {
+                              return <span className="text-xs text-muted-foreground">—</span>;
+                            }
+                            const wa = waStatus[user.user_id];
+                            const status = wa?.status ?? 'configure';
+                            const handleClick = () =>
+                              navigate(`/admin/advisors/${user.user_id}/whatsapp-setup`);
+                            if (status === 'active') {
+                              return (
+                                <button
+                                  onClick={handleClick}
+                                  className="flex items-center gap-1.5 text-xs"
+                                  title={wa?.phone_number ?? ''}
+                                >
+                                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                  <span className="text-emerald-400">Ativo</span>
+                                  {wa?.is_mock && (
+                                    <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                                      MOCK
+                                    </Badge>
+                                  )}
+                                </button>
+                              );
+                            }
+                            if (status === 'pending') {
+                              return (
+                                <button
+                                  onClick={handleClick}
+                                  className="flex items-center gap-1.5 text-xs text-amber-400"
+                                >
+                                  <Clock className="h-3 w-3" />
+                                  Aguardando SMS
+                                </button>
+                              );
+                            }
+                            return (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 bg-transparent text-xs"
+                                onClick={handleClick}
+                              >
+                                <MessageSquare className="h-3 w-3 mr-1" />
+                                Configurar
+                              </Button>
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell>
                           {new Date(user.created_at).toLocaleDateString('pt-BR')}
                         </TableCell>
                         <TableCell className="text-right">
