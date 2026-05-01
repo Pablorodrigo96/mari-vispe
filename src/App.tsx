@@ -100,6 +100,7 @@ import DashboardExecutivoPage from "./pages/dashboards/DashboardExecutivoPage";
 import DashboardMandatoPage from "./pages/dashboards/DashboardMandatoPage";
 import DashboardMatchPage from "./pages/dashboards/DashboardMatchPage";
 import DashboardNboPage from "./pages/dashboards/DashboardNboPage";
+import QuickFillPage from "./pages/equity-brain/QuickFillPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
