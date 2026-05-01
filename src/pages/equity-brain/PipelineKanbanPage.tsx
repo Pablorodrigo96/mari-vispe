@@ -85,6 +85,25 @@ export default function PipelineKanbanPage() {
   });
 
   const move = useMutation({
+  const [kindFilter, setKindFilter] = useState<string>("real"); // real | all | marketplace | sem_mandato
+
+  const { data: stages = [] } = usePipelineStages();
+
+  const { data: mandates, isLoading } = useQuery({
+    queryKey: ["pipeline-kanban-v2"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("eb_mandates_enriched" as any)
+        .select("id,company_cnpj,display_name,codename,razao_social,deal_type,deal_kind,deal_origin,deal_confidence,needs_enrichment,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura,comprador_cnpj,comprador_nome,drive_url,contract_url")
+        .neq("outcome", "cancelado")
+        .order("stage_changed_at", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return (data ?? []) as unknown as Mandate[];
+    },
+  });
+
+  const move = useMutation({
     mutationFn: async ({ id, stage }: { id: string; stage: string }) => {
       const { error } = await supabase
         .from("eb_mandates" as any)
@@ -93,21 +112,11 @@ export default function PipelineKanbanPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["pipeline-kanban"] });
+      qc.invalidateQueries({ queryKey: ["pipeline-kanban-v2"] });
       toast.success("Estágio atualizado");
     },
     onError: (e: any) => toast.error(e?.message ?? "Falha ao mover"),
   });
-
-  const reanimate = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("eb_mandates" as any)
-        .update({ stage_changed_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pipeline-kanban"] });
       toast.success("SLA reiniciado");
     },
