@@ -2260,6 +2260,16 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_crm_audit_v2: {
+        Row: {
+          check_key: string | null
+          label: string | null
+          sample_ids: string[] | null
+          severity: string | null
+          total: number | null
+        }
+        Relationships: []
+      }
       eb_crm_kpis: {
         Row: {
           comissao_realizada: number | null
