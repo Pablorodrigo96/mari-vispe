@@ -1,164 +1,160 @@
-# Sistema de Notícias Corporativas — Equity Brain News
+Fiz uma auditoria inicial do CRM/Pipeline e encontrei problemas reais de modelo, dados e UI que explicam por que “suas empresas” e negociações não aparecem como deveriam.
 
-Pipeline automático que monitora notícias sobre empresas-alvo, extrai eventos de M&A com IA, alimenta `canonical_transactions` e gera alertas no CRM.
+Diagnóstico objetivo:
 
-## Decisões confirmadas
+1. O banco tem dados, mas o pipeline não está refletindo a realidade operacional.
+   - `equity_brain.companies`: 282 empresas.
+   - `equity_brain.mandates`: 317 mandatos/deals.
+   - `equity_brain.buyers`: 503 buyers.
+   - `equity_brain.matches`: 67.381 matches.
+   - Porém todos os 317 mandatos estão em `pipeline_stage = match`. Ou seja: o Kanban inteiro fica preso na primeira coluna, mesmo havendo negociações em andamento.
 
-- **Escopo de monitoramento (4 fontes):** Mandatos ativos do CRM, Top 500 do `ma_score`, listings ativos do marketplace, buyers ativos do CRM.
-- **Ação em deal fechado detectado:** notificação para advisor responsável (sem auto-fechar mandato).
-- **Profundidade IA:** **híbrido** — extração estruturada completa (EV, múltiplo, partes, advisors) só quando o evento for `ma_closed`, `ma_announced`, `funding_round` ou `ipo`. Demais notícias ficam como sinal informativo.
-- **APIs:** Perplexity (linkado ✅) para search + extração. Firecrawl recusado — fica para v2 se precisarmos de scraping profundo de site institucional.
+2. Há 230 mandatos sem `outcome` e sem responsável.
+   - 230 mandatos têm `outcome = null`.
+   - 230 mandatos têm `responsavel_id = null`.
+   - 210 mandatos não têm valor relevante (`valor_pedido` nem `valor_operacao`).
+   - 87 mandatos não têm contato inline.
 
-## Arquitetura
+3. O backfill do marketplace contaminou o modelo de deal.
+   - Existem 86 listings ativas no marketplace.
+   - Essas listings foram convertidas automaticamente em “mandatos” com `source = backfill_marketplace`.
+   - Esses 86 registros ficaram com `outcome = vigente`, que é semanticamente errado: `vigente` é status de mandato, não resultado do deal.
+   - Além disso, só 1 listing tem CNPJ real; a maioria nasce de dados incompletos do marketplace.
+
+4. O CRM mistura quatro universos que precisam ser separados, mas conectados:
+   - Empresas qualificadas com mandato/deal real.
+   - Vendedores/listings ativos do marketplace.
+   - Buyers ativos do CRM/marketplace.
+   - Empresas frias/importadas/inteligência de mercado.
+   Hoje a UI chama quase tudo de “mandato” e isso gera a sensação correta de que o CRM não está 100%.
+
+5. Há problema de visibilidade e navegação.
+   - Não existe uma visão clara “Minhas empresas / carteira / pipeline real”.
+   - O CRM mostra “Mandatos M&A” com CNPJ como nome principal em muitos casos, não a razão social/codename.
+   - O Kanban filtra por `outcome != cancelado`, mas não diferencia mandato real, listing, origem manual, import, vendedor sem mandato, etc.
+   - A rota global de notícias foi criada mas ainda não está registrada/navegável.
+
+6. O import melhorou, mas ainda tem lacunas.
+   - Import de mandates exige CNPJ válido; isso é ruim para vendedor com mandato/negociação sem CNPJ disponível.
+   - Import de activities tenta inserir coluna `note`, mas a tabela real usa `body`; isso pode quebrar import de histórico.
+   - Import de contacts aceita `company`, mas a enum atual de `contacts.entity_type` parece ser só `mandate|buyer`; isso precisa ser harmonizado ou bloqueado com mensagem clara.
+
+Plano para deixar o CRM 100% em fases:
+
+Fase 0 — Correção emergencial de dados e semântica
+- Normalizar mandatos existentes:
+  - `outcome null` -> `em_andamento` para deals vivos.
+  - `outcome = vigente` -> `em_andamento` nos registros vindos do marketplace.
+  - Definir `stage_changed_at` para registros antigos sem data coerente.
+- Separar visualmente `source = backfill_marketplace` de mandato real.
+- Corrigir a view/KPI para “Em andamento” considerar pipeline/outcome corretamente, não só `status = em_negociacao`.
+- Corrigir import de activities para gravar em `body`, não `note`.
+- Verificar e corrigir edge function `eb-import`, incluindo deploy/teste.
+
+Fase 1 — Modelo canônico de CRM: Empresas, Deals, Sellers e Buyers
+- Criar uma camada de classificação operacional sem apagar dados:
+  - `deal_origin`: manual/import/marketplace/match_inbox/cold.
+  - `deal_kind`: mandato_assinado, vendedor_sem_mandato, buyer_mandate, marketplace_listing, prospecção.
+  - `deal_confidence`: real, incompleto, precisa_enriquecer.
+- Permitir empresa/deal sem CNPJ real usando placeholder controlado e flag `needs_cnpj_enrichment`, igual já existe em empresas importadas.
+- Garantir que vendedor com mandato e vendedor sem mandato possam aparecer no CRM, mas com status diferente.
+- Revisar `eb_mandates_enriched` para trazer nome/codename/razão social corretamente e não depender só de CNPJ.
+
+Fase 2 — Pipeline operacional verdadeiro
+- Regras de estágio automáticas para dados existentes:
+  - Listing marketplace ativa sem contato avançado -> “Originação/Match” ou fila “Marketplace”.
+  - Mandato assinado/com contrato/data_assinatura -> “NBO” ou etapa configurável.
+  - Deal com comprador vinculado -> “NBO” ou “Due Diligence” dependendo dos campos.
+  - `vendemos/concluido` -> `closed`.
+  - `cancelado/vencido/vendeu_sozinho` -> etapa terminal ou fora do Kanban ativo.
+- Adicionar filtros no Kanban:
+  - Todos.
+  - Mandatos reais.
+  - Vendedores sem mandato.
+  - Marketplace.
+  - Meus deals.
+  - Sem responsável.
+  - Precisa enriquecer.
+- Corrigir o Kanban para exibir razão social/codename, comprador, origem, responsável, status e contato com clareza.
+
+Fase 3 — Tela “Minhas Empresas / Carteira” e auditoria operacional
+- Criar uma página de auditoria do CRM com cards:
+  - Empresas sem responsável.
+  - Deals sem contato.
+  - Deals sem valor.
+  - Deals sem CNPJ real.
+  - Buyers stubs criados por import.
+  - Mandatos presos em Match há muitos dias.
+  - Registros de marketplace que precisam virar ou não virar mandato real.
+- Criar ações rápidas:
+  - Atribuir responsável.
+  - Mover etapa.
+  - Enriquecer CNPJ.
+  - Converter listing em mandato real.
+  - Marcar como vendedor sem mandato.
+  - Arquivar/cancelar.
+
+Fase 4 — Importação robusta para seu cenário real
+- Ajustar templates e parser para aceitar planilhas reais da operação:
+  - Empresas com ou sem CNPJ.
+  - Vendedores com mandato.
+  - Vendedores sem mandato.
+  - Buyers.
+  - Negociações em andamento.
+  - Contatos e atividades.
+- Adicionar pré-validação com resumo antes de gravar:
+  - Quantas empresas/deals/buyers serão criados.
+  - Quantos serão atualizados.
+  - Quantos sem CNPJ.
+  - Quantos sem responsável.
+  - Quantos vão para cada etapa.
+- Adicionar deduplicação por CNPJ, nome normalizado, telefone/email e external_ref.
+- Adicionar relatório pós-import com erros exportáveis.
+
+Fase 5 — Automação de consistência e recalculadora do CRM
+- Criar uma função administrativa “rebuild-crm-state” para:
+  - Reclassificar deals.
+  - Criar contatos primários a partir de campos inline quando faltarem.
+  - Recalcular KPIs.
+  - Recalcular matches por lote.
+  - Recalcular temperatura/probabilidade.
+  - Registrar tudo em logs auditáveis.
+- Criar cron leve para verificar inconsistências diariamente, sem sobrescrever edição humana.
+
+Fase 6 — UI final 100%
+- Reorganizar CRM em abas claras:
+  - Pipeline.
+  - Empresas/Carteira.
+  - Mandatos reais.
+  - Vendedores sem mandato.
+  - Buyers.
+  - Marketplace.
+  - Pendências de dados.
+  - Atividades.
+- Atualizar sidebar para incluir Notícias e Auditoria CRM.
+- Integrar o `MarketPulseWidget` no dashboard executivo.
+- Registrar `/equity-brain/news` no roteamento.
+
+Ordem de implementação sugerida:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  CRON (pg_cron)                                              │
-│  ├─ daily 03h BRT  → ingest-company-news (escopo completo)   │
-│  └─ hourly         → ingest-company-news (mandatos ativos)   │
-└─────────────┬───────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  ingest-company-news (edge function)                         │
-│  1. Monta lista de empresas-alvo (4 escopos)                 │
-│  2. Para cada empresa: Perplexity sonar com filtros          │
-│     (search_recency_filter='week', search_domain_filter)    │
-│  3. Dedupe por hash(url + cnpj)                              │
-│  4. Insere em equity_brain.company_news (status='ingested')  │
-│  5. Enfileira eventos pending para extract-news-event        │
-└─────────────┬───────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  extract-news-event (edge function — chamada em batch)       │
-│  1. Classifica tipo via Lovable AI (gemini-2.5-flash-lite)   │
-│     enum: ma_closed, ma_announced, funding_round, ipo,       │
-│     leadership_change, expansion, regulatory, generic        │
-│  2. Se for evento M&A/funding/ipo:                           │
-│     → Perplexity sonar-pro + structured output JSON schema   │
-│       (ev_brl, multiplo_ebitda, comprador, vendedor,         │
-│        advisors_financeiros[], advisors_legais[], data)     │
-│  3. Atualiza company_news com evento + dados estruturados    │
-│  4. Para ma_closed: cria registro em canonical_transactions  │
-│  5. Dispara news-to-crm-alert se empresa tem mandato ativo   │
-└─────────────┬───────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  news-to-crm-alert                                            │
-│  - Busca advisor responsável pelo mandato/setor              │
-│  - Insere em equity_brain.crm_activities (type='news_alert') │
-│  - Insere em public.notifications                            │
-│  - Atualiza company_signals (signal_key='news_ma_signal')    │
-└─────────────────────────────────────────────────────────────┘
+Fase 0: corrigir inconsistências críticas e import quebrado
+Fase 1: criar classificação operacional estável
+Fase 2: reconstruir pipeline/Kanban com filtros reais
+Fase 3: criar Auditoria CRM e ações rápidas
+Fase 4: fortalecer import para dados reais da operação
+Fase 5: rebuild/recalculation backend
+Fase 6: polimento UI e navegação final
 ```
 
-## Schema (migration)
+Critério de “100% funcionando”:
+- Toda empresa/deal/buyer aparece em pelo menos uma visão correta.
+- Nenhuma negociação real fica escondida por falta de CNPJ, responsável ou etapa.
+- Marketplace não é confundido com mandato assinado.
+- Pipeline reflete negociação real, não apenas import bruto.
+- Existe fila explícita de pendências para dados incompletos.
+- Import não falha silenciosamente.
+- KPIs batem com o pipeline.
+- Advisor/admin consegue operar tudo sem SQL/manual backend.
 
-```sql
--- enum dos tipos de evento
-CREATE TYPE equity_brain.news_event_type AS ENUM (
-  'ma_closed','ma_announced','funding_round','ipo',
-  'leadership_change','expansion','regulatory','generic'
-);
-
-CREATE TABLE equity_brain.company_news (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  cnpj varchar(14),                 -- nullable: pode ser buyer/grupo sem CNPJ
-  company_id uuid REFERENCES equity_brain.companies(cnpj), -- ajustado p/ FK real
-  buyer_id uuid REFERENCES equity_brain.buyers(id),
-  listing_id uuid,
-  source_url text NOT NULL,
-  source_domain text,
-  title text NOT NULL,
-  summary text,
-  published_at timestamptz,
-  ingested_at timestamptz DEFAULT now(),
-  event_type equity_brain.news_event_type DEFAULT 'generic',
-  event_data jsonb DEFAULT '{}'::jsonb, -- {ev_brl, multiplo, comprador, vendedor, advisors[]}
-  raw_perplexity jsonb,
-  status text DEFAULT 'ingested',  -- ingested | extracted | failed | duplicate
-  dedupe_hash text UNIQUE,         -- sha1(source_url + (cnpj||buyer_id))
-  alert_sent boolean DEFAULT false,
-  created_at timestamptz DEFAULT now()
-);
-
-CREATE INDEX idx_company_news_cnpj ON equity_brain.company_news(cnpj) WHERE cnpj IS NOT NULL;
-CREATE INDEX idx_company_news_buyer ON equity_brain.company_news(buyer_id) WHERE buyer_id IS NOT NULL;
-CREATE INDEX idx_company_news_event ON equity_brain.company_news(event_type, published_at DESC);
-CREATE INDEX idx_company_news_status ON equity_brain.company_news(status) WHERE status = 'ingested';
-
-ALTER TABLE equity_brain.company_news ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admins/advisors view all news"
-  ON equity_brain.company_news FOR SELECT TO authenticated
-  USING (has_role(auth.uid(),'admin') OR has_role(auth.uid(),'advisor'));
-
-CREATE POLICY "Service role manages news"
-  ON equity_brain.company_news FOR ALL TO service_role
-  USING (true) WITH CHECK (true);
-
--- novos signals em signal_catalog
-INSERT INTO equity_brain.signal_catalog VALUES
-  ('news_ma_signal','market',  'Empresa ou setor com M&A recente nos últimos 90 dias', 0.15, ARRAY['ma_score','vispe_score']),
-  ('news_funding',  'market',  'Empresa captou rodada de equity ou dívida nos últimos 180 dias', 0.10, ARRAY['ma_score']),
-  ('news_leadership','signal', 'Mudança de liderança/sucessão noticiada nos últimos 180 dias', 0.20, ARRAY['sucessao_score']);
-```
-
-## Edge functions
-
-| função | gatilho | descrição |
-|---|---|---|
-| `ingest-company-news` | cron + manual | Monta target list (4 escopos), chama Perplexity `sonar` com filtros temporais e de domínio (valor.globo.com, neofeed.com.br, brazilfunds.com, infomoney, exame, …). Insere em `company_news` com `status='ingested'`. |
-| `extract-news-event` | trigger interno + cron 5min | Pega lote de `status='ingested'`, classifica com Gemini Flash Lite, e para eventos M&A roda Perplexity `sonar-pro` com `response_format: json_schema` para extrair EV, múltiplo, partes. Atualiza para `status='extracted'`. Cria `canonical_transactions` quando há valor confirmado. |
-| `crawl-ma-sources` | cron diário 04h BRT | Varre os 8 portais brasileiros de M&A (sem precisar conhecer CNPJ específico) buscando deals do dia. Cruza com `companies` por razão social. Cobre M&As de empresas que ainda não estão no nosso radar. |
-| `news-to-crm-alert` | chamada por extract-news-event | Para cada notícia M&A relacionada a empresa com mandato/buyer ativo: cria `crm_activity` tipo `news_alert`, `notification` para advisor, atualiza `company_signals`. |
-
-Todas seguem padrão Edge Functions já estabelecido (CORS, auth admin/service_role, log em `engine_runs`).
-
-## Cron jobs (adicionados em `setup-equity-brain-crons`)
-
-```text
-news-ingest-hourly-mandates     0 * * * *      ingest-company-news  {scope:'mandates'}
-news-ingest-daily-full          0 6 * * *      ingest-company-news  {scope:'all'}
-news-extract-batch-5min         */5 * * * *    extract-news-event   {limit:50}
-news-crawl-sources-daily        0 7 * * *      crawl-ma-sources     {}
-```
-
-## UI
-
-1. **Aba "Notícias" em `MandateDetailPage`** (`/equity-brain/crm/mandate/:id`): timeline de notícias da empresa-alvo, com badge colorido por `event_type`, link para a fonte original e card destacado quando há M&A com EV/múltiplo extraído.
-2. **Aba "Notícias" em `BuyerDetailPage`**: notícias do buyer (movimentos, novas teses, aquisições paralelas).
-3. **Widget "Pulso de Mercado" no Dashboard Executivo** (`/equity-brain/dashboard`): últimas 10 notícias M&A do setor de qualquer mandato ativo + contador de deals do mês por setor.
-4. **Página global `/equity-brain/news`**: feed completo filtrável por setor, UF, tipo, período. Acesso admin/advisor.
-
-## Mari Brain integration
-
-- KB doc `04-noticias-mercado.md` em `supabase/functions/mari-brain/kb/` explicando como o sistema funciona, quais portais são monitorados, o que cada `event_type` significa e exemplos de queries que a Mari pode responder ("quais M&As o concorrente X fechou em 2026?", "qual o múltiplo mediano dos deals de logística no último trimestre?").
-- Mari Brain ganha contexto vivo: ao abrir um mandato, as 5 últimas notícias da empresa entram automaticamente no system prompt.
-
-## Custos esperados (mensais)
-
-| item | qtd | valor |
-|---|---|---|
-| Perplexity sonar (search) | ~3.500 chamadas/mês | ~US$ 35 |
-| Perplexity sonar-pro (extração M&A) | ~400 chamadas/mês | ~US$ 25 |
-| Lovable AI Gemini Flash Lite (classificação) | ~5.000 chamadas/mês | ~US$ 8 |
-| **Total** | | **~US$ 68/mês** |
-
-## Entregáveis (ordem de implementação)
-
-1. Migration: schema + enum + RLS + 3 novos signals.
-2. `ingest-company-news` + deploy.
-3. `extract-news-event` + deploy.
-4. `crawl-ma-sources` + deploy.
-5. `news-to-crm-alert` + deploy.
-6. Atualização de `setup-equity-brain-crons` com 4 novos jobs.
-7. UI: tab Notícias em MandateDetailPage + BuyerDetailPage, página `/equity-brain/news`, widget no Dashboard Executivo.
-8. KB doc `04-noticias-mercado.md` para Mari Brain + injeção de contexto vivo.
-9. Doc técnico `docs/EQUITY_BRAIN_NEWS.md`.
-
-Tempo estimado: ~3-4 horas de implementação contínua.
-
-Pronto para implementar — confirme aprovando o plano.
+Se aprovado, começo pela Fase 0 e Fase 1, porque elas destravam imediatamente o CRM e evitam que as próximas telas sejam construídas sobre dado inconsistente.
