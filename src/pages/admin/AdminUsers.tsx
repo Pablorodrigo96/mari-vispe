@@ -424,6 +424,7 @@ export default function AdminUsers() {
                     <TableRow>
                       <TableHead>Usuário</TableHead>
                       <TableHead>Roles</TableHead>
+                      <TableHead>WhatsApp</TableHead>
                       <TableHead>Cadastro</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
