@@ -52,10 +52,7 @@ export function EBSidebar() {
   const isAdmin = roles.includes("admin");
 
   const dashboardsActive = location.pathname.startsWith("/equity-brain/dashboards");
-  const adminActive =
-    location.pathname.startsWith("/equity-brain/admin") ||
-    location.pathname.startsWith("/admin/monday-parity") ||
-    location.pathname.startsWith("/admin/advisors-mapping");
+  const adminActive = location.pathname.startsWith("/equity-brain/admin");
 
   const [dashOpen, setDashOpen] = useState(dashboardsActive);
   const [adminOpen, setAdminOpen] = useState(adminActive);
