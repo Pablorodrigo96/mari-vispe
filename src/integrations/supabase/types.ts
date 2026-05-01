@@ -492,6 +492,27 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_insight_cache: {
+        Row: {
+          body: string
+          dashboard_type: string
+          generated_at: string
+          snapshot_hash: string
+        }
+        Insert: {
+          body: string
+          dashboard_type: string
+          generated_at?: string
+          snapshot_hash: string
+        }
+        Update: {
+          body?: string
+          dashboard_type?: string
+          generated_at?: string
+          snapshot_hash?: string
+        }
+        Relationships: []
+      }
       eb_pipeline_stages: {
         Row: {
           archived_at: string | null
@@ -4006,6 +4027,7 @@ export type Database = {
             }
             Returns: Json
           }
+      refresh_dashboard_views: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "seller" | "buyer" | "advisor" | "admin" | "franchisee"
