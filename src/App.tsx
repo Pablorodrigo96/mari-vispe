@@ -76,6 +76,7 @@ import BuyerDetailPage from "./pages/equity-brain/BuyerDetailPage";
 import AccessAuditPage from "./pages/equity-brain/AccessAuditPage";
 import CrmAuditPage from "./pages/equity-brain/CrmAuditPage";
 import MyCompaniesPage from "./pages/equity-brain/MyCompaniesPage";
+import CrmAssignmentsPage from "./pages/equity-brain/CrmAssignmentsPage";
 import NewsPage from "./pages/equity-brain/NewsPage";
 import ExecutiveDashboardPage from "./pages/equity-brain/ExecutiveDashboardPage";
 import MatchAnalyticsPage from "./pages/equity-brain/MatchAnalyticsPage";
@@ -214,6 +215,7 @@ const App = () => (
               <Route path="crm/matching"         element={<MatchAnalyticsPage />} />
               <Route path="crm/admin/auditoria-operacional" element={<RequireRole roles={["admin"]}><CrmAuditPage /></RequireRole>} />
               <Route path="crm/minhas-empresas"  element={<MyCompaniesPage />} />
+              <Route path="crm/admin/atribuicoes" element={<RequireRole roles={["admin"]}><CrmAssignmentsPage /></RequireRole>} />
               <Route path="news"                 element={<NewsPage />} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
               <Route path="crm/pipeline/historico" element={<PipelineHistoryPage />} />

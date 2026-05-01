@@ -2946,6 +2946,47 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_my_companies_v2: {
+        Row: {
+          cnpj: string | null
+          co_advisor_ids: string[] | null
+          codename: string | null
+          company_name: string | null
+          created_at: string | null
+          created_by: string | null
+          deal_confidence: string | null
+          deal_kind: string | null
+          deal_origin: string | null
+          mandate_id: string | null
+          my_role: string | null
+          needs_enrichment: boolean | null
+          origin_advisor_id: string | null
+          outcome:
+            | "em_andamento"
+            | "concluido"
+            | "cancelado"
+            | "vencido"
+            | "vendeu_sozinho"
+            | "vigente"
+            | "vendemos"
+            | "em_negociacao"
+            | null
+          pipeline_stage:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
+          responsavel_id: string | null
+          stage_changed_at: string | null
+          updated_at: string | null
+          valor_operacao: number | null
+          valor_pedido: number | null
+        }
+        Relationships: []
+      }
       eb_opportunities_ready: {
         Row: {
           ai_pitch: string | null
@@ -3041,6 +3082,42 @@ export type Database = {
           default_weight?: number | null
           description?: string | null
           signal_key?: string | null
+        }
+        Relationships: []
+      }
+      eb_unassigned_mandates: {
+        Row: {
+          cnpj: string | null
+          codename: string | null
+          company_name: string | null
+          created_at: string | null
+          deal_confidence: string | null
+          deal_kind: string | null
+          deal_origin: string | null
+          mandate_id: string | null
+          outcome:
+            | "em_andamento"
+            | "concluido"
+            | "cancelado"
+            | "vencido"
+            | "vendeu_sozinho"
+            | "vigente"
+            | "vendemos"
+            | "em_negociacao"
+            | null
+          pipeline_stage:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
+          setor: string | null
+          stage_changed_at: string | null
+          uf: string | null
+          valor_operacao: number | null
+          valor_pedido: number | null
         }
         Relationships: []
       }
