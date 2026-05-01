@@ -28,7 +28,15 @@ import { cn } from "@/lib/utils";
 type Row = {
   id: string;
   company_cnpj: string;
+  display_name: string | null;
+  razao_social: string | null;
+  nome_fantasia: string | null;
+  codename: string | null;
   deal_type: string;
+  deal_kind: string | null;
+  deal_origin: string | null;
+  deal_confidence: string | null;
+  needs_enrichment: boolean | null;
   pipeline_stage: string;
   outcome: string;
   valor_operacao: number | null;
@@ -51,6 +59,22 @@ type Row = {
   contract_url: string | null;
 };
 
+const DEAL_KIND_LABEL: Record<string, string> = {
+  mandato_assinado: "Mandato",
+  vendedor_sem_mandato: "Vendedor",
+  buyer_mandate: "Buyside",
+  marketplace_listing: "Marketplace",
+  prospeccao: "Prospecção",
+};
+
+const DEAL_KIND_COLOR: Record<string, string> = {
+  mandato_assinado: "bg-emerald-500/15 text-emerald-300 border-emerald-700/40",
+  vendedor_sem_mandato: "bg-amber-500/15 text-amber-300 border-amber-700/40",
+  buyer_mandate: "bg-blue-500/15 text-blue-300 border-blue-700/40",
+  marketplace_listing: "bg-cyan-500/15 text-cyan-300 border-cyan-700/40",
+  prospeccao: "bg-zinc-500/15 text-zinc-300 border-zinc-700/40",
+};
+
 const STAGE_ACCENT: Record<string, string> = {
   match: "bg-blue-500/10 border-l-blue-500",
   nbo: "bg-cyan-500/10 border-l-cyan-500",
@@ -60,23 +84,26 @@ const STAGE_ACCENT: Record<string, string> = {
   closed: "bg-emerald-500/10 border-l-emerald-500",
 };
 
+type KindFilter = "all" | "mandato_assinado" | "vendedor_sem_mandato" | "buyer_mandate" | "marketplace_listing" | "prospeccao" | "no_owner" | "needs_enrichment";
+
 export function MandatesMondayTable() {
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Row | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["mandates-monday"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("eb_mandates" as any)
+        .from("eb_mandates_enriched" as any)
         .select(
-          "id,company_cnpj,deal_type,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura,comprador_cnpj,comprador_nome,drive_url,contract_url",
+          "id,company_cnpj,display_name,razao_social,nome_fantasia,codename,deal_type,deal_kind,deal_origin,deal_confidence,needs_enrichment,pipeline_stage,outcome,valor_operacao,faturamento_vispe,commission_pct,uf,regiao,setor_ma,contato_nome,contato_telefone,responsavel_id,temperature,stage_changed_at,data_inicio,data_fechamento,data_assinatura,comprador_cnpj,comprador_nome,drive_url,contract_url",
         )
         .order("stage_changed_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      return (data ?? []) as unknown as Row[];
+      return ((data ?? []) as any[]).map((r) => ({ ...r, setor: r.setor_ma })) as unknown as Row[];
     },
   });
 
@@ -93,15 +120,20 @@ export function MandatesMondayTable() {
   );
 
   const filtered = useMemo(() => {
-    if (!q) return rows;
-    const t = q.toLowerCase();
-    return rows.filter(
-      (r) =>
+    let out = rows;
+    if (kindFilter === "no_owner") out = out.filter((r) => !r.responsavel_id);
+    else if (kindFilter === "needs_enrichment") out = out.filter((r) => r.needs_enrichment);
+    else if (kindFilter !== "all") out = out.filter((r) => r.deal_kind === kindFilter);
+    if (q) {
+      const t = q.toLowerCase();
+      out = out.filter((r) =>
+        (r.display_name ?? "").toLowerCase().includes(t) ||
         (r.company_cnpj ?? "").includes(t.replace(/\D/g, "")) ||
         (r.comprador_nome ?? "").toLowerCase().includes(t) ||
-        (r.contato_nome ?? "").toLowerCase().includes(t),
-    );
-  }, [rows, q]);
+        (r.contato_nome ?? "").toLowerCase().includes(t));
+    }
+    return out;
+  }, [rows, q, kindFilter]);
 
   const grouped = useMemo(() => {
     const g: Record<string, Row[]> = {};
@@ -113,11 +145,33 @@ export function MandatesMondayTable() {
     return g;
   }, [filtered]);
 
+  const counts = useMemo(() => ({
+    all: rows.length,
+    mandato_assinado: rows.filter((r) => r.deal_kind === "mandato_assinado").length,
+    vendedor_sem_mandato: rows.filter((r) => r.deal_kind === "vendedor_sem_mandato").length,
+    buyer_mandate: rows.filter((r) => r.deal_kind === "buyer_mandate").length,
+    marketplace_listing: rows.filter((r) => r.deal_kind === "marketplace_listing").length,
+    prospeccao: rows.filter((r) => r.deal_kind === "prospeccao").length,
+    no_owner: rows.filter((r) => !r.responsavel_id).length,
+    needs_enrichment: rows.filter((r) => r.needs_enrichment).length,
+  }), [rows]);
+
+  const FILTERS: { key: KindFilter; label: string }[] = [
+    { key: "all", label: "Todos" },
+    { key: "mandato_assinado", label: "Mandatos" },
+    { key: "vendedor_sem_mandato", label: "Sem mandato" },
+    { key: "buyer_mandate", label: "Buyside" },
+    { key: "marketplace_listing", label: "Marketplace" },
+    { key: "prospeccao", label: "Prospecção" },
+    { key: "no_owner", label: "Sem dono" },
+    { key: "needs_enrichment", label: "Precisa enriquecer" },
+  ];
+
   return (
     <div className="bg-zinc-900/40 border border-zinc-800 rounded-lg overflow-hidden">
       <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2 flex-wrap">
         <h3 className="text-sm font-bold text-zinc-100 flex-1">
-          Mandatos M&amp;A{" "}
+          Pipeline operacional{" "}
           <span className="text-zinc-500 font-normal">({filtered.length})</span>
         </h3>
         <div className="relative w-64">
@@ -125,10 +179,26 @@ export function MandatesMondayTable() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar vendedor, comprador, contato…"
+            placeholder="Buscar nome, CNPJ, comprador, contato…"
             className="pl-7 h-8 text-xs bg-zinc-950 border-zinc-800 text-zinc-100"
           />
         </div>
+      </div>
+      <div className="px-4 py-2 border-b border-zinc-800 flex items-center gap-1 flex-wrap bg-zinc-950/40">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setKindFilter(f.key)}
+            className={cn(
+              "text-[10px] px-2 py-1 rounded border whitespace-nowrap",
+              kindFilter === f.key
+                ? "border-[#D9F564]/50 bg-[#D9F564]/10 text-[#D9F564]"
+                : "border-zinc-800 bg-transparent text-zinc-400 hover:text-zinc-200",
+            )}
+          >
+            {f.label} <span className="ml-1 text-zinc-500 tabular-nums">{counts[f.key as keyof typeof counts] ?? 0}</span>
+          </button>
+        ))}
       </div>
 
       <div className="overflow-auto max-h-[70vh]">
@@ -247,10 +317,22 @@ export function MandatesMondayTable() {
                                 to={`/equity-brain/crm/mandate/${m.id}`}
                                 className="text-zinc-100 hover:text-[#D9F564] font-medium break-words"
                               >
-                                {m.company_cnpj}
+                                {m.display_name || m.razao_social || m.nome_fantasia || m.codename || m.company_cnpj}
                               </Link>
+                              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                {m.deal_kind && (
+                                  <span className={cn("text-[9px] px-1.5 py-0.5 rounded border", DEAL_KIND_COLOR[m.deal_kind] ?? "bg-zinc-800 text-zinc-400 border-zinc-700")}>
+                                    {DEAL_KIND_LABEL[m.deal_kind] ?? m.deal_kind}
+                                  </span>
+                                )}
+                                {m.needs_enrichment && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded border bg-rose-500/10 text-rose-300 border-rose-700/40">
+                                    enriquecer CNPJ
+                                  </span>
+                                )}
+                              </div>
                               {m.contato_nome && (
-                                <div className="text-[10px] text-zinc-500 truncate break-words">
+                                <div className="text-[10px] text-zinc-500 truncate break-words mt-0.5">
                                   {m.contato_nome}
                                 </div>
                               )}

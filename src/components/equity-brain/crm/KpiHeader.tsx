@@ -34,17 +34,24 @@ export function KpiHeader() {
       ))}
     </div>;
   }
-  const totalOps = (data.total_mandates ?? 0) + (data.total_buyers_active ?? 0);
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-      <Kpi label="Total Operações" value={totalOps} info={EB_TIPS.total_operacoes} />
-      <Kpi label="Vendedores" value={data.total_mandates ?? 0} accent="text-emerald-300" info={EB_TIPS.vendedores} />
-      <Kpi label="Compradores" value={data.total_buyers_active ?? 0} accent="text-blue-300" info={EB_TIPS.compradores} />
-      <Kpi label="Em andamento" value={data.mandates_em_negociacao ?? 0} accent="text-amber-300" info={EB_TIPS.em_andamento} />
-      <Kpi label="Concluídas" value={data.mandates_vendemos ?? 0} accent="text-emerald-400" info={EB_TIPS.concluidas} />
-      <Kpi label="Canceladas" value={data.mandates_cancelado ?? 0} accent="text-rose-300" info={EB_TIPS.canceladas} />
-      <Kpi label="Carteira (R$)" value={formatBRL(data.valor_total_carteira ?? 0)} info={EB_TIPS.carteira_rs} />
-      <Kpi label="Comissão Vispe" value={formatBRL(data.comissao_realizada ?? 0)} accent="text-emerald-300" info={EB_TIPS.comissao_vispe} />
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        <Kpi label="Mandatos assinados" value={data.total_mandates_real ?? 0} accent="text-emerald-300" info={EB_TIPS.vendedores} />
+        <Kpi label="Vend. sem mandato" value={data.total_vendedores_sem_mandato ?? 0} accent="text-amber-300" info={EB_TIPS.vendedores} />
+        <Kpi label="Marketplace" value={data.total_marketplace ?? 0} accent="text-blue-300" info={EB_TIPS.vendedores} />
+        <Kpi label="Compradores" value={data.total_buyers_active ?? 0} accent="text-cyan-300" info={EB_TIPS.compradores} />
+        <Kpi label="Em negociação" value={data.mandates_em_negociacao ?? 0} accent="text-amber-200" info={EB_TIPS.em_andamento} />
+        <Kpi label="Concluídas" value={data.mandates_vendemos ?? 0} accent="text-emerald-400" info={EB_TIPS.concluidas} />
+        <Kpi label="Carteira (R$)" value={formatBRL(data.valor_total_carteira ?? 0)} info={EB_TIPS.carteira_rs} />
+        <Kpi label="Comissão Vispe" value={formatBRL(data.comissao_realizada ?? 0)} accent="text-emerald-300" info={EB_TIPS.comissao_vispe} />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Kpi label="Sem responsável" value={data.mandates_sem_responsavel ?? 0} accent="text-rose-300" />
+        <Kpi label="Precisa enriquecer CNPJ" value={data.mandates_precisa_enriquecer ?? 0} accent="text-rose-300" />
+        <Kpi label="Presos em Match >30d" value={data.mandates_presos_match ?? 0} accent="text-rose-300" />
+        <Kpi label="Total no CRM" value={data.total_mandates ?? 0} accent="text-zinc-200" />
+      </div>
     </div>
   );
 }

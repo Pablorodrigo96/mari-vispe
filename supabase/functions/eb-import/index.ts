@@ -674,7 +674,8 @@ async function processActivities(
       entity_type: et,
       entity_id,
       kind,
-      note: pick(r, "note", "notes") || null,
+      direction: (pick(r, "direction") as string) || "out",
+      body: pick(r, "body", "note", "notes") || null,
       created_by: userId,
       created_at: toDate(pick(r, "created_at")) || new Date().toISOString(),
     });
