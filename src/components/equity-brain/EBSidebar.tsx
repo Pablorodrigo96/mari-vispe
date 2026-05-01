@@ -14,11 +14,12 @@ import { useMatchPercentiles, useMatchInbox } from "@/hooks/useMatchInbox";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
 const MAIN = [
-  { to: "/equity-brain/oportunidades", label: "Oportunidades", Icon: Mail, badge: "matches" as const },
-  { to: "/equity-brain/pipeline",      label: "Pipeline",      Icon: Briefcase },
-  { to: "/equity-brain/compradores",   label: "Compradores",   Icon: Target },
-  { to: "/equity-brain/calls",         label: "Calls",         Icon: PhoneCall },
-  { to: "/equity-brain/mercado",       label: "Mercado",       Icon: Newspaper },
+  { to: "/equity-brain/oportunidades",   label: "Oportunidades",    Icon: Mail, badge: "matches" as const },
+  { to: "/equity-brain/pipeline",        label: "Pipeline",         Icon: Briefcase },
+  { to: "/equity-brain/mandatos/tabela", label: "Mandatos · tabela",Icon: TableIcon },
+  { to: "/equity-brain/compradores",     label: "Compradores",      Icon: Target },
+  { to: "/equity-brain/calls",           label: "Calls",            Icon: PhoneCall },
+  { to: "/equity-brain/mercado",         label: "Mercado",          Icon: Newspaper },
 ];
 
 const DASHBOARDS = [
