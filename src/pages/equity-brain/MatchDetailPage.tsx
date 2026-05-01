@@ -11,6 +11,7 @@ import { tierForScore, useMatchPercentiles } from "@/hooks/useMatchInbox";
 import { useMatchContacts, type MatchContact } from "@/hooks/useMatchContacts";
 import { useIdentityVisibility } from "@/hooks/useIdentityVisibility";
 import { getWhatsAppLink, normalizeBrPhone } from "@/lib/whatsapp";
+import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
 import { QuickStartMandateDialog } from "@/components/equity-brain/match/QuickStartMandateDialog";
 import { AddContactDialog } from "@/components/equity-brain/match/AddContactDialog";
 import { RequestDisclosureDialog } from "@/components/equity-brain/RequestDisclosureDialog";
@@ -20,16 +21,10 @@ import { useQuery } from "@tanstack/react-query";
 import { OUTCOMES, relativeTime } from "@/lib/equityBrain";
 import { cn } from "@/lib/utils";
 
-function ContactRow({ c, side }: { c: MatchContact; side: "buyer" | "seller" }) {
+function ContactRow({
+  c, side, matchId, buyerId,
+}: { c: MatchContact; side: "buyer" | "seller"; matchId?: string | null; buyerId?: string | null; }) {
   const phone = normalizeBrPhone(c.telefone_e164);
-  const wa = phone
-    ? getWhatsAppLink(
-        side === "buyer"
-          ? `Olá ${c.nome ?? ""}! Falo da mari sobre uma oportunidade compatível com seu perfil de investimento.`
-          : `Olá ${c.nome ?? ""}! Falo da mari, identifiquei investidores qualificados interessados na sua empresa.`,
-        phone,
-      )
-    : null;
   return (
     <div className="border border-zinc-800 rounded p-2.5 flex items-center gap-2 bg-zinc-900/40">
       <div className="min-w-0 flex-1">
@@ -43,16 +38,19 @@ function ContactRow({ c, side }: { c: MatchContact; side: "buyer" | "seller" }) 
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        {wa ? (
-          <a href={wa} target="_blank" rel="noopener noreferrer" title="WhatsApp"
-            className="h-7 w-7 inline-flex items-center justify-center rounded border border-zinc-800 bg-transparent text-emerald-300 hover:border-emerald-700">
-            <MessageCircle className="h-3 w-3" />
-          </a>
-        ) : (
-          <span className="h-7 w-7 inline-flex items-center justify-center rounded border border-zinc-800 text-zinc-700" title="Sem WhatsApp">
-            <MessageCircle className="h-3 w-3" />
-          </span>
-        )}
+        <WhatsAppActionButton
+          phone={c.telefone_e164}
+          contactId={c.id ?? null}
+          matchId={matchId ?? null}
+          buyerId={side === "buyer" ? (buyerId ?? null) : null}
+          contactName={c.nome ?? null}
+          draftType={side === "buyer" ? "match_announcement" : "first_contact"}
+          source="match_detail"
+          variant="outline"
+          size="sm"
+          label="WA"
+          className="h-7 px-2 text-[10px] bg-transparent border-zinc-800 text-emerald-300 hover:border-emerald-700"
+        />
         {phone ? (
           <a href={`tel:+${phone}`} title="Ligar" className="h-7 w-7 inline-flex items-center justify-center rounded border border-zinc-800 bg-transparent text-zinc-300 hover:text-[#D9F564]">
             <Phone className="h-3 w-3" />
