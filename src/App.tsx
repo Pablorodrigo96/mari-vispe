@@ -246,6 +246,7 @@ const App = () => (
               <Route path="dashboard/mandato"    element={<DashboardMandatoPage />} />
               <Route path="dashboard/match"      element={<DashboardMatchPage />} />
               <Route path="dashboard/nbo"        element={<DashboardNboPage />} />
+              <Route path="crm/quick-fill"       element={<RequireRole roles={["admin", "advisor"]}><QuickFillPage /></RequireRole>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
