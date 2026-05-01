@@ -1502,6 +1502,78 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_messages: {
+        Row: {
+          advisor_id: string
+          contact_id: string | null
+          content_text: string | null
+          direction: string
+          id: string
+          intent: string | null
+          mandate_id: string | null
+          media_caption: string | null
+          media_mime_type: string | null
+          media_url: string | null
+          message_type: string
+          meta_message_id: string | null
+          meta_message_timestamp: string | null
+          phone_from: string
+          phone_to: string
+          processed_at: string | null
+          processing_error: string | null
+          raw_payload: Json | null
+          received_at: string
+          sentiment: string | null
+          status: string
+        }
+        Insert: {
+          advisor_id: string
+          contact_id?: string | null
+          content_text?: string | null
+          direction: string
+          id?: string
+          intent?: string | null
+          mandate_id?: string | null
+          media_caption?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string
+          meta_message_id?: string | null
+          meta_message_timestamp?: string | null
+          phone_from: string
+          phone_to: string
+          processed_at?: string | null
+          processing_error?: string | null
+          raw_payload?: Json | null
+          received_at?: string
+          sentiment?: string | null
+          status?: string
+        }
+        Update: {
+          advisor_id?: string
+          contact_id?: string | null
+          content_text?: string | null
+          direction?: string
+          id?: string
+          intent?: string | null
+          mandate_id?: string | null
+          media_caption?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string
+          meta_message_id?: string | null
+          meta_message_timestamp?: string | null
+          phone_from?: string
+          phone_to?: string
+          processed_at?: string | null
+          processing_error?: string | null
+          raw_payload?: Json | null
+          received_at?: string
+          sentiment?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       eb_buyer_preferences_history: {
