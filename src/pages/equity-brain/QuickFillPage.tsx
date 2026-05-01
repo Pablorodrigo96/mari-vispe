@@ -20,13 +20,10 @@ const STATUSES = ["vigente", "vencido", "vendemos", "em_negociacao", "vendeu_soz
 
 type Mandate = {
   id: string;
-  codename: string | null;
-  comprador_nome: string | null;
   contato_nome: string | null;
   uf: string | null;
   setor: string | null;
   deal_type: string | null;
-  deal_phase: string | null;
   status: string | null;
   outcome: string | null;
   valor_operacao: number | null;
@@ -37,7 +34,7 @@ type Mandate = {
   pipeline_stage: string | null;
 };
 
-const REQUIRED = ["deal_type", "deal_phase", "outcome", "valor_operacao", "responsavel_id"] as const;
+const REQUIRED = ["deal_type", "outcome", "valor_operacao", "responsavel_id"] as const;
 
 function isComplete(m: Mandate): boolean {
   return REQUIRED.every((k) => m[k] !== null && m[k] !== undefined && m[k] !== "");
@@ -53,9 +50,8 @@ export default function QuickFillPage() {
     queryKey: ["quick-fill-mandates"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .schema("equity_brain" as any)
-        .from("mandates")
-        .select("id, codename, comprador_nome, contato_nome, uf, setor, deal_type, deal_phase, status, outcome, valor_operacao, faturamento_vispe, responsavel_id, data_inicio, data_fechamento, pipeline_stage")
+        .from("eb_mandates")
+        .select("id, contato_nome, uf, setor, deal_type, status, outcome, valor_operacao, faturamento_vispe, responsavel_id, data_inicio, data_fechamento, pipeline_stage")
         .order("created_at", { ascending: false })
         .limit(2000);
       if (error) throw error;
@@ -90,9 +86,8 @@ export default function QuickFillPage() {
         }
       }
       const { error } = await supabase
-        .schema("equity_brain" as any)
-        .from("mandates")
-        .update(patch)
+        .from("eb_mandates")
+        .update(patch as any)
         .eq("id", id);
       if (error) throw error;
     },
@@ -122,9 +117,9 @@ export default function QuickFillPage() {
     if (search.trim()) {
       const s = search.toLowerCase();
       list = list.filter((m) =>
-        (m.codename ?? "").toLowerCase().includes(s) ||
         (m.contato_nome ?? "").toLowerCase().includes(s) ||
-        (m.comprador_nome ?? "").toLowerCase().includes(s),
+        (m.setor ?? "").toLowerCase().includes(s) ||
+        (m.uf ?? "").toLowerCase().includes(s),
       );
     }
     return list.slice(0, 200);
@@ -179,11 +174,11 @@ export default function QuickFillPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-[#A8A8A3] border-b border-zinc-800">
-                  <th className="text-left p-2 font-medium">Codename</th>
-                  <th className="text-left p-2 font-medium">Empresa / Contato</th>
+                  <th className="text-left p-2 font-medium">ID</th>
+                  <th className="text-left p-2 font-medium">Contato</th>
                   <th className="text-left p-2 font-medium">UF</th>
+                  <th className="text-left p-2 font-medium">Setor</th>
                   <th className="text-left p-2 font-medium">Tipo</th>
-                  <th className="text-left p-2 font-medium">Fase</th>
                   <th className="text-left p-2 font-medium">Status</th>
                   <th className="text-left p-2 font-medium">Resultado</th>
                   <th className="text-right p-2 font-medium">Valor (R$)</th>
@@ -231,15 +226,13 @@ function Row({ m, advisors, onSave }: { m: Mandate; advisors: { user_id: string;
 
   return (
     <tr className="border-b border-zinc-800/50 hover:bg-zinc-900/40">
-      <td className="p-2 font-mono text-[10px] text-[#D9F564]">{local.codename ?? "—"}</td>
-      <td className="p-2 text-[#FAFAF7] max-w-[180px] truncate">{local.comprador_nome ?? local.contato_nome ?? "—"}</td>
+      <td className="p-2 font-mono text-[10px] text-[#D9F564]">{local.id.slice(0, 8)}</td>
+      <td className="p-2 text-[#FAFAF7] max-w-[180px] truncate">{local.contato_nome ?? "—"}</td>
       <td className="p-2 text-[#A8A8A3]">{local.uf ?? "—"}</td>
+      <td className="p-2 text-[#A8A8A3] max-w-[120px] truncate">{local.setor ?? "—"}</td>
 
       <td className="p-1">
         <SmallSelect value={local.deal_type ?? ""} options={DEAL_TYPES} onChange={(v) => { set("deal_type", v); commit("deal_type", v); }} />
-      </td>
-      <td className="p-1">
-        <SmallSelect value={local.deal_phase ?? ""} options={DEAL_PHASES} onChange={(v) => { set("deal_phase", v); commit("deal_phase", v); }} />
       </td>
       <td className="p-1">
         <SmallSelect value={local.status ?? ""} options={STATUSES} onChange={(v) => { set("status", v); commit("status", v); }} />

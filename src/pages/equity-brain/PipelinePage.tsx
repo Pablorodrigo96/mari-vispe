@@ -1,9 +1,9 @@
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { List, LayoutGrid, Map as MapIcon, Network, Zap } from "lucide-react";
+import { List, LayoutGrid, Map as MapIcon, Network, Zap, Plus } from "lucide-react";
 import CrmHubPage from "./CrmHubPage";
 import PipelineKanbanPage from "./PipelineKanbanPage";
 import MapaPage from "./MapaPage";
@@ -96,6 +96,17 @@ export default function PipelinePage() {
                   );
                 })}
               </div>
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="h-8 bg-transparent border-zinc-700 text-zinc-100 hover:bg-zinc-800"
+              >
+                <Link to="/equity-brain/crm/mandate/new">
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Novo mandato
+                </Link>
+              </Button>
               <Button
                 size="sm"
                 onClick={() => setQuickFillOpen(true)}

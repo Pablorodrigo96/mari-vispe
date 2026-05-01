@@ -233,6 +233,13 @@ const App = () => (
               <Route path="mapa"          element={<Navigate to="/equity-brain/pipeline?view=mapa" replace />} />
               <Route path="grafo"         element={<Navigate to="/equity-brain/pipeline?view=grafo" replace />} />
               <Route path="crm/quick-fill" element={<Navigate to="/equity-brain/pipeline" replace />} />
+              <Route path="mandate"       element={<Navigate to="/equity-brain/pipeline" replace />} />
+              <Route path="mandato"       element={<Navigate to="/equity-brain/pipeline" replace />} />
+              <Route path="mandatos"      element={<Navigate to="/equity-brain/pipeline" replace />} />
+              <Route path="vendedores"    element={<Navigate to="/equity-brain/pipeline" replace />} />
+              <Route path="mandate/new"   element={<Navigate to="/equity-brain/crm/mandate/new" replace />} />
+              <Route path="mandato/novo"  element={<Navigate to="/equity-brain/crm/mandate/new" replace />} />
+              <Route path="vendedor/novo" element={<Navigate to="/equity-brain/crm/mandate/new" replace />} />
               <Route path="buyers"        element={<Navigate to="/equity-brain/compradores" replace />} />
               <Route path="teses"         element={<Navigate to="/equity-brain/compradores?tab=teses" replace />} />
               <Route path="news"          element={<Navigate to="/equity-brain/mercado" replace />} />
