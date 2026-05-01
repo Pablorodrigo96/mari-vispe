@@ -307,7 +307,7 @@ export function MatchWhyCard({ match, compact = false }: MatchWhyCardProps) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div className="rounded border border-emerald-900/40 bg-emerald-950/20 p-2.5">
             <div className="text-[9px] uppercase tracking-wider text-emerald-400/80 inline-flex items-center gap-1">
-              <Target className="h-3 w-3" /> p(close 12m)
+              <Target className="h-3 w-3" /> {techMode ? "p(close 12m)" : "Chance de fechar em 12 meses"}
             </div>
             <div className="text-base font-bold text-emerald-300 tabular-nums mt-0.5">
               {match.p_close_12m == null ? "—" : pct(match.p_close_12m, 1)}
