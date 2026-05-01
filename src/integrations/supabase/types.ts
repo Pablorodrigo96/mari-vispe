@@ -533,6 +533,7 @@ export type Database = {
       }
       eb_pipeline_transitions: {
         Row: {
+          deal_id: string | null
           from_outcome: string | null
           from_stage: string | null
           id: string
@@ -545,6 +546,7 @@ export type Database = {
           to_stage: string | null
         }
         Insert: {
+          deal_id?: string | null
           from_outcome?: string | null
           from_stage?: string | null
           id?: string
@@ -557,6 +559,7 @@ export type Database = {
           to_stage?: string | null
         }
         Update: {
+          deal_id?: string | null
           from_outcome?: string | null
           from_stage?: string | null
           id?: string
