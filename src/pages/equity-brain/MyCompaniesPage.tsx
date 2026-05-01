@@ -7,21 +7,33 @@ import { brl } from "@/lib/dealFormatters";
 import { cn } from "@/lib/utils";
 
 type Row = {
-  id: string;
-  display_name: string | null;
+  mandate_id: string;
+  cnpj: string;
+  company_name: string | null;
   codename: string | null;
-  razao_social: string | null;
-  company_cnpj: string;
   pipeline_stage: string;
   deal_kind: string | null;
   deal_origin: string | null;
   outcome: string;
+  valor_pedido: number | null;
   valor_operacao: number | null;
-  uf: string | null;
-  contato_nome: string | null;
-  comprador_nome: string | null;
   needs_enrichment: boolean | null;
   stage_changed_at: string | null;
+  my_role: "responsavel" | "co_advisor" | "originador" | "criador" | null;
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  responsavel: "Responsável",
+  co_advisor: "Co-advisor",
+  originador: "Originador",
+  criador: "Criador",
+};
+
+const ROLE_COLOR: Record<string, string> = {
+  responsavel: "bg-emerald-500/15 text-emerald-300 border-emerald-700/40",
+  co_advisor: "bg-blue-500/15 text-blue-300 border-blue-700/40",
+  originador: "bg-purple-500/15 text-purple-300 border-purple-700/40",
+  criador: "bg-zinc-500/15 text-zinc-300 border-zinc-700/40",
 };
 
 const KIND_LABEL: Record<string, string> = {
