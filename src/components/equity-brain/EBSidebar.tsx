@@ -24,10 +24,11 @@ const items = [
 ];
 
 const dashboardItems = [
-  { to: "/equity-brain/dashboard/executivo", label: "Executivo M&A", Icon: TrendingUp },
-  { to: "/equity-brain/dashboard/mandato",   label: "Mandatos",      Icon: Briefcase },
-  { to: "/equity-brain/dashboard/match",     label: "Matching",      Icon: ArrowLeftRight },
-  { to: "/equity-brain/dashboard/nbo",       label: "NBO",           Icon: FileSignature },
+  { to: "/equity-brain/dashboard/executivo", label: "Executivo M&A",      Icon: TrendingUp },
+  { to: "/equity-brain/dashboard/mandato",   label: "Mandatos",           Icon: Briefcase },
+  { to: "/equity-brain/dashboard/match",     label: "Matching",           Icon: ArrowLeftRight },
+  { to: "/equity-brain/dashboard/nbo",       label: "NBO",                Icon: FileSignature },
+  { to: "/equity-brain/crm/quick-fill",      label: "Preencher dados",    Icon: Zap },
 ];
 
 const dataItems = [
