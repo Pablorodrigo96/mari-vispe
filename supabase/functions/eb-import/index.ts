@@ -417,6 +417,7 @@ async function processMandates(
       contato_email: pick(r, "contato_email") || null,
       observacoes: [observacoesBase, ...obsExtras].filter(Boolean).join(" | ") || null,
       source: "import",
+      needs_enrichment: needsEnrichment,
       created_by: userId,
     });
   }
