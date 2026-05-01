@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap, Newspaper, ShieldAlert, Activity, UserCog } from "lucide-react";
+import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap, Newspaper, ShieldAlert, Activity, UserCog, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
@@ -55,6 +55,23 @@ export function EBSidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {/* Tela Hoje — destaque Volt no topo da sidebar */}
+        <NavLink
+          to="/equity-brain/hoje"
+          className={({ isActive }) =>
+            cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-semibold transition-all mb-2",
+              isActive
+                ? "bg-[#D9F564] text-zinc-900 shadow-[0_0_20px_-5px_rgba(217,245,100,0.6)]"
+                : "bg-zinc-900 text-[#D9F564] border border-[#D9F564]/30 hover:bg-zinc-800 hover:border-[#D9F564]/60",
+            )
+          }
+        >
+          <Flame className="h-4 w-4" />
+          <span className="flex-1">Hoje</span>
+          <Sparkles className="h-3 w-3 opacity-70" />
+        </NavLink>
+
         {items.map(({ to, label, Icon, end, badge }) => (
           <NavLink
             key={to}
