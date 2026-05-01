@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, ClipboardList, User, Shield, UserSearch, DollarSign, BarChart3, Briefcase } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
+import vispeLogoDark from '@/assets/vispe-logo-dark.png';
+import vispeLogoLight from '@/assets/vispe-logo-light.png';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -81,8 +83,36 @@ export function Header() {
     >
       <nav className="container mx-auto px-4 lg:px-8">
         <div className="flex h-24 items-center justify-between">
-          {/* Logo — both variants pre-loaded; toggle via opacity for instant transition */}
-          <Link to="/" className="flex items-center">
+          {/* Logos Vispe + mari — ambas variantes pré-carregadas; toggle via opacity */}
+          <Link to="/" className="flex items-center gap-3">
+            {/* Vispe Capital */}
+            <div className="relative h-8 w-[120px] shrink-0">
+              <img
+                src={vispeLogoLight}
+                alt="Vispe Capital"
+                className={cn(
+                  'absolute inset-0 h-full w-full object-contain transition-opacity duration-300',
+                  isTransparent ? 'opacity-100' : 'opacity-0'
+                )}
+              />
+              <img
+                src={vispeLogoDark}
+                alt="Vispe Capital"
+                className={cn(
+                  'absolute inset-0 h-full w-full object-contain transition-opacity duration-300',
+                  isTransparent ? 'opacity-0' : 'opacity-100'
+                )}
+              />
+            </div>
+            {/* Divisor sutil */}
+            <span
+              className={cn(
+                'h-8 w-px transition-colors duration-300',
+                isTransparent ? 'bg-white/20' : 'bg-foreground/15'
+              )}
+              aria-hidden
+            />
+            {/* mari */}
             <div className="relative">
               <MariLogo
                 variant="dark"

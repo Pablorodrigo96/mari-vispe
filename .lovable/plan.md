@@ -1,38 +1,26 @@
-# Acelerar resposta da Mari Brain
+## Adicionar logo Vispe ao lado do logo mari no header
 
-## Diagnóstico
+### O que será feito
+Posicionar o logo da Vispe à esquerda do logo "mari" no header público (visitor), com transição igual à do logo mari (versão escura sobre hero transparente, versão branca sobre header sólido).
 
-A função `mari-brain` está lenta porque:
+### Passos
 
-1. Usa **`google/gemini-2.5-pro`**, o modelo mais lento da família (alta latência de "time to first token", ~3-8s antes de começar o streaming).
-2. Injeta a **KB inteira (8 arquivos markdown)** no system prompt a cada mensagem — milhares de tokens que aumentam TTFT e custo.
-3. Histórico de 20 msgs + KB + contexto vivo somam um prompt muito pesado para perguntas simples.
+1. **Copiar os assets** enviados para `src/assets/`:
+   - `user-uploads://logo_vispe_preto.png` → `src/assets/vispe-logo-dark.png` (usado quando o header está sólido/claro — logo preto sobre fundo branco)
+   - `user-uploads://LOGO_VISPE_BRANCO-2.png` → `src/assets/vispe-logo-light.png` (usado sobre o hero escuro transparente — logo branco)
 
-## Mudanças
+2. **Editar `src/components/layout/Header.tsx`** (bloco do `<Link to="/">`, linhas ~85–104):
+   - Importar os dois assets como ES6 modules.
+   - Envolver o conteúdo do link num `flex items-center gap-3`.
+   - Adicionar antes do `MariLogo` um wrapper com dois `<img>` da Vispe (altura ~28px), usando o mesmo padrão de duas camadas com `opacity` controlada por `isTransparent`:
+     - `vispe-logo-light` visível quando `isTransparent` (header transparente sobre hero escuro)
+     - `vispe-logo-dark` visível quando header sólido
+   - Adicionar um divisor vertical sutil (`h-8 w-px bg-current opacity-20`) entre os dois logos para indicar coexistência das marcas.
+   - Manter `alt="Vispe Capital"` para acessibilidade.
 
-### 1. Trocar modelo padrão para `gemini-2.5-flash`
-- ~3-5x mais rápido que Pro, mantendo qualidade alta para Q&A operacional de M&A.
-- Pro fica disponível como fallback opcional via parâmetro `model` no body (ex.: para análises complexas).
+3. **Sem mudanças** em `AppTopbar` (logado) — usuário pediu apenas no header público onde aparece o logo mari mostrado no print.
 
-### 2. Reduzir histórico carregado de 20 → 10 mensagens
-- Mantém continuidade da conversa sem inflar o prompt.
-
-### 3. Limitar KB carregada a ~40k chars
-- Trunca cada arquivo se ultrapassar, preservando topo (definições, rotas, regras principais).
-- Ainda dá à Mari conhecimento autoritativo, mas com 30-50% menos tokens no system.
-
-### 4. Reduzir top matches de 5 → 3 e mandates do snapshot
-- Contexto vivo continua útil mas mais enxuto.
-
-### 5. Garantir flush imediato do stream
-- Verificar que o `controller.enqueue(value)` acontece sem buffering adicional (já está correto, só validar headers).
-
-## Arquivo afetado
-
-- `supabase/functions/mari-brain/index.ts`
-
-## Resultado esperado
-
-- TTFT (primeira palavra aparecendo): de ~5-10s → ~1-2s
-- Resposta completa curta: de ~15-25s → ~4-8s
-- Custo por request reduzido ~60%
+### Detalhes técnicos
+- O Header já retorna `null` para usuários logados (AppShell), então a alteração afeta somente as páginas públicas (Home, Marketplace, etc.).
+- Reutilizar exatamente o mesmo mecanismo de toggle (`opacity-0`/`opacity-100` + `absolute inset-0`) já usado pelo MariLogo para garantir transição suave idêntica.
+- Altura do logo Vispe: ~28–32px para ficar visualmente equilibrado com o `MariLogo size={96}` (que renderiza altura efetiva menor).
