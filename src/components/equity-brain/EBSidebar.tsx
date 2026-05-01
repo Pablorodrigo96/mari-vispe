@@ -24,10 +24,10 @@ const items = [
 ];
 
 const dashboardItems = [
-  { to: "/dashboard/executivo", label: "Executivo",  Icon: TrendingUp },
-  { to: "/dashboard/mandato",   label: "Mandatos",   Icon: Briefcase },
-  { to: "/dashboard/match",     label: "Matching",   Icon: ArrowLeftRight },
-  { to: "/dashboard/nbo",       label: "NBO",        Icon: FileSignature },
+  { to: "/equity-brain/dashboard/executivo", label: "Executivo M&A", Icon: TrendingUp },
+  { to: "/equity-brain/dashboard/mandato",   label: "Mandatos",      Icon: Briefcase },
+  { to: "/equity-brain/dashboard/match",     label: "Matching",      Icon: ArrowLeftRight },
+  { to: "/equity-brain/dashboard/nbo",       label: "NBO",           Icon: FileSignature },
 ];
 
 const dataItems = [
@@ -103,8 +103,8 @@ export function EBSidebar() {
           </NavLink>
         ))}
 
-        <div className="pt-4 pb-1 px-3 text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">
-          Dashboards
+        <div className="pt-4 pb-1 px-3 text-[10px] uppercase tracking-wider text-[#D9F564]/70 font-semibold">
+          Dashboards M&A
         </div>
         {dashboardItems.map(({ to, label, Icon }) => (
           <NavLink
