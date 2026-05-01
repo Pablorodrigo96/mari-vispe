@@ -1,147 +1,131 @@
-# Por que aparece "5 matches" no topo mas "0" na aba Matches
+## O que vamos entregar
 
-Auditei o caso INFORNET (CNPJ 02508631000141). No banco há **10 matches `is_current`** todos com buyers **`qualification_status='qualified'`** (NET-X, NAVETECH, VIRTUAL NET, LOOMY, SOFTDADOS, etc., score 56).
+3 movimentos grandes, em ordem:
 
-**Bug encontrado em `MatchesPanel.tsx` (linha 31):**
-```ts
-const getQual = (m: any) => m.qualification_status as string | undefined;
-```
-Lê `match.qualification_status` — coluna que **não existe** em `equity_brain.matches`. A flag de qualificação mora em `equity_brain.buyers.qualification_status`. Resultado: o filtro "Qualificados" zera, "Todos" também não exibe corretamente, "Base RFB" idem (depende de `match.source`, que tampouco existe em matches — `source` está em `buyers`).
-
-Por isso o header "5 compradores casam — top NET-X" funciona (lê `matches` cru) e logo abaixo aparece "Nenhum match qualificado disponível ainda".
+1. **Reorganizar navegação**: tirar "Dashboard Executivo" de dentro do CRM e colocar no menu "Dashboards". CRM volta a ser CRM (mandatos/buyers/atividades/matches).
+2. **"Minhas Empresas" virar cadastro geral em tabela rica**, com colunas operacionais (contato, match, contrato, fechamento, drive, comissão Vispe, etc.) e uma **ficha completa** ao clicar.
+3. **4 Dashboards Analíticos novos** (`/dashboard/executivo`, `/dashboard/mandato`, `/dashboard/match`, `/dashboard/nbo`) substituindo o Monday — identidade visual **MARI dark** (Carbon + Volt, monospace, cards minimalistas, sem sombras, com sparklines, AI insights e drill-down).
 
 ---
 
-# O que vou entregar
-
-## 1. Corrigir o filtro de qualificação (bug)
-
-- Em `useMandateMatches`/`useBuyerMatches` (`src/hooks/useCrm.ts`): trocar o `select("*")` por um join leve via duas queries (matches + buyers/companies) e mesclar `qualification_status` e `source` da contraparte no objeto retornado, igual ao padrão de `useMatchInbox`.
-- `MatchesPanel.tsx`: passar a ler `m.counterpart_qualification_status` e `m.counterpart_source`. Texto dos filtros vira "Qualificados", "Todos", "Vindos da Receita Federal".
-- Resultado esperado no INFORNET: aba Matches passa a mostrar 10 matches (todos qualificados).
-
-## 2. "Ver todos" levar à lista do mandato (não Match Inbox global)
-
-- `TopMatchesHeader.tsx` linha 71: hoje aponta para `/equity-brain/match-inbox`.
-- Quando a prop `cnpj` está setada, mudar o link para acionar a aba Matches do próprio mandato (mesma página, `?tab=matches`) — controlar `tab` por query string em `MandateDetailPage`. Idem para `buyerId` → aba Matches do buyer 360.
-
-## 3. Reescrever "Por que esse match" em linguagem humana
-
-Rebuild do `MatchWhyCard.tsx` num modo **plain-language por padrão**, com toggle "Ver técnico" para o atual SHAP detalhado.
-
-Modo padrão (humano), seguindo o que cada feature significa na prática:
+## 1. Navegação (menu lateral)
 
 ```text
-🌎 Geografia          MATCH PERFEITO
-   Comprador atua no Nordeste, INFORNET fica em PE.
+📊 DASHBOARDS  (novo grupo)
+├── Visão consolidada do funil   → /equity-brain  (atual DashboardPage)
+├── Visão Executiva M&A          → /dashboard/executivo
+├── Mandato                      → /dashboard/mandato
+├── Match                        → /dashboard/match
+└── NBO                          → /dashboard/nbo
 
-📐 Porte              ENCAIXA
-   Faturamento dentro do range alvo do comprador.
-
-🎯 Tese               ALINHA
-   Comprador busca consolidação regional de ISPs — INFORNET
-   é exatamente o perfil.
-
-🏭 Setor              MESMO SETOR
-   Ambos em Telecom / ISP.
-
-📞 Sinal de venda     FRACO
-   Vendedor ainda não declarou intenção. Sugestão: ligar antes
-   de envolver buyer.
-
-💰 Saúde financeira   BOA
-   Sinais financeiros recentes consistentes.
-
-📊 Pressão de mercado MORNA
-   Setor ISP × PE com atividade moderada de M&A nos últimos
-   12 meses.
+📁 CRM
+├── Visão Geral / Mandatos / Buyers / Atividades / Matches IA / Match Analytics
+│   (sem mais "Dashboard Executivo")
+├── Minhas Empresas (carteira rica)
+└── Pipeline / Imports / Exports / Aberturas / Auditoria / Permissões
 ```
 
-Regras de tradução que vou aplicar para todos os 17 features:
-- valor ≥ 0.85 → "MATCH PERFEITO" / "MUITO ALTO"
-- 0.65–0.84 → "ENCAIXA" / "BOM"
-- 0.40–0.64 → "PARCIAL" / "MORNO"
-- < 0.40 → "FRACO" + sugestão de ação curta
-
-Para os 3 cards de cenário, troco os rótulos:
-- "p(close 12m)" → **"Chance de fechar em 12 meses"**
-- "EV (P10/P50/P90)" → **"Valor estimado do deal: pessimista / provável / otimista"**
-- "Tese & score M&A" → **"Tese do comprador"**
-
-Sobre a queixa de score baixo apesar de mesmo setor: o score 56 do INFORNET vem de **Seller intent baixo (0.40)** e **Wave pressure morna (0.39)** puxando pra baixo, mesmo com setor/geografia/porte 1.0. Isso fica explícito no novo card com a frase "puxa pra baixo" em destaque vermelho.
-
-## 4. "Match Composto" no pipeline (Match Card como uma ficha unificada)
-
-Hoje o pipeline movimenta **mandato** OU **buyer** isolado. Você quer mover o **par (mandato + buyer)** como uma única ficha — chamada **Deal**.
-
-Estrutura que vou criar:
-
-**Tabela nova `equity_brain.deals`:**
-```text
-id              uuid pk
-match_id        uuid → matches(id)
-mandate_id      uuid → mandates(id)
-buyer_id        uuid → buyers(id)
-cnpj            text
-stage           text  (pipeline stage atual)
-outcome         text  (open / won / lost / paused)
-owner_user_id   uuid
-created_at, updated_at, last_moved_at
-notes           text
-```
-
-Promoção: na tela do match, botão **"Promover para Pipeline"** cria a row em `deals` (idempotente por `match_id`). A página de Pipeline passa a renderizar **deals** (não mais mandates soltos), com card mostrando:
-
-```text
-┌─────────────────────────────────────────┐
-│ DEAL · INFORNET ⇄ NET-X            56  │
-│ Telecom · NE · R$ 0                    │
-│ Estágio: Discovery · 3d                │
-└─────────────────────────────────────────┘
-```
-
-Clicar abre **`/equity-brain/deal/:id`** — nova rota com:
-- header do par (vendedor + comprador lado a lado, mesma estética do MatchDetailPage)
-- 3 colunas: ficha do vendedor (clicável → 360 da empresa), ficha do comprador (clicável → 360 do buyer), painel central com timeline unificada, próxima ação, WhatsApp para ambos os lados, documentos e MatchWhyCard humano
-- botões de mover estágio (drag no kanban também)
-
-Migração de pipeline:
-- `eb_pipeline_transitions` ganha coluna nullable `deal_id` (mantém `mandate_id` para retrocompat).
-- `PipelineKanbanPage` ganha toggle no topo: **"Por Deal (par)"** (default) / **"Por Mandato (legado)"**.
-
-## 5. Por que a aba "Base RFB" mostra 0
-
-Os 10 matches do INFORNET têm `buyers.source = 'import'`, não `'rfb_expand'`. Então corretamente é 0 — mas o usuário interpreta como "bug". Vou:
-- renomear filtro para **"Vindos da Receita Federal"** + tooltip explicando que aparecem aqui apenas matches gerados pelo botão "Expandir busca na Base RFB" do buyer 360
-- adicionar contador no tooltip: "Use 'Expandir busca' no buyer para popular esta lista"
+- `EBSidebar.tsx` ganha seção "Dashboards" no topo (logo abaixo de "Hoje").
+- `CrmHubPage.tsx`: remover a top-tab `executivo` (e seu conteúdo `ExecutiveDashboardContent`). Mantém Visão Geral, Matches IA, Match Analytics.
 
 ---
 
-# Arquivos tocados
+## 2. Minhas Empresas — cadastro geral em tabela + ficha
+
+**Substitui** `MyCompaniesPage.tsx` por uma tabela densa estilo Linear/Bloomberg, com filtros e busca, mostrando todas as empresas/deals (não só as do usuário; admin vê tudo, advisor vê tudo, franchisee filtra próprios).
+
+Colunas da tabela:
+- Empresa (codename ou nome) · Contato (nome) · Match (com quem, link p/ Deal) · Contrato (link/status) · Data fechamento · Tipo (Buy/Sell) · Drive · Estado · Região · Status do projeto · Conclusão · R$ Comissão Vispe · % Vispe · E-mail · Telefone · Observações
+
+Ao clicar numa linha → **Ficha da empresa** (`/equity-brain/crm/empresa/:cnpj`) com 4 abas:
+- **Visão geral** (KPIs do deal, contato, endereço)
+- **Match & Pipeline** (deal vinculado, etapa, histórico)
+- **Documentos** (Drive, contrato, VDR, financeiros — reusa `DocumentsPanel`)
+- **Atividades & Notas** (timeline + observações)
+
+Backend: tudo já existe em `equity_brain.mandates` (incluindo `contato_*`, `drive_url`, `contract_url`, `faturamento_vispe`, `comissao_pct`, `regiao`, `uf`, `data_fechamento`, `deal_kind`, `outcome`, `match_buyer_id`). Vamos:
+- Criar view `eb_companies_carteira` (join mandates + buyers do match + listings).
+- Criar página `EmpresaDetailPage.tsx`.
+
+---
+
+## 3. Os 4 Dashboards (identidade MARI)
+
+### Schema (Fase A — migrations)
+
+Em `equity_brain.mandates`, adicionar:
+- `deal_phase` (enum: `match`, `nbo`, `due_diligence`, `spa`, `closing`, `closed`)
+- `success_fee_value` numeric (já existe `faturamento_vispe`, vamos consolidar nele)
+- `bdr_id` uuid (responsável de origem)
+- `closer_id` uuid (responsável de fechamento)
+
+Materialized views (refresh `pg_cron` a cada 1h):
+- `mv_dashboard_executivo` · `mv_dashboard_mandato` · `mv_dashboard_match` · `mv_dashboard_nbo`
+
+### Identidade visual (todas as 4 telas)
+
+Aplicar via tokens novos em `tailwind.config.ts` e `index.css`:
 
 ```text
-NOVOS
-  supabase/migrations/<ts>_eb_deals_pipeline.sql   (tabela deals + RLS + trigger)
-  src/pages/equity-brain/DealDetailPage.tsx        (já existe stub — preencher)
-  src/hooks/useDeal.ts
-  src/lib/matchWhyHumanizer.ts                     (tradução feature → texto)
-
-EDITADOS
-  src/hooks/useCrm.ts                              (join buyer/company nos matches)
-  src/components/equity-brain/crm/MatchesPanel.tsx (filtro correto + rótulos pt)
-  src/components/equity-brain/match/TopMatchesHeader.tsx (link contextual)
-  src/components/equity-brain/match/MatchWhyCard.tsx     (modo humano + toggle)
-  src/pages/equity-brain/MandateDetailPage.tsx     (tab via querystring + botão "Promover para Pipeline")
-  src/pages/equity-brain/MatchDetailPage.tsx       (botão "Promover para Pipeline")
-  src/pages/equity-brain/PipelineKanbanPage.tsx    (toggle Deal/Mandato + render por deal)
-  src/App.tsx                                      (rota /equity-brain/deal/:id se faltar)
+bg page    #0A0A0A    card bg     #141414    card hover  #1F1F1F
+border     #2A2A2A    text 1ª     #FAFAF7    text 2ª     #A8A8A3
+volt       #D9F564    success     #00D27F    danger      #FF3B6B
+amber      #FFB800    cyan        #00C2FF    purple      #8B5CF6
+font num   Geist Mono / JetBrains Mono       font ui     Inter
 ```
 
-# Resultado esperado no INFORNET
+Componentes reusáveis novos em `src/components/dashboards/`:
+- `<DashShell>` (header com `DASHBOARD` uppercase Volt + título 32px + Live indicator pulsante + filtros chip + atalhos `⌘E`/`⌘R`)
+- `<KpiCard>` (label 11px uppercase, número 72px mono count-up animado, mini-trend, sparkline)
+- `<DashCard>` (border 1px #2A2A2A, hover Volt, sem shadow)
+- `<DashDonut>` `<DashLine>` `<DashBar>` `<DashStackedBar>` `<DashArea>` (Recharts customizado conforme regras: donut fino 8px com KPI no centro, linhas 1.5px com gradient, barras top performer Volt + glow, etc.)
+- `<AIInsightCard>` (borda Volt + ✨, gerado por edge function `dashboard-insights` usando Mari Brain)
+- `<EmptyStateSmart>` `<SkeletonChart>`
+- `<DashFilters>` (período · região · estado · executivo · limpar · exportar CSV/PDF)
+- `<KbdShortcuts>` (`f`, `1-4`, `e`, `r`)
 
-- Aba Matches passa a mostrar **10 qualificados** (NET-X, NAVETECH, VIRTUAL NET, LOOMY, SOFTDADOS, PLANOWEB, TURBONET, WANTEL, KASATECH, NORTETEL)
-- "Ver todos" no header abre a própria aba Matches (não some pra inbox global)
-- Card "Por que esse match" diz em pt-BR claro o que significa cada peça e por que deu 56 apesar de mesmo setor
-- Botão **"Promover para Pipeline"** cria um Deal NET-X⇄INFORNET que aparece no Kanban como uma única ficha movível
+Microinterações: `framer-motion` para count-up e stagger; `react-hotkeys-hook` para shortcuts; auto-refresh 60s invisível.
 
-Aprova que eu já mando bala?
+### Conteúdo de cada dashboard
+
+Replicar exatamente as linhas listadas no brief para cada um:
+- **Executivo** (7 linhas: 6 KPIs + 3 financeiros + status/evolução + 3 donuts + estado + valor/comissão + top 3 / por responsável)
+- **Mandato** (8 linhas)
+- **Match** (4 linhas)
+- **NBO** (7 linhas)
+
+Acesso: admin/advisor → tudo; franchisee → filtro automático pelos próprios deals (via RLS em `responsavel_id`/`origin_advisor_id`).
+
+### Theme toggle
+
+`<ThemeToggle>` no topbar (default dark). Light mode é fallback opcional — paleta principal continua dark-first.
+
+---
+
+## Fases de execução
+
+| Fase | Entrega |
+|---|---|
+| **A** | Migrations: `deal_phase`, `bdr_id`, `closer_id`, 4 mv + pg_cron |
+| **B** | Tokens MARI no Tailwind, fontes Geist/Inter, componentes `Dash*` base |
+| **C** | Reorganizar Sidebar + remover tab Executivo do CRM |
+| **D** | Dashboard Executivo (`/dashboard/executivo`) |
+| **E** | Dashboard Mandato (`/dashboard/mandato`) |
+| **F** | Dashboard Match + NBO |
+| **G** | Minhas Empresas tabela rica + Ficha da empresa |
+| **H** | AI Insight cards (edge function) + drill-down + theme toggle + atalhos + polish |
+
+---
+
+## Detalhes técnicos (apêndice)
+
+- Recharts em todos os gráficos (já no projeto).
+- Edge function nova: `dashboard-insights` (Gemini 2.5-flash, cache 1h em `mari_brain_messages` ou tabela nova `dashboard_insights_cache`).
+- Drill-down: clicar em segmento de donut/barra atualiza filtros via `useSearchParams` e re-renderiza KPIs com transição.
+- Export PDF: `react-to-pdf` para snapshot da página; CSV via `exportCsv.ts` existente.
+- Live indicator: `useQuery` com `refetchInterval: 60_000`, mostra "atualizado há Xs" calculado a partir de `dataUpdatedAt`.
+- Mobile: grid colapsa para 1-2 colunas em <768px; KPI display reduz para 48px.
+
+---
+
+**Pode aprovar que eu mando bala em sequência (A→H), commitando cada fase.**

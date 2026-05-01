@@ -96,6 +96,10 @@ import IspSuggestionsPage from "./pages/equity-brain/IspSuggestionsPage";
 import IspMarketPage from "./pages/equity-brain/IspMarketPage";
 import DisclosuresPage from "./pages/equity-brain/DisclosuresPage";
 import UnifiedDealPage from "./pages/equity-brain/UnifiedDealPage";
+import DashboardExecutivoPage from "./pages/dashboards/DashboardExecutivoPage";
+import DashboardMandatoPage from "./pages/dashboards/DashboardMandatoPage";
+import DashboardMatchPage from "./pages/dashboards/DashboardMatchPage";
+import DashboardNboPage from "./pages/dashboards/DashboardNboPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
@@ -237,6 +241,10 @@ const App = () => (
               <Route path="crm/aberturas"        element={<RequireRole roles={["admin", "advisor"]}><DisclosuresPage /></RequireRole>} />
               <Route path="crm/mandate/new"      element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
               <Route path="crm/mandate/:id/edit" element={<RequireRole roles={["admin"]}><MandateFormPage /></RequireRole>} />
+              <Route path="dashboard/executivo"  element={<DashboardExecutivoPage />} />
+              <Route path="dashboard/mandato"    element={<DashboardMandatoPage />} />
+              <Route path="dashboard/match"      element={<DashboardMatchPage />} />
+              <Route path="dashboard/nbo"        element={<DashboardNboPage />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
