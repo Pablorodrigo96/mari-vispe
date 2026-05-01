@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, MessageCircle, FileText, Activity, Target, Brain } from "lucide-react";
+import { ArrowLeft, MessageCircle, FileText, Activity, Target, Brain, Newspaper } from "lucide-react";
+import { NewsPanel } from "@/components/equity-brain/news/NewsPanel";
 import { cn } from "@/lib/utils";
 import { useBuyerCrm } from "@/hooks/useCrm";
 import { useAccessLog } from "@/hooks/useAccessLog";
@@ -20,7 +21,7 @@ import { BlindTeaserButton } from "@/components/equity-brain/BlindTeaserButton";
 import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 
-type Tab = "overview" | "matches" | "whatsapp" | "documents";
+type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents";
 
 export default function BuyerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +37,7 @@ export default function BuyerDetailPage() {
   const tabs: { key: Tab; label: string; Icon: any }[] = [
     { key: "overview", label: "Visão geral", Icon: Activity },
     { key: "matches", label: "Matches", Icon: Target },
+    { key: "news", label: "Notícias", Icon: Newspaper },
     { key: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
     { key: "documents", label: "Documentos", Icon: FileText },
   ];
@@ -130,6 +132,10 @@ export default function BuyerDetailPage() {
           }}
           entityName={name}
         />
+      )}
+
+      {tab === "news" && (
+        <NewsPanel buyerId={buyer.id} cnpj={(buyer as any).cnpj} emptyMessage="Nenhuma notícia coletada ainda sobre este buyer." />
       )}
 
       {tab === "whatsapp" && (

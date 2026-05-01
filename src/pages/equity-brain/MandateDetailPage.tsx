@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, MessageCircle, FileText, Activity, DollarSign, Target, Pencil } from "lucide-react";
+import { ArrowLeft, MessageCircle, FileText, Activity, DollarSign, Target, Pencil, Newspaper } from "lucide-react";
+import { NewsPanel } from "@/components/equity-brain/news/NewsPanel";
 import { cn } from "@/lib/utils";
 import { useMandate } from "@/hooks/useCrm";
 import { useAccessLog } from "@/hooks/useAccessLog";
@@ -20,7 +21,7 @@ import { BlindTeaserButton } from "@/components/equity-brain/BlindTeaserButton";
 import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 
-type Tab = "overview" | "matches" | "whatsapp" | "documents";
+type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents";
 
 export default function MandateDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +37,7 @@ export default function MandateDetailPage() {
   const tabs: { key: Tab; label: string; Icon: any }[] = [
     { key: "overview", label: "Visão geral", Icon: Activity },
     { key: "matches", label: "Matches", Icon: Target },
+    { key: "news", label: "Notícias", Icon: Newspaper },
     { key: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
     { key: "documents", label: "Documentos & Pipeline", Icon: FileText },
   ];
@@ -131,6 +133,10 @@ export default function MandateDetailPage() {
       )}
       {tab === "matches" && !mandate.company_cnpj && (
         <div className="text-xs text-zinc-400 p-4">Mandato sem CNPJ vinculado — não é possível buscar matches.</div>
+      )}
+
+      {tab === "news" && (
+        <NewsPanel cnpj={mandate.company_cnpj} emptyMessage="Nenhuma notícia coletada ainda para esta empresa. A varredura roda a cada hora." />
       )}
 
       {tab === "whatsapp" && (
