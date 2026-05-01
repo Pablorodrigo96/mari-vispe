@@ -10,6 +10,8 @@ const items = [
   { to: "/equity-brain",                label: "Dashboard",       Icon: LayoutDashboard, end: true },
   { to: "/equity-brain/match-inbox",    label: "Match Inbox",     Icon: ArrowLeftRight, badge: "matches" as const },
   { to: "/equity-brain/crm",            label: "CRM",             Icon: Briefcase },
+  { to: "/equity-brain/crm/minhas-empresas", label: "Minhas Empresas", Icon: Briefcase },
+  { to: "/equity-brain/news",           label: "Notícias M&A",    Icon: Newspaper },
   { to: "/equity-brain/board",          label: "Board Executivo", Icon: LineChart },
   { to: "/equity-brain/oportunidades",  label: "Oportunidades",   Icon: Target },
   { to: "/equity-brain/mapa",           label: "Mapa",            Icon: MapIcon },
