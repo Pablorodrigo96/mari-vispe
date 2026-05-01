@@ -121,16 +121,39 @@ export default function PipelineKanbanPage() {
     return m;
   }, [stages]);
 
+  const kindCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: 0, real: 0, marketplace: 0, sem_mandato: 0, buyer: 0 };
+    (mandates ?? []).forEach((m) => {
+      counts.all++;
+      if (m.deal_kind === "mandato_assinado") counts.real++;
+      else if (m.deal_kind === "marketplace_listing") counts.marketplace++;
+      else if (m.deal_kind === "vendedor_sem_mandato") counts.sem_mandato++;
+      else if (m.deal_kind === "buyer_mandate") counts.buyer++;
+    });
+    return counts;
+  }, [mandates]);
+
+  const matchesKindFilter = (m: Mandate) => {
+    if (kindFilter === "all") return true;
+    if (kindFilter === "real") return m.deal_kind === "mandato_assinado";
+    if (kindFilter === "marketplace") return m.deal_kind === "marketplace_listing";
+    if (kindFilter === "sem_mandato") return m.deal_kind === "vendedor_sem_mandato";
+    if (kindFilter === "buyer") return m.deal_kind === "buyer_mandate";
+    return true;
+  };
+
+  const filteredMandates = (mandates ?? []).filter(matchesKindFilter);
+
   const byStage: Record<string, Mandate[]> = {};
   stages.forEach((s) => (byStage[s.key] = []));
   const orphans: Mandate[] = [];
-  (mandates ?? []).forEach((m) => {
+  filteredMandates.forEach((m) => {
     const key = m.pipeline_stage || "match";
     if (byStage[key]) byStage[key].push(m);
     else orphans.push(m);
   });
 
-  const frozenCount = (mandates ?? []).filter((m) => {
+  const frozenCount = filteredMandates.filter((m) => {
     const s = stageMap[m.pipeline_stage];
     if (!s || s.is_terminal) return false;
     return getStageTimeState(m.stage_changed_at, s.sla_days).status === "frozen";
@@ -142,6 +165,14 @@ export default function PipelineKanbanPage() {
     if (!s || s.is_terminal) return false;
     return getStageTimeState(m.stage_changed_at, s.sla_days).status === "frozen";
   };
+
+  const KIND_FILTERS: { key: string; label: string }[] = [
+    { key: "real", label: "Mandatos reais" },
+    { key: "sem_mandato", label: "Sem mandato" },
+    { key: "marketplace", label: "Marketplace" },
+    { key: "buyer", label: "Buyers" },
+    { key: "all", label: "Todos" },
+  ];
 
   return (
     <div className="p-6 space-y-4 bg-zinc-950 min-h-full">
