@@ -86,6 +86,18 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
     });
   }
 
+  if (eff.isAdmin) {
+    groups.push({
+      id: 'monday', name: '🔄 Migração Monday', icon: Shield,
+      children: [
+        { name: 'Importar Monday', href: '/admin/monday-import', icon: Plus },
+        { name: 'Paridade Monday', href: '/admin/monday-parity', icon: ChartBar },
+        { name: 'Mapeamento de advisors', href: '/admin/advisors-mapping', icon: UserSearch },
+        { name: 'Health check', href: '/equity-brain/admin/health', icon: Sparkles },
+      ],
+    });
+  }
+
   if (eff.isAdmin || eff.isAdvisor) {
     groups.push({
       id: 'dashboards', name: '📊 Dashboards', icon: BarChart3,
