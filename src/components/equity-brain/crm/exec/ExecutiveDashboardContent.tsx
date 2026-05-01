@@ -8,6 +8,7 @@ import { StatusBarChart, YearlyEvolutionChart } from "@/components/equity-brain/
 import { YearlyMoneyChart } from "@/components/equity-brain/crm/exec/YearlyMoneyChart";
 import { StackedLocalityChart } from "@/components/equity-brain/crm/exec/StackedLocalityChart";
 import { brl, DEAL_TYPE_LABEL, OUTCOME_LABEL, OUTCOME_COLOR, REGIAO_BY_UF, PIPELINE_STAGE_LABEL } from "@/lib/dealFormatters";
+import { MarketPulseWidget } from "@/components/equity-brain/news/MarketPulseWidget";
 import { EB_TIPS } from "@/lib/ebTooltips";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
