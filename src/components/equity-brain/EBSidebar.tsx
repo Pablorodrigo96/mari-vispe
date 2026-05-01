@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap, Newspaper, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Target, Users, Lightbulb, PhoneCall, Map as MapIcon, Network, ArrowLeft, LogOut, LineChart, Sparkles, Brain, Briefcase, ArrowLeftRight, Upload, Wifi, BarChart3, Zap, Newspaper, ShieldAlert, Activity, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
@@ -26,6 +26,8 @@ const items = [
 const dataItems = [
   { to: "/equity-brain/crm/imports",                 label: "Imports",         Icon: Upload },
   { to: "/equity-brain/crm/admin/auditoria-operacional", label: "Auditoria CRM", Icon: ShieldAlert },
+  { to: "/equity-brain/crm/admin/atribuicoes",       label: "Atribuições",     Icon: UserCog },
+  { to: "/equity-brain/admin/health",                label: "Health 24h",      Icon: Activity },
   { to: "/equity-brain/isp/import",                  label: "ISP Anatel",      Icon: Wifi },
   { to: "/equity-brain/isp/sugestoes",               label: "ISP Sugestões",   Icon: Zap },
   { to: "/equity-brain/isp/mercado",                 label: "ISP Mercado",     Icon: BarChart3 },
