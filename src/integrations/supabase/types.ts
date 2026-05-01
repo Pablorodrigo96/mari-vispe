@@ -3443,6 +3443,60 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_dashboard_executivo: {
+        Row: {
+          buyside: number | null
+          canceladas: number | null
+          concluidas: number | null
+          em_andamento: number | null
+          faturamento_vispe: number | null
+          refreshed_at: string | null
+          sellside: number | null
+          ticket_medio: number | null
+          total_operacoes: number | null
+          valor_total_operacoes: number | null
+        }
+        Relationships: []
+      }
+      mv_dashboard_mandato: {
+        Row: {
+          com_exclusividade: number | null
+          comissao_vispe: number | null
+          em_negociacao: number | null
+          equity_sob_gestao: number | null
+          refreshed_at: string | null
+          total_mandatos: number | null
+          vendemos: number | null
+          vigentes: number | null
+        }
+        Relationships: []
+      }
+      mv_dashboard_match: {
+        Row: {
+          cancelados: number | null
+          concluidos: number | null
+          em_andamento: number | null
+          refreshed_at: string | null
+          tempo_medio_dias: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
+      mv_dashboard_nbo: {
+        Row: {
+          cancelados: number | null
+          comissoes_total: number | null
+          concluidos: number | null
+          em_andamento: number | null
+          refreshed_at: string | null
+          tempo_medio_dias: number | null
+          ticket_medio: number | null
+          total: number | null
+          valor_medio: number | null
+          valor_total: number | null
+        }
+        Relationships: []
+      }
       partner_opportunity_pool: {
         Row: {
           annual_profit: number | null
@@ -3786,6 +3840,46 @@ export type Database = {
       }
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
       expire_old_reservations: { Args: never; Returns: undefined }
+      get_dashboard_executivo: {
+        Args: never
+        Returns: Database["public"]["Views"]["mv_dashboard_executivo"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "mv_dashboard_executivo"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_dashboard_mandato: {
+        Args: never
+        Returns: Database["public"]["Views"]["mv_dashboard_mandato"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "mv_dashboard_mandato"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_dashboard_match: {
+        Args: never
+        Returns: Database["public"]["Views"]["mv_dashboard_match"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "mv_dashboard_match"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_dashboard_nbo: {
+        Args: never
+        Returns: Database["public"]["Views"]["mv_dashboard_nbo"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "mv_dashboard_nbo"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_health_recent_errors: {
         Args: { limit_n?: number }
         Returns: {
