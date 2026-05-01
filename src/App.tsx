@@ -78,6 +78,7 @@ import CrmAuditPage from "./pages/equity-brain/CrmAuditPage";
 import MyCompaniesPage from "./pages/equity-brain/MyCompaniesPage";
 import CrmAssignmentsPage from "./pages/equity-brain/CrmAssignmentsPage";
 import HealthDashboardPage from "./pages/equity-brain/HealthDashboardPage";
+import TodayPage from "./pages/equity-brain/TodayPage";
 import NewsPage from "./pages/equity-brain/NewsPage";
 import ExecutiveDashboardPage from "./pages/equity-brain/ExecutiveDashboardPage";
 import MatchAnalyticsPage from "./pages/equity-brain/MatchAnalyticsPage";
@@ -174,6 +175,7 @@ const App = () => (
               }
             >
               <Route index               element={<EBDashboardPage />} />
+              <Route path="hoje"          element={<TodayPage />} />
               <Route path="match-inbox"   element={<MatchInboxPage />} />
               <Route path="match/:matchId" element={<MatchDetailPage />} />
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
