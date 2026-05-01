@@ -2213,17 +2213,70 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_crm_audit: {
+        Row: {
+          company_cnpj: string | null
+          created_at: string | null
+          deal_confidence: string | null
+          deal_kind: string | null
+          deal_origin: string | null
+          display_name: string | null
+          id: string | null
+          issue_fake_cnpj: boolean | null
+          issue_no_contact: boolean | null
+          issue_no_owner: boolean | null
+          issue_no_value: boolean | null
+          issue_stuck_match: boolean | null
+          needs_enrichment: boolean | null
+          outcome:
+            | "em_andamento"
+            | "concluido"
+            | "cancelado"
+            | "vencido"
+            | "vendeu_sozinho"
+            | "vigente"
+            | "vendemos"
+            | "em_negociacao"
+            | null
+          pipeline_stage:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
+          responsavel_id: string | null
+          stage_changed_at: string | null
+          status:
+            | "vigente"
+            | "vencido"
+            | "vendemos"
+            | "em_negociacao"
+            | "vendeu_sozinho"
+            | "cancelado"
+            | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       eb_crm_kpis: {
         Row: {
           comissao_realizada: number | null
           mandates_cancelado: number | null
           mandates_em_negociacao: number | null
+          mandates_precisa_enriquecer: number | null
+          mandates_presos_match: number | null
+          mandates_sem_responsavel: number | null
           mandates_vencido: number | null
           mandates_vendemos: number | null
           mandates_vigente: number | null
           ticket_medio: number | null
           total_buyers_active: number | null
           total_mandates: number | null
+          total_mandates_real: number | null
+          total_marketplace: number | null
+          total_vendedores_sem_mandato: number | null
           valor_total_carteira: number | null
         }
         Relationships: []
@@ -2662,25 +2715,77 @@ export type Database = {
       }
       eb_mandates_enriched: {
         Row: {
+          codename: string | null
           comissao_pct: number | null
+          commission_pct: number | null
           company_cnpj: string | null
+          comprador_cnpj: string | null
+          comprador_nome: string | null
+          contato_email: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
+          contract_url: string | null
           created_at: string | null
           data_assinatura: string | null
+          data_assinatura_contrato: string | null
+          data_fechamento: string | null
+          data_inicio: string | null
           data_vencimento: string | null
+          deal_confidence: string | null
+          deal_kind: string | null
+          deal_origin: string | null
+          deal_type:
+            | "buyside"
+            | "sellside"
+            | "spa"
+            | "due_diligence"
+            | "cisao"
+            | "fusao"
+            | "nbo"
+            | "match"
+            | null
+          display_name: string | null
+          drive_url: string | null
           exclusividade: boolean | null
+          expected_close_at: string | null
           faturamento_estimado: number | null
+          faturamento_vispe: number | null
           has_listing: boolean | null
           id: string | null
           listing_id: string | null
+          match_buyer_id: string | null
           municipio: string | null
+          needs_enrichment: boolean | null
           nome_fantasia: string | null
           observacoes: string | null
+          outcome:
+            | "em_andamento"
+            | "concluido"
+            | "cancelado"
+            | "vencido"
+            | "vendeu_sozinho"
+            | "vigente"
+            | "vendemos"
+            | "em_negociacao"
+            | null
+          pipeline_stage:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
           primary_contact: Json | null
+          probability: number | null
           razao_social: string | null
           regiao: string | null
+          regiao_calc: string | null
           responsavel_id: string | null
           setor_ma: string | null
+          setor_mandate: string | null
           source: string | null
+          stage_changed_at: string | null
           status:
             | "vigente"
             | "vencido"
@@ -2690,8 +2795,13 @@ export type Database = {
             | "cancelado"
             | null
           subsetor_ma: string | null
+          temperature: string | null
+          temperature_reason: string | null
+          temperature_updated_at: string | null
           uf: string | null
+          uf_mandate: string | null
           updated_at: string | null
+          valor_operacao: number | null
           valor_pedido: number | null
         }
         Relationships: []
