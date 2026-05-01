@@ -204,7 +204,19 @@ export function WhatsAppActionButton({
           {step === "review" && (
             <>
               <DialogHeader>
-                <DialogTitle>Revisar mensagem</DialogTitle>
+                <DialogTitle className="flex items-center gap-2">
+                  Revisar mensagem
+                  {mode === "followup" && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
+                      Continuação
+                    </span>
+                  )}
+                  {mode === "initial" && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 uppercase tracking-wider">
+                      Primeiro contato
+                    </span>
+                  )}
+                </DialogTitle>
                 <DialogDescription className="text-zinc-400">
                   Edite se quiser. Vai abrir o WhatsApp Web/App com este texto pronto.
                 </DialogDescription>
