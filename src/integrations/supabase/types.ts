@@ -3498,6 +3498,15 @@ export type Database = {
         }
         Returns: Json
       }
+      eb_dismiss_today_card: {
+        Args: {
+          p_card_kind: string
+          p_reason?: string
+          p_ref_id: string
+          p_snooze_days?: number
+        }
+        Returns: string
+      }
       eb_event_queue_stats: { Args: never; Returns: Json }
       eb_event_recent_errors: {
         Args: { p_limit?: number }
@@ -3532,6 +3541,14 @@ export type Database = {
         }
         Returns: string
       }
+      eb_log_whatsapp_send: {
+        Args: {
+          p_contact_id: string
+          p_mandate_id: string
+          p_message_preview?: string
+        }
+        Returns: string
+      }
       eb_match_crosstab: {
         Args: { dim?: string }
         Returns: {
@@ -3548,6 +3565,25 @@ export type Database = {
           p_target_listing_id?: string
         }
         Returns: string
+      }
+      eb_today_cards: {
+        Args: { p_limit?: number }
+        Returns: {
+          card_kind: string
+          computed_at: string
+          contact_id: string
+          contact_name: string
+          contact_phone: string
+          days_inactive: number
+          headline: string
+          mandate_codename: string
+          mandate_id: string
+          mandate_value: number
+          match_score: number
+          priority_score: number
+          ref_id: string
+          subline: string
+        }[]
       }
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
       expire_old_reservations: { Args: never; Returns: undefined }
