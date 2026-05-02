@@ -374,13 +374,13 @@ function DealCard({
       )}
     >
       <div className="flex items-start justify-between gap-1">
-        <Link
-          to={`/equity-brain/crm/mandate/${m.id}`}
-          className="text-[11px] text-zinc-100 font-medium leading-tight break-words flex-1 truncate hover:text-[#D9F564]"
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpen(); }}
+          className="text-[11px] text-zinc-100 font-medium leading-tight break-words flex-1 truncate hover:text-[#D9F564] text-left"
           title={m.razao_social ?? m.company_cnpj}
         >
           {m.display_name ?? m.codename ?? m.razao_social ?? m.company_cnpj}
-        </Link>
+        </button>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
           className="text-zinc-700 hover:text-[#D9F564] shrink-0"
