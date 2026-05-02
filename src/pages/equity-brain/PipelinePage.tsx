@@ -42,7 +42,7 @@ export default function PipelinePage() {
       else np.set("tab", next.tab);
     }
     if (next.view !== undefined) {
-      if (next.view === "lista") np.delete("view");
+      if (next.view === "kanban") np.delete("view");
       else np.set("view", next.view);
     }
     setParams(np, { replace: true });
