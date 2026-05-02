@@ -1,82 +1,92 @@
+# Fase D — Polish, responsividade, motor de insights e docs
 
-# Fase C — Drawer lateral + Timeline unificada
+Encerra a refatoração do EB com 4 frentes: sidebar responsivo, motor persistente de insights da Mari, documentação operacional e expansão dos smoke tests. Mantém comportamento atual em desktop intocado.
 
-Objetivo: clicar em qualquer card de deal/mandato (Hoje, Oportunidades, Kanban, Lista) abre um drawer lateral com contexto completo, sem trocar de página. Página dedicada `MandateDetailPage` continua existindo.
+## D.1 — Sidebar EB responsivo
 
-## Diferenças vs spec (adaptações ao schema real)
+Migrar `EBSidebar.tsx` (hoje `<aside class="w-60">` fixo) para o sistema `shadcn/ui sidebar` que já usamos em `AppSidebar`.
 
-Levantei o schema atual:
+- `EquityBrainLayout.tsx`: envolver com `<SidebarProvider defaultOpen>`, trocar `<EBSidebar/> + <main>` por `<EBSidebar/> + <SidebarInset>`. Adicionar header `lg:hidden` com `<SidebarTrigger/>` e label "mari · Equity Brain".
+- `EBSidebar.tsx`: refatorar usando `<Sidebar collapsible="icon">`, `SidebarHeader/Content/Footer`, `SidebarGroup`, `SidebarMenu/Item/Button`. Preservar:
+  - Item destacado "Hoje" com flame (`/equity-brain/hoje`)
+  - Listas MAIN, DASHBOARDS (collapsible), ADMIN_ITEMS (collapsible, gated por `isAdmin`)
+  - Badge `hotCount` em Oportunidades
+  - Footer com logo Mari, e-mail do user, "Voltar ao site", "Sair"
+- Estado `open` herdado do provider (já persiste em cookie/localStorage internamente).
+- Comportamento: desktop ≥1024 aberto; tablet 768–1023 colapsa para ícones; mobile <768 vira sheet via trigger.
 
-- ✅ existem: `equity_brain.crm_activities`, `equity_brain.whatsapp_action_log`, `equity_brain.mandate_subtasks`, `equity_brain.deal_events`, `public.eb_pipeline_transitions`
-- ❌ **não existe** `equity_brain.vdr_documents` — vou omitir essa fonte da timeline (ou tentar `eb_documents` se existir; checo na hora)
-- Colunas reais (spec usa nomes diferentes):
-  - `crm_activities`: `kind` (não `activity_type`), `body` (não `notes`), `created_by`, `entity_type`+`entity_id` (precisa filtrar `entity_type='mandate'`)
-  - `whatsapp_action_log`: **não tem `direction` nem `message_body`** → usar `draft_text_sent` / `draft_text_generated` e `marked_action`
-  - `eb_pipeline_transitions`: `moved_by` + `moved_at` (não `changed_by`/`created_at`)
-  - `mandate_subtasks`: `responsavel_id`/`anotacoes`/`updated_at` ok
-  - `deal_events`: ligado por `match_id`/`cnpj`, não por `mandate_id` — vou trazer eventos cujo `cnpj` = cnpj do mandato
+## D.2 — Tabela `equity_brain.mari_insights` (migration)
 
-Ajusto o RPC para refletir a realidade e o componente de timeline lê o JSON normalizado.
+Cria tabela persistente para insights proativos com RLS por advisor, índices de prioridade/dedup, status (`active|dismissed|acted|expired`) e payload de ação. Política SELECT por dono ou admin; UPDATE só pelo dono (para dispensar/marcar acted).
 
-## Entregáveis
+Antes de aplicar, validar nomes reais das tabelas referenciadas (`equity_brain.mandates`, `equity_brain.buyers`) — schema confere com fases anteriores.
 
-### C.1 — RPC unificado (migration)
-`equity_brain.get_deal_timeline(p_mandate_id uuid)` retorna `(ts, source, kind, title, body, actor_name, metadata, color)` consolidando 5 fontes (crm_activities, whatsapp_action_log, eb_pipeline_transitions, mandate_subtasks, deal_events). `SECURITY DEFINER`, com `GRANT EXECUTE TO authenticated` mas internamente filtrando por `has_role(auth.uid(),'admin') OR has_role(auth.uid(),'advisor')` (advisor vê tudo do mandato; non-advisor recebe vazio).
+## D.3 — Edge function `mari-generate-insights`
 
-### C.2 — Componentes novos em `src/components/deal/`
-- `DealDrawer.tsx` — wrapper `Sheet` (lado direito, 640px), composto por:
-- `DealMeta.tsx` — header com codename, fase atual, status, dias na fase
-- `DealMariInsights.tsx` — chama edge function `mari-deal-insights` (criar)
-- `DealActions.tsx` — 4 botões: WhatsApp (usa `crmWhatsapp` existente), Nota (modal pequena que insere em `crm_activities`), Doc (futuro — placeholder com toast), Abrir página
-- `DealTimeline.tsx` — consome RPC, renderiza com ícones por `source` (lucide-react)
-- `DealDrawerContext.tsx` em `src/contexts/` — provider + hook `useDealDrawer()`
+Roda diariamente (cron 06:00 BRT) e on-demand. Para cada advisor com mandatos ativos, aplica regras:
 
-### C.3 — Edge function `mari-deal-insights`
-Input: `{ mandate_id }`. Calcula em SQL: dias na fase atual, última atividade, # de docs, # de subtarefas pendentes. Manda contexto pra Gemini 2.5-flash + system prompt curto, retorna até 3 insights `{ severity, message, suggested_action?, action_url? }`. Cache por 30min em tabela `dashboard_insight_cache` (reusa).
+- **Urgência**: mandato vence em 30/15/7d; deal sem atividade 7d; WhatsApp inbound não respondido 24h; subtarefa DD vencida; NBO sem decisão 14d.
+- **Oportunidade**: 3+ matches novos fit>70% não triados; buyer fechou deal recente; notícia M&A no setor; empresa parada com novo buyer compatível.
+- **Risco**: temperature → cold sem ação; buyer com `cautela_flag` em deal; tempo na fase 2× média; valor pedido 3× mercado.
+- **Aprendizado** (semanal): tempo médio fechamento setor; múltiplo médio; performance vs meta.
 
-### C.4 — Provider montado em `EquityBrainLayout`
-Wrap dos children com `<DealDrawerProvider>` para que qualquer rota EB possa abrir o drawer.
+Mensagens humanizadas via Lovable AI (`google/gemini-2.5-flash`). Dedup por `(advisor_id, mandate_id, trigger_rule)` ativos. Loga em `mari_ops.health_check`.
 
-### C.5 — Pontos de uso (integração mínima na fase)
-- `TodayPage.tsx` — onClick do card chama `openDeal(card.mandate_id)`
-- `MandatosTablePage.tsx` — onClick da linha (já existe navigate, troco por `openDeal`); mantenho botão Editar
-- `PipelineKanbanPage.tsx` — onClick do card (não no drag) chama `openDeal`
-- `EBOportunidadesPage.tsx` — se o item tem `mandate_id`, abre drawer
+Cron via `pg_cron` + `pg_net`.
 
-`MandateDetailPage` segue intocada por enquanto (refator C.6 fica para fase posterior — não é bloqueante).
+## D.4 — Integrar insights no `TodayPage`
 
-## Limpeza de bugs detectados (drive-by)
-Console mostra dois warnings de `forwardRef` que vou consertar:
-1. `RequireRole` está sendo passado como element pra `<Route>` e React Router tenta passar ref → envolver em `forwardRef` (ou simplesmente garantir que retorne `<>{children}</>`, que já faz; o warning vem do `Route element`-wrapping, vou converter `RequireRole` em `React.forwardRef`).
-2. `MandatosTablePage` linha 590 — componente `Cell` interno precisa de `forwardRef` (provavelmente usado dentro de `Tooltip`/`Slot`).
+Adicionar query a `mari_insights` (ativos, top 7 por prioridade) ao lado dos cards do `eb_today_feed`. Cada card:
+- Borda colorida por tipo (urgency=rose, opportunity=emerald, risk=amber, learning=purple)
+- Badge de prioridade
+- Mensagem + botão de ação (interpreta `action_payload.type`: `whatsapp` abre `openWhatsAppForContact`, `open_deal` abre `DealDrawer`, `open_url` navega)
+- Botão "Dispensar" → `update status='dismissed', dismissed_at=now()`
 
-Faço esses dois fixes na mesma fase.
+## D.5 — Docs operacionais (PT-BR, foco no usuário)
 
-## Arquivos novos/editados
+Criar em `docs/`:
+- `GUIA_ADVISOR.md` — fluxo do dia (Hoje → Oportunidades → Pipeline), drawer, registrar interação, Mari ⌘K, tipos de insight.
+- `GUIA_ADMIN.md` — imports, dedupe, paridade Monday, mapping advisors, health, atribuição de role via SQL.
+- `MUDANCAS_RECENTES.md` — changelog Maio 2026 (reorg menu, drawer, insights, sidebar responsivo, dedupe).
 
-Novos:
-- `supabase/migrations/<ts>_deal_timeline_rpc.sql`
-- `supabase/functions/mari-deal-insights/index.ts` + `supabase/config.toml` block
-- `src/components/deal/{DealDrawer,DealMeta,DealActions,DealTimeline,DealMariInsights}.tsx`
-- `src/contexts/DealDrawerContext.tsx`
+## D.6 — Smoke tests diários
 
-Editados:
-- `src/components/equity-brain/EquityBrainLayout.tsx` (montar provider)
-- `src/pages/equity-brain/{TodayPage,MandatosTablePage,PipelineKanbanPage,OportunidadesPage}.tsx` (handlers de click)
-- `src/components/auth/RequireRole.tsx` (forwardRef)
-- `src/pages/equity-brain/MandatosTablePage.tsx` (Cell forwardRef)
+Atualizar/criar `mari_ops.daily_smoke_tests()` cobrindo:
+1. Range de mandatos (200–1000)
+2. Matches ativos (≥1000)
+3. Buyers reais (≥100)
+4. Materialized views frescas (<2h)
+5. Insights gerados nas últimas 24h (>0)
+6. RLS habilitada em `drain_jobs`
+7. CNPJs inválidos (não 14 dígitos, exceto `PENDING-`/`VL%`)
+8. Resumo final em `mari_ops.health_check`
 
-## Fora de escopo nesta fase (deixar para C.6 separada)
-- Refatorar `MandateDetailPage` para reusar componentes (grande, melhor isolar)
-- Upload de docs (não há tabela `vdr_documents` — precisa decidir storage/schema)
-- Funcionalidade "Ligar" (não há sistema de telefonia)
+Já existe cron diário; apenas substituir corpo da função.
+
+## Arquivos
+
+**Novos:**
+- `supabase/migrations/<ts>_mari_insights.sql`
+- `supabase/migrations/<ts>_smoke_tests_v2.sql`
+- `supabase/functions/mari-generate-insights/index.ts` (+ bloco em `supabase/config.toml` se precisar verify_jwt=false)
+- `docs/GUIA_ADVISOR.md`, `docs/GUIA_ADMIN.md`, `docs/MUDANCAS_RECENTES.md`
+
+**Editados:**
+- `src/components/equity-brain/EBSidebar.tsx` (refator shadcn)
+- `src/components/equity-brain/EquityBrainLayout.tsx` (SidebarProvider + Inset + trigger mobile)
+- `src/pages/equity-brain/TodayPage.tsx` (cards de insights + dispensar)
+
+## Fora de escopo
+- Rebuild de regras de matching
+- Push notifications
+- Refator de `MandateDetailPage` (Fase C.6 separada)
 
 ## Critérios de aceite
-- Click em card "Hoje" abre drawer em <500ms; URL não muda
-- Timeline mostra eventos das 5 fontes em ordem decrescente
-- Botão WhatsApp do drawer abre `wa.me` com draft (loga em `crm_activities`)
-- Botão Nota salva em `crm_activities` (kind='note', entity_type='mandate')
-- Drawer tem link "Abrir página completa" → `MandateDetailPage`
-- Console sem o warning de forwardRef em `RequireRole` e `Cell`
+- Sidebar EB colapsa em tablet/mobile, hamburger funciona, estado persiste
+- Tabela `mari_insights` com RLS; função `mari-generate-insights` deployada e cron agendado
+- TodayPage mostra insights coloridos com ações + dispensar
+- 3 docs criados em PT-BR
+- Smoke tests diários rodando, todos verdes em `health_dashboard`
+- Performance Today <1s com 7 cards extras
 
 Posso prosseguir?
