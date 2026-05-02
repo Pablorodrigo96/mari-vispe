@@ -110,6 +110,8 @@ import MandatosTablePage from "./pages/equity-brain/MandatosTablePage";
 import { RedirectWithParams } from "./components/equity-brain/RedirectWithParams";
 import DashboardCoveragePage from "./pages/equity-brain/DashboardCoveragePage";
 import DedupeAdminPage from "./pages/equity-brain/DedupeAdminPage";
+import BenchmarkPage from "./pages/equity-brain/admin/BenchmarkPage";
+import BuyerClassificationPage from "./pages/equity-brain/admin/BuyerClassificationPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
 import { AppShell } from "@/components/layout/AppShell";
