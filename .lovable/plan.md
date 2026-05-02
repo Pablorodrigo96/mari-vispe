@@ -1,79 +1,127 @@
+# Fase E2 — Scores SV/SAV + Tese Mari + Simulador VPL
 
-# Fase E1 — Metodologia Três Assimetrias (schema + benchmark + classificador)
+Implementa a metodologia "Três Assimetrias" sobre o schema E1 já pronto. Não toca no `match_score` atual — `sav_score` roda em paralelo. Score só é apresentado se `sv_data_completeness >= 0.6` (caso contrário, badge "dados insuficientes").
 
-Backend-only. Sem novas telas de uso final — apenas 2 telas admin para operar a base. Prepara terreno para E2 (SV/SAV + Simulador VPL) sem mexer em `match_score` atual.
+## Dados validados (não vou re-perguntar)
+- 249 companies `qualified` aptas pra calcular SV.
+- 141.601 matches (vou processar em batch e priorizar top por `match_score`).
+- 11 linhas em `taxonomia_compradores` ✓.
+- 0 linhas em `benchmark_transactions` — comparáveis na tese e fallback do classificador SAV vão devolver vazio até o JSON ser carregado pela tela de E1; nada quebra.
+- `matches.cnpj` (não `mandate_id`) — uso `companies!inner(cnpj)` direto e busco mandato pelo `company_cnpj` quando preciso.
 
-## ⚠ Pré-requisito de dados
-A spec referencia `transacoes_ma_brasil.json` (55 deals VSP-001…VSP-055), mas **só o .md foi anexado nesta sessão**. Vou implementar a edge function `eb-load-benchmark-transactions` esperando o JSON via body, e a tela `/equity-brain/admin/benchmark` terá um upload (`<input type="file">`) que lê o arquivo e envia o conteúdo. Assim que você subir o JSON pela tela, os 55 deals entram. Sem hardcode no migration.
+## E2.1 — Função SQL `calculate_sv` + batch
+**Migration** `..._sv_calculation.sql`:
+- `equity_brain.calculate_sv(p_company_cnpj varchar)` retorna `(score, nivel, breakdown, data_completeness)` conforme spec (9 subscores, pesos, mapeamento 5 níveis, completeness = preenchidos/9). `STABLE SECURITY DEFINER`, `search_path = equity_brain, public`.
+- GRANT EXECUTE pra `authenticated`.
 
-## E1.1 — Migration `metodologia_tres_assimetrias.sql`
-- ENUM `equity_brain.tipo_comprador_enum` (11 tipos).
-- Tabela `taxonomia_compradores` populada com as 11 linhas (texto exato da spec) + RLS read-all.
-- ALTER `equity_brain.buyers`: `tipo_comprador`, `tipo_classified_at`, `tipo_classified_confidence` + index parcial.
-- ALTER `equity_brain.companies`: `score_vendabilidade`, `nivel_maturidade` (CHECK 1–5), `sv_calculated_at`, `sv_breakdown jsonb`, `sv_data_completeness`.
-- ALTER `equity_brain.matches`: `sav_score`, `sav_breakdown`, `sav_calculated_at`, `thesis_text`, `thesis_generated_at` + index DESC parcial.
-- Tabela `benchmark_transactions` (PK textual `VSP-xxx`, raw_data jsonb, índices por setor/fase e por tipo_comprador). RLS: leitura admin+advisor; escrita só admin.
-- Tabela `transaction_proposals` com FK em `mandates` + RLS por responsável/padrinho/co_advisor/admin.
+**Edge function** `calculate-vendabilidade-batch`:
+- Auth: admin OR service_role (mesmo pattern de `calculate-scores`).
+- Pega até 250 companies `qualification_status='qualified'` com `sv_calculated_at IS NULL OR < now()-7d`, chama `rpc('calculate_sv')` por CNPJ, faz `update` em `companies` (score_vendabilidade, nivel_maturidade, sv_breakdown, sv_data_completeness, sv_calculated_at).
+- Loga em `mari_ops.health_check`.
 
-Validação prévia via `supabase--read_query` confirmando nomes reais (`equity_brain.mandates.responsavel_id`, `co_advisor_ids`, `equity_brain.buyers.is_synthetic`) antes de aplicar — ajusto se diferir.
+**Cron**: `0 4 * * *` via `pg_cron` (insert separado, não migration — por causa da anon key no body).
 
-## E1.2 — Edge function `eb-load-benchmark-transactions`
-- Acesso admin (verifica via `has_role` no JWT).
-- Body: `{ transactions_json: string | object }`. Faz `JSON.parse` se string.
-- Itera `data.transacoes`, monta row mapeando campos da spec (incl. `vista_pct` vindo de `estrutura_pagamento.vista_pct`, `flag_caso_critico` por heurística "case study" em `observacoes_relevantes`), `upsert` por `id`.
-- Loga em `mari_ops.health_check` (sucesso/erros).
-- Retorna `{ inserted, errors, total }`.
+## E2.2 — Edge function `calculate-sav-score`
+- Auth admin/service_role.
+- Body: `{ match_id }` (single) ou `{ batch: true, limit?: 200 }`.
+- Single: lê `matches` + `companies` (via cnpj) + `buyers`, busca até 5 deals históricos em `benchmark_transactions ILIKE comprador_nome` (vazio enquanto JSON não carregado → encaixe ganha 0 nesse fator).
+- Calcula 6 fatores (sinergia custo 25% / receita 15% / eliminação 15% / geografia 15% / custo oportunidade 15% / encaixe estratégico 15%) usando `buyer.tipo_comprador`, setores/UFs/municípios de interesse, deals_last_12m, recent_capital_raise.
+- `update matches set sav_score, sav_breakdown, sav_calculated_at` (filtra `is_current=true`).
+- Batch: pega matches `is_current=true` order by `match_score DESC` com `sav_calculated_at IS NULL OR < now()-24h`, processa serial, agrega contagem.
+- Loga health_check.
 
-## E1.3 — Edge function `mari-classify-buyer-type`
-- Body: `{ buyer_id }` (single) ou `{ batch: true, limit?: number }`.
-- Single: lê buyer + até 10 deals históricos da `benchmark_transactions` casando `comprador_nome` (ILIKE primeiro token), monta prompt PT-BR com taxonomia + dados + regras heurísticas, chama Lovable AI Gateway com `google/gemini-2.5-flash`, parseia JSON `{tipo, confidence, reasoning}`, valida contra enum, persiste em `buyers`.
-- Batch: pega buyers `tipo_comprador IS NULL AND is_synthetic = false`, processa serial com `await sleep(1000)` (rate limit), agrega contagem, loga health_check.
-- Tratamento de erro: parse fail / tipo inválido → loga warning, segue.
+**Cron**: `15 */6 * * *`.
 
-## E1.4 — Tela `/equity-brain/admin/benchmark`
-- `BenchmarkPage.tsx`: header com botão **"Carregar JSON"** (file picker → lê via FileReader → invoca edge function).
-- KPIs: total transações, multiplo médio EV/EBITDA, distribuição por setor (tabela compacta).
-- Tabela paginada (filtros: setor, fase_ciclo_setorial, tipo_comprador, ano de `data_anuncio`).
-- Linha clicável → `Sheet` lateral com `raw_data` em `<pre>` colapsável.
-- Coluna "Caso crítico" com badge.
+## E2.3 — Edge function `mari-generate-buyer-thesis`
+- Auth: usuário autenticado (advisor/admin) — single use; batch protegido por admin.
+- Body: `{ match_id }` ou `{ batch: true, limit?: 50 }`.
+- Monta prompt PT-BR conforme spec (top 3 fatores SAV, taxonomia, comparáveis recentes do setor).
+- `LOVABLE_API_KEY` + `google/gemini-2.5-flash` via `https://ai.gateway.lovable.dev/v1/chat/completions`.
+- Trim 600 chars, `update matches set thesis_text, thesis_generated_at`.
+- Loga health_check.
 
-## E1.5 — Tela `/equity-brain/admin/buyer-classification`
-- `BuyerClassificationPage.tsx`: KPIs (total / classificados / pendentes / confidence médio).
-- Distribuição por tipo (gráfico barras simples — recharts já no projeto).
-- Botões: "Classificar próximos 50" e "Classificar todos pendentes" (com `confirm()` mostrando estimativa = pendentes × 1s).
-- Tabela últimas 50 classificações (`tipo_classified_at DESC`) com confidence + reasoning (campo extra em `buyers`? — usar `sv_breakdown`-style? **Decisão:** adicionar coluna `tipo_classified_reasoning text` nullable na migration para auditoria).
+## E2.4 — Edge function `calculate-vpl-proposal`
+- Auth: usuários com acesso ao mandato (verifico via RLS chamando como user). Admin sempre.
+- Body: `{ proposal_id }`.
+- Lê `transaction_proposals`, calcula VPL com 5 premissas fixas (custo capital 15%, prob earn-out 55%, prob escrow 70%, desconto liquidez ações 25%, prob garantias 30%), monta breakdown e assumptions, persiste `vpl_ajustado_brl_mm`, `vpl_breakdown`, `vpl_assumptions`, `vpl_calculated_at`.
+- Retorna `{ total, breakdown }`.
 
-## E1.6 — Sidebar admin
-Adicionar 2 itens em `ADMIN_ITEMS` de `EBSidebar.tsx`:
-- `{ to: "/equity-brain/admin/benchmark", label: "Base Benchmark", Icon: Database }`
-- `{ to: "/equity-brain/admin/buyer-classification", label: "Classificar Buyers", Icon: Tags }`
+## E2.5 — Tela `/equity-brain/crm/mandate/:id/propostas`
+**Arquivo**: `src/pages/equity-brain/PropostasPage.tsx` + rota em `App.tsx`.
 
-E rotas em `App.tsx` dentro de `EquityBrainLayout`.
+Layout:
+```text
+[← Voltar] Comparação de Propostas — <empresa>     [+ Nova proposta]
+─────────────────────────────────────────────────────────────
+                       Proposta A      Proposta B
+Buyer / Tipo
+Valor nominal
+Componentes (vista, earn-out nominal/ajustado, escrow, parcelamento, ações)
+Custos implícitos (non-compete, lockup, garantias)
+─────────────────────────────────────────────────────────────
+▶ VPL AJUSTADO          R$ X,XX MM     R$ Y,YY MM ← MELHOR (border Volt)
+Diferença vs nominal
+[Editar A]              [Editar B]     [Premissas usadas]
+```
+
+- Drawer "Nova/Editar proposta": buyer (select dos buyers do mandato), label, blocos vista / earn-out (valor + prazo + métricas) / escrow / parcelamento / ações (valor + lockup + ticker) / cláusulas (non-compete anos, lockup operacional, garantias).
+- Botão "Calcular VPL" → invoca edge function → recarrega.
+- Tabela comparativa com colunas dinâmicas; coluna do maior VPL com `border-volt/40`.
+- Modal "Premissas usadas" abre as 5 constantes (read-only nesta versão).
+- Tooltips usando `ebTooltips.ts` (vou estender com chaves novas: `sv_score`, `sav_score`, `vpl_ajustado`, etc.).
+
+## E2.6 — Integração na UI existente
+**A. `MandateDetailPage.tsx`** — bloco "Diagnóstico Vispe" acima da timeline:
+- Gauge SV (reusa `ScoreDial`) + `NivelBadge` (1-5, label "Invendável/Desconto/Médio/Prêmio/Disputado").
+- Alert se `sv_data_completeness < 0.6`.
+- Top 3 fragilidades (menores subscores no breakdown).
+- Botão "💰 Comparar propostas" → navega pra `/equity-brain/crm/mandate/:id/propostas`.
+
+**B. `OportunidadesPage.tsx`** (cards de matches): SAV badge (>70 verde, 50-70 amber, <50 zinc), badge `tipo_comprador`, `thesis_text` em itálico, botão "Gerar/Regerar tese" (chama edge function, invalida query).
+
+**C. `BuyerDetailPage.tsx`** — bloco "Perfil Vispe" com taxonomia (descricao, paga_premio_quando, paga_menos_quando, argumento_comercial_padrao, risco_principal_vendedor) + tabela "Deals históricos" lendo `benchmark_transactions ILIKE comprador_nome`.
+
+**D. `DealDrawer.tsx`** — adiciona ActionButton "Simulador VPL" → mesma rota `/equity-brain/crm/mandate/:id/propostas`.
+
+## Componentes novos compartilhados
+- `src/components/equity-brain/Gauge.tsx` — círculo SVG simples 0-100 (reusa `scoreColor`).
+- `src/components/equity-brain/NivelBadge.tsx` — 5 níveis com cor escalonada.
+- `src/components/equity-brain/SAVBadge.tsx` — score badge com tooltip.
+- `src/components/equity-brain/TopFragilidades.tsx` — lista os 3 menores subscores do `sv_breakdown`.
+- `src/components/proposals/ProposalForm.tsx` (drawer).
+- `src/components/proposals/ProposalCompareTable.tsx`.
 
 ## Arquivos
 **Novos**
-- `supabase/migrations/<ts>_metodologia_tres_assimetrias.sql`
-- `supabase/functions/eb-load-benchmark-transactions/index.ts`
-- `supabase/functions/mari-classify-buyer-type/index.ts`
-- `src/pages/equity-brain/admin/BenchmarkPage.tsx`
-- `src/pages/equity-brain/admin/BuyerClassificationPage.tsx`
+- `supabase/migrations/<ts>_sv_calculation.sql`
+- `supabase/functions/calculate-vendabilidade-batch/index.ts`
+- `supabase/functions/calculate-sav-score/index.ts`
+- `supabase/functions/mari-generate-buyer-thesis/index.ts`
+- `supabase/functions/calculate-vpl-proposal/index.ts`
+- `src/pages/equity-brain/PropostasPage.tsx`
+- `src/components/equity-brain/Gauge.tsx`, `NivelBadge.tsx`, `SAVBadge.tsx`, `TopFragilidades.tsx`
+- `src/components/proposals/ProposalForm.tsx`, `ProposalCompareTable.tsx`
 
 **Editados**
-- `src/components/equity-brain/EBSidebar.tsx` (2 itens admin)
-- `src/App.tsx` (2 rotas)
+- `src/App.tsx` (rota propostas)
+- `src/pages/equity-brain/MandateDetailPage.tsx` (bloco Diagnóstico Vispe)
+- `src/pages/equity-brain/OportunidadesPage.tsx` (SAV badge + tese)
+- `src/pages/equity-brain/BuyerDetailPage.tsx` (Perfil Vispe + deals históricos)
+- `src/components/deal/DealActions.tsx` (botão Simulador VPL)
+- `src/lib/ebTooltips.ts` (chaves novas)
 
-## Fora de escopo (vai pra E2)
-- Cálculo de `score_vendabilidade` / `sav_score`.
-- Geração de `thesis_text`.
-- Simulador VPL (UI consumindo `transaction_proposals`).
-- Integrar tipo_comprador no ranking de matches.
+**Insert (não migration)** — agendamento dos 2 crons via `pg_cron`/`pg_net`.
+
+## Fora de escopo (V2/F+)
+SQE, SDF, SCP, SCV, what-if scenarios, anuário Vispe, pitch deck por buyer, score de risco da transação, override de premissas pelo admin (UI fica read-only nesta fase).
 
 ## Critérios de aceite
-- Migration aplicada sem warnings do linter.
-- 11 linhas em `taxonomia_compradores`.
-- Após upload do JSON, `SELECT count(*) FROM equity_brain.benchmark_transactions = 55` e distribuição setor confere (saude:24, telecom:16, tecnologia:5, varejo:3, servicos_b2b:3, infraestrutura:2, industria:1, educacao:1).
-- Edge functions logam em `mari_ops.health_check`.
-- Sidebar admin mostra os 2 itens novos; telas carregam sem erro.
-- Batch classifier processa pelo menos 1 buyer com sucesso end-to-end.
+- Migration aplica sem warnings; `calculate_sv` retorna shape correto pra um CNPJ qualificado.
+- Batch SV roda e popula >= 100 companies (temos 249).
+- Batch SAV roda e popula >= 1000 matches.
+- 1 tese gerada manualmente, coerente com tipo + top 3 fatores.
+- 2 propostas de teste validam: B (R$85MM mais à vista) com VPL > A (R$100MM mais earn-out/escrow/ações).
+- MandateDetailPage, OportunidadesPage, BuyerDetailPage e DealDrawer mostram os novos blocos sem quebrar layout.
+- `mari_ops.daily_smoke_tests` continua verde.
 
 Posso prosseguir?
