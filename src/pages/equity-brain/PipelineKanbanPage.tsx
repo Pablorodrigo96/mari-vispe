@@ -364,6 +364,8 @@ function DealCard({
   onReanimate: () => void;
 }) {
   const { status } = getStageTimeState(m.stage_changed_at, slaDays);
+  const { openDeal } = useDealDrawer();
+  const onOpen = () => openDeal(m.id);
   return (
     <div
       draggable
