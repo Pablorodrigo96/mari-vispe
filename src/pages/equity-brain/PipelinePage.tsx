@@ -125,7 +125,7 @@ export default function PipelinePage() {
         {tab === "empresas" ? (
           <MyCompaniesPage />
         ) : view === "lista" ? (
-          <CrmHubPage />
+          <MandatosTablePage />
         ) : view === "kanban" ? (
           <PipelineKanbanPage />
         ) : view === "mapa" ? (
