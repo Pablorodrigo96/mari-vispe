@@ -62,12 +62,14 @@ function CardActions({ card, onDismiss }: { card: TodayCard; onDismiss: () => vo
           <Sparkles className="h-3.5 w-3.5 mr-1.5" />
           {expanded ? "Esconder Mari" : "Pedir resumo p/ Mari"}
         </Button>
-        <Link to={`/equity-brain/crm/mandate/${card.mandate_id}`}>
-          <Button size="sm" variant="outline" className="bg-transparent border-zinc-700 text-zinc-400 hover:bg-zinc-800">
-            <Eye className="h-3.5 w-3.5 mr-1.5" />
-            Abrir deal
-          </Button>
-        </Link>
+        <Button
+          size="sm" variant="outline"
+          onClick={() => openDeal(card.mandate_id)}
+          className="bg-transparent border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+        >
+          <Eye className="h-3.5 w-3.5 mr-1.5" />
+          Abrir deal
+        </Button>
         <button
           onClick={onDismiss}
           className="ml-auto text-[11px] text-zinc-500 hover:text-zinc-300 px-2 py-1"
