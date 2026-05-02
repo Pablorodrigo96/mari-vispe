@@ -1,92 +1,79 @@
-# Fase D — Polish, responsividade, motor de insights e docs
 
-Encerra a refatoração do EB com 4 frentes: sidebar responsivo, motor persistente de insights da Mari, documentação operacional e expansão dos smoke tests. Mantém comportamento atual em desktop intocado.
+# Fase E1 — Metodologia Três Assimetrias (schema + benchmark + classificador)
 
-## D.1 — Sidebar EB responsivo
+Backend-only. Sem novas telas de uso final — apenas 2 telas admin para operar a base. Prepara terreno para E2 (SV/SAV + Simulador VPL) sem mexer em `match_score` atual.
 
-Migrar `EBSidebar.tsx` (hoje `<aside class="w-60">` fixo) para o sistema `shadcn/ui sidebar` que já usamos em `AppSidebar`.
+## ⚠ Pré-requisito de dados
+A spec referencia `transacoes_ma_brasil.json` (55 deals VSP-001…VSP-055), mas **só o .md foi anexado nesta sessão**. Vou implementar a edge function `eb-load-benchmark-transactions` esperando o JSON via body, e a tela `/equity-brain/admin/benchmark` terá um upload (`<input type="file">`) que lê o arquivo e envia o conteúdo. Assim que você subir o JSON pela tela, os 55 deals entram. Sem hardcode no migration.
 
-- `EquityBrainLayout.tsx`: envolver com `<SidebarProvider defaultOpen>`, trocar `<EBSidebar/> + <main>` por `<EBSidebar/> + <SidebarInset>`. Adicionar header `lg:hidden` com `<SidebarTrigger/>` e label "mari · Equity Brain".
-- `EBSidebar.tsx`: refatorar usando `<Sidebar collapsible="icon">`, `SidebarHeader/Content/Footer`, `SidebarGroup`, `SidebarMenu/Item/Button`. Preservar:
-  - Item destacado "Hoje" com flame (`/equity-brain/hoje`)
-  - Listas MAIN, DASHBOARDS (collapsible), ADMIN_ITEMS (collapsible, gated por `isAdmin`)
-  - Badge `hotCount` em Oportunidades
-  - Footer com logo Mari, e-mail do user, "Voltar ao site", "Sair"
-- Estado `open` herdado do provider (já persiste em cookie/localStorage internamente).
-- Comportamento: desktop ≥1024 aberto; tablet 768–1023 colapsa para ícones; mobile <768 vira sheet via trigger.
+## E1.1 — Migration `metodologia_tres_assimetrias.sql`
+- ENUM `equity_brain.tipo_comprador_enum` (11 tipos).
+- Tabela `taxonomia_compradores` populada com as 11 linhas (texto exato da spec) + RLS read-all.
+- ALTER `equity_brain.buyers`: `tipo_comprador`, `tipo_classified_at`, `tipo_classified_confidence` + index parcial.
+- ALTER `equity_brain.companies`: `score_vendabilidade`, `nivel_maturidade` (CHECK 1–5), `sv_calculated_at`, `sv_breakdown jsonb`, `sv_data_completeness`.
+- ALTER `equity_brain.matches`: `sav_score`, `sav_breakdown`, `sav_calculated_at`, `thesis_text`, `thesis_generated_at` + index DESC parcial.
+- Tabela `benchmark_transactions` (PK textual `VSP-xxx`, raw_data jsonb, índices por setor/fase e por tipo_comprador). RLS: leitura admin+advisor; escrita só admin.
+- Tabela `transaction_proposals` com FK em `mandates` + RLS por responsável/padrinho/co_advisor/admin.
 
-## D.2 — Tabela `equity_brain.mari_insights` (migration)
+Validação prévia via `supabase--read_query` confirmando nomes reais (`equity_brain.mandates.responsavel_id`, `co_advisor_ids`, `equity_brain.buyers.is_synthetic`) antes de aplicar — ajusto se diferir.
 
-Cria tabela persistente para insights proativos com RLS por advisor, índices de prioridade/dedup, status (`active|dismissed|acted|expired`) e payload de ação. Política SELECT por dono ou admin; UPDATE só pelo dono (para dispensar/marcar acted).
+## E1.2 — Edge function `eb-load-benchmark-transactions`
+- Acesso admin (verifica via `has_role` no JWT).
+- Body: `{ transactions_json: string | object }`. Faz `JSON.parse` se string.
+- Itera `data.transacoes`, monta row mapeando campos da spec (incl. `vista_pct` vindo de `estrutura_pagamento.vista_pct`, `flag_caso_critico` por heurística "case study" em `observacoes_relevantes`), `upsert` por `id`.
+- Loga em `mari_ops.health_check` (sucesso/erros).
+- Retorna `{ inserted, errors, total }`.
 
-Antes de aplicar, validar nomes reais das tabelas referenciadas (`equity_brain.mandates`, `equity_brain.buyers`) — schema confere com fases anteriores.
+## E1.3 — Edge function `mari-classify-buyer-type`
+- Body: `{ buyer_id }` (single) ou `{ batch: true, limit?: number }`.
+- Single: lê buyer + até 10 deals históricos da `benchmark_transactions` casando `comprador_nome` (ILIKE primeiro token), monta prompt PT-BR com taxonomia + dados + regras heurísticas, chama Lovable AI Gateway com `google/gemini-2.5-flash`, parseia JSON `{tipo, confidence, reasoning}`, valida contra enum, persiste em `buyers`.
+- Batch: pega buyers `tipo_comprador IS NULL AND is_synthetic = false`, processa serial com `await sleep(1000)` (rate limit), agrega contagem, loga health_check.
+- Tratamento de erro: parse fail / tipo inválido → loga warning, segue.
 
-## D.3 — Edge function `mari-generate-insights`
+## E1.4 — Tela `/equity-brain/admin/benchmark`
+- `BenchmarkPage.tsx`: header com botão **"Carregar JSON"** (file picker → lê via FileReader → invoca edge function).
+- KPIs: total transações, multiplo médio EV/EBITDA, distribuição por setor (tabela compacta).
+- Tabela paginada (filtros: setor, fase_ciclo_setorial, tipo_comprador, ano de `data_anuncio`).
+- Linha clicável → `Sheet` lateral com `raw_data` em `<pre>` colapsável.
+- Coluna "Caso crítico" com badge.
 
-Roda diariamente (cron 06:00 BRT) e on-demand. Para cada advisor com mandatos ativos, aplica regras:
+## E1.5 — Tela `/equity-brain/admin/buyer-classification`
+- `BuyerClassificationPage.tsx`: KPIs (total / classificados / pendentes / confidence médio).
+- Distribuição por tipo (gráfico barras simples — recharts já no projeto).
+- Botões: "Classificar próximos 50" e "Classificar todos pendentes" (com `confirm()` mostrando estimativa = pendentes × 1s).
+- Tabela últimas 50 classificações (`tipo_classified_at DESC`) com confidence + reasoning (campo extra em `buyers`? — usar `sv_breakdown`-style? **Decisão:** adicionar coluna `tipo_classified_reasoning text` nullable na migration para auditoria).
 
-- **Urgência**: mandato vence em 30/15/7d; deal sem atividade 7d; WhatsApp inbound não respondido 24h; subtarefa DD vencida; NBO sem decisão 14d.
-- **Oportunidade**: 3+ matches novos fit>70% não triados; buyer fechou deal recente; notícia M&A no setor; empresa parada com novo buyer compatível.
-- **Risco**: temperature → cold sem ação; buyer com `cautela_flag` em deal; tempo na fase 2× média; valor pedido 3× mercado.
-- **Aprendizado** (semanal): tempo médio fechamento setor; múltiplo médio; performance vs meta.
+## E1.6 — Sidebar admin
+Adicionar 2 itens em `ADMIN_ITEMS` de `EBSidebar.tsx`:
+- `{ to: "/equity-brain/admin/benchmark", label: "Base Benchmark", Icon: Database }`
+- `{ to: "/equity-brain/admin/buyer-classification", label: "Classificar Buyers", Icon: Tags }`
 
-Mensagens humanizadas via Lovable AI (`google/gemini-2.5-flash`). Dedup por `(advisor_id, mandate_id, trigger_rule)` ativos. Loga em `mari_ops.health_check`.
-
-Cron via `pg_cron` + `pg_net`.
-
-## D.4 — Integrar insights no `TodayPage`
-
-Adicionar query a `mari_insights` (ativos, top 7 por prioridade) ao lado dos cards do `eb_today_feed`. Cada card:
-- Borda colorida por tipo (urgency=rose, opportunity=emerald, risk=amber, learning=purple)
-- Badge de prioridade
-- Mensagem + botão de ação (interpreta `action_payload.type`: `whatsapp` abre `openWhatsAppForContact`, `open_deal` abre `DealDrawer`, `open_url` navega)
-- Botão "Dispensar" → `update status='dismissed', dismissed_at=now()`
-
-## D.5 — Docs operacionais (PT-BR, foco no usuário)
-
-Criar em `docs/`:
-- `GUIA_ADVISOR.md` — fluxo do dia (Hoje → Oportunidades → Pipeline), drawer, registrar interação, Mari ⌘K, tipos de insight.
-- `GUIA_ADMIN.md` — imports, dedupe, paridade Monday, mapping advisors, health, atribuição de role via SQL.
-- `MUDANCAS_RECENTES.md` — changelog Maio 2026 (reorg menu, drawer, insights, sidebar responsivo, dedupe).
-
-## D.6 — Smoke tests diários
-
-Atualizar/criar `mari_ops.daily_smoke_tests()` cobrindo:
-1. Range de mandatos (200–1000)
-2. Matches ativos (≥1000)
-3. Buyers reais (≥100)
-4. Materialized views frescas (<2h)
-5. Insights gerados nas últimas 24h (>0)
-6. RLS habilitada em `drain_jobs`
-7. CNPJs inválidos (não 14 dígitos, exceto `PENDING-`/`VL%`)
-8. Resumo final em `mari_ops.health_check`
-
-Já existe cron diário; apenas substituir corpo da função.
+E rotas em `App.tsx` dentro de `EquityBrainLayout`.
 
 ## Arquivos
+**Novos**
+- `supabase/migrations/<ts>_metodologia_tres_assimetrias.sql`
+- `supabase/functions/eb-load-benchmark-transactions/index.ts`
+- `supabase/functions/mari-classify-buyer-type/index.ts`
+- `src/pages/equity-brain/admin/BenchmarkPage.tsx`
+- `src/pages/equity-brain/admin/BuyerClassificationPage.tsx`
 
-**Novos:**
-- `supabase/migrations/<ts>_mari_insights.sql`
-- `supabase/migrations/<ts>_smoke_tests_v2.sql`
-- `supabase/functions/mari-generate-insights/index.ts` (+ bloco em `supabase/config.toml` se precisar verify_jwt=false)
-- `docs/GUIA_ADVISOR.md`, `docs/GUIA_ADMIN.md`, `docs/MUDANCAS_RECENTES.md`
+**Editados**
+- `src/components/equity-brain/EBSidebar.tsx` (2 itens admin)
+- `src/App.tsx` (2 rotas)
 
-**Editados:**
-- `src/components/equity-brain/EBSidebar.tsx` (refator shadcn)
-- `src/components/equity-brain/EquityBrainLayout.tsx` (SidebarProvider + Inset + trigger mobile)
-- `src/pages/equity-brain/TodayPage.tsx` (cards de insights + dispensar)
-
-## Fora de escopo
-- Rebuild de regras de matching
-- Push notifications
-- Refator de `MandateDetailPage` (Fase C.6 separada)
+## Fora de escopo (vai pra E2)
+- Cálculo de `score_vendabilidade` / `sav_score`.
+- Geração de `thesis_text`.
+- Simulador VPL (UI consumindo `transaction_proposals`).
+- Integrar tipo_comprador no ranking de matches.
 
 ## Critérios de aceite
-- Sidebar EB colapsa em tablet/mobile, hamburger funciona, estado persiste
-- Tabela `mari_insights` com RLS; função `mari-generate-insights` deployada e cron agendado
-- TodayPage mostra insights coloridos com ações + dispensar
-- 3 docs criados em PT-BR
-- Smoke tests diários rodando, todos verdes em `health_dashboard`
-- Performance Today <1s com 7 cards extras
+- Migration aplicada sem warnings do linter.
+- 11 linhas em `taxonomia_compradores`.
+- Após upload do JSON, `SELECT count(*) FROM equity_brain.benchmark_transactions = 55` e distribuição setor confere (saude:24, telecom:16, tecnologia:5, varejo:3, servicos_b2b:3, infraestrutura:2, industria:1, educacao:1).
+- Edge functions logam em `mari_ops.health_check`.
+- Sidebar admin mostra os 2 itens novos; telas carregam sem erro.
+- Batch classifier processa pelo menos 1 buyer com sucesso end-to-end.
 
 Posso prosseguir?
