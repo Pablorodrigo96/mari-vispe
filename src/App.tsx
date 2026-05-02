@@ -107,6 +107,7 @@ import QuickFillPage from "./pages/equity-brain/QuickFillPage";
 import PipelinePage from "./pages/equity-brain/PipelinePage";
 import CompradoresPage from "./pages/equity-brain/CompradoresPage";
 import MandatosTablePage from "./pages/equity-brain/MandatosTablePage";
+import { RedirectWithParams } from "./components/equity-brain/RedirectWithParams";
 import DashboardCoveragePage from "./pages/equity-brain/DashboardCoveragePage";
 import DedupeAdminPage from "./pages/equity-brain/DedupeAdminPage";
 
