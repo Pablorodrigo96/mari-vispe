@@ -295,6 +295,8 @@ const App = () => (
               <Route path="admin/dedupe" element={<RequireRole roles={["admin"]}><DedupeAdminPage /></RequireRole>} />
               <Route path="admin/monday-parity"     element={<RequireRole roles={["admin"]}><MondayParity /></RequireRole>} />
               <Route path="admin/advisors-mapping"  element={<RequireRole roles={["admin"]}><AdvisorsMapping /></RequireRole>} />
+              <Route path="admin/benchmark"               element={<RequireRole roles={["admin"]}><BenchmarkPage /></RequireRole>} />
+              <Route path="admin/buyer-classification"    element={<RequireRole roles={["admin"]}><BuyerClassificationPage /></RequireRole>} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
