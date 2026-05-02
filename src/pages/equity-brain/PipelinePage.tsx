@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { List, LayoutGrid, Map as MapIcon, Network, Zap, Plus } from "lucide-react";
-import CrmHubPage from "./CrmHubPage";
+import MandatosTablePage from "./MandatosTablePage";
 import PipelineKanbanPage from "./PipelineKanbanPage";
 import MapaPage from "./MapaPage";
 import GrafoPage from "./GrafoPage";
