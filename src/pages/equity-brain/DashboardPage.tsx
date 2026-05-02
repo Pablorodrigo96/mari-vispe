@@ -1,3 +1,4 @@
+/** @deprecated Substituído — manter em código por hora; remover após Fase B aprovada. */
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";

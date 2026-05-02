@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { List, LayoutGrid, Map as MapIcon, Network, Zap, Plus } from "lucide-react";
-import CrmHubPage from "./CrmHubPage";
+import MandatosTablePage from "./MandatosTablePage";
 import PipelineKanbanPage from "./PipelineKanbanPage";
 import MapaPage from "./MapaPage";
 import GrafoPage from "./GrafoPage";
@@ -32,7 +32,7 @@ export default function PipelinePage() {
   const viewRaw = params.get("view");
   const tab: Tab = tabRaw === "empresas" ? "empresas" : "mandatos";
   const view: View =
-    viewRaw === "kanban" || viewRaw === "mapa" || viewRaw === "grafo" ? viewRaw : "lista";
+    viewRaw === "lista" || viewRaw === "mapa" || viewRaw === "grafo" ? viewRaw : "kanban";
   const [quickFillOpen, setQuickFillOpen] = useState(false);
 
   function update(next: { tab?: Tab; view?: View }) {
@@ -42,7 +42,7 @@ export default function PipelinePage() {
       else np.set("tab", next.tab);
     }
     if (next.view !== undefined) {
-      if (next.view === "lista") np.delete("view");
+      if (next.view === "kanban") np.delete("view");
       else np.set("view", next.view);
     }
     setParams(np, { replace: true });
@@ -125,7 +125,7 @@ export default function PipelinePage() {
         {tab === "empresas" ? (
           <MyCompaniesPage />
         ) : view === "lista" ? (
-          <CrmHubPage />
+          <MandatosTablePage />
         ) : view === "kanban" ? (
           <PipelineKanbanPage />
         ) : view === "mapa" ? (

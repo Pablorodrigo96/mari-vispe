@@ -1,3 +1,4 @@
+/** @deprecated Substituído — manter em código por hora; remover após Fase B aprovada. */
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { KpiHeader } from "@/components/equity-brain/crm/KpiHeader";

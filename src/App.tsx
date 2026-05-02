@@ -107,6 +107,7 @@ import QuickFillPage from "./pages/equity-brain/QuickFillPage";
 import PipelinePage from "./pages/equity-brain/PipelinePage";
 import CompradoresPage from "./pages/equity-brain/CompradoresPage";
 import MandatosTablePage from "./pages/equity-brain/MandatosTablePage";
+import { RedirectWithParams } from "./components/equity-brain/RedirectWithParams";
 import DashboardCoveragePage from "./pages/equity-brain/DashboardCoveragePage";
 import DedupeAdminPage from "./pages/equity-brain/DedupeAdminPage";
 
@@ -238,6 +239,7 @@ const App = () => (
               <Route path="grafo"         element={<Navigate to="/equity-brain/pipeline?view=grafo" replace />} />
               <Route path="crm/quick-fill" element={<Navigate to="/equity-brain/pipeline" replace />} />
               <Route path="mandate"       element={<Navigate to="/equity-brain/pipeline" replace />} />
+              <Route path="mandate/:id"   element={<RedirectWithParams to="/equity-brain/crm/mandate/:id" />} />
               <Route path="mandato"       element={<Navigate to="/equity-brain/pipeline" replace />} />
               <Route path="mandatos"      element={<Navigate to="/equity-brain/pipeline" replace />} />
               <Route path="vendedores"    element={<Navigate to="/equity-brain/pipeline" replace />} />
@@ -277,8 +279,8 @@ const App = () => (
               <Route path="admin/health" element={<RequireRole roles={["admin"]}><HealthDashboardPage /></RequireRole>} />
               <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
               <Route path="crm/pipeline/historico" element={<PipelineHistoryPage />} />
-              {/* deal/:id desativado até existir dado em equity_brain.deals; redireciona pro pipeline */}
-              <Route path="deal/:id"             element={<Navigate to="/equity-brain/pipeline" replace />} />
+              {/* deal/:id ainda não tem página própria — redireciona para mandate/:id preservando o id */}
+              <Route path="deal/:id"             element={<RedirectWithParams to="/equity-brain/crm/mandate/:id" />} />
               <Route path="crm/exports"          element={<RequireRole roles={["admin"]}><ExportsPage /></RequireRole>} />
               <Route path="isp/import"           element={<RequireRole roles={["admin", "advisor"]}><IspImportPage /></RequireRole>} />
               <Route path="isp/sugestoes"        element={<RequireRole roles={["admin", "advisor"]}><IspSuggestionsPage /></RequireRole>} />

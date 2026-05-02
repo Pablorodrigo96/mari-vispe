@@ -1,3 +1,4 @@
+/** @deprecated Substituído — manter em código por hora; remover após Fase B aprovada. */
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowLeftRight, Filter, Sparkles } from "lucide-react";
