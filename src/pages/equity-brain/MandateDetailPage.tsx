@@ -18,6 +18,7 @@ import { ConversationSummary } from "@/components/equity-brain/crm/ConversationS
 import { AskMariDrawer } from "@/components/equity-brain/crm/AskMariDrawer";
 import { IdentityRevealCard } from "@/components/equity-brain/IdentityRevealCard";
 import { BlindTeaserButton } from "@/components/equity-brain/BlindTeaserButton";
+import { DiagnosticoVispe } from "@/components/equity-brain/DiagnosticoVispe";
 import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
@@ -139,6 +140,7 @@ export default function MandateDetailPage() {
             <ActivityTimeline entityType="mandate" entityId={mandate.id} />
           </div>
           <div className="space-y-3">
+            <DiagnosticoVispe cnpj={mandate.company_cnpj} />
             <div className="bg-zinc-900/40 border border-zinc-800 rounded p-4 space-y-2">
               <div className="text-[10px] uppercase text-zinc-400">Resumo</div>
               <div className="text-xs text-zinc-300">CNPJ: {mandate.company_cnpj ?? "—"}</div>

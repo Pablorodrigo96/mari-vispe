@@ -32,7 +32,7 @@ const DASHBOARDS = [
   { to: "/equity-brain/dashboards/executivo", label: "Executivo", Icon: TrendingUp },
   { to: "/equity-brain/dashboards/mandatos",  label: "Mandatos",  Icon: Building2 },
   { to: "/equity-brain/dashboards/match",     label: "Match",     Icon: GitMerge },
-  { to: "/equity-brain/dashboards/propostas", label: "Propostas", Icon: FileSignature },
+  { to: "/equity-brain/propostas",            label: "Propostas", Icon: FileSignature },
 ];
 
 const ADMIN_ITEMS = [
