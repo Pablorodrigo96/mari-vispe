@@ -32,7 +32,7 @@ export default function PipelinePage() {
   const viewRaw = params.get("view");
   const tab: Tab = tabRaw === "empresas" ? "empresas" : "mandatos";
   const view: View =
-    viewRaw === "kanban" || viewRaw === "mapa" || viewRaw === "grafo" ? viewRaw : "lista";
+    viewRaw === "lista" || viewRaw === "mapa" || viewRaw === "grafo" ? viewRaw : "kanban";
   const [quickFillOpen, setQuickFillOpen] = useState(false);
 
   function update(next: { tab?: Tab; view?: View }) {
