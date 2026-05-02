@@ -5,6 +5,7 @@ import { EBSidebar } from "./EBSidebar";
 import { VerticalSelector } from "./VerticalSelector";
 import { Input } from "@/components/ui/input";
 import { MariBrainFab } from "./mari/MariBrainFab";
+import { DealDrawerProvider } from "@/contexts/DealDrawerContext";
 
 export function EquityBrainLayout() {
   const [search, setSearch] = useState("");
