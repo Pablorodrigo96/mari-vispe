@@ -238,6 +238,7 @@ const App = () => (
               <Route path="grafo"         element={<Navigate to="/equity-brain/pipeline?view=grafo" replace />} />
               <Route path="crm/quick-fill" element={<Navigate to="/equity-brain/pipeline" replace />} />
               <Route path="mandate"       element={<Navigate to="/equity-brain/pipeline" replace />} />
+              <Route path="mandate/:id"   element={<RedirectWithParams to="/equity-brain/crm/mandate/:id" />} />
               <Route path="mandato"       element={<Navigate to="/equity-brain/pipeline" replace />} />
               <Route path="mandatos"      element={<Navigate to="/equity-brain/pipeline" replace />} />
               <Route path="vendedores"    element={<Navigate to="/equity-brain/pipeline" replace />} />
