@@ -1,4 +1,4 @@
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate, useLocation, Link } from "react-router-dom";
 import { useState } from "react";
 import {
   Flame, Mail, Briefcase, Target, PhoneCall, Newspaper, BarChart3,
@@ -12,6 +12,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
 import { useMatchPercentiles, useMatchInbox } from "@/hooks/useMatchInbox";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import {
+  Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
+  SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
+  SidebarMenu, SidebarMenuItem, SidebarMenuButton,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 const MAIN = [
   { to: "/equity-brain/oportunidades",   label: "Oportunidades",    Icon: Mail, badge: "matches" as const },
@@ -45,170 +51,213 @@ export function EBSidebar() {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
   const { data: pcts } = useMatchPercentiles();
   const { data: hotMatches = [] } = useMatchInbox({ minScore: pcts?.hot ?? 70, limit: 200 });
   const hotCount = hotMatches.length;
   const { roles } = useUserRoles();
   const isAdmin = roles.includes("admin");
 
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
   const dashboardsActive = location.pathname.startsWith("/equity-brain/dashboards");
   const adminActive = location.pathname.startsWith("/equity-brain/admin");
-
   const [dashOpen, setDashOpen] = useState(dashboardsActive);
   const [adminOpen, setAdminOpen] = useState(adminActive);
 
+  const hojeActive = location.pathname === "/equity-brain/hoje";
+
   return (
-    <aside className="w-60 shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
-      <div className="px-5 py-5 border-b border-zinc-800">
+    <Sidebar collapsible="icon" className="border-r border-zinc-800 bg-zinc-950">
+      <SidebarHeader className="border-b border-zinc-800 bg-zinc-950 p-3">
         <div className="flex items-center gap-3">
-          <MariLogo variant="symbol-dark" size={56} />
-          <div>
-            <div className="text-zinc-100 text-base font-bold leading-none">Equity Brain</div>
-            <div className="text-zinc-500 text-[11px] mt-1">by mari · Vispe Capital</div>
-          </div>
-        </div>
-      </div>
-
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {/* Hoje — destaque Volt */}
-        <NavLink
-          to="/equity-brain/hoje"
-          className={({ isActive }) =>
-            cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-semibold transition-all mb-2",
-              isActive
-                ? "bg-[#D9F564] text-zinc-900 shadow-[0_0_20px_-5px_rgba(217,245,100,0.6)]"
-                : "bg-zinc-900 text-[#D9F564] border border-[#D9F564]/30 hover:bg-zinc-800 hover:border-[#D9F564]/60",
-            )
-          }
-        >
-          <Flame className="h-4 w-4" />
-          <span className="flex-1">Hoje</span>
-          <Sparkles className="h-3 w-3 opacity-70" />
-        </NavLink>
-
-        {MAIN.map(({ to, label, Icon, badge }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                isActive
-                  ? "bg-emerald-950/40 text-emerald-300 border border-emerald-900/60"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
-              )
-            }
-          >
-            <Icon className="h-4 w-4" />
-            <span className="flex-1">{label}</span>
-            {badge === "matches" && hotCount > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#D9F564] text-zinc-900 tabular-nums">
-                {hotCount}
-              </span>
-            )}
-          </NavLink>
-        ))}
-
-        {/* Dashboards accordion */}
-        <button
-          onClick={() => setDashOpen((o) => !o)}
-          className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-            dashboardsActive
-              ? "bg-emerald-950/40 text-emerald-300 border border-emerald-900/60"
-              : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
+          <MariLogo variant="symbol-dark" size={collapsed ? 32 : 44} />
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="text-zinc-100 text-sm font-bold leading-none">Equity Brain</div>
+              <div className="text-zinc-500 text-[10px] mt-1">by mari · Vispe</div>
+            </div>
           )}
-        >
-          <BarChart3 className="h-4 w-4" />
-          <span className="flex-1 text-left">Dashboards</span>
-          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", dashOpen && "rotate-180")} />
-        </button>
-        {dashOpen && (
-          <div className="ml-3 pl-3 border-l border-zinc-800 space-y-0.5">
-            {DASHBOARDS.map(({ to, label, Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors",
-                    isActive
-                      ? "text-[#D9F564] bg-[#D9F564]/10"
-                      : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900",
-                  )
-                }
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{label}</span>
-              </NavLink>
-            ))}
-          </div>
-        )}
+        </div>
+      </SidebarHeader>
 
-        {/* Admin accordion (admin only) */}
-        {isAdmin && (
-          <>
-            <div className="my-3 border-t border-zinc-800" />
-            <button
-              onClick={() => setAdminOpen((o) => !o)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                adminActive
-                  ? "bg-zinc-800 text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
-              )}
-            >
-              <Settings className="h-4 w-4" />
-              <span className="flex-1 text-left">Admin</span>
-              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", adminOpen && "rotate-180")} />
-            </button>
-            {adminOpen && (
-              <div className="ml-3 pl-3 border-l border-zinc-800 space-y-0.5">
-                {ADMIN_ITEMS.map(({ to, label, Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors",
-                        isActive
-                          ? "text-zinc-100 bg-zinc-800"
-                          : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900",
-                      )
-                    }
+      <SidebarContent className="bg-zinc-950">
+        {/* Hoje destaque Volt */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={hojeActive}
+                  tooltip="Hoje"
+                  className={cn(
+                    "font-semibold",
+                    hojeActive
+                      ? "!bg-[#D9F564] !text-zinc-900 hover:!bg-[#D9F564]/90"
+                      : "!bg-zinc-900 !text-[#D9F564] border border-[#D9F564]/30 hover:!bg-zinc-800",
+                  )}
+                >
+                  <Link to="/equity-brain/hoje">
+                    <Flame className="h-4 w-4" />
+                    <span>Hoje</span>
+                    {!collapsed && <Sparkles className="ml-auto h-3 w-3 opacity-70" />}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          {!collapsed && <SidebarGroupLabel className="text-zinc-600">Operação</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {MAIN.map(({ to, label, Icon, badge }) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(to)}
+                    tooltip={label}
+                    className={cn(
+                      isActive(to)
+                        ? "!bg-emerald-950/40 !text-emerald-300 border border-emerald-900/60"
+                        : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                    )}
                   >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{label}</span>
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </nav>
+                    <NavLink to={to}>
+                      <Icon className="h-4 w-4" />
+                      <span>{label}</span>
+                      {!collapsed && badge === "matches" && hotCount > 0 && (
+                        <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#D9F564] text-zinc-900 tabular-nums">
+                          {hotCount}
+                        </span>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-      <div className="border-t border-zinc-800 p-3 space-y-1">
-        <button
-          onClick={() => navigate("/")}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Voltar ao site
-        </button>
-        {user && (
-          <button
-            onClick={async () => { await signOut(); navigate("/"); }}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs text-zinc-500 hover:text-rose-400 hover:bg-zinc-900 transition-colors"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sair
-          </button>
+        {/* Dashboards */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setDashOpen((o) => !o)}
+                  isActive={dashboardsActive}
+                  tooltip="Dashboards"
+                  className={cn(
+                    dashboardsActive
+                      ? "!bg-emerald-950/40 !text-emerald-300"
+                      : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Dashboards</span>
+                  {!collapsed && (
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", dashOpen && "rotate-180")} />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {dashOpen && !collapsed && DASHBOARDS.map(({ to, label, Icon }) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(to)}
+                    className={cn(
+                      "ml-3 text-xs",
+                      isActive(to) ? "!text-[#D9F564] !bg-[#D9F564]/10" : "!text-zinc-500 hover:!text-zinc-200",
+                    )}
+                  >
+                    <NavLink to={to}>
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Admin */}
+        {isAdmin && (
+          <SidebarGroup>
+            {!collapsed && <SidebarGroupLabel className="text-zinc-600">Admin</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setAdminOpen((o) => !o)}
+                    isActive={adminActive}
+                    tooltip="Admin"
+                    className={cn(
+                      adminActive ? "!bg-zinc-800 !text-zinc-100" : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                    )}
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Admin</span>
+                    {!collapsed && (
+                      <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", adminOpen && "rotate-180")} />
+                    )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {adminOpen && !collapsed && ADMIN_ITEMS.map(({ to, label, Icon }) => (
+                  <SidebarMenuItem key={to}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(to)}
+                      className={cn(
+                        "ml-3 text-xs",
+                        isActive(to) ? "!text-zinc-100 !bg-zinc-800" : "!text-zinc-500 hover:!text-zinc-200",
+                      )}
+                    >
+                      <NavLink to={to}>
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{label}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
-        {user?.email && (
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-zinc-800 bg-zinc-950 p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => navigate("/")}
+              tooltip="Voltar ao site"
+              className="!text-zinc-500 hover:!text-zinc-200 hover:!bg-zinc-900 text-xs"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Voltar ao site</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          {user && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={async () => { await signOut(); navigate("/"); }}
+                tooltip="Sair"
+                className="!text-zinc-500 hover:!text-rose-400 hover:!bg-zinc-900 text-xs"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Sair</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
+        </SidebarMenu>
+        {!collapsed && user?.email && (
           <div className="px-3 pt-2 text-[10px] text-zinc-600 truncate">{user.email}</div>
         )}
-      </div>
-    </aside>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
