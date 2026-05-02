@@ -3505,6 +3505,63 @@ export type Database = {
         }
         Relationships: []
       }
+      mari_insights: {
+        Row: {
+          acted_at: string | null
+          action_payload: Json | null
+          advisor_id: string | null
+          buyer_id: string | null
+          created_at: string | null
+          dismissed_at: string | null
+          expires_at: string | null
+          id: string | null
+          insight_type: string | null
+          mandate_id: string | null
+          message: string | null
+          priority: number | null
+          status: string | null
+          suggested_action: string | null
+          trigger_rule: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          acted_at?: string | null
+          action_payload?: Json | null
+          advisor_id?: string | null
+          buyer_id?: string | null
+          created_at?: string | null
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          insight_type?: string | null
+          mandate_id?: string | null
+          message?: string | null
+          priority?: number | null
+          status?: string | null
+          suggested_action?: string | null
+          trigger_rule?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          acted_at?: string | null
+          action_payload?: Json | null
+          advisor_id?: string | null
+          buyer_id?: string | null
+          created_at?: string | null
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          insight_type?: string | null
+          mandate_id?: string | null
+          message?: string | null
+          priority?: number | null
+          status?: string | null
+          suggested_action?: string | null
+          trigger_rule?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       mv_dashboard_executivo: {
         Row: {
           buyside: number | null

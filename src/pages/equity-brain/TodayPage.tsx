@@ -8,6 +8,7 @@ import { useTodayCards, useDismissCard, useMandateSummary, type TodayCard } from
 import { openWhatsAppForContact } from "@/lib/whatsappBridge";
 import { toast } from "sonner";
 import { useDealDrawer } from "@/contexts/DealDrawerContext";
+import { MariInsightsSection } from "@/components/equity-brain/MariInsightsSection";
 
 function fmtBRL(v: number | null) {
   if (v == null) return "—";
@@ -210,6 +211,9 @@ export default function TodayPage() {
             A Mari priorizou pra você. Foque, dispense ou deixe para depois.
           </p>
         </div>
+
+        {/* Insights proativos da Mari */}
+        <MariInsightsSection />
 
         {/* Conteúdo */}
         {isLoading && (
