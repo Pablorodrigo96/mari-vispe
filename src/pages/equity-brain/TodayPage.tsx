@@ -20,6 +20,7 @@ function CardActions({ card, onDismiss }: { card: TodayCard; onDismiss: () => vo
   const [expanded, setExpanded] = useState(false);
   const [sending, setSending] = useState(false);
   const summary = useMandateSummary(card.mandate_id, { enabled: expanded });
+  const { openDeal } = useDealDrawer();
 
   const handleWhatsApp = async (msg?: string) => {
     if (!card.contact_phone) {
