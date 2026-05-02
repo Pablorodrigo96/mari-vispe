@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useDealDrawer } from "@/contexts/DealDrawerContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, GripVertical, DollarSign, Pencil, FolderOpen, FileSignature, Settings2, Snowflake, History, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
@@ -363,6 +364,8 @@ function DealCard({
   onReanimate: () => void;
 }) {
   const { status } = getStageTimeState(m.stage_changed_at, slaDays);
+  const { openDeal } = useDealDrawer();
+  const onOpen = () => openDeal(m.id);
   return (
     <div
       draggable
@@ -373,13 +376,13 @@ function DealCard({
       )}
     >
       <div className="flex items-start justify-between gap-1">
-        <Link
-          to={`/equity-brain/crm/mandate/${m.id}`}
-          className="text-[11px] text-zinc-100 font-medium leading-tight break-words flex-1 truncate hover:text-[#D9F564]"
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpen(); }}
+          className="text-[11px] text-zinc-100 font-medium leading-tight break-words flex-1 truncate hover:text-[#D9F564] text-left"
           title={m.razao_social ?? m.company_cnpj}
         >
           {m.display_name ?? m.codename ?? m.razao_social ?? m.company_cnpj}
-        </Link>
+        </button>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
           className="text-zinc-700 hover:text-[#D9F564] shrink-0"
