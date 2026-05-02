@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { Flame, Snowflake, Sparkles, MessageCircle, Eye, Clock, ChevronRight, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTodayCards, useDismissCard, useMandateSummary, type TodayCard } from "@/hooks/useTodayCards";
 import { openWhatsAppForContact } from "@/lib/whatsappBridge";
 import { toast } from "sonner";
+import { useDealDrawer } from "@/contexts/DealDrawerContext";
 
 function fmtBRL(v: number | null) {
   if (v == null) return "—";
