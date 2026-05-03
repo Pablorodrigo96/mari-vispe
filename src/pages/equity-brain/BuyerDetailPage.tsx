@@ -22,7 +22,14 @@ import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
 
-type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents";
+import { BuyerIdentityBlock } from "@/components/equity-brain/buyer/BuyerIdentityBlock";
+import { BuyerOperationBlock } from "@/components/equity-brain/buyer/BuyerOperationBlock";
+import { BuyerThesisBlock } from "@/components/equity-brain/buyer/BuyerThesisBlock";
+import { BuyerTrackRecordBlock } from "@/components/equity-brain/buyer/BuyerTrackRecordBlock";
+import { EnrichBuyerButton } from "@/components/equity-brain/buyer/EnrichBuyerButton";
+import { Lightbulb, TrendingUp } from "lucide-react";
+
+type Tab = "overview" | "thesis" | "track" | "matches" | "news" | "whatsapp" | "documents";
 
 export default function BuyerDetailPage() {
   const { id } = useParams<{ id: string }>();
