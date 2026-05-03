@@ -196,6 +196,16 @@ Produza a análise no formato JSON pedido.`;
     const tokensOut = claudeJson.usage?.output_tokens ?? 0;
     const costUsd = (tokensIn * COST_INPUT_PER_MTOK / 1_000_000) + (tokensOut * COST_OUTPUT_PER_MTOK / 1_000_000);
 
+    try {
+      const { logApiUsage } = await import("../_shared/apiTrack.ts");
+      await logApiUsage({
+        provider: "anthropic", category: "llm", model: MODEL,
+        function_name: "claude-classify-thesis", feature: "thesis_classification",
+        input_tokens: tokensIn, output_tokens: tokensOut, total_tokens: tokensIn + tokensOut,
+        status: "success", http_status: 200,
+      });
+    } catch (e) { console.error("apiTrack:", e); }
+
     // 6) Atualiza tabelas se parse foi bem
     if (parsed?.summary) {
       await supabase
