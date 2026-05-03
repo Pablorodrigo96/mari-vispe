@@ -11,6 +11,7 @@ import {
   Sparkles,
   Brain,
   LineChart,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
@@ -25,6 +26,7 @@ const menuItems = [
   { name: 'Captações', href: '/admin/capital', icon: Banknote },
   { name: 'Provedores', href: '/admin/capital/providers', icon: Building2 },
   { name: 'Parcerias', href: '/admin/parcerias', icon: Users },
+  { name: 'Monitor de APIs', href: '/admin/api-monitor', icon: Activity },
 ];
 
 export function AdminSidebar() {
