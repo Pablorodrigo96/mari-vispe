@@ -135,6 +135,15 @@ export function NewsPanel({ cnpj, buyerId, listingId, limit = 30, emptyMessage }
 
   return (
     <div className="space-y-3">
+      {showFetchButton && (
+        <div className="flex justify-end">
+          <Button size="sm" variant="outline" onClick={fetchNow} disabled={fetching}
+            className="bg-transparent border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/20">
+            {fetching ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+            Atualizar
+          </Button>
+        </div>
+      )}
       {items.map((n) => {
         const meta = EVENT_META[n.event_type] ?? EVENT_META.generic;
         const ev = n.event_data ?? {};
