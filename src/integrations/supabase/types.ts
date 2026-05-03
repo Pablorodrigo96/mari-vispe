@@ -3348,52 +3348,6 @@ export type Database = {
         }
         Relationships: []
       }
-      eb_matches_enriched: {
-        Row: {
-          ai_pitch: string | null
-          ai_thesis_summary: string | null
-          assigned_bdr: string | null
-          buyer_id: string | null
-          buyer_nome: string | null
-          buyer_tipo: string | null
-          capital_social: number | null
-          cnae_descricao: string | null
-          cnae_principal: string | null
-          cnpj: string | null
-          computed_at: string | null
-          data_abertura: string | null
-          geografia_fit: number | null
-          has_listing: boolean | null
-          id: string | null
-          ma_score: number | null
-          ma_score_emp: number | null
-          match_score: number | null
-          municipio: string | null
-          nome_fantasia: string | null
-          porte: string | null
-          porte_fit: number | null
-          prioridade: number | null
-          qtd_socios: number | null
-          razao_social: string | null
-          reasons: Json | null
-          setor_fit: number | null
-          setor_ma: string | null
-          setores_interesse: string[] | null
-          status: string | null
-          subsetor_ma: string | null
-          sucessao_score: number | null
-          tese_fit: number | null
-          thesis_category: string | null
-          thesis_description: string | null
-          thesis_key: string | null
-          thesis_name: string | null
-          ticket_max: number | null
-          ticket_min: number | null
-          uf: string | null
-          vispe_score: number | null
-        }
-        Relationships: []
-      }
       eb_my_companies_v2: {
         Row: {
           cnpj: string | null
