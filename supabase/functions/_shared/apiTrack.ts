@@ -90,7 +90,7 @@ export async function logApiUsage(p: LogParams) {
         user_id: p.user_id ?? null,
         input_tokens: inTok || null,
         output_tokens: outTok || null,
-        total_tokens: p.total_tokens ?? (inTok + outTok) || null,
+        total_tokens: (p.total_tokens ?? (inTok + outTok)) || null,
         request_count: calls,
         cost_usd,
         cost_brl,
