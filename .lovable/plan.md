@@ -1,77 +1,84 @@
-# Fase F1.1 — Make-it-work (apenas fixes, zero feature nova)
+# MARI State Reference — Pacote de Diagnóstico (03/05/2026)
 
-Objetivo: tornar visível e funcional o que já foi construído nas fases E2/F1 mas está inerte (views incompletas, dados não calculados, componentes órfãos, sem cron).
+## Objetivo
+Gerar **4 arquivos de referência** em `/mnt/documents/` que servirão como fonte de verdade sobre o estado real da plataforma. Esses arquivos são para serem anexados em prompts futuros para evitar que features sejam construídas sobre suposições erradas (vide divergências encontradas no diagnóstico).
 
----
+## O que vai ser entregue
 
-## 1. Database — Migration
+### 1. `MARI_SCHEMA_STATE.txt`
+Dump SQL real (já coletado no diagnóstico) contendo:
+- Lista completa de colunas das 7 tabelas core (companies, buyers, mandates, matches, crm_activities, benchmark_transactions, deal_events)
+- 9 enums do schema `equity_brain` com todos os labels
+- 60 functions/triggers do schema
+- Contagens reais (não estimativas)
+- Cobertura de campos críticos (geocode, SV, thesis)
+- Validação de integridade FK (0 orphans confirmado)
 
-**a) Recriar `public.eb_buyers_enriched`** incluindo as 6 colunas novas de buyer:
-`tese_text`, `criterios_exclusao`, `notas_estrategicas`, `linkedin_url`, `email_contato_principal`, `telefone_contato` + manter colunas existentes. `security_invoker=on`.
+### 2. `MARI_CODE_STATE.txt`
+- 81 edge functions deployadas (lista completa)
+- 47 páginas EB + 97 componentes EB
+- 33 hooks customizados
+- 26 libs utilitárias
+- Configuração `supabase/config.toml` (verify_jwt overrides)
+- Mapa de redirects de rotas legadas
 
-**b) Recriar `public.eb_companies_enriched`** (ou view equivalente usada no Mapa) expondo `latitude`, `longitude`, `geocoded_at`, `geocoded_source`, respeitando `is_company_visible_in_crm()`.
+### 3. `MARI_STATE_REFERENCE.json`
+JSON estruturado com a **realidade**, corrigindo o template do prompt original:
+- Schemas reais por tabela (com tipos)
+- Lista de campos que **não existem** mas são frequentemente assumidos
+- Edge functions agrupadas por domínio (mari-*, match-*, eb-*, calculate-*, etc.)
+- Componentes mapeados a paths reais
+- Cobertura % de cada campo crítico
 
-**c) Garantir `equity_brain.eb_v_mandate_pins`** com grants para `authenticated` e exposição via view pública `public.eb_v_mandate_pins`.
+### 4. `MARI_README.md`
+Documento legível resumindo:
+- Snapshot de rows por tabela
+- **Tabela de divergências críticas vs. suposições comuns** (o que mais importa)
+- Próximas migrations necessárias
+- Template de prompt para reuso
 
-**d) Cron (`pg_cron` + `pg_net`)** — inserido via insert tool (contém URL/anon key, não migration):
-- `geocode-companies-batch`: semanal (domingo 03h)
-- `calculate-vendabilidade-batch`: a cada 4h
-- `calculate-sav-score`: dispara junto com vendabilidade
+## Divergências críticas que vão para o README (já confirmadas no banco)
 
----
+```text
+Suposição comum                          Realidade
+---------------------------------------- ----------------------------------------
+matches.mandate_id existe                NÃO. matches liga cnpj↔buyer_id
+buyers.tese_text é coluna                NÃO existe na tabela buyers
+buyers.linkedin_url existe               NÃO existe
+buyers.email_contato_principal existe    NÃO existe
+buyers.website preenchido                Existe mas 0/503 populados
+mandates.motivo_venda existe             NÃO existe
+mandates.fase_changed_at                 NÃO. É stage_changed_at
+mandates.titulo / mandates.fase          NÃO. É pipeline_stage + outcome
+benchmark_transactions tem 55 rows       Está VAZIA (0 rows)
+matches.sav_score populado               0/141.601 calculados
+matches.thesis_text populado             0/141.601 gerados
+companies geocodificadas 80%             63% (248/394)
+F1.1 criou view eb_buyers_enriched      View criada mas colunas-fonte não existem
+```
 
-## 2. Backfill imediato (insert tool)
+## Implementação técnica
 
-Disparar 1x manualmente via `net.http_post`:
-- geocodificar as 394 companies
-- calcular SV/SAV de todos mandatos ativos
-Para popular o mapa e os gauges já no primeiro acesso.
+1. **Coletar dados restantes** que faltam (já tenho 90%):
+   - Triggers list (info_schema)
+   - RLS policies count
+   - Edge functions config
+   - Cron jobs ativos
 
----
+2. **Gerar os 4 arquivos** via script Node/bash em `/mnt/documents/`:
+   - `MARI_SCHEMA_STATE.txt` (texto formatado)
+   - `MARI_CODE_STATE.txt` (texto formatado)
+   - `MARI_STATE_REFERENCE.json` (JSON validado)
+   - `MARI_README.md` (markdown)
 
-## 3. UI — Integrações que faltam
+3. **Emitir tags `<lov-artifact>`** para cada arquivo gerado, permitindo download direto.
 
-**a) `MapaPage.tsx`**
-- Adicionar toggle “Heatmap | Mandatos” no topo do mapa.
-- Quando “Mandatos”: renderizar `<MandateMap />` consumindo `eb_v_mandate_pins`.
-- Legenda por fase (cores já existentes).
+## Não está no escopo
 
-**b) `BuyerDetailPage.tsx`**
-- Confirmar que `useBuyerCrm` lê de `eb_buyers_enriched` (com fallback resiliente para `equity_brain.buyers` se a view falhar).
-- Garantir tabs “Tese” e “Track” renderizando `BuyerThesisBlock` e `BuyerTrackRecordBlock`.
-- Botão `EnrichBuyerButton` visível no header da página + modal `EnrichReviewModal` aplicando updates via `useUpdateBuyer`.
+- **NÃO** vou criar migrations para os campos faltantes (`buyers.tese_text`, `mandates.motivo_venda`, etc.) — isso fica para uma Fase F1.3 separada que você pode autorizar depois com base no README.
+- **NÃO** vou rodar backfill de SAV/thesis nos 141k matches (job pesado, precisa decisão).
+- **NÃO** vou alterar código da plataforma — esta tarefa é puramente diagnóstica/documental.
 
-**c) `DiagnosticoVispe.tsx`**
-- Adicionar botão “Recalcular Vendabilidade” (admin/advisor) → invoca `calculate-vendabilidade-batch` para o mandato atual.
-- Mostrar `Gauge` SV + `SAVBadge` lendo do registro atualizado.
+## Próximo passo após aprovação
 
-**d) Loading/empty states** — todos os componentes acima devem renderizar skeleton + mensagem clara “Calculando…” / “Sem dados ainda” em vez de retornar `null`.
-
----
-
-## 4. Hook hardening
-
-`useBuyerCrm.ts` e `useMandatePins.ts`:
-- try/catch em torno do select da view; se erro `42703` (column missing) ou `42P01` (relation missing), loggar e cair em query alternativa em `equity_brain.*`.
-- Toast só em modo dev.
-
----
-
-## 5. QA checklist (acceptance)
-
-- [ ] `/equity-brain/mapa` mostra pelo menos 50 pins de mandatos no toggle “Mandatos”.
-- [ ] `/equity-brain/buyer/:id` exibe campos editáveis e botão de IA; salvar grava em DB e cria `crm_activity`.
-- [ ] `/equity-brain/mandate/:id` mostra Gauge SV preenchido e Badge SAV; botão recalcular funciona.
-- [ ] Console sem erros de view inexistente.
-- [ ] `select count(*) where latitude is not null` > 300 após backfill.
-
----
-
-## Arquivos previstos
-
-**Migration:** `supabase/migrations/<ts>_phase_f11_fixes.sql`
-**Insert (cron + backfill):** via insert tool (não migration)
-**Editados:** `src/pages/equity-brain/MapaPage.tsx`, `src/pages/equity-brain/BuyerDetailPage.tsx`, `src/components/equity-brain/DiagnosticoVispe.tsx`, `src/hooks/useBuyerCrm.ts`
-**Novos (se faltarem):** `src/hooks/useMandatePins.ts`
-
-Sem novos endpoints; sem novas tabelas; sem novas dependências.
+Aprove e eu rodo as últimas queries de complemento + escrevo os 4 arquivos em `/mnt/documents/` em uma única passada. Tempo estimado: ~2 min.
