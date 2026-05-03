@@ -89,6 +89,7 @@ export default function BuyerDetailPage() {
             entityType="buyer"
             entityId={buyer.id}
           />
+          <EnrichBuyerButton buyerId={buyer.id} />
         </div>
       </header>
 
