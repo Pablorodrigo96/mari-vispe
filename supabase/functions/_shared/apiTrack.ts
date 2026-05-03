@@ -361,3 +361,84 @@ export async function trackExternalCall<T>(
     throw e;
   }
 }
+
+// ===== Drop-in fetch wrappers (minimal refactor) =====
+// Replace `fetch(url, opts)` with `trackedAIFetch(url, opts, { function_name })`
+// Auto-detects provider from URL, clones response to extract usage without consuming caller's body.
+export async function trackedAIFetch(
+  url: string,
+  init: RequestInit,
+  opts: { function_name: string; feature?: string; user_id?: string | null; model?: string; metadata?: Record<string, any> },
+): Promise<Response> {
+  const start = Date.now();
+  const provider = url.includes("anthropic.com")
+    ? "anthropic"
+    : url.includes("perplexity.ai")
+    ? "perplexity"
+    : url.includes("ai.gateway.lovable.dev")
+    ? "lovable_ai"
+    : "unknown";
+  const category = url.includes("/embeddings") ? "embedding" : "llm";
+
+  let bodyModel: string | undefined = opts.model;
+  try {
+    if (!bodyModel && typeof init.body === "string") {
+      const parsed = JSON.parse(init.body);
+      bodyModel = parsed?.model;
+    }
+  } catch (_) { /* ignore */ }
+
+  let resp: Response;
+  try {
+    resp = await fetch(url, init);
+  } catch (e: any) {
+    await logApiUsage({
+      provider, category, model: bodyModel,
+      function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
+      latency_ms: Date.now() - start, status: "error",
+      error_message: String(e?.message ?? e).slice(0, 500), metadata: opts.metadata,
+    });
+    throw e;
+  }
+  const latency = Date.now() - start;
+
+  if (!resp.ok) {
+    const cloned = resp.clone();
+    cloned.text().then((t) => {
+      logApiUsage({
+        provider, category, model: bodyModel,
+        function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
+        latency_ms: latency, status: resp.status === 429 ? "rate_limited" : "error",
+        http_status: resp.status, error_message: t.slice(0, 500), metadata: opts.metadata,
+      });
+    }).catch(() => {});
+    return resp;
+  }
+
+  // Try to extract usage from cloned JSON (works for non-stream)
+  const ct = resp.headers.get("content-type") ?? "";
+  if (ct.includes("application/json")) {
+    const cloned = resp.clone();
+    cloned.json().then((data: any) => {
+      const usage = data?.usage ?? {};
+      const inTok = usage.prompt_tokens ?? usage.input_tokens;
+      const outTok = usage.completion_tokens ?? usage.output_tokens;
+      logApiUsage({
+        provider, category, model: data?.model ?? bodyModel,
+        function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
+        input_tokens: inTok, output_tokens: outTok,
+        total_tokens: usage.total_tokens ?? ((inTok ?? 0) + (outTok ?? 0)) || undefined,
+        latency_ms: latency, status: "success", http_status: resp.status, metadata: opts.metadata,
+      });
+    }).catch(() => {});
+  } else {
+    // streaming or non-json — log without tokens
+    logApiUsage({
+      provider, category, model: bodyModel,
+      function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
+      latency_ms: latency, status: "success", http_status: resp.status,
+      metadata: { ...opts.metadata, stream: true },
+    });
+  }
+  return resp;
+}
