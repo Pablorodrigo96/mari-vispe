@@ -2,11 +2,17 @@
 // Logs to public.api_usage_logs (fire-and-forget, never blocks the caller).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const _admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
-  auth: { persistSession: false },
-});
+let _adminCache: ReturnType<typeof createClient> | null = null;
+function getAdmin() {
+  if (_adminCache) return _adminCache;
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) {
+    throw new Error("apiTrack: SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY not set");
+  }
+  _adminCache = createClient(url, key, { auth: { persistSession: false } });
+  return _adminCache;
+}
 
 // In-process pricing cache (refreshes every 5 min)
 let pricingCache: Map<string, any> | null = null;
@@ -17,7 +23,7 @@ let settingsAt = 0;
 async function getPricing(provider: string, model: string | null) {
   const now = Date.now();
   if (!pricingCache || now - pricingCacheAt > 5 * 60_000) {
-    const { data } = await _admin.from("api_pricing").select("*");
+    const { data } = await getAdmin().from("api_pricing").select("*");
     pricingCache = new Map();
     (data ?? []).forEach((p: any) => {
       pricingCache!.set(`${p.provider}::${p.model}`, p);
@@ -34,14 +40,82 @@ async function getPricing(provider: string, model: string | null) {
 async function getUsdBrl(): Promise<number> {
   const now = Date.now();
   if (now - settingsAt < 5 * 60_000) return usdBrlRate;
-  const { data } = await _admin
+  const { data } = await getAdmin()
     .from("api_settings")
     .select("value")
     .eq("key", "usd_brl_rate")
     .maybeSingle();
-  if (data?.value) usdBrlRate = parseFloat(data.value) || 5.2;
+  const v = (data as any)?.value;
+  if (v) usdBrlRate = parseFloat(String(v)) || 5.2;
   settingsAt = now;
   return usdBrlRate;
+}
+
+// ===== Pure helpers (exported for unit tests) =====
+
+export interface PricingRow {
+  input_per_1m_usd?: number | string | null;
+  output_per_1m_usd?: number | string | null;
+  flat_per_call_usd?: number | string | null;
+}
+
+/** Compute USD cost for a call given pricing + token counts. Null pricing => 0. */
+export function computeCostUsd(
+  pricing: PricingRow | null | undefined,
+  inputTokens: number | null | undefined,
+  outputTokens: number | null | undefined,
+  requestCount: number = 1,
+): number {
+  if (!pricing) return 0;
+  const inTok = inputTokens ?? 0;
+  const outTok = outputTokens ?? 0;
+  const calls = requestCount ?? 1;
+  return (
+    (inTok / 1_000_000) * Number(pricing.input_per_1m_usd ?? 0) +
+    (outTok / 1_000_000) * Number(pricing.output_per_1m_usd ?? 0) +
+    calls * Number(pricing.flat_per_call_usd ?? 0)
+  );
+}
+
+/** Resolve total tokens with the same logic used in logApiUsage. Returns null when zero/missing. */
+export function resolveTotalTokens(
+  total: number | null | undefined,
+  inputTokens: number | null | undefined,
+  outputTokens: number | null | undefined,
+): number | null {
+  const inTok = inputTokens ?? 0;
+  const outTok = outputTokens ?? 0;
+  return ((total ?? (inTok + outTok)) || null) as number | null;
+}
+
+/** Detect provider/category from URL. */
+export function detectProvider(url: string): { provider: string; category: string } {
+  const provider = url.includes("anthropic.com")
+    ? "anthropic"
+    : url.includes("perplexity.ai")
+    ? "perplexity"
+    : url.includes("ai.gateway.lovable.dev")
+    ? "lovable_ai"
+    : "unknown";
+  const category = url.includes("/embeddings") ? "embedding" : "llm";
+  return { provider, category };
+}
+
+/** Normalize OpenAI/Anthropic/Perplexity usage payloads into {input,output,total}. */
+export function extractUsage(usage: any): {
+  input_tokens: number | null;
+  output_tokens: number | null;
+  total_tokens: number | null;
+} {
+  const u = usage ?? {};
+  const inTok = u.prompt_tokens ?? u.input_tokens ?? null;
+  const outTok = u.completion_tokens ?? u.output_tokens ?? null;
+  const total = u.total_tokens ?? null;
+  return {
+    input_tokens: inTok,
+    output_tokens: outTok,
+    total_tokens: resolveTotalTokens(total, inTok, outTok),
+  };
 }
 
 interface LogParams {
@@ -69,17 +143,11 @@ export async function logApiUsage(p: LogParams) {
     const inTok = p.input_tokens ?? 0;
     const outTok = p.output_tokens ?? 0;
     const calls = p.request_count ?? 1;
-    let cost_usd = 0;
-    if (pricing) {
-      cost_usd =
-        (inTok / 1_000_000) * Number(pricing.input_per_1m_usd ?? 0) +
-        (outTok / 1_000_000) * Number(pricing.output_per_1m_usd ?? 0) +
-        calls * Number(pricing.flat_per_call_usd ?? 0);
-    }
+    const cost_usd = computeCostUsd(pricing, inTok, outTok, calls);
     const cost_brl = cost_usd * rate;
 
     // fire-and-forget
-    void _admin
+    void getAdmin()
       .from("api_usage_logs")
       .insert({
         provider: p.provider,
@@ -90,7 +158,7 @@ export async function logApiUsage(p: LogParams) {
         user_id: p.user_id ?? null,
         input_tokens: inTok || null,
         output_tokens: outTok || null,
-        total_tokens: (p.total_tokens ?? (inTok + outTok)) || null,
+        total_tokens: resolveTotalTokens(p.total_tokens, inTok, outTok),
         request_count: calls,
         cost_usd,
         cost_brl,
@@ -371,14 +439,7 @@ export async function trackedAIFetch(
   opts: { function_name: string; feature?: string; user_id?: string | null; model?: string; metadata?: Record<string, any> },
 ): Promise<Response> {
   const start = Date.now();
-  const provider = url.includes("anthropic.com")
-    ? "anthropic"
-    : url.includes("perplexity.ai")
-    ? "perplexity"
-    : url.includes("ai.gateway.lovable.dev")
-    ? "lovable_ai"
-    : "unknown";
-  const category = url.includes("/embeddings") ? "embedding" : "llm";
+  const { provider, category } = detectProvider(url);
 
   let bodyModel: string | undefined = opts.model;
   try {
@@ -420,14 +481,13 @@ export async function trackedAIFetch(
   if (ct.includes("application/json")) {
     const cloned = resp.clone();
     cloned.json().then((data: any) => {
-      const usage = data?.usage ?? {};
-      const inTok = usage.prompt_tokens ?? usage.input_tokens;
-      const outTok = usage.completion_tokens ?? usage.output_tokens;
+      const u = extractUsage(data?.usage);
       logApiUsage({
         provider, category, model: data?.model ?? bodyModel,
         function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
-        input_tokens: inTok, output_tokens: outTok,
-        total_tokens: (usage.total_tokens ?? ((inTok ?? 0) + (outTok ?? 0))) || undefined,
+        input_tokens: u.input_tokens ?? undefined,
+        output_tokens: u.output_tokens ?? undefined,
+        total_tokens: u.total_tokens ?? undefined,
         latency_ms: latency, status: "success", http_status: resp.status, metadata: opts.metadata,
       });
     }).catch(() => {});

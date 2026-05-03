@@ -1,159 +1,96 @@
+# Testes unitários para `apiTrack.ts`
 
-# Painel Admin: Monitoramento Completo de IA + APIs Externas
+Criar suíte de testes Deno cobrindo cálculo de custo, total de tokens e cenários nulos para todos os providers (Lovable AI, Anthropic, Perplexity) e APIs externas (Stripe/BrasilAPI/CNPJ etc.) — sem depender de rede ou Supabase.
 
-## Diagnóstico real (auditado agora)
+## Estratégia
 
-A plataforma chama várias APIs externas que **hoje não são monitoradas em lugar nenhum**. Mapeamento completo:
+`apiTrack.ts` hoje mistura lógica pura (cálculo de custo, soma de tokens, detecção de provider) com I/O (insert no Supabase, fetch HTTP). Para testar de forma confiável vamos:
 
-### IA / LLMs
-| Provider | Modelos | Usado em (edge functions) | API Key |
-|---|---|---|---|
-| **Lovable AI Gateway** | gemini-2.5-flash, gemini-2.5-pro, gpt-5-mini, gpt-5 | mari-brain, mari-chat, mari-summarize-deal, mari-summarize-thread, mari-suggest-actions, mari-draft-message, mari-generate-buyer-thesis, mari-classify-buyer-type, mari-generate-insights, mari-refresh-active-summaries, enrich-buyer-via-ai, generate-dashboard-insight, generate-whatsapp-draft, analyze-financial-doc, compute-semantic-embeddings, embed-signal, whatsapp-classify-batch | LOVABLE_API_KEY |
-| **Anthropic Claude** | claude-* (3 funções) | claude-generate-pitch, claude-analyze-call, claude-classify-thesis | ANTHROPIC_API_KEY |
-| **Perplexity** | sonar/online | crawl-ma-sources, ingest-company-news, extract-news-event | PERPLEXITY_API_KEY |
+1. **Extrair helpers puros exportáveis** em `apiTrack.ts` (sem alterar comportamento):
+   - `computeCostUsd(pricing, inputTokens, outputTokens, requestCount)` — cálculo isolado em USD.
+   - `resolveTotalTokens(total, input, output)` — replica a expressão `(total ?? (in+out)) || null` que já causou bug de precedência.
+   - `detectProvider(url)` — extrai a lógica do `trackedAIFetch` (lovable_ai / anthropic / perplexity / unknown + embedding/llm).
+   - `extractUsage(usage)` — normaliza payloads OpenAI-style (`prompt_tokens`/`completion_tokens`) e Anthropic-style (`input_tokens`/`output_tokens`).
 
-### APIs externas não-IA (também valem monitorar)
-| Provider | Função |
-|---|---|
-| **Stripe** | pagamentos, subscriptions, checkout |
-| **BrasilAPI** | geocode-companies-batch (CEP) |
-| **CNPJ.ws / external DB** | sync-companies-from-cnpj, national-search |
-| **Meta WhatsApp Graph** | metaWhatsappAdapter, whatsapp-webhook |
-| **Nominatim** | geocoding (referenciado no codebase) |
+2. **Refatorar `logApiUsage` e `trackedAIFetch`** para usar esses helpers (zero mudança comportamental).
 
-## O que vai ser entregue
+3. **Criar `supabase/functions/_shared/apiTrack.test.ts`** com testes Deno cobrindo todos os cenários abaixo. Não toca rede nem DB.
 
-### 1. Banco — telemetria unificada
+4. **Teste de integração leve** com `fetch` mockado via stub global para validar que `trackedAIFetch` retorna o `Response` original (clone funcionando, body do caller preservado) — usando `stub` de `globalThis.fetch`.
 
-**Tabela `public.api_usage_logs`** (genérica para todas as integrações):
-- `id`, `created_at`
-- `provider` (`lovable_ai`, `anthropic`, `perplexity`, `stripe`, `brasilapi`, `cnpj_ws`, `meta_whatsapp`, `nominatim`)
-- `category` (`llm`, `payments`, `data_enrichment`, `messaging`, `geocoding`)
-- `model` (quando aplicável: `google/gemini-2.5-flash`, `claude-3-5-sonnet-20241022`, `sonar-pro`, etc.)
-- `function_name` (qual edge function chamou)
-- `feature` (`mari_chat`, `pitch_generation`, `news_ingestion`, `cnpj_lookup`, etc.)
-- `user_id` (quem disparou, se autenticado)
-- `input_tokens`, `output_tokens`, `total_tokens` (NULL para não-LLM)
-- `request_count` (default 1; útil para batch)
-- `cost_usd`, `cost_brl` (snapshot calculado no momento)
-- `latency_ms`, `status` (`success`/`error`/`rate_limited`), `http_status`
-- `error_message`, `metadata jsonb` (params extras: cep, cnpj, model_version, etc.)
+## Cobertura de testes
 
-Índices: `(created_at desc)`, `(provider, created_at)`, `(function_name)`, `(user_id)`, `(status)`.
-RLS: SELECT só admin. INSERT só service_role.
+### `computeCostUsd`
+- Pricing `null` → retorna `0`.
+- Lovable AI Gemini 2.5 Flash (`$0.075` in / `$0.30` out por 1M) com 1.000.000 in + 500.000 out → `0.075 + 0.15 = 0.225`.
+- Anthropic Claude 3.5 Sonnet (`$3.00` / `$15.00`) com 10k in + 2k out → `0.03 + 0.03 = 0.06`.
+- Perplexity Sonar (`flat_per_call_usd: 0.005` + tokens) → soma flat + variável.
+- Tokens nulos (`null`/`undefined`) → tratados como 0, custo só do flat fee.
+- `requestCount` default = 1; passar 5 multiplica o flat fee.
+- Pricing com strings (vindo do Supabase como `numeric`) — `"3.00"` é convertido via `Number()`.
 
-**Tabela `public.api_pricing`** (admin edita preços vigentes):
-- `provider`, `model`, `category`
-- `input_per_1k_usd`, `output_per_1k_usd` (LLMs)
-- `flat_per_call_usd` (APIs por requisição: BrasilAPI free=0, Perplexity ~$0.005/req, etc.)
-- `currency` (default USD), `effective_from` timestamptz
-- `notes` text
+### `resolveTotalTokens` (regressão direta do bug de precedência `??` + `||`)
+- `(total=300, in=100, out=200)` → `300`.
+- `(total=null, in=100, out=200)` → `300` (somou).
+- `(total=undefined, in=undefined, out=undefined)` → `null` (zero coerced).
+- `(total=0, in=0, out=0)` → `null` (zero é falsy → vira null, comportamento atual preservado).
+- `(total=null, in=0, out=50)` → `50`.
+- `(total=null, in=null, out=null)` → `null`.
 
-Seed inicial:
-- `lovable_ai/google/gemini-2.5-flash`: in $0.075/1M, out $0.30/1M
-- `lovable_ai/google/gemini-2.5-pro`: in $1.25/1M, out $5.00/1M
-- `lovable_ai/openai/gpt-5-mini`: in $0.25/1M, out $2.00/1M
-- `lovable_ai/openai/gpt-5`: in $1.25/1M, out $10.00/1M
-- `anthropic/claude-3-5-sonnet`: in $3.00/1M, out $15.00/1M
-- `anthropic/claude-3-5-haiku`: in $0.80/1M, out $4.00/1M
-- `perplexity/sonar`: $0.001 + $0.20/1M
-- `perplexity/sonar-pro`: $0.005 + $1.00/1M
-- `stripe`: 0 (Stripe cobra do payout, não rastreável aqui — registramos só nº de chamadas)
-- `brasilapi`: 0 (gratuito)
-- `cnpj_ws`: ~$0.01/req (configurável)
-- `meta_whatsapp`: variável (registramos contagem; admin edita custo médio)
+### `detectProvider`
+- `https://ai.gateway.lovable.dev/v1/chat/completions` → `lovable_ai`/`llm`.
+- `https://ai.gateway.lovable.dev/v1/embeddings` → `lovable_ai`/`embedding`.
+- `https://api.anthropic.com/v1/messages` → `anthropic`/`llm`.
+- `https://api.perplexity.ai/chat/completions` → `perplexity`/`llm`.
+- `https://api.stripe.com/v1/customers` → `unknown`/`llm` (caso o helper seja chamado fora do escopo de IA).
 
-**Tabela `public.api_settings`** (kv): `usd_brl_rate` (default 5.20), atualizável manualmente.
+### `extractUsage`
+- Payload OpenAI: `{prompt_tokens:10, completion_tokens:20, total_tokens:30}` → `{10,20,30}`.
+- Payload Anthropic: `{input_tokens:15, output_tokens:25}` (sem total) → `{15,25,40}`.
+- Payload vazio `{}` → `{null,null,null}`.
+- Payload `null` → `{null,null,null}`.
+- Payload Perplexity sem `total_tokens`: `{prompt_tokens:50, completion_tokens:100}` → `{50,100,150}`.
 
-**View materializada `api_usage_daily_summary`** (refresh hourly via cron) agregando por dia/provider/model para o gráfico.
+### `trackedAIFetch` (integração com `fetch` stubado)
+- Stub em `globalThis.fetch` que retorna 200 + JSON com `usage`. Chamada deve:
+  - Retornar `Response` legível pelo caller (`.json()` funciona — clone preservou body).
+  - Detectar provider correto a partir da URL.
+- Stub que retorna 429 → resposta original repassada com status 429.
+- Stub que lança erro de rede → `trackedAIFetch` re-lança a exceção.
+- URL com `/embeddings` → categoria `embedding` no contexto (validado via spy do helper `detectProvider`).
 
-### 2. Helpers compartilhados de instrumentação
+## Detalhes técnicos
 
-`supabase/functions/_shared/apiTrack.ts` exportando:
+### Arquivo de testes
+`supabase/functions/_shared/apiTrack.test.ts`:
+- Convenção Deno: `Deno.test("nome", () => {...})`.
+- Imports: `assertEquals`, `assertAlmostEquals`, `assertRejects` de `https://deno.land/std@0.224.0/assert/mod.ts`.
+- `stub`/`restore` de `globalThis.fetch` via `https://deno.land/std@0.224.0/testing/mock.ts`.
+- Para `trackedAIFetch`, stub também retorna sucesso silencioso para o insert no `_admin` (já é fire-and-forget e qualquer falha é só `console.error` — não interfere).
+- Variáveis `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` setadas via `Deno.env.set` no topo do arquivo se não existirem (evita o `!` de non-null assertion explodir no import).
 
+### Estrutura de seeds de pricing (in-memory, não toca DB)
+Usados apenas como input para `computeCostUsd`:
 ```ts
-// LLM via Lovable AI Gateway (lê usage do response)
-callLovableAI({ model, messages, feature, function_name, user_id, ...opts })
-
-// LLM via Anthropic (lê usage.input_tokens / output_tokens)
-callAnthropic({ model, messages, system, max_tokens, feature, function_name, user_id })
-
-// Perplexity (lê usage; calcula request fee + tokens)
-callPerplexity({ model, messages, feature, function_name, user_id })
-
-// Genérico para APIs não-LLM
-trackExternalCall({ provider, category, feature, function_name, user_id, fn })
-  → mede latência, status, exceções; insere log fire-and-forget.
+const PRICING = {
+  lovable_gemini_flash: { input_per_1m_usd: 0.075, output_per_1m_usd: 0.30, flat_per_call_usd: 0 },
+  anthropic_sonnet:     { input_per_1m_usd: 3.00,  output_per_1m_usd: 15.00, flat_per_call_usd: 0 },
+  perplexity_sonar:     { input_per_1m_usd: 0.20,  output_per_1m_usd: 0.20,  flat_per_call_usd: 0.005 },
+  stripe_flat:          { input_per_1m_usd: 0,     output_per_1m_usd: 0,     flat_per_call_usd: 0 },
+  brasilapi_free:       { input_per_1m_usd: 0,     output_per_1m_usd: 0,     flat_per_call_usd: 0 },
+  cnpjws:               { input_per_1m_usd: 0,     output_per_1m_usd: 0,     flat_per_call_usd: 0.01 },
+};
 ```
 
-Todos calculam custo via `api_pricing` no insert e gravam snapshot. Insert é fire-and-forget (não bloqueia resposta).
+### Mudanças mínimas em `apiTrack.ts`
+- Adicionar 4 funções puras exportadas no topo (linhas ~46).
+- Substituir o bloco interno de cálculo dentro de `logApiUsage` por `computeCostUsd(...)` + `resolveTotalTokens(...)` (idempotente, mesmo resultado).
+- Substituir o bloco de detecção dentro de `trackedAIFetch` por `detectProvider(url)` e a leitura de usage por `extractUsage(data?.usage)`.
+- Sem mudança em `callLovableAI`, `callAnthropic`, `callPerplexity`, `trackExternalCall`.
 
-### 3. Refactor das edge functions
+### Como rodar
+Via tool `supabase--test_edge_functions` com `{ "functions": ["_shared"] }` (ou sem filtro). Os testes não exigem credenciais reais nem rede.
 
-Substituir os `fetch` diretos pelos helpers. Lista:
-- **17 funções LLM** (Lovable AI) → `callLovableAI`
-- **3 funções Claude** → `callAnthropic`
-- **3 funções Perplexity** → `callPerplexity`
-- **APIs não-LLM** (sync-companies-from-cnpj, national-search, geocode-companies-batch, metaWhatsappAdapter, whatsapp-webhook) → wrap com `trackExternalCall`
-- **Stripe** (sync-stripe, checkout, etc.) → wrap com `trackExternalCall` apenas para contagem/latência
-
-Mudança curta (~5-8 linhas por função). Mesma assinatura de retorno = risco baixo.
-
-### 4. Página `/admin/ai-monitor` (renomeio: "Monitor de APIs")
-
-Adicionar à `AdminSidebar` com ícone Activity.
-
-**Header — filtros globais:**
-- Período: 24h / 7d / 30d / 90d / custom
-- Provider (multi-select)
-- Categoria (LLM / Payments / Data / Messaging / Geocoding)
-
-**Bloco A — KPIs (5 cards):**
-- Custo total R$ (com Δ% vs período anterior)
-- Total tokens (input+output, só LLM)
-- Total chamadas
-- Taxa de erro %
-- Latência média (ms)
-
-**Bloco B — Gráficos (recharts):**
-- Linha empilhada: custo R$/dia por provider
-- Barra: top 10 funções por custo
-- Pizza: share de custo por categoria
-
-**Bloco C — Tabela detalhada:**
-- Colunas: Provider · Modelo · Função · Chamadas · Tokens in/out · Custo R$ · Latência média · % erro
-- Ordenável, exportável CSV
-
-**Bloco D — Pricing & Settings (admin edita inline):**
-- CRUD de `api_pricing` (preço por 1M tokens / por requisição)
-- Atualizar `usd_brl_rate`
-- Histórico das últimas 200 chamadas com modal de payload (metadata jsonb)
-
-**Bloco E — Alertas (apenas visual nesta fase):**
-- Badge vermelho se gasto do mês > R$ X (configurável em `api_settings`)
-- Lista de "anomalias": funções com erro >10% nas últimas 24h
-
-### 5. Cron de manutenção
-- `api-usage-summary-refresh`: refresh da view materializada a cada 1h
-- `api-usage-cleanup`: deletar logs > 180 dias (configurável) mensalmente
-
-## Não está no escopo (fica para fase 2)
-- Backfill histórico (começa a contar do deploy — sem dados anteriores possíveis)
-- Alertas por email/WhatsApp ao estourar orçamento
-- Detalhamento por usuário individual (campo existe, basta acrescentar filtro)
-- Conciliação automática com fatura real do provider (Stripe/Anthropic)
-
-## Considerações técnicas
-- `usage` do Lovable AI e Anthropic seguem padrão OpenAI-compatível (`prompt_tokens`/`input_tokens`).
-- Perplexity retorna `usage.prompt_tokens`, `usage.completion_tokens` + cobra $/req fixo.
-- Custo travado no insert (snapshot do preço vigente) — mudança de pricing não reescreve histórico.
-- Fire-and-forget: `void supabase.from('api_usage_logs').insert(...).then().catch(console.error)` para não atrasar UX.
-
-## Próximos passos após aprovação
-1. Migration: `api_usage_logs`, `api_pricing` (com seed completo), `api_settings`, view materializada, RLS, crons.
-2. Criar `_shared/apiTrack.ts` com 4 helpers.
-3. Refatorar ~26 edge functions (Lovable AI + Claude + Perplexity + APIs não-LLM + Stripe).
-4. Criar `src/pages/admin/AdminApiMonitor.tsx` + rota + item sidebar.
-5. Validar com chamadas de teste em mari-chat, claude-generate-pitch, ingest-company-news antes de declarar pronto.
-
-Tempo estimado: feature grande (~1-2 builds).
+## Arquivos afetados
+- `supabase/functions/_shared/apiTrack.ts` — adicionar helpers puros + refatorar 2 trechos para usá-los.
+- `supabase/functions/_shared/apiTrack.test.ts` — **novo**, ~25 testes cobrindo os 4 helpers + integração com fetch stubado.
