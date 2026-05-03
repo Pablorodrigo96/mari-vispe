@@ -71,6 +71,13 @@ async function searchPerplexity(apiKey: string, target: Target): Promise<any[]> 
   }
 
   const data = await resp.json();
+  // [D.1.1 TEMP DEBUG] log raw shape
+  try {
+    console.log("[D.1.1 DEBUG] target=", target.name, " keys=", Object.keys(data || {}));
+    console.log("[D.1.1 DEBUG] citations=", JSON.stringify(data?.citations)?.slice(0, 1500));
+    console.log("[D.1.1 DEBUG] search_results=", JSON.stringify(data?.search_results)?.slice(0, 1500));
+    console.log("[D.1.1 DEBUG] content=", (data?.choices?.[0]?.message?.content ?? "").slice(0, 2000));
+  } catch (_) {}
   const content: string = data?.choices?.[0]?.message?.content ?? "";
   const citations: string[] = data?.citations ?? data?.search_results?.map((r: any) => r.url) ?? [];
 
