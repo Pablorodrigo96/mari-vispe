@@ -536,6 +536,38 @@ export function JarvisGraph3D() {
   // ---------- Solar flare (explosão solar a cada ~10s) ----------
   useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2, setFlareActive);
 
+  // ---------- Auto-focus em ?focus=<id> ----------
+  useEffect(() => {
+    if (!focusParam) return;
+    if (focusedOnceRef.current === focusParam) return;
+    if (!graphData.nodes.length) return;
+    const node = graphData.nodes.find((n: any) => n.id === focusParam);
+    if (!node) {
+      // ainda pode aparecer em rebuild seguinte; só notifica se já estabilizou
+      return;
+    }
+    focusedOnceRef.current = focusParam;
+    // espera a simulação posicionar o nó antes de centralizar a câmera
+    const timer = window.setTimeout(() => {
+      setSelectedNode(node as JarvisNode);
+      const fg = fgRef.current as any;
+      const n: any = node;
+      if (!fg) return;
+      const dist = 320;
+      const distRatio = 1 + dist / Math.hypot(n.x ?? 1, n.y ?? 1, n.z ?? 1);
+      fg.cameraPosition?.(
+        {
+          x: (n.x ?? 0) * distRatio,
+          y: (n.y ?? 0) * distRatio,
+          z: (n.z ?? 0) * distRatio,
+        },
+        n,
+        1400,
+      );
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [focusParam, graphData.nodes]);
+
 
   // ---------- Vizinhos do hovered/selected ----------
   const focusId = selectedNode?.id ?? hoveredId ?? null;
