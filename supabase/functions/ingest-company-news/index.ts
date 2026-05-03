@@ -174,11 +174,14 @@ async function buildTargets(supabase: any, scope: string, limit: number): Promis
   }
 
   if (scope === "top500" || scope === "all") {
-    const { data } = await supabase.schema("equity_brain")
+    let q = supabase.schema("equity_brain")
       .from("companies_scored")
       .select("cnpj, razao_social, nome_fantasia, setor_ma, ma_score")
-      .order("ma_score", { ascending: false })
-      .limit(Math.min(limit, 500));
+      .order("ma_score", { ascending: false });
+    for (const p of PLACEHOLDER_PREFIXES) {
+      q = q.not("razao_social", "ilike", `${p}%`);
+    }
+    const { data } = await q.limit(Math.min(limit, 500));
     for (const c of data ?? []) {
       targets.push({
         kind: "company", cnpj: c.cnpj,
