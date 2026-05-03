@@ -72,7 +72,7 @@ export function LearningInsightsCard({ buyerId }: { buyerId: string }) {
             <div key={h.id} className="text-[11px] text-zinc-300 flex items-center gap-1">
               {h.delta_kind === "added" ? <TrendingUp className="h-3 w-3 text-emerald-400" /> : <TrendingDown className="h-3 w-3 text-rose-400" />}
               <span className="text-zinc-400">{h.field}:</span>
-              <span className="break-words">{JSON.stringify(h.delta).slice(0, 120)}</span>
+              <span className="break-words">{(JSON.stringify(h.delta ?? null) ?? "").slice(0, 120)}</span>
             </div>
           ))}
         </div>
