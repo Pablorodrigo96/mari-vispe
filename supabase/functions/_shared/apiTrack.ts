@@ -44,6 +44,73 @@ async function getUsdBrl(): Promise<number> {
   return usdBrlRate;
 }
 
+// ===== Pure helpers (exported for unit tests) =====
+
+export interface PricingRow {
+  input_per_1m_usd?: number | string | null;
+  output_per_1m_usd?: number | string | null;
+  flat_per_call_usd?: number | string | null;
+}
+
+/** Compute USD cost for a call given pricing + token counts. Null pricing => 0. */
+export function computeCostUsd(
+  pricing: PricingRow | null | undefined,
+  inputTokens: number | null | undefined,
+  outputTokens: number | null | undefined,
+  requestCount: number = 1,
+): number {
+  if (!pricing) return 0;
+  const inTok = inputTokens ?? 0;
+  const outTok = outputTokens ?? 0;
+  const calls = requestCount ?? 1;
+  return (
+    (inTok / 1_000_000) * Number(pricing.input_per_1m_usd ?? 0) +
+    (outTok / 1_000_000) * Number(pricing.output_per_1m_usd ?? 0) +
+    calls * Number(pricing.flat_per_call_usd ?? 0)
+  );
+}
+
+/** Resolve total tokens with the same logic used in logApiUsage. Returns null when zero/missing. */
+export function resolveTotalTokens(
+  total: number | null | undefined,
+  inputTokens: number | null | undefined,
+  outputTokens: number | null | undefined,
+): number | null {
+  const inTok = inputTokens ?? 0;
+  const outTok = outputTokens ?? 0;
+  return ((total ?? (inTok + outTok)) || null) as number | null;
+}
+
+/** Detect provider/category from URL. */
+export function detectProvider(url: string): { provider: string; category: string } {
+  const provider = url.includes("anthropic.com")
+    ? "anthropic"
+    : url.includes("perplexity.ai")
+    ? "perplexity"
+    : url.includes("ai.gateway.lovable.dev")
+    ? "lovable_ai"
+    : "unknown";
+  const category = url.includes("/embeddings") ? "embedding" : "llm";
+  return { provider, category };
+}
+
+/** Normalize OpenAI/Anthropic/Perplexity usage payloads into {input,output,total}. */
+export function extractUsage(usage: any): {
+  input_tokens: number | null;
+  output_tokens: number | null;
+  total_tokens: number | null;
+} {
+  const u = usage ?? {};
+  const inTok = u.prompt_tokens ?? u.input_tokens ?? null;
+  const outTok = u.completion_tokens ?? u.output_tokens ?? null;
+  const total = u.total_tokens ?? null;
+  return {
+    input_tokens: inTok,
+    output_tokens: outTok,
+    total_tokens: resolveTotalTokens(total, inTok, outTok),
+  };
+}
+
 interface LogParams {
   provider: string;
   category?: string;
