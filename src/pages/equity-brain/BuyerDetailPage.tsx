@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, MessageCircle, FileText, Activity, Target, Brain, Newspaper } from "lucide-react";
+import { ArrowLeft, MessageCircle, FileText, Activity, Target, Brain, Newspaper, Network } from "lucide-react";
 import { NewsPanel } from "@/components/equity-brain/news/NewsPanel";
 import { cn } from "@/lib/utils";
 import { useBuyerCrm } from "@/hooks/useCrm";
