@@ -84,20 +84,27 @@ export function ExpandRFBDialog({
         <Button size="sm" variant="outline"
           className="h-8 text-xs bg-transparent border-emerald-700/60 text-emerald-300 hover:bg-emerald-950/40">
           <Database className="h-3.5 w-3.5 mr-1.5" />
-          Expandir busca na Base RFB (5M)
+          {triggerLabel ?? (target === "buyers"
+            ? "Buscar compradores na Base RFB (5M)"
+            : "Expandir busca na Base RFB (5M)")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl bg-zinc-950 border-zinc-800 text-zinc-100">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-emerald-400" />
-            Expandir para Base Nacional (Receita Federal)
+            {target === "buyers"
+              ? "Buscar compradores potenciais (Receita Federal)"
+              : "Expandir para Base Nacional (Receita Federal)"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 text-sm">
           <p className="text-xs text-zinc-400">
-            Importa empresas da base RFB que se encaixam neste comprador. Elas entram como
+            {target === "buyers"
+              ? "Importa empresas da base RFB que poderiam adquirir este negócio (mesmo setor / UF / porte). "
+              : "Importa empresas da base RFB que se encaixam neste comprador. "}
+            Elas entram como
             <span className="mx-1 px-1.5 py-0.5 text-[10px] rounded border border-zinc-700 bg-zinc-900 text-zinc-300">não qualificadas</span>
             e ficam visíveis nos matches para você qualificar após o primeiro contato.
           </p>
