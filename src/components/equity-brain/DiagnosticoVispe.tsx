@@ -1,15 +1,38 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Gauge } from "./Gauge";
 import { NivelBadge } from "./NivelBadge";
 import { TopFragilidades } from "./TopFragilidades";
-import { Stethoscope } from "lucide-react";
+import { Stethoscope, RefreshCw, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface Props {
   cnpj?: string | null;
 }
 
 export function DiagnosticoVispe({ cnpj }: Props) {
+  const qc = useQueryClient();
+  const [recalculating, setRecalculating] = useState(false);
+
+  async function handleRecalculate() {
+    if (!cnpj) return;
+    setRecalculating(true);
+    try {
+      const { error } = await supabase.functions.invoke("calculate-vendabilidade-batch", {
+        body: { cnpj },
+      });
+      if (error) throw error;
+      toast.success("Vendabilidade recalculada");
+      qc.invalidateQueries({ queryKey: ["eb", "sv", cnpj] });
+    } catch (e: any) {
+      toast.error("Falha: " + (e?.message ?? "erro"));
+    } finally {
+      setRecalculating(false);
+    }
+  }
+
   const { data, isLoading } = useQuery({
     queryKey: ["eb", "sv", cnpj],
     enabled: !!cnpj,
