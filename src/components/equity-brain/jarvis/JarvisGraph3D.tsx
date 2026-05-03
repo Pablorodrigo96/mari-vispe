@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Settings2, X, RotateCcw, Activity, ClipboardCopy } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
@@ -98,6 +99,40 @@ export function JarvisGraph3D() {
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<JarvisNode | null>(null);
+
+  // ---------- Deep-link via ?focus=<nodeId> ----------
+  const [searchParams] = useSearchParams();
+  const focusParam = searchParams.get("focus");
+  const focusedOnceRef = useRef<string | null>(null);
+
+  // Quando chega com ?focus=, ativa o tipo do nó para garantir que ele apareça
+  useEffect(() => {
+    if (!focusParam) return;
+    const prefix = focusParam.split(":")[0];
+    const typeMap: Record<string, string[]> = {
+      buyer: ["buyer_strategic", "buyer_financial"],
+      seller: ["seller"],
+      thesis: ["thesis"],
+      platform: ["platform"],
+      asset: ["asset"],
+      strategy: ["strategy"],
+    };
+    const types = typeMap[prefix];
+    if (types) {
+      setSelectedNodeTypes((prev) => {
+        const next = new Set(prev);
+        types.forEach((t) => next.add(t));
+        return next;
+      });
+    }
+    if (prefix === "buyer" || prefix === "seller") {
+      setEnabledLayers((prev) => {
+        const next = new Set(prev);
+        next.add("ma_direct" as LayerKey);
+        return next;
+      });
+    }
+  }, [focusParam]);
 
   // ---------- Visual prefs (ajustes de fundo, persistidos em localStorage) ----------
   // Defaults LEVES — abre o painel rápido; usuário aumenta efeitos quando quiser.
@@ -500,6 +535,38 @@ export function JarvisGraph3D() {
 
   // ---------- Solar flare (explosão solar a cada ~10s) ----------
   useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2, setFlareActive);
+
+  // ---------- Auto-focus em ?focus=<id> ----------
+  useEffect(() => {
+    if (!focusParam) return;
+    if (focusedOnceRef.current === focusParam) return;
+    if (!graphData.nodes.length) return;
+    const node = graphData.nodes.find((n: any) => n.id === focusParam);
+    if (!node) {
+      // ainda pode aparecer em rebuild seguinte; só notifica se já estabilizou
+      return;
+    }
+    focusedOnceRef.current = focusParam;
+    // espera a simulação posicionar o nó antes de centralizar a câmera
+    const timer = window.setTimeout(() => {
+      setSelectedNode(node as JarvisNode);
+      const fg = fgRef.current as any;
+      const n: any = node;
+      if (!fg) return;
+      const dist = 320;
+      const distRatio = 1 + dist / Math.hypot(n.x ?? 1, n.y ?? 1, n.z ?? 1);
+      fg.cameraPosition?.(
+        {
+          x: (n.x ?? 0) * distRatio,
+          y: (n.y ?? 0) * distRatio,
+          z: (n.z ?? 0) * distRatio,
+        },
+        n,
+        1400,
+      );
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [focusParam, graphData.nodes]);
 
 
   // ---------- Vizinhos do hovered/selected ----------

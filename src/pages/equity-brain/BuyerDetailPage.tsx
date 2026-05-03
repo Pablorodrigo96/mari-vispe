@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, MessageCircle, FileText, Activity, Target, Brain, Newspaper } from "lucide-react";
+import { ArrowLeft, MessageCircle, FileText, Activity, Target, Brain, Newspaper, Network } from "lucide-react";
 import { NewsPanel } from "@/components/equity-brain/news/NewsPanel";
 import { cn } from "@/lib/utils";
 import { useBuyerCrm } from "@/hooks/useCrm";
@@ -90,6 +90,13 @@ export default function BuyerDetailPage() {
             entityId={buyer.id}
           />
           <EnrichBuyerButton buyerId={buyer.id} />
+          <Link
+            to={`/equity-brain/admin/jarvis?focus=buyer:${buyer.id}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-transparent border border-zinc-700 text-zinc-200 hover:bg-zinc-900 hover:text-emerald-300 text-xs"
+          >
+            <Network className="h-3.5 w-3.5" />
+            Mostrar no grafo 3D
+          </Link>
         </div>
       </header>
 

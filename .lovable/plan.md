@@ -1,79 +1,60 @@
-## Diagnóstico — por que está vazio
+# Botão "Mostrar no grafo 3D" — buyer e seller (mandato)
 
-**1. CNPJ / website / linkedin / email / pe_sponsor não vêm**
-- Na DB, `buyers.id=3ddb9d75…` (Brasil TecPar) tem TODOS esses campos `NULL`.
-- O prompt do `enrich-buyer-via-ai` **não pede** esses campos à IA — só pede `tese_atualizada`, `deals_recentes`, `ultima_captacao`, `equipe_chave`, `setores_foco`, `regioes_foco`, `fontes_sugeridas`.
-- O `EnrichReviewModal` também não tem opção de aplicá-los — só salva `tese_text`, `setores_interesse`, `ufs_interesse`, `recent_capital_raise_brl`.
-- Resultado: mesmo se a IA respondesse, não teria onde ir.
+## Objetivo
+Adicionar, na barra de ações de `BuyerDetailPage` e `MandateDetailPage`, um botão **Mostrar no grafo 3D** que abre `/equity-brain/admin/jarvis` já com o nó da entidade selecionado (painel lateral aberto) e a câmera centralizada nele.
 
-**2. Métricas (deals históricos / múltiplo / 12m / captação) zeradas**
-- `deals_realizados=0`, `deals_last_12m=0`, `avg_multiple_paid_recent=NULL`, `recent_capital_raise_brl=NULL`.
-- Mesmo problema: prompt não pede `total_deals`, `deals_12m`, `multiplo_medio`. Modal só aplica captação.
-- Bloco "Deals históricos (Vispe Database)" busca em `equity_brain.benchmark_transactions` por `comprador_nome ILIKE '%Brasil%'` — confirmei que não há registros desse comprador nessa tabela (base é interna).
+## Como o grafo identifica nós (já existe)
+- Buyer  → `id = "buyer:<buyer.id>"`
+- Seller → `id = "seller:<company.cnpj>"`
 
-**3. Notícias vazias**
-- `company_news` tem 25 linhas, **0 com `buyer_id`**. A varredura roda só no escopo `mandates/top500` (Onda D anterior).
-- O `ingest-company-news` já aceita `scope='buyers'`, mas nunca foi disparado para buyers — e não há botão na UI do buyer para forçar coleta sob demanda.
-- `NewsPanel` filtra por `buyer_id`, então naturalmente vazio.
+(definido em `src/lib/equityGraphBuilder.ts`)
 
----
+## Mudanças
 
-## Plano
+### 1. `JarvisGraph3D.tsx` — aceitar `?focus=<nodeId>`
+- Ler `useSearchParams()` no mount.
+- Se houver `focus`:
+  - Detectar o tipo (`buyer:` / `seller:` / `thesis:` / `platform:`) e **adicionar automaticamente esse tipo a `selectedNodeTypes`** (hoje começa vazio, então o nó ficaria escondido). Para buyer/seller também forçar `enabledLayers` a incluir `ma_direct` para garantir arestas visíveis.
+- Após `graphData` carregar e a simulação aquecer (~`cooldownTicks` ou um `setTimeout` de ~1500ms), procurar o nó por id, fazer:
+  - `setSelectedNode(node)` (já abre o `NodeDetailPanel` e ativa o realce de vizinhos via `focusId`);
+  - `fgRef.current.cameraPosition(...)` reaproveitando exatamente a mesma fórmula do `onNodeClick` atual (linhas 983-993).
+- Executar **só uma vez** por valor de `focus` (guard com `useRef`).
 
-### Job 1 — Expandir prompt do `enrich-buyer-via-ai`
-Adicionar ao schema JSON pedido:
-```json
-{
-  "cnpj": "00.000.000/0001-00 ou null",
-  "website": "https://… ou null",
-  "linkedin_url": "https://linkedin.com/company/… ou null",
-  "email_contato_principal": "string ou null",
-  "telefone_contato": "string ou null",
-  "pe_sponsor_name": "string ou null",
-  "vertical_principal": "string ou null",
-  "metricas": {
-    "deals_realizados": "número total histórico ou null",
-    "deals_last_12m": "número ou null",
-    "avg_multiple_paid_recent": "ex: 8.5 (EV/EBITDA) ou null",
-    "recent_capital_raise_brl": "valor em R$ (não em milhões) ou null"
-  },
-  "tese_atualizada": …,
-  "deals_recentes": [...],
-  "ultima_captacao": {...},
-  "equipe_chave": [...],
-  "setores_foco": [...],
-  "regioes_foco": [...],
-  "fontes_sugeridas": [...]
-}
+### 2. `BuyerDetailPage.tsx` — botão na barra de ações
+Logo depois do `<EnrichBuyerButton />` (linha 92), inserir:
+```tsx
+<Link
+  to={`/equity-brain/admin/jarvis?focus=buyer:${buyer.id}`}
+  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md
+             bg-transparent border border-zinc-700 text-zinc-200
+             hover:bg-zinc-900 hover:text-emerald-300 text-xs"
+>
+  <Network className="h-3.5 w-3.5" />
+  Mostrar no grafo 3D
+</Link>
 ```
-Reforçar no prompt: "Pesquise especificamente em LinkedIn, site oficial, Crunchbase, releases, mídia BR (Valor, Pipeline, Brazil Journal). Não invente — use null se incerto."
+(import `Network` de `lucide-react` e `Link` já existe.)
 
-### Job 2 — Expandir `EnrichReviewModal`
-Adicionar 2 novas seções com checkboxes:
-- **Identidade & contato** → `cnpj`, `website`, `linkedin_url`, `email_contato_principal`, `telefone_contato`, `pe_sponsor_name`, `vertical_principal` (cada campo com checkbox individual; só aplica os marcados E que vieram preenchidos).
-- **Métricas do comprador** → `deals_realizados`, `deals_last_12m`, `avg_multiple_paid_recent`, `recent_capital_raise_brl` (idem).
+### 3. `MandateDetailPage.tsx` — mesmo botão para seller
+Render condicional a `mandate.company_cnpj`:
+```tsx
+{mandate.company_cnpj && (
+  <Link
+    to={`/equity-brain/admin/jarvis?focus=seller:${mandate.company_cnpj}`}
+    className="..."  // mesmo estilo
+  >
+    <Network className="h-3.5 w-3.5" /> Mostrar no grafo 3D
+  </Link>
+)}
+```
 
-Mostrar valor sugerido pela IA ao lado do checkbox. Patch direto em `equity_brain.buyers`. Manter "Salvar tudo como nota" como fallback.
+## Detalhes técnicos / edge cases
+- Se o nó **não estiver no grafo após filtros padrão** (ex.: buyer sem matches que cair fora dos 350 nós), exibir `toast` "Nó não encontrado no grafo atual — ajuste filtros".
+- O guard com `useRef<string|null>` evita re-focar a cada `graphData` rebuild quando o usuário arrasta a câmera.
+- Não mexer no `GrafoJarvisPage.tsx` — o param flui via URL.
+- Sem mudança de banco, sem nova rota, sem edge function.
 
-### Job 3 — Botão "Buscar notícias agora" no buyer
-Em `BuyerDetailPage` (header, ao lado de Enriquecer via IA) e/ou no topo da aba "Notícias":
-- Botão **"Buscar notícias"** (ícone Newspaper + Loader2)
-- Chama `ingest-company-news` via `supabase.functions.invoke` com body `{ scope: 'buyer', buyer_id, lookback_days: 365 }` — **adicionar suporte a buyer_id único** na função (hoje só aceita scope='buyers' que faz batch de qualified).
-- Toast com nº inserido. Re-fetch do `NewsPanel` (invalidar query / refazer effect).
-
-### Job 4 — Ajuste mínimo no `ingest-company-news`
-Aceitar `body.buyer_id` (single): se presente, ignora scope/limit, busca aquele buyer e gera 1 target. Mantém retrocompatibilidade.
-
-### Job 5 — Hint amigável quando IA volta vazio
-Se a IA retornar todos os campos `null` para um buyer (por ser pequeno/desconhecido), mostrar mensagem no modal: "IA não encontrou informação pública confiável sobre este buyer. Tente preencher manualmente ou buscar pelo CNPJ se você tiver."
-
----
-
-## Não vou fazer
-- Não vou refatorar `BuyerTrackRecordBlock` (a busca em `benchmark_transactions` é correta — só não há dados pra Brasil TecPar lá).
-- Não vou agendar cron novo de notícias por buyer (é sob demanda via botão).
-- Não vou mexer em outras telas/rotas.
-
-**Custo estimado**: ~R$ 0,05 por enrichment (Gemini Flash) + ~R$ 0,01 por busca de notícias (Perplexity sonar). Zero custo recorrente.
-
-Aprova?
+## Não fazer
+- Não criar nova página de grafo focado.
+- Não adicionar `mode=focus` ou outros params além de `focus`.
+- Não alterar comportamento padrão quando `focus` não está presente.
