@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Settings2, X, RotateCcw, Activity, ClipboardCopy } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
