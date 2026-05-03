@@ -22,7 +22,14 @@ import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
 
-type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents";
+import { BuyerIdentityBlock } from "@/components/equity-brain/buyer/BuyerIdentityBlock";
+import { BuyerOperationBlock } from "@/components/equity-brain/buyer/BuyerOperationBlock";
+import { BuyerThesisBlock } from "@/components/equity-brain/buyer/BuyerThesisBlock";
+import { BuyerTrackRecordBlock } from "@/components/equity-brain/buyer/BuyerTrackRecordBlock";
+import { EnrichBuyerButton } from "@/components/equity-brain/buyer/EnrichBuyerButton";
+import { Lightbulb, TrendingUp } from "lucide-react";
+
+type Tab = "overview" | "thesis" | "track" | "matches" | "news" | "whatsapp" | "documents";
 
 export default function BuyerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +44,8 @@ export default function BuyerDetailPage() {
 
   const tabs: { key: Tab; label: string; Icon: any }[] = [
     { key: "overview", label: "Visão geral", Icon: Activity },
+    { key: "thesis", label: "Tese", Icon: Lightbulb },
+    { key: "track", label: "Track", Icon: TrendingUp },
     { key: "matches", label: "Matches", Icon: Target },
     { key: "news", label: "Notícias", Icon: Newspaper },
     { key: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
@@ -80,6 +89,7 @@ export default function BuyerDetailPage() {
             entityType="buyer"
             entityId={buyer.id}
           />
+          <EnrichBuyerButton buyerId={buyer.id} />
         </div>
       </header>
 
