@@ -79,7 +79,11 @@ export function EnrichReviewModal({ buyerId, suggested, citations, onClose }: Pr
       const noteParts: string[] = [];
 
       for (const f of identityFields) {
-        if (sel[f.k]) patch[f.k] = f.value;
+        if (sel[f.k]) {
+          patch[f.k] = f.k === "cnpj"
+            ? String(f.value).replace(/\D/g, "").slice(0, 14)
+            : f.value;
+        }
       }
       if (sel.deals_realizados && m.deals_realizados != null) patch.deals_realizados = Number(m.deals_realizados);
       if (sel.deals_last_12m && m.deals_last_12m != null) patch.deals_last_12m = Number(m.deals_last_12m);
