@@ -23,7 +23,7 @@ let settingsAt = 0;
 async function getPricing(provider: string, model: string | null) {
   const now = Date.now();
   if (!pricingCache || now - pricingCacheAt > 5 * 60_000) {
-    const { data } = await _admin.from("api_pricing").select("*");
+    const { data } = await getAdmin().from("api_pricing").select("*");
     pricingCache = new Map();
     (data ?? []).forEach((p: any) => {
       pricingCache!.set(`${p.provider}::${p.model}`, p);
@@ -40,7 +40,7 @@ async function getPricing(provider: string, model: string | null) {
 async function getUsdBrl(): Promise<number> {
   const now = Date.now();
   if (now - settingsAt < 5 * 60_000) return usdBrlRate;
-  const { data } = await _admin
+  const { data } = await getAdmin()
     .from("api_settings")
     .select("value")
     .eq("key", "usd_brl_rate")
@@ -146,7 +146,7 @@ export async function logApiUsage(p: LogParams) {
     const cost_brl = cost_usd * rate;
 
     // fire-and-forget
-    void _admin
+    void getAdmin()
       .from("api_usage_logs")
       .insert({
         provider: p.provider,
