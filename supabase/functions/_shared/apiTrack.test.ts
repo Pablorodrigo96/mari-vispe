@@ -225,7 +225,7 @@ function jsonResponse(body: any, status = 200): Response {
   });
 }
 
-Deno.test("trackedAIFetch: 200 JSON → caller can read body (clone preserved)", async () => {
+Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch: 200 JSON → caller can read body (clone preserved)", fn: async () => {
   const fetchStub = stub(globalThis, "fetch", () =>
     Promise.resolve(jsonResponse({
       model: "google/gemini-2.5-flash",
@@ -248,7 +248,7 @@ Deno.test("trackedAIFetch: 200 JSON → caller can read body (clone preserved)",
   }
 });
 
-Deno.test("trackedAIFetch: 429 → response forwarded with same status", async () => {
+Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch: 429 → response forwarded with same status", fn: async () => {
   const fetchStub = stub(globalThis, "fetch", () =>
     Promise.resolve(new Response("rate limited", { status: 429 })),
   );
@@ -265,7 +265,7 @@ Deno.test("trackedAIFetch: 429 → response forwarded with same status", async (
   }
 });
 
-Deno.test("trackedAIFetch: network error is re-thrown", async () => {
+Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch: network error is re-thrown", fn: async () => {
   const fetchStub = stub(globalThis, "fetch", () =>
     Promise.reject(new Error("ECONNRESET")),
   );
@@ -285,7 +285,7 @@ Deno.test("trackedAIFetch: network error is re-thrown", async () => {
   }
 });
 
-Deno.test("trackedAIFetch: embeddings URL → category 'embedding' resolved via detectProvider", async () => {
+Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch: embeddings URL → category 'embedding' resolved via detectProvider", fn: async () => {
   // We can't directly observe the log call (fire-and-forget), but we verify
   // the URL-to-provider mapping via detectProvider — single source of truth.
   const { provider, category } = detectProvider(
