@@ -45,7 +45,8 @@ async function getUsdBrl(): Promise<number> {
     .select("value")
     .eq("key", "usd_brl_rate")
     .maybeSingle();
-  if (data?.value) usdBrlRate = parseFloat(data.value) || 5.2;
+  const v = (data as any)?.value;
+  if (v) usdBrlRate = parseFloat(String(v)) || 5.2;
   settingsAt = now;
   return usdBrlRate;
 }
