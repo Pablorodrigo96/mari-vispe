@@ -102,6 +102,8 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const buyerId: string | undefined = body.buyer_id;
+    const mandateId: string | undefined = body.mandate_id;
+    const target: "companies" | "buyers" = body.target === "buyers" ? "buyers" : "companies";
     const filters = body.filters ?? {};
     const setores: string[] = Array.isArray(filters.setores) ? filters.setores : [];
     const ufs: string[] = Array.isArray(filters.ufs) ? filters.ufs : [];
