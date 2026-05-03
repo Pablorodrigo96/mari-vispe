@@ -36,6 +36,7 @@ const DASHBOARDS = [
 ];
 
 const ADMIN_ITEMS = [
+  { to: "/equity-brain/admin/rfb", label: "Base Nacional (RFB)", Icon: Database },
   { to: "/equity-brain/admin/dashboard-coverage", label: "Cobertura dashboards", Icon: Gauge },
   { to: "/equity-brain/admin/dedupe",     label: "Limpeza duplicatas",  Icon: Copy },
   { to: "/equity-brain/admin/imports",    label: "Importar",            Icon: Upload },
