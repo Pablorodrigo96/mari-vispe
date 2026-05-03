@@ -48,6 +48,8 @@ export function ExpandRFBDialog({
       const { data, error } = await supabase.functions.invoke("expand-companies-from-rfb", {
         body: {
           buyer_id: buyerId,
+          mandate_id: mandateId,
+          target,
           dry_run: dryRun,
           filters: {
             setores, ufs,
@@ -59,14 +61,15 @@ export function ExpandRFBDialog({
       });
       if (error) throw error;
       setResult(data);
+      const noun = target === "buyers" ? "compradores potenciais" : "empresas";
       if (!dryRun && data?.imported > 0) {
         toast({
-          title: `${data.imported} empresas importadas da base RFB`,
-          description: "Marcadas como 'não qualificadas'. Recalculando matches…",
+          title: `${data.imported} ${noun} importados da base RFB`,
+          description: "Marcados como 'não qualificados'. Recalculando matches…",
         });
         onCompleted?.();
       } else if (!dryRun) {
-        toast({ title: "Nenhuma empresa nova encontrada", description: "Tente relaxar os filtros." });
+        toast({ title: `Nenhum ${noun.split(" ")[0]} novo encontrado`, description: "Tente relaxar os filtros." });
       }
     } catch (e: any) {
       toast({ title: "Erro", description: e?.message ?? "Falha", variant: "destructive" });
