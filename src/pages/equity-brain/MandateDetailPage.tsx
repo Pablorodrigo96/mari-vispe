@@ -97,6 +97,15 @@ export default function MandateDetailPage() {
           >
             <Pencil className="h-3 w-3" /> Editar mandato
           </Link>
+          {mandate.company_cnpj && (
+            <Link
+              to={`/equity-brain/admin/jarvis?focus=seller:${mandate.company_cnpj}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-transparent border border-zinc-700 text-zinc-200 hover:bg-zinc-900 hover:text-emerald-300 text-xs"
+            >
+              <Network className="h-3.5 w-3.5" />
+              Mostrar no grafo 3D
+            </Link>
+          )}
         </div>
       </header>
 
