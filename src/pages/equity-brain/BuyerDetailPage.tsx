@@ -54,8 +54,8 @@ export default function BuyerDetailPage() {
 
   return (
     <div className="p-6 space-y-4 bg-zinc-950 min-h-full">
-      <Link to="/equity-brain/crm" className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100">
-        <ArrowLeft className="h-3 w-3" /> Voltar ao CRM
+      <Link to="/equity-brain/compradores" className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100">
+        <ArrowLeft className="h-3 w-3" /> Voltar para listagem
       </Link>
 
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 pb-4">
