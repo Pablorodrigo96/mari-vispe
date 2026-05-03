@@ -56,15 +56,29 @@ export function DiagnosticoVispe({ cnpj }: Props) {
       </div>
     );
   }
+  const RecalcBtn = (
+    <Button
+      size="sm"
+      variant="outline"
+      className="bg-transparent border-zinc-700 text-zinc-300 hover:text-emerald-300 ml-auto"
+      onClick={handleRecalculate}
+      disabled={recalculating}
+    >
+      {recalculating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+      Recalcular
+    </Button>
+  );
+
   if (!data || data.score_vendabilidade == null) {
     return (
-      <div className="bg-zinc-900/40 border border-zinc-800 rounded p-4 space-y-1">
+      <div className="bg-zinc-900/40 border border-zinc-800 rounded p-4 space-y-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
           <Stethoscope className="h-3.5 w-3.5 text-[#D9F564]" />
           Diagnóstico Vispe
+          {RecalcBtn}
         </div>
         <div className="text-[11px] text-zinc-500">
-          Sem score de vendabilidade ainda. Ele será calculado no próximo ciclo (4h).
+          Sem score de vendabilidade ainda. Clique em "Recalcular" ou aguarde o próximo ciclo (4h).
         </div>
       </div>
     );
@@ -75,6 +89,7 @@ export function DiagnosticoVispe({ cnpj }: Props) {
       <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
         <Stethoscope className="h-3.5 w-3.5 text-[#D9F564]" />
         Diagnóstico Vispe — Vendabilidade
+        {RecalcBtn}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-[auto,1fr] gap-4 items-center">
         <Gauge value={Number(data.score_vendabilidade)} label="Score SV" size={110} />
