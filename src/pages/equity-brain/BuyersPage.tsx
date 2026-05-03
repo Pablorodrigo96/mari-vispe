@@ -1,23 +1,22 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Loader2, AlertTriangle } from "lucide-react";
 import { useVertical } from "@/hooks/useVertical";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { BuyerCard } from "@/components/equity-brain/BuyerCard";
 import { formatBRL, relativeTime } from "@/lib/equityBrain";
 import { cn } from "@/lib/utils";
 
 export default function BuyersPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { buyerVerticalKey, vertical } = useVertical();
-  const [drawerId, setDrawerId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
   const buyers = useQuery({
