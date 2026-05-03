@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Newspaper, ExternalLink, TrendingUp, Building2, Crown, Megaphone, Scale, Users, Sparkles } from "lucide-react";
+import { Newspaper, ExternalLink, TrendingUp, Building2, Crown, Megaphone, Scale, Users, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 type EventType =
   | "ma_closed" | "ma_announced" | "funding_round" | "ipo"
