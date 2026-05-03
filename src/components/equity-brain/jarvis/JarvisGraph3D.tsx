@@ -100,6 +100,40 @@ export function JarvisGraph3D() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<JarvisNode | null>(null);
 
+  // ---------- Deep-link via ?focus=<nodeId> ----------
+  const [searchParams] = useSearchParams();
+  const focusParam = searchParams.get("focus");
+  const focusedOnceRef = useRef<string | null>(null);
+
+  // Quando chega com ?focus=, ativa o tipo do nó para garantir que ele apareça
+  useEffect(() => {
+    if (!focusParam) return;
+    const prefix = focusParam.split(":")[0];
+    const typeMap: Record<string, string[]> = {
+      buyer: ["buyer_strategic", "buyer_financial"],
+      seller: ["seller"],
+      thesis: ["thesis"],
+      platform: ["platform"],
+      asset: ["asset"],
+      strategy: ["strategy"],
+    };
+    const types = typeMap[prefix];
+    if (types) {
+      setSelectedNodeTypes((prev) => {
+        const next = new Set(prev);
+        types.forEach((t) => next.add(t));
+        return next;
+      });
+    }
+    if (prefix === "buyer" || prefix === "seller") {
+      setEnabledLayers((prev) => {
+        const next = new Set(prev);
+        next.add("ma_direct" as LayerKey);
+        return next;
+      });
+    }
+  }, [focusParam]);
+
   // ---------- Visual prefs (ajustes de fundo, persistidos em localStorage) ----------
   // Defaults LEVES — abre o painel rápido; usuário aumenta efeitos quando quiser.
   const VISUAL_DEFAULTS = {
