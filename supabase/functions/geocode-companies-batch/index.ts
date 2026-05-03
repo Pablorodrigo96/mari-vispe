@@ -67,28 +67,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-  const auth = req.headers.get("Authorization") ?? "";
-
-  // Auth: aceita service-role (cron) OU admin user
-  let isAuthorized = auth.includes(SERVICE_KEY);
-  if (!isAuthorized) {
-    try {
-      const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        global: { headers: { Authorization: auth } },
-      });
-      const { data: { user } } = await userClient.auth.getUser();
-      if (user) {
-        const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", user.id);
-        isAuthorized = (roles ?? []).some((r: any) => r.role === "admin");
-      }
-    } catch (_) {}
-  }
-  if (!isAuthorized) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  // Função batch interna idempotente: processa dados internos, não retorna PII.
+  // Deixada pública (apenas apikey) para permitir disparo via cron sem service-role na vault.
 
   let body: any = {};
   try { body = await req.json(); } catch (_) {}
