@@ -8,12 +8,16 @@ import { Network } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BrasilMap, type BrasilMapFilters } from "@/components/equity-brain/BrasilMap";
+import { MandateMap } from "@/components/equity-brain/MandateMap";
 import { DealCard } from "@/components/equity-brain/DealCard";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { UFS, formatNumber } from "@/lib/equityBrain";
+import { useMandatePins } from "@/hooks/useMandatePins";
 
 export default function MapaPage() {
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
+  const [mode, setMode] = useState<"heat" | "mandates">("heat");
+  const mandatePinsQ = useMandatePins();
   const [filters, setFilters] = useState<BrasilMapFilters>({
     ufs: [],
     setores: [],
@@ -83,10 +87,42 @@ export default function MapaPage() {
         <EBStatCard label="Concentração top 5 cidades" value={kpis.concentration} accent="blue" />
       </div>
 
+      {/* Toggle modo */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800 bg-zinc-900/40">
+        <span className="text-[11px] text-zinc-500 uppercase tracking-wider">Visualização:</span>
+        <button
+          onClick={() => setMode("heat")}
+          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${mode === "heat" ? "bg-emerald-500 text-zinc-950" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
+        >
+          Heatmap empresas
+        </button>
+        <button
+          onClick={() => setMode("mandates")}
+          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${mode === "mandates" ? "bg-emerald-500 text-zinc-950" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
+        >
+          Mandatos ({mandatePinsQ.data?.length ?? 0})
+        </button>
+      </div>
+
       {/* Mapa + sidebar filtros */}
       <div className="flex-1 flex min-h-0">
         <div className="flex-1 relative">
-          <BrasilMap filters={filters} onSelectCompany={setDrawerCnpj} />
+          {mode === "heat" ? (
+            <BrasilMap filters={filters} onSelectCompany={setDrawerCnpj} />
+          ) : (
+            <div className="p-4 h-full overflow-auto">
+              {mandatePinsQ.isLoading ? (
+                <div className="text-zinc-400 text-sm">Carregando mandatos…</div>
+              ) : (mandatePinsQ.data?.length ?? 0) === 0 ? (
+                <div className="text-zinc-400 text-sm space-y-2">
+                  <p>Nenhum mandato geocodificado ainda.</p>
+                  <p className="text-[11px] text-zinc-500">A geocodificação está rodando em background. Volte em alguns minutos.</p>
+                </div>
+              ) : (
+                <MandateMap mandates={mandatePinsQ.data ?? []} height="calc(100vh - 220px)" />
+              )}
+            </div>
+          )}
 
           {/* Botão flutuante para Grafo */}
           <Link

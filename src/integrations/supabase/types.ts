@@ -1756,15 +1756,25 @@ export type Database = {
           cautela_motivo: string | null
           cnpj: string | null
           created_at: string | null
+          criterios_exclusao: string | null
           deals_last_12m: number | null
           deals_realizados: number | null
+          email_contato_principal: string | null
           embedding: string | null
           embedding_computed_at: string | null
           embedding_text_hash: string | null
+          engagement_status:
+            | "aguardando"
+            | "em_negociacao"
+            | "comprou"
+            | "descartado"
+            | null
           id: string | null
+          linkedin_url: string | null
           median_target_size_recent: number | null
           municipios_interesse: string[] | null
           nome: string | null
+          notas_estrategicas: string | null
           observacoes: string | null
           pause_signal: boolean | null
           pe_sponsor_entry_date: string | null
@@ -1772,6 +1782,16 @@ export type Database = {
           porte_alvo: string[] | null
           primary_contact: Json | null
           prioridade_global: number | null
+          qualification_status:
+            | "qualified"
+            | "unqualified"
+            | "cold_market_map"
+            | "cold_prospect"
+            | "contacted"
+            | "relationship_started"
+            | "lost"
+            | "do_not_contact"
+            | null
           raw_data: Json | null
           recent_capital_raise_brl: number | null
           recent_capital_raise_date: string | null
@@ -1781,9 +1801,24 @@ export type Database = {
           source: string | null
           status: string | null
           subsetores_interesse: string[] | null
+          telefone_contato: string | null
+          tese_text: string | null
           ticket_max: number | null
           ticket_min: number | null
           tipo: string | null
+          tipo_comprador:
+            | "estrategico_incumbente"
+            | "estrategico_entrante"
+            | "consolidador"
+            | "plataforma_pe"
+            | "add_on_pe"
+            | "fundo_financeiro"
+            | "family_office"
+            | "search_fund"
+            | "oportunista"
+            | "eliminatorio"
+            | "internacional"
+            | null
           ufs_interesse: string[] | null
           ultimo_contato_em: string | null
           updated_at: string | null
@@ -1798,15 +1833,25 @@ export type Database = {
           cautela_motivo?: string | null
           cnpj?: string | null
           created_at?: string | null
+          criterios_exclusao?: string | null
           deals_last_12m?: number | null
           deals_realizados?: number | null
+          email_contato_principal?: string | null
           embedding?: string | null
           embedding_computed_at?: string | null
           embedding_text_hash?: string | null
+          engagement_status?:
+            | "aguardando"
+            | "em_negociacao"
+            | "comprou"
+            | "descartado"
+            | null
           id?: string | null
+          linkedin_url?: string | null
           median_target_size_recent?: number | null
           municipios_interesse?: string[] | null
           nome?: string | null
+          notas_estrategicas?: string | null
           observacoes?: string | null
           pause_signal?: boolean | null
           pe_sponsor_entry_date?: string | null
@@ -1814,6 +1859,16 @@ export type Database = {
           porte_alvo?: string[] | null
           primary_contact?: never
           prioridade_global?: number | null
+          qualification_status?:
+            | "qualified"
+            | "unqualified"
+            | "cold_market_map"
+            | "cold_prospect"
+            | "contacted"
+            | "relationship_started"
+            | "lost"
+            | "do_not_contact"
+            | null
           raw_data?: Json | null
           recent_capital_raise_brl?: number | null
           recent_capital_raise_date?: string | null
@@ -1823,9 +1878,24 @@ export type Database = {
           source?: string | null
           status?: string | null
           subsetores_interesse?: string[] | null
+          telefone_contato?: string | null
+          tese_text?: string | null
           ticket_max?: number | null
           ticket_min?: number | null
           tipo?: string | null
+          tipo_comprador?:
+            | "estrategico_incumbente"
+            | "estrategico_entrante"
+            | "consolidador"
+            | "plataforma_pe"
+            | "add_on_pe"
+            | "fundo_financeiro"
+            | "family_office"
+            | "search_fund"
+            | "oportunista"
+            | "eliminatorio"
+            | "internacional"
+            | null
           ufs_interesse?: string[] | null
           ultimo_contato_em?: string | null
           updated_at?: string | null
@@ -1840,15 +1910,25 @@ export type Database = {
           cautela_motivo?: string | null
           cnpj?: string | null
           created_at?: string | null
+          criterios_exclusao?: string | null
           deals_last_12m?: number | null
           deals_realizados?: number | null
+          email_contato_principal?: string | null
           embedding?: string | null
           embedding_computed_at?: string | null
           embedding_text_hash?: string | null
+          engagement_status?:
+            | "aguardando"
+            | "em_negociacao"
+            | "comprou"
+            | "descartado"
+            | null
           id?: string | null
+          linkedin_url?: string | null
           median_target_size_recent?: number | null
           municipios_interesse?: string[] | null
           nome?: string | null
+          notas_estrategicas?: string | null
           observacoes?: string | null
           pause_signal?: boolean | null
           pe_sponsor_entry_date?: string | null
@@ -1856,6 +1936,16 @@ export type Database = {
           porte_alvo?: string[] | null
           primary_contact?: never
           prioridade_global?: number | null
+          qualification_status?:
+            | "qualified"
+            | "unqualified"
+            | "cold_market_map"
+            | "cold_prospect"
+            | "contacted"
+            | "relationship_started"
+            | "lost"
+            | "do_not_contact"
+            | null
           raw_data?: Json | null
           recent_capital_raise_brl?: number | null
           recent_capital_raise_date?: string | null
@@ -1865,9 +1955,24 @@ export type Database = {
           source?: string | null
           status?: string | null
           subsetores_interesse?: string[] | null
+          telefone_contato?: string | null
+          tese_text?: string | null
           ticket_max?: number | null
           ticket_min?: number | null
           tipo?: string | null
+          tipo_comprador?:
+            | "estrategico_incumbente"
+            | "estrategico_entrante"
+            | "consolidador"
+            | "plataforma_pe"
+            | "add_on_pe"
+            | "fundo_financeiro"
+            | "family_office"
+            | "search_fund"
+            | "oportunista"
+            | "eliminatorio"
+            | "internacional"
+            | null
           ufs_interesse?: string[] | null
           ultimo_contato_em?: string | null
           updated_at?: string | null
@@ -3392,6 +3497,27 @@ export type Database = {
           valor_operacao: number | null
           valor_pedido: number | null
           year_started: number | null
+        }
+        Relationships: []
+      }
+      eb_v_mandate_pins: {
+        Row: {
+          company_cnpj: string | null
+          fase:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
+          id: string | null
+          latitude: number | null
+          longitude: number | null
+          municipio: string | null
+          razao_social: string | null
+          status: string | null
+          uf: string | null
         }
         Relationships: []
       }

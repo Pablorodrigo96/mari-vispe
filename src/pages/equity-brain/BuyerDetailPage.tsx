@@ -156,6 +156,20 @@ export default function BuyerDetailPage() {
         />
       )}
 
+      {tab === "thesis" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <BuyerIdentityBlock buyer={buyer} />
+          <BuyerOperationBlock buyer={buyer} />
+          <div className="lg:col-span-2">
+            <BuyerThesisBlock buyer={buyer} />
+          </div>
+        </div>
+      )}
+
+      {tab === "track" && (
+        <BuyerTrackRecordBlock buyer={buyer} />
+      )}
+
       {tab === "news" && (
         <NewsPanel buyerId={buyer.id} cnpj={(buyer as any).cnpj} emptyMessage="Nenhuma notícia coletada ainda sobre este buyer." />
       )}
