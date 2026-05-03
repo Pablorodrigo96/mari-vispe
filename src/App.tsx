@@ -51,6 +51,7 @@ import AdminCRM from "./pages/admin/AdminCRM";
 import MondayImport from "./pages/admin/MondayImport";
 import MondayParity from "./pages/admin/MondayParity";
 import AdvisorsMapping from "./pages/admin/AdvisorsMapping";
+import AdminApiMonitor from "./pages/admin/AdminApiMonitor";
 import MatchingBuyers from "./pages/MatchingBuyers";
 import CapitalCase from "./pages/CapitalCase";
 import CapitalBySegment from "./pages/CapitalBySegment";
