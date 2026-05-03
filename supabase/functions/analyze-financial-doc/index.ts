@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,7 +86,7 @@ serve(async (req) => {
     }
 
     // Call Lovable AI with structured output
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${lovableKey}`,
@@ -141,7 +142,7 @@ Extraia os indicadores financeiros e calcule o Equity Score (0-100) baseado em:
         ],
         tool_choice: { type: "function", function: { name: "extract_financial_data" } },
       }),
-    });
+    }, { function_name: "analyze-financial-doc" });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();

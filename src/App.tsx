@@ -51,6 +51,7 @@ import AdminCRM from "./pages/admin/AdminCRM";
 import MondayImport from "./pages/admin/MondayImport";
 import MondayParity from "./pages/admin/MondayParity";
 import AdvisorsMapping from "./pages/admin/AdvisorsMapping";
+import AdminApiMonitor from "./pages/admin/AdminApiMonitor";
 import MatchingBuyers from "./pages/MatchingBuyers";
 import CapitalCase from "./pages/CapitalCase";
 import CapitalBySegment from "./pages/CapitalBySegment";
@@ -186,6 +187,7 @@ const App = () => (
               <Route path="/admin/capital" element={<RequireRole roles={["admin"]}><AdminCapital /></RequireRole>} />
               <Route path="/admin/capital/providers" element={<RequireRole roles={["admin"]}><AdminCapitalProviders /></RequireRole>} />
               <Route path="/admin/monday-import" element={<RequireRole roles={["admin"]}><MondayImport /></RequireRole>} />
+              <Route path="/admin/api-monitor" element={<RequireRole roles={["admin"]}><AdminApiMonitor /></RequireRole>} />
               {/* legados — agora rodam dentro do shell EB */}
               <Route path="/admin/monday-parity" element={<Navigate to="/equity-brain/admin/monday-parity" replace />} />
               <Route path="/admin/advisors-mapping" element={<Navigate to="/equity-brain/admin/advisors-mapping" replace />} />

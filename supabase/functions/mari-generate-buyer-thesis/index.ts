@@ -1,3 +1,4 @@
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 // Equity Brain — mari-generate-buyer-thesis (Fase E2)
 // Gera tese individualizada (até 600 chars) por match usando Lovable AI Gateway.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -98,7 +99,7 @@ REGRAS:
 
 Tese:`;
 
-  const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const aiResp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -108,7 +109,7 @@ Tese:`;
         { role: "user", content: prompt },
       ],
     }),
-  });
+  }, { function_name: "mari-generate-buyer-thesis" });
   if (!aiResp.ok) {
     const t = await aiResp.text();
     if (aiResp.status === 429) throw new Error("RATE_LIMIT");

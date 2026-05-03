@@ -1,3 +1,4 @@
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 // whatsapp-classify-batch
 // Classifica sentimento e intenção de mensagens inbound recém recebidas.
 // Roda manualmente (admin) ou via cron (Fase 4 — a cada ~30min).
@@ -54,14 +55,14 @@ async function classifyGroup(messages: MsgRow[]): Promise<
     response_format: { type: "json_object" },
   };
 
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${lovableKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
-  });
+  }, { function_name: "whatsapp-classify-batch" });
 
   if (!r.ok) {
     const txt = await r.text();

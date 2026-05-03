@@ -1,3 +1,4 @@
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 // mari-draft-message — Gera rascunho de mensagem WhatsApp contextual
 // para um buyer/contato/deal. Mais leve que summarize-deal, sem cache.
 //
@@ -51,7 +52,7 @@ async function handler(req: Request): Promise<Response> {
     thanks: "agradecimento curto após reunião/etapa",
   };
 
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -61,7 +62,7 @@ async function handler(req: Request): Promise<Response> {
         { role: "user", content: `Contexto:\n${ctx.join("\n") || "(sem contexto extra)"}\n\nObjetivo: ${intentMap[intent] ?? intent}\n\nEscreva apenas a mensagem, sem aspas.` },
       ],
     }),
-  });
+  }, { function_name: "mari-draft-message" });
 
   if (!resp.ok) {
     const txt = await resp.text();

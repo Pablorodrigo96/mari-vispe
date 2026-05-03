@@ -1,3 +1,4 @@
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 // Equity Brain v3 — compute-semantic-embeddings
 // Etapa 2: gera embeddings semânticos (768d) para companies e buyers.
 // Estratégia: tenta Lovable AI Gateway; se indisponível, cai para TF-IDF
@@ -87,11 +88,11 @@ async function tryGatewayEmbedding(text: string, apiKey: string): Promise<number
   ];
   for (const model of models) {
     try {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+      const resp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/embeddings", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model, input: text.slice(0, 4000) }),
-      });
+      }, { function_name: "compute-semantic-embeddings" });
       if (!resp.ok) continue;
       const json = await resp.json();
       const vec = json?.data?.[0]?.embedding;

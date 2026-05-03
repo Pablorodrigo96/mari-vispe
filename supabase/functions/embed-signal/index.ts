@@ -1,3 +1,4 @@
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 // Equity Brain — embed-signal (Fase 7)
 // Gera embedding (768 dims) para um signal_text usando Lovable AI Gateway (google/text-embedding-004)
 // Auth: admin OR service_role.
@@ -44,7 +45,7 @@ async function generateEmbedding(text: string): Promise<number[] | null> {
     return null;
   }
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+    const resp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/embeddings", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -54,7 +55,7 @@ async function generateEmbedding(text: string): Promise<number[] | null> {
         model: "google/text-embedding-004",
         input: text.slice(0, 4000),
       }),
-    });
+    }, { function_name: "embed-signal" });
     if (!resp.ok) {
       const t = await resp.text();
       console.error(`[embed-signal] gateway ${resp.status}: ${t.slice(0, 300)}`);

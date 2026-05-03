@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { withObservability } from "../_shared/observability.ts";
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 
 // Knowledge Base — loaded at cold start from co-located markdown files
 const KB_FILES = [
@@ -179,7 +180,7 @@ ${liveCtx}`;
     ];
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -189,7 +190,7 @@ ${liveCtx}`;
         messages,
         stream: true,
       }),
-    });
+    }, { function_name: "mari-brain" });
 
     if (!aiRes.ok) {
       const status = aiRes.status;

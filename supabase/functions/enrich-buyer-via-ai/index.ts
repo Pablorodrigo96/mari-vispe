@@ -1,3 +1,4 @@
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 // Enriquece um buyer via Lovable AI (Gemini 2.5 Flash). Retorna sugestões para revisão humana.
 // Auth: advisor OR admin. Body: { buyer_id }.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -71,14 +72,14 @@ Retorne APENAS JSON válido (sem markdown), no formato:
 
 Se não tiver informação confiável de algum campo, use null ou array vazio.`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [{ role: "user", content: prompt }],
       }),
-    });
+    }, { function_name: "enrich-buyer-via-ai" });
     if (!resp.ok) {
       const txt = await resp.text();
       return new Response(JSON.stringify({ error: "ai_error", detail: txt }), {
