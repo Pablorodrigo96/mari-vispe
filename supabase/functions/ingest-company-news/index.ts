@@ -51,18 +51,18 @@ function domainOf(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
 }
 
-async function searchPerplexity(apiKey: string, target: Target): Promise<any[]> {
+async function searchPerplexity(apiKey: string, target: Target, lookbackDays?: number): Promise<any[]> {
   const queryName = target.name;
-  const prompt = `Encontre as notícias mais recentes (últimos 6 meses) sobre a empresa brasileira "${queryName}"${target.context ? ` (${target.context})` : ""}. Foque em: M&A (fusões, aquisições, vendas), captação de recursos (equity, dívida, IPO), mudanças de liderança (CEO, sócios, sucessão), expansão (novos mercados, plantas, contratos relevantes), eventos regulatórios. Retorne URLs específicos das notícias com data, título e resumo de 2 linhas. Se não houver notícias relevantes, responda "NENHUMA".`;
+  const prompt = `Encontre as notícias mais recentes sobre a empresa brasileira "${queryName}"${target.context ? ` (${target.context})` : ""}. Foque em: M&A (fusões, aquisições, vendas), captação de recursos (equity, dívida, IPO), mudanças de liderança (CEO, sócios, sucessão), expansão (novos mercados, plantas, contratos relevantes), eventos regulatórios. Retorne URLs específicos das notícias com data, título e resumo. Se não houver notícias relevantes, responda "NENHUMA".`;
 
   const body = {
     model: "sonar",
     messages: [
-      { role: "system", content: "Você é um analista de M&A. Liste apenas notícias verificáveis com URL direta para a fonte original. Em formato: [DATA] [VEÍCULO] Título — resumo. URL: ..." },
+      { role: "system", content: "Você é um analista de M&A brasileiro. Liste apenas notícias verificáveis com URL direta para a fonte original." },
       { role: "user", content: prompt },
     ],
-    search_recency_filter: "month",
-    search_domain_filter: TRUSTED_DOMAINS,
+    search_recency_filter: mapRecency(lookbackDays),
+    search_domain_filter: BLOCKED_DOMAINS,
     max_tokens: 1500,
     temperature: 0.1,
   };
@@ -79,15 +79,9 @@ async function searchPerplexity(apiKey: string, target: Target): Promise<any[]> 
   }
 
   const data = await resp.json();
-  // [D.1.1 TEMP DEBUG] log raw shape
-  try {
-    console.log("[D.1.1 DEBUG] target=", target.name, " keys=", Object.keys(data || {}));
-    console.log("[D.1.1 DEBUG] citations=", JSON.stringify(data?.citations)?.slice(0, 1500));
-    console.log("[D.1.1 DEBUG] search_results=", JSON.stringify(data?.search_results)?.slice(0, 1500));
-    console.log("[D.1.1 DEBUG] content=", (data?.choices?.[0]?.message?.content ?? "").slice(0, 2000));
-  } catch (_) {}
   const content: string = data?.choices?.[0]?.message?.content ?? "";
-  const citations: string[] = data?.citations ?? data?.search_results?.map((r: any) => r.url) ?? [];
+  const searchResults: any[] = Array.isArray(data?.search_results) ? data.search_results : [];
+  const citationsArr: string[] = Array.isArray(data?.citations) ? data.citations : [];
 
   try {
     const { logApiUsage } = await import("../_shared/apiTrack.ts");
@@ -99,53 +93,58 @@ async function searchPerplexity(apiKey: string, target: Target): Promise<any[]> 
     });
   } catch (e) { console.error("apiTrack:", e); }
 
-  if (/NENHUMA/i.test(content)) return [];
+  if (/NENHUMA/i.test(content) && searchResults.length === 0 && citationsArr.length === 0) return [];
 
-  // Heurística: para cada URL citada, tenta achar o trecho do texto que a referencia.
   const items: any[] = [];
   const seen = new Set<string>();
 
-  for (const url of citations) {
+  // Primary path: structured search_results
+  for (const r of searchResults) {
+    const url = r?.url;
     if (!url || seen.has(url)) continue;
     seen.add(url);
-
-    // Tenta extrair título: primeira linha do bloco que contém algo parecido com o domínio
-    const dom = domainOf(url);
-    const blocks = content.split(/\n\n+/);
-    let title = "", summary = "", publishedAt: string | null = null;
-
-    for (const blk of blocks) {
-      if (blk.includes(url) || (dom && blk.toLowerCase().includes(dom.split(".")[0]))) {
-        const lines = blk.split("\n").filter(Boolean);
-        // Tenta data dd/mm/aaaa ou aaaa-mm-dd
-        const dateMatch = blk.match(/(\d{2}\/\d{2}\/\d{4})|(\d{4}-\d{2}-\d{2})/);
-        if (dateMatch) {
-          const raw = dateMatch[0];
-          if (raw.includes("/")) {
-            const [d, m, y] = raw.split("/");
-            publishedAt = `${y}-${m}-${d}T00:00:00Z`;
-          } else {
-            publishedAt = `${raw}T00:00:00Z`;
-          }
-        }
-        title = lines[0]?.replace(/^\W+/, "").slice(0, 240) ?? "";
-        summary = lines.slice(1).join(" ").slice(0, 800);
-        break;
+    let publishedAt: string | null = null;
+    if (r?.date) {
+      const d = String(r.date);
+      if (/^\d{4}-\d{2}-\d{2}/.test(d)) publishedAt = `${d.slice(0, 10)}T00:00:00Z`;
+      else if (/^\d{2}\/\d{2}\/\d{4}$/.test(d)) {
+        const [dd, mm, yy] = d.split("/"); publishedAt = `${yy}-${mm}-${dd}T00:00:00Z`;
       }
     }
-
-    if (!title) {
-      title = `Notícia sobre ${queryName} (${dom})`;
-      summary = content.slice(0, 600);
-    }
-
     items.push({
       source_url: url,
-      source_domain: dom,
-      title,
-      summary,
+      source_domain: domainOf(url),
+      title: (r?.title ?? `Notícia sobre ${queryName}`).slice(0, 240),
+      summary: (r?.snippet ?? r?.description ?? "").slice(0, 800),
       published_at: publishedAt,
     });
+  }
+
+  // Fallback: legacy regex parser when search_results empty but citations present
+  if (items.length === 0 && citationsArr.length > 0) {
+    for (const url of citationsArr) {
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      const dom = domainOf(url);
+      const blocks = content.split(/\n\n+/);
+      let title = "", summary = "", publishedAt: string | null = null;
+      for (const blk of blocks) {
+        if (blk.includes(url) || (dom && blk.toLowerCase().includes(dom.split(".")[0]))) {
+          const lines = blk.split("\n").filter(Boolean);
+          const dm = blk.match(/(\d{2}\/\d{2}\/\d{4})|(\d{4}-\d{2}-\d{2})/);
+          if (dm) {
+            const raw = dm[0];
+            if (raw.includes("/")) { const [d, m, y] = raw.split("/"); publishedAt = `${y}-${m}-${d}T00:00:00Z`; }
+            else publishedAt = `${raw}T00:00:00Z`;
+          }
+          title = lines[0]?.replace(/^\W+/, "").slice(0, 240) ?? "";
+          summary = lines.slice(1).join(" ").slice(0, 800);
+          break;
+        }
+      }
+      if (!title) { title = `Notícia sobre ${queryName} (${dom})`; summary = content.slice(0, 600); }
+      items.push({ source_url: url, source_domain: dom, title, summary, published_at: publishedAt });
+    }
   }
 
   return items;
