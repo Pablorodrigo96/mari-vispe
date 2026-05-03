@@ -44,6 +44,8 @@ export default function BuyerDetailPage() {
 
   const tabs: { key: Tab; label: string; Icon: any }[] = [
     { key: "overview", label: "Visão geral", Icon: Activity },
+    { key: "thesis", label: "Tese", Icon: Lightbulb },
+    { key: "track", label: "Track", Icon: TrendingUp },
     { key: "matches", label: "Matches", Icon: Target },
     { key: "news", label: "Notícias", Icon: Newspaper },
     { key: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
