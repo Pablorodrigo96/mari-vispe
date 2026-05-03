@@ -19,7 +19,18 @@ interface Props {
 export function EnrichReviewModal({ buyerId, suggested, citations, onClose }: Props) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [sel, setSel] = useState({
+  const [sel, setSel] = useState<Record<string, boolean>>({
+    cnpj: false,
+    website: false,
+    linkedin_url: false,
+    email_contato_principal: false,
+    telefone_contato: false,
+    pe_sponsor_name: false,
+    vertical_principal: false,
+    deals_realizados: false,
+    deals_last_12m: false,
+    avg_multiple_paid_recent: false,
+    recent_capital_raise_brl: false,
     tese: false,
     setores_foco: false,
     regioes_foco: false,
@@ -29,15 +40,52 @@ export function EnrichReviewModal({ buyerId, suggested, citations, onClose }: Pr
   });
   const [saving, setSaving] = useState(false);
 
-  function toggle(k: keyof typeof sel) {
+  function toggle(k: string) {
     setSel((s) => ({ ...s, [k]: !s[k] }));
   }
+
+  const m = suggested?.metricas ?? {};
+  const identityFields: Array<{ k: string; label: string; value: any }> = [
+    { k: "cnpj", label: "CNPJ", value: suggested?.cnpj },
+    { k: "website", label: "Website", value: suggested?.website },
+    { k: "linkedin_url", label: "LinkedIn", value: suggested?.linkedin_url },
+    { k: "email_contato_principal", label: "Email contato", value: suggested?.email_contato_principal },
+    { k: "telefone_contato", label: "Telefone", value: suggested?.telefone_contato },
+    { k: "pe_sponsor_name", label: "PE Sponsor", value: suggested?.pe_sponsor_name },
+    { k: "vertical_principal", label: "Vertical principal", value: suggested?.vertical_principal },
+  ].filter((f) => f.value);
+
+  const metricFields: Array<{ k: string; label: string; value: any; format?: (v: any) => string }> = [
+    { k: "deals_realizados", label: "Total deals históricos", value: m.deals_realizados },
+    { k: "deals_last_12m", label: "Deals últimos 12m", value: m.deals_last_12m },
+    { k: "avg_multiple_paid_recent", label: "Múltiplo médio EV/EBITDA", value: m.avg_multiple_paid_recent, format: (v: any) => `${v}x` },
+    { k: "recent_capital_raise_brl", label: "Última captação", value: m.recent_capital_raise_brl, format: (v: any) => `R$ ${(Number(v) / 1e6).toFixed(1)}MM` },
+  ].filter((f) => f.value !== null && f.value !== undefined && f.value !== "");
+
+  const hasAnyData =
+    identityFields.length > 0 ||
+    metricFields.length > 0 ||
+    suggested?.tese_atualizada ||
+    (suggested?.setores_foco?.length ?? 0) > 0 ||
+    (suggested?.regioes_foco?.length ?? 0) > 0 ||
+    (suggested?.deals_recentes?.length ?? 0) > 0 ||
+    suggested?.ultima_captacao?.valor_brl_mm ||
+    (suggested?.equipe_chave?.length ?? 0) > 0;
 
   async function applySelected() {
     setSaving(true);
     try {
       const patch: Record<string, any> = {};
       const noteParts: string[] = [];
+
+      for (const f of identityFields) {
+        if (sel[f.k]) patch[f.k] = f.value;
+      }
+      if (sel.deals_realizados && m.deals_realizados != null) patch.deals_realizados = Number(m.deals_realizados);
+      if (sel.deals_last_12m && m.deals_last_12m != null) patch.deals_last_12m = Number(m.deals_last_12m);
+      if (sel.avg_multiple_paid_recent && m.avg_multiple_paid_recent != null) patch.avg_multiple_paid_recent = Number(m.avg_multiple_paid_recent);
+      if (sel.recent_capital_raise_brl && m.recent_capital_raise_brl != null) patch.recent_capital_raise_brl = Number(m.recent_capital_raise_brl);
+
       if (sel.tese && suggested.tese_atualizada) patch.tese_text = suggested.tese_atualizada;
       if (sel.setores_foco && Array.isArray(suggested.setores_foco) && suggested.setores_foco.length) {
         patch.setores_interesse = suggested.setores_foco;
@@ -49,7 +97,7 @@ export function EnrichReviewModal({ buyerId, suggested, citations, onClose }: Pr
         noteParts.push("Deals recentes:\n" + suggested.deals_recentes
           .map((d: any) => `• ${d.target} (${d.setor ?? "?"}) — ${d.data ?? "?"}`).join("\n"));
       }
-      if (sel.captacao && suggested.ultima_captacao?.valor_brl_mm) {
+      if (sel.captacao && suggested.ultima_captacao?.valor_brl_mm && !sel.recent_capital_raise_brl) {
         patch.recent_capital_raise_brl = Number(suggested.ultima_captacao.valor_brl_mm) * 1e6;
       }
       if (sel.equipe && Array.isArray(suggested.equipe_chave) && suggested.equipe_chave.length) {
