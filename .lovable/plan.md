@@ -1,127 +1,133 @@
-# Fase E2 — Scores SV/SAV + Tese Mari + Simulador VPL
+# Fase F1 — Mapa do Pipeline + BuyerDetailPage editável
 
-Implementa a metodologia "Três Assimetrias" sobre o schema E1 já pronto. Não toca no `match_score` atual — `sav_score` roda em paralelo. Score só é apresentado se `sv_data_completeness >= 0.6` (caso contrário, badge "dados insuficientes").
+## Diagnóstico (já feito)
 
-## Dados validados (não vou re-perguntar)
-- 249 companies `qualified` aptas pra calcular SV.
-- 141.601 matches (vou processar em batch e priorizar top por `match_score`).
-- 11 linhas em `taxonomia_compradores` ✓.
-- 0 linhas em `benchmark_transactions` — comparáveis na tese e fallback do classificador SAV vão devolver vazio até o JSON ser carregado pela tela de E1; nada quebra.
-- `matches.cnpj` (não `mandate_id`) — uso `companies!inner(cnpj)` direto e busco mandato pelo `company_cnpj` quando preciso.
+- `equity_brain.companies`: 394 total · 249 qualified · **0 com lat/long** (precisa geocodar tudo).
+- 529 mandates · 503 buyers.
+- Leaflet 1.9 e leaflet.markercluster já instalados (vanilla, padrão do projeto). **Não vou instalar `react-leaflet`** — bate na regra Core "interactive maps via vanilla Leaflet".
+- Mapa atual `BrasilMap.tsx` (usado em `MapaPage`) usa choropleth/cluster por UF/município via views agregadas (`eb_v_opportunities_by_uf/_by_municipio`), **não consome lat/long de companies**. Por isso "não funciona" pra ver mandato individual — é outro modelo.
+- `BuyerDetailPage` já tem 5 tabs (Visão geral, Matches, Notícias, WhatsApp, Documentos), mas **sem edição inline** dos campos (preferências/tese/contato).
 
-## E2.1 — Função SQL `calculate_sv` + batch
-**Migration** `..._sv_calculation.sql`:
-- `equity_brain.calculate_sv(p_company_cnpj varchar)` retorna `(score, nivel, breakdown, data_completeness)` conforme spec (9 subscores, pesos, mapeamento 5 níveis, completeness = preenchidos/9). `STABLE SECURITY DEFINER`, `search_path = equity_brain, public`.
-- GRANT EXECUTE pra `authenticated`.
+## F.1 — Mapa do Pipeline funcionando
 
-**Edge function** `calculate-vendabilidade-batch`:
-- Auth: admin OR service_role (mesmo pattern de `calculate-scores`).
-- Pega até 250 companies `qualification_status='qualified'` com `sv_calculated_at IS NULL OR < now()-7d`, chama `rpc('calculate_sv')` por CNPJ, faz `update` em `companies` (score_vendabilidade, nivel_maturidade, sv_breakdown, sv_data_completeness, sv_calculated_at).
+Estratégia: **manter `BrasilMap` (choropleth nacional) e adicionar uma view nova "mandatos"** dentro do MapaPage com markers individuais por mandato, agrupados via cluster.
+
+### Migration `..._companies_geocoding.sql`
+- `ALTER TABLE equity_brain.companies ADD COLUMN IF NOT EXISTS latitude double precision, longitude double precision, geocoded_at timestamptz, geocoded_source text`.
+- Index `idx_companies_geo (latitude, longitude) WHERE latitude IS NOT NULL`.
+- View `equity_brain.eb_v_mandate_pins`: `id, titulo, fase, latitude, longitude, razao_social, cnpj, municipio, uf, faturamento_estimado` (join `mandates` ↔ `companies` por `company_cnpj`).
+
+### Edge function `geocode-companies-batch`
+- Cascata: `cep` via `brasilapi.com.br/api/cep/v2/{cep}` → `municipio + uf` via Nominatim (User-Agent `Vispe-MARI/1.0`, sleep 1.1s entre chamadas Nominatim).
+- Body `{ limit?: 100 }`, processa companies com `qualification_status='qualified' AND latitude IS NULL`.
+- Atualiza colunas + loga em `mari_ops.health_check`.
+- Auth: admin OR service_role.
+
+### Cron `0 2 * * 1` (segundas 2h via `pg_cron` + `pg_net`).
+
+### Componente novo `src/components/equity-brain/MandateMap.tsx`
+- Hook vanilla Leaflet (mesmo padrão do `BrasilMap`): `useRef` + `useEffect`, tile CARTO dark, `L.markerClusterGroup`.
+- `divIcon` colorido por `fase` (match=blue, cold=zinc, nbo=amber, spa=violet, closed=emerald, cancelado=red).
+- Popup: razão social + fase + faturamento + município/UF + link `Abrir mandato →` para `/equity-brain/crm/mandate/{id}`.
+- Props: `mandates: { id, fase, latitude, longitude, ... }[]` + `onGeocodeRequest?` opcional.
+- Alert no topo se há mandates sem coords (com botão "Geocodificar pendentes" só pra admin).
+- Legenda de cores por fase abaixo do mapa.
+
+### Integração em `MapaPage.tsx`
+- Adicionar **toggle no topo** "Heat nacional ⇄ Mandatos" (segmented control). Default "Heat nacional" (preserva tela atual).
+- Quando "Mandatos": query `eb_v_mandate_pins` + renderiza `<MandateMap />` ocupando o slot do `<BrasilMap />`. Sidebar de filtros é simplificada (só fase + UF).
+- Botão "Geocodificar agora" usa `useUserRoles().isAdmin`, invoca a edge function via `supabase.functions.invoke('geocode-companies-batch', { body:{ limit: 200 } })`, toast com resultado, refetch.
+
+### Critérios F.1
+- Migration aplicada; índice geo criado; view existe.
+- Edge `geocode-companies-batch` deployada e cron agendado.
+- Após primeira execução manual via botão admin, ≥80% das 249 qualified com coords.
+- Toggle "Mandatos" no MapaPage renderiza markers clusterizados, popup clicável navega.
+- Sem regressão na view "Heat nacional".
+
+---
+
+## F.2 — BuyerDetailPage editável
+
+Não vou refazer a página do zero — ela já tem header + 5 tabs (`overview/matches/news/whatsapp/documents`). Vou **estender a tab "Visão geral"** com edição inline e adicionar 2 sub-blocos novos (Tese & Setor, Track Record), além do botão "Enriquecer via IA". Documentos já estão na tab existente — mantenho.
+
+### Migration `..._buyer_detail_fields.sql`
+```sql
+ALTER TABLE equity_brain.buyers
+  ADD COLUMN IF NOT EXISTS tese_text text,
+  ADD COLUMN IF NOT EXISTS criterios_exclusao text,
+  ADD COLUMN IF NOT EXISTS notas_estrategicas text,
+  ADD COLUMN IF NOT EXISTS website text,
+  ADD COLUMN IF NOT EXISTS linkedin_url text,
+  ADD COLUMN IF NOT EXISTS email_contato_principal text,
+  ADD COLUMN IF NOT EXISTS telefone_contato text;
+```
+(Documentos já vivem em `equity_brain.documents` consumido pelo `DocumentsPanel` — não preciso de tabela `buyer_documents` separada nem bucket novo.)
+
+### Componente `EditableField.tsx` (novo, `src/components/equity-brain/`)
+- Modos: `text | number | email | url | textarea | select | multiselect`.
+- Padrão: label + valor; ícone lápis aparece on-hover; clicou → input + Salvar/Cancelar (`Enter` salva, `Esc` cancela).
+- `onSave(value)` async; toast erro/sucesso.
+- Tema dark (`bg-zinc-900/40 border-zinc-800`).
+
+### Hook `useUpdateBuyer(buyerId)`
+- Mutation: update em `equity_brain.buyers` + insert em `crm_activities` (kind=`field_update`, payload com `field/old/new`) — projeto não tem `audit_logs` mas tem `crm_activities` com timeline; reaproveitar.
+- Invalida `useBuyerCrm`.
+
+### Sub-componentes novos sob `src/components/equity-brain/buyer/`
+- `BuyerIdentityBlock.tsx` — grid 2 col com EditableField pra: nome, razao_social, cnpj, website, linkedin_url, email_contato_principal, telefone_contato, pe_sponsor_name.
+- `BuyerOperationBlock.tsx` — tipo (select), status (select), vertical_principal, ticket_min/max, ufs_interesse (multiselect), setores_interesse (multiselect), subsetores_interesse.
+- `BuyerThesisBlock.tsx` — tese_text, criterios_exclusao, notas_estrategicas, sinergias_chave (tag list).
+- `BuyerTrackRecordBlock.tsx` — métricas editáveis (deals_realizados, deals_last_12m, avg_multiple_paid_recent, recent_capital_raise_brl) + tabela `benchmark_transactions ILIKE comprador_nome` (com fallback "tabela vazia" se sem dados).
+- `EnrichBuyerButton.tsx` — botão Sparkles → invoca edge `enrich-buyer-via-ai` → abre `EnrichReviewModal` com checkboxes por campo + lista de fontes citadas; "Aplicar selecionados" faz update; "Salvar tudo como nota" insere em `crm_activities`.
+
+### Mudanças em `BuyerDetailPage.tsx`
+- No header: adicionar botão "Enriquecer via IA" ao lado dos existentes (WhatsApp/BlindTeaser).
+- Tab "overview": antes da Timeline, inserir os blocos `BuyerIdentityBlock` + `BuyerOperationBlock` em `<details open>` colapsáveis; manter `ConversationSummary`/`Timeline`/`PreferencesEditor`/`TasksWidget` como estão.
+- Adicionar **2 tabs novas**: `Tese` (BuyerThesisBlock) e `Track` (BuyerTrackRecordBlock). Ordem final: Visão geral · Tese · Track · Matches · Notícias · WhatsApp · Documentos.
+
+### Edge function `enrich-buyer-via-ai`
+- Auth: advisor OR admin.
+- Body: `{ buyer_id }`.
+- **Usa Lovable AI Gateway com `google/gemini-2.5-flash`** (não Perplexity — projeto não tem `PERPLEXITY_API_KEY` configurada; AI Gateway é a regra do projeto). Para web search, usar prompt instruindo Gemini a sugerir "fontes prováveis" com URLs candidatas (não citações reais). **Nota:** se Pablo quiser web search verdadeiro com citações, requer `PERPLEXITY_API_KEY` — vou perguntar via toast/comentário, mas a versão default fica em Gemini.
+- Retorna `{ suggested: { tese_atualizada, deals_recentes[], ultima_captacao, equipe_chave[], setores_foco[], regioes_foco[] }, citations: [] }`.
 - Loga em `mari_ops.health_check`.
 
-**Cron**: `0 4 * * *` via `pg_cron` (insert separado, não migration — por causa da anon key no body).
+### Critérios F.2
+- Migration aplicada (7 colunas novas em buyers).
+- `EditableField` funciona em ≥15 campos do BuyerDetailPage.
+- Cada save grava entrada em `crm_activities` (kind=`field_update`).
+- Botão "Enriquecer via IA" abre modal com sugestões + lista de fontes; aplicar atualiza só campos marcados.
+- Tabs novas (Tese, Track) renderizam sem quebrar as existentes.
+- Skeleton em cada tab durante loading.
 
-## E2.2 — Edge function `calculate-sav-score`
-- Auth admin/service_role.
-- Body: `{ match_id }` (single) ou `{ batch: true, limit?: 200 }`.
-- Single: lê `matches` + `companies` (via cnpj) + `buyers`, busca até 5 deals históricos em `benchmark_transactions ILIKE comprador_nome` (vazio enquanto JSON não carregado → encaixe ganha 0 nesse fator).
-- Calcula 6 fatores (sinergia custo 25% / receita 15% / eliminação 15% / geografia 15% / custo oportunidade 15% / encaixe estratégico 15%) usando `buyer.tipo_comprador`, setores/UFs/municípios de interesse, deals_last_12m, recent_capital_raise.
-- `update matches set sav_score, sav_breakdown, sav_calculated_at` (filtra `is_current=true`).
-- Batch: pega matches `is_current=true` order by `match_score DESC` com `sav_calculated_at IS NULL OR < now()-24h`, processa serial, agrega contagem.
-- Loga health_check.
-
-**Cron**: `15 */6 * * *`.
-
-## E2.3 — Edge function `mari-generate-buyer-thesis`
-- Auth: usuário autenticado (advisor/admin) — single use; batch protegido por admin.
-- Body: `{ match_id }` ou `{ batch: true, limit?: 50 }`.
-- Monta prompt PT-BR conforme spec (top 3 fatores SAV, taxonomia, comparáveis recentes do setor).
-- `LOVABLE_API_KEY` + `google/gemini-2.5-flash` via `https://ai.gateway.lovable.dev/v1/chat/completions`.
-- Trim 600 chars, `update matches set thesis_text, thesis_generated_at`.
-- Loga health_check.
-
-## E2.4 — Edge function `calculate-vpl-proposal`
-- Auth: usuários com acesso ao mandato (verifico via RLS chamando como user). Admin sempre.
-- Body: `{ proposal_id }`.
-- Lê `transaction_proposals`, calcula VPL com 5 premissas fixas (custo capital 15%, prob earn-out 55%, prob escrow 70%, desconto liquidez ações 25%, prob garantias 30%), monta breakdown e assumptions, persiste `vpl_ajustado_brl_mm`, `vpl_breakdown`, `vpl_assumptions`, `vpl_calculated_at`.
-- Retorna `{ total, breakdown }`.
-
-## E2.5 — Tela `/equity-brain/crm/mandate/:id/propostas`
-**Arquivo**: `src/pages/equity-brain/PropostasPage.tsx` + rota em `App.tsx`.
-
-Layout:
-```text
-[← Voltar] Comparação de Propostas — <empresa>     [+ Nova proposta]
-─────────────────────────────────────────────────────────────
-                       Proposta A      Proposta B
-Buyer / Tipo
-Valor nominal
-Componentes (vista, earn-out nominal/ajustado, escrow, parcelamento, ações)
-Custos implícitos (non-compete, lockup, garantias)
-─────────────────────────────────────────────────────────────
-▶ VPL AJUSTADO          R$ X,XX MM     R$ Y,YY MM ← MELHOR (border Volt)
-Diferença vs nominal
-[Editar A]              [Editar B]     [Premissas usadas]
-```
-
-- Drawer "Nova/Editar proposta": buyer (select dos buyers do mandato), label, blocos vista / earn-out (valor + prazo + métricas) / escrow / parcelamento / ações (valor + lockup + ticker) / cláusulas (non-compete anos, lockup operacional, garantias).
-- Botão "Calcular VPL" → invoca edge function → recarrega.
-- Tabela comparativa com colunas dinâmicas; coluna do maior VPL com `border-volt/40`.
-- Modal "Premissas usadas" abre as 5 constantes (read-only nesta versão).
-- Tooltips usando `ebTooltips.ts` (vou estender com chaves novas: `sv_score`, `sav_score`, `vpl_ajustado`, etc.).
-
-## E2.6 — Integração na UI existente
-**A. `MandateDetailPage.tsx`** — bloco "Diagnóstico Vispe" acima da timeline:
-- Gauge SV (reusa `ScoreDial`) + `NivelBadge` (1-5, label "Invendável/Desconto/Médio/Prêmio/Disputado").
-- Alert se `sv_data_completeness < 0.6`.
-- Top 3 fragilidades (menores subscores no breakdown).
-- Botão "💰 Comparar propostas" → navega pra `/equity-brain/crm/mandate/:id/propostas`.
-
-**B. `OportunidadesPage.tsx`** (cards de matches): SAV badge (>70 verde, 50-70 amber, <50 zinc), badge `tipo_comprador`, `thesis_text` em itálico, botão "Gerar/Regerar tese" (chama edge function, invalida query).
-
-**C. `BuyerDetailPage.tsx`** — bloco "Perfil Vispe" com taxonomia (descricao, paga_premio_quando, paga_menos_quando, argumento_comercial_padrao, risco_principal_vendedor) + tabela "Deals históricos" lendo `benchmark_transactions ILIKE comprador_nome`.
-
-**D. `DealDrawer.tsx`** — adiciona ActionButton "Simulador VPL" → mesma rota `/equity-brain/crm/mandate/:id/propostas`.
-
-## Componentes novos compartilhados
-- `src/components/equity-brain/Gauge.tsx` — círculo SVG simples 0-100 (reusa `scoreColor`).
-- `src/components/equity-brain/NivelBadge.tsx` — 5 níveis com cor escalonada.
-- `src/components/equity-brain/SAVBadge.tsx` — score badge com tooltip.
-- `src/components/equity-brain/TopFragilidades.tsx` — lista os 3 menores subscores do `sv_breakdown`.
-- `src/components/proposals/ProposalForm.tsx` (drawer).
-- `src/components/proposals/ProposalCompareTable.tsx`.
+---
 
 ## Arquivos
+
 **Novos**
-- `supabase/migrations/<ts>_sv_calculation.sql`
-- `supabase/functions/calculate-vendabilidade-batch/index.ts`
-- `supabase/functions/calculate-sav-score/index.ts`
-- `supabase/functions/mari-generate-buyer-thesis/index.ts`
-- `supabase/functions/calculate-vpl-proposal/index.ts`
-- `src/pages/equity-brain/PropostasPage.tsx`
-- `src/components/equity-brain/Gauge.tsx`, `NivelBadge.tsx`, `SAVBadge.tsx`, `TopFragilidades.tsx`
-- `src/components/proposals/ProposalForm.tsx`, `ProposalCompareTable.tsx`
+- `supabase/migrations/<ts>_companies_geocoding.sql` (colunas + index + view `eb_v_mandate_pins`).
+- `supabase/migrations/<ts>_buyer_detail_fields.sql` (7 colunas).
+- `supabase/functions/geocode-companies-batch/index.ts`.
+- `supabase/functions/enrich-buyer-via-ai/index.ts`.
+- `src/components/equity-brain/MandateMap.tsx`.
+- `src/components/equity-brain/EditableField.tsx`.
+- `src/components/equity-brain/buyer/BuyerIdentityBlock.tsx`.
+- `src/components/equity-brain/buyer/BuyerOperationBlock.tsx`.
+- `src/components/equity-brain/buyer/BuyerThesisBlock.tsx`.
+- `src/components/equity-brain/buyer/BuyerTrackRecordBlock.tsx`.
+- `src/components/equity-brain/buyer/EnrichBuyerButton.tsx`.
+- `src/components/equity-brain/buyer/EnrichReviewModal.tsx`.
+- `src/hooks/useUpdateBuyer.ts`.
 
 **Editados**
-- `src/App.tsx` (rota propostas)
-- `src/pages/equity-brain/MandateDetailPage.tsx` (bloco Diagnóstico Vispe)
-- `src/pages/equity-brain/OportunidadesPage.tsx` (SAV badge + tese)
-- `src/pages/equity-brain/BuyerDetailPage.tsx` (Perfil Vispe + deals históricos)
-- `src/components/deal/DealActions.tsx` (botão Simulador VPL)
-- `src/lib/ebTooltips.ts` (chaves novas)
+- `src/pages/equity-brain/MapaPage.tsx` — toggle Heat ⇄ Mandatos.
+- `src/pages/equity-brain/BuyerDetailPage.tsx` — header + tabs Tese/Track + blocos editáveis em overview.
 
-**Insert (não migration)** — agendamento dos 2 crons via `pg_cron`/`pg_net`.
+**Inserts pós-migration (não migration)**
+- Cron `pg_cron` `0 2 * * 1` chamando `geocode-companies-batch` via `pg_net`.
 
-## Fora de escopo (V2/F+)
-SQE, SDF, SCP, SCV, what-if scenarios, anuário Vispe, pitch deck por buyer, score de risco da transação, override de premissas pelo admin (UI fica read-only nesta fase).
-
-## Critérios de aceite
-- Migration aplica sem warnings; `calculate_sv` retorna shape correto pra um CNPJ qualificado.
-- Batch SV roda e popula >= 100 companies (temos 249).
-- Batch SAV roda e popula >= 1000 matches.
-- 1 tese gerada manualmente, coerente com tipo + top 3 fatores.
-- 2 propostas de teste validam: B (R$85MM mais à vista) com VPL > A (R$100MM mais earn-out/escrow/ações).
-- MandateDetailPage, OportunidadesPage, BuyerDetailPage e DealDrawer mostram os novos blocos sem quebrar layout.
-- `mari_ops.daily_smoke_tests` continua verde.
+## Fora de escopo
+F.2 do documento original (Drawer Hoje + Mandate NBA) — Pablo pediu para parar após F1 e aprovar.
 
 Posso prosseguir?
