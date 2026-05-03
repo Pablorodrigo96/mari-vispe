@@ -154,7 +154,7 @@ export function EnrichReviewModal({ buyerId, suggested, citations, onClose }: Pr
     }
   }
 
-  function Item({ k, label, children }: { k: keyof typeof sel; label: string; children?: any }) {
+  function Item({ k, label, children }: { k: string; label: string; children?: any }) {
     return (
       <div className="p-3 border border-zinc-800 rounded bg-zinc-900/40">
         <button
@@ -167,7 +167,7 @@ export function EnrichReviewModal({ buyerId, suggested, citations, onClose }: Pr
           </span>
           <span className="text-xs font-semibold text-zinc-100">{label}</span>
         </button>
-        {children && <div className="mt-2 text-xs text-zinc-300 pl-6">{children}</div>}
+        {children && <div className="mt-2 text-xs text-zinc-300 pl-6 break-words">{children}</div>}
       </div>
     );
   }
@@ -182,7 +182,41 @@ export function EnrichReviewModal({ buyerId, suggested, citations, onClose }: Pr
           </DialogDescription>
         </DialogHeader>
 
+        {!hasAnyData && (
+          <div className="p-4 border border-amber-700/40 bg-amber-950/20 rounded text-xs text-amber-200">
+            A IA não encontrou informação pública confiável sobre este buyer. Tente preencher manualmente
+            (especialmente CNPJ e website) e rode o enriquecimento novamente — com mais contexto a IA
+            costuma achar dados.
+          </div>
+        )}
+
         <div className="space-y-3">
+          {identityFields.length > 0 && (
+            <div>
+              <h4 className="text-[10px] uppercase text-zinc-500 mb-2">Identidade & Contato</h4>
+              <div className="space-y-2">
+                {identityFields.map((f) => (
+                  <Item key={f.k} k={f.k} label={f.label}>
+                    {String(f.value)}
+                  </Item>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {metricFields.length > 0 && (
+            <div>
+              <h4 className="text-[10px] uppercase text-zinc-500 mb-2">Métricas do comprador</h4>
+              <div className="space-y-2">
+                {metricFields.map((f) => (
+                  <Item key={f.k} k={f.k} label={f.label}>
+                    {f.format ? f.format(f.value) : String(f.value)}
+                  </Item>
+                ))}
+              </div>
+            </div>
+          )}
+
           {suggested.tese_atualizada && (
             <Item k="tese" label="Aplicar tese atualizada">
               <p className="break-words">{suggested.tese_atualizada}</p>
