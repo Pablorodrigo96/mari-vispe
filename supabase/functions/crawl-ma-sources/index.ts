@@ -53,6 +53,16 @@ async function searchDeals(apiKey: string, lookback: "day" | "week"): Promise<an
   const content: string = data?.choices?.[0]?.message?.content ?? "";
   const citations: string[] = data?.citations ?? data?.search_results?.map((r: any) => r.url) ?? [];
 
+  try {
+    const { logApiUsage } = await import("../_shared/apiTrack.ts");
+    await logApiUsage({
+      provider: "perplexity", category: "llm", model: body.model,
+      function_name: "crawl-ma-sources", feature: "ma_news_search",
+      input_tokens: data?.usage?.prompt_tokens, output_tokens: data?.usage?.completion_tokens,
+      total_tokens: data?.usage?.total_tokens, status: "success", http_status: 200,
+    });
+  } catch (e) { console.error("apiTrack:", e); }
+
   const items: any[] = [];
   const seen = new Set<string>();
   for (const url of citations) {
