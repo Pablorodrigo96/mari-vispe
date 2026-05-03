@@ -240,16 +240,17 @@ serve(withObservability(async (req) => {
     const scope = body.scope ?? "mandates";
     const limit = Math.min(body.limit ?? 50, 500);
     const dryRun = !!body.dry_run;
+    const lookbackDays = typeof body.lookback_days === "number" ? body.lookback_days : undefined;
 
     const targets = await buildTargets(supabase, scope, limit);
-    console.log(`[ingest-company-news] scope=${scope} targets=${targets.length}`);
+    console.log(`[ingest-company-news] scope=${scope} targets=${targets.length} lookback=${lookbackDays ?? 'default(month)'}`);
 
     let inserted = 0, duplicates = 0, errors = 0;
     const startedAt = new Date().toISOString();
 
     for (const t of targets) {
       try {
-        const items = await searchPerplexity(PERPLEXITY_API_KEY, t);
+        const items = await searchPerplexity(PERPLEXITY_API_KEY, t, lookbackDays);
         for (const it of items) {
           const dedupeBase = `${it.source_url}|${t.cnpj ?? t.buyer_id ?? t.listing_id ?? t.name}`;
           const dedupe = await sha1(dedupeBase);
