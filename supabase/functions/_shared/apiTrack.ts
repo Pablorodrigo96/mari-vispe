@@ -474,14 +474,13 @@ export async function trackedAIFetch(
   if (ct.includes("application/json")) {
     const cloned = resp.clone();
     cloned.json().then((data: any) => {
-      const usage = data?.usage ?? {};
-      const inTok = usage.prompt_tokens ?? usage.input_tokens;
-      const outTok = usage.completion_tokens ?? usage.output_tokens;
+      const u = extractUsage(data?.usage);
       logApiUsage({
         provider, category, model: data?.model ?? bodyModel,
         function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
-        input_tokens: inTok, output_tokens: outTok,
-        total_tokens: (usage.total_tokens ?? ((inTok ?? 0) + (outTok ?? 0))) || undefined,
+        input_tokens: u.input_tokens ?? undefined,
+        output_tokens: u.output_tokens ?? undefined,
+        total_tokens: u.total_tokens ?? undefined,
         latency_ms: latency, status: "success", http_status: resp.status, metadata: opts.metadata,
       });
     }).catch(() => {});
