@@ -246,7 +246,7 @@ Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch:
   } finally {
     fetchStub.restore();
   }
-});
+} });
 
 Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch: 429 → response forwarded with same status", fn: async () => {
   const fetchStub = stub(globalThis, "fetch", () =>
@@ -263,7 +263,7 @@ Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch:
   } finally {
     fetchStub.restore();
   }
-});
+} });
 
 Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch: network error is re-thrown", fn: async () => {
   const fetchStub = stub(globalThis, "fetch", () =>
@@ -283,7 +283,7 @@ Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch:
   } finally {
     fetchStub.restore();
   }
-});
+} });
 
 Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch: embeddings URL → category 'embedding' resolved via detectProvider", fn: async () => {
   // We can't directly observe the log call (fire-and-forget), but we verify
