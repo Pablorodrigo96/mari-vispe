@@ -144,7 +144,7 @@ async function buildTargets(supabase: any, scope: string, limit: number): Promis
       .schema("equity_brain")
       .from("mandates")
       .select("company_cnpj, status")
-      .eq("status", "active")
+      .eq("status", "vigente")
       .limit(limit);
     for (const m of data ?? []) {
       if (!m.company_cnpj) continue;
@@ -177,7 +177,7 @@ async function buildTargets(supabase: any, scope: string, limit: number): Promis
   if (scope === "listings" || scope === "all") {
     const { data } = await supabase.from("listings")
       .select("id, title, category, cnpj")
-      .eq("status", "active").limit(limit);
+      .eq("status", "vigente").limit(limit);
     for (const l of data ?? []) {
       targets.push({
         kind: "listing", listing_id: l.id, cnpj: l.cnpj ?? undefined,
