@@ -308,4 +308,4 @@ Deno.test({ sanitizeResources: false, sanitizeOps: false, name: "trackedAIFetch:
   } finally {
     fetchStub.restore();
   }
-});
+} });
