@@ -432,14 +432,7 @@ export async function trackedAIFetch(
   opts: { function_name: string; feature?: string; user_id?: string | null; model?: string; metadata?: Record<string, any> },
 ): Promise<Response> {
   const start = Date.now();
-  const provider = url.includes("anthropic.com")
-    ? "anthropic"
-    : url.includes("perplexity.ai")
-    ? "perplexity"
-    : url.includes("ai.gateway.lovable.dev")
-    ? "lovable_ai"
-    : "unknown";
-  const category = url.includes("/embeddings") ? "embedding" : "llm";
+  const { provider, category } = detectProvider(url);
 
   let bodyModel: string | undefined = opts.model;
   try {
