@@ -1,63 +1,61 @@
-## Objetivo
+## Diagnóstico
 
-Tornar a base RFB (5M CNPJs via `EXTERNAL_DB_URL`) descobrível e útil em todo o Equity Brain, com hub admin, expansão em mandates, worker da fila de matches e enriquecimento automático.
+Rodei `cnpj-db-inspect` em produção e o resultado é claro:
 
-## Itens
-
-### 1. Hub Receita Federal — `/equity-brain/admin/rfb`
-Nova página `RfbHubPage.tsx` (admin/advisor only) com 4 seções:
-- **Status da conexão**: chama `cnpj-db-inspect` (sem `?samples=` pesado), mostra se conectou, schemas, tabelas principais (`empresas`, `estabelecimentos`, `cnaes`, `estabelecimentos_detalhados`) e contagem aproximada.
-- **Busca livre RFB**: form com setor/UF/capital min/idade min/limit, usa `expand-companies-from-rfb` em modo `dry_run` para preview e import real.
-- **Últimas importações**: tabela agrupando `equity_brain.companies WHERE source='rfb_expand'` por dia (count, UFs, setores).
-- **Toggle BrasilAPI fallback**: lê/escreve `integrations_config.brasilapi_fallback_enabled`.
-
-### 2. Expand RFB em MandateDetailPage
-Adicionar `<ExpandRFBDialog/>` com modo "buscar buyers" (`target='buyers'`). Requer extensão da edge function `expand-companies-from-rfb` para aceitar `target: 'companies' | 'buyers'` e gravar em `equity_brain.buyers` quando `buyers` (com `source='rfb_expand'`, `qualification_status='unqualified'`). Dispara `match-company-v2` para o mandate.
-
-### 3. Item no EBSidebar
-Adicionar entrada **"Base Nacional (RFB)"** com ícone `Database`, visível só para `admin`/`advisor`, apontando para `/equity-brain/admin/rfb`. Agrupar dentro de "Admin" (já existente).
-
-### 4. Banner descoberta no MatchesPanel
-Quando lista de matches vier vazia OU < 3, mostrar callout discreto: "+5M CNPJs disponíveis na Base RFB" com CTA reusando `<ExpandRFBDialog/>` já montado.
-
-### 5. Worker `process-match-queue` (cron 5 min)
-- Nova edge function que lê N items pendentes de `equity_brain.match_queue`, chama `match-buyer` ou `match-company-v2` conforme `entity_type`, marca processado.
-- Cron via `pg_cron` + `pg_net` (registrar via insert tool, não migration).
-- Página de health (admin/rfb) mostra tamanho da fila e últimos processados.
-
-### 6. Botão "Enriquecer via RFB" em CompanyDetail
-Reaproveitar padrão do `EnrichBuyerButton` em company. Cria nova edge function `enrich-company-via-rfb` que: dado CNPJ, faz lookup em `national-search` (type=cnpj), preenche campos faltantes em `equity_brain.companies` (razão social, CNAE, endereço, idade, capital, QSA via BrasilAPI fallback). Loga em `api_usage_logs`.
-
-## Estrutura técnica
-
-```text
-supabase/functions/
-  expand-companies-from-rfb/    [EDIT]  +target=buyers
-  process-match-queue/          [NEW]   cron worker
-  enrich-company-via-rfb/       [NEW]
-  cnpj-db-inspect/              [reuso] hub status
-
-src/pages/equity-brain/admin/
-  RfbHubPage.tsx                [NEW]
-
-src/components/equity-brain/
-  rfb/RfbStatusCard.tsx         [NEW]
-  rfb/RfbSearchPanel.tsx        [NEW]
-  rfb/RfbImportsLog.tsx         [NEW]
-  rfb/BrasilApiToggle.tsx       [NEW]
-  company/EnrichCompanyButton.tsx [NEW]
-
-src/components/layout/EBSidebar.tsx        [EDIT]  + item Base Nacional
-src/components/equity-brain/crm/MatchesPanel.tsx [EDIT] +banner descoberta
-src/pages/equity-brain/MandateDetailPage.tsx     [EDIT] +ExpandRFBDialog(target=buyers)
-src/App.tsx                                       [EDIT] +rota /equity-brain/admin/rfb
+```
+PostgresError: password authentication failed for user "postgres"
+connected: false
 ```
 
-## Migrations / DB
-- Nenhuma alteração de schema necessária (tabelas e colunas já existem).
-- Cron job criado via insert tool (contém URL/anon key).
+Conclusão: toda a UI/edge functions/cron RFB foi entregue, mas o **secret `EXTERNAL_DB_URL` tem credenciais inválidas**. Por isso o "0 companies com source='rfb_expand'" — nenhum import jamais conseguiu rodar.
 
-## Observações
-- Acesso restrito a admin/advisor em todas as superfícies novas (`RequireRole`).
-- Imports RFB continuam entrando como `unqualified` — qualificação manual via `<QualifyLeadButton/>` existente.
-- Sem novas dependências npm.
+Itens secundários encontrados:
+- `EnrichCompanyButton` foi criado mas **não está usado em nenhuma página** (CompanyDetail / MandateDetail).
+- `MandateDetailPage` ainda não tem o `<ExpandRFBDialog target="buyers"/>` direto no header (só dentro do `MatchesPanel`).
+- Worker `process-match-queue` está agendado (cron 5min ✅) mas precisa ser validado end-to-end depois que a conexão voltar.
+- Schema `equity_brain` é acessado via `supabase.schema("equity_brain")` — confirmar que está exposto no PostgREST (provavelmente está, dado que as outras telas EB funcionam).
+
+## Plano de execução
+
+### 1. Pedir ao usuário a credencial correta do banco RFB (BLOQUEADOR)
+
+Sem isso, nenhum dos outros itens vira "100% funcional". Vou usar `add_secret` para solicitar **`EXTERNAL_DB_URL`** novamente, no formato:
+```
+postgresql://USUARIO:SENHA@HOST:5432/DATABASE?sslmode=require
+```
+
+Após o usuário atualizar, vou:
+- Rodar `cnpj-db-inspect` via curl e confirmar `connected: true` + listar tabelas (`empresas`, `estabelecimentos`, `socios`, `simples`).
+- Rodar uma busca real (1 empresa, UF=SP, qualquer setor) via `expand-companies-from-rfb` e verificar inserção em `equity_brain.companies`.
+- Disparar `process-match-queue` manualmente e confirmar que consome a fila.
+
+### 2. Plugar `EnrichCompanyButton` na `CompanyDetailPage`
+
+Adicionar no header, ao lado dos botões existentes, visível quando `company.cnpj` existir. Reaproveita o componente já criado.
+
+### 3. Adicionar atalho RFB no header do `MandateDetailPage`
+
+Botão "Importar compradores RFB" (target="buyers", `mandate_id` = atual) ao lado do "Mostrar no grafo 3D", para o advisor não precisar entrar em Matches → empty state.
+
+### 4. Hardening do `RfbHubPage`
+
+- Mostrar mensagem amigável quando `connected=false` (atualmente só joga erro no toast) — apontar para "atualizar EXTERNAL_DB_URL".
+- Corrigir cálculo de contagem em `loadQueue` (hoje usa `.length` em resposta de `count: 'exact', head: true`, que vem em `count` no retorno; ajustar para ler `count` corretamente).
+
+### 5. Validação final (smoke test em produção)
+
+- `cnpj-db-inspect?samples=0` → `connected: true`
+- `expand-companies-from-rfb` com `target=companies, uf=SP, limit=5` → ver linhas em `equity_brain.companies` com `source='rfb_expand'`
+- `expand-companies-from-rfb` com `target=buyers, mandate_id=<uuid>, limit=5` → ver linhas em `equity_brain.buyers`
+- `process-match-queue` → consome itens
+- Hub `/equity-brain/admin/rfb` exibe contagens reais
+
+## O que NÃO vou mudar
+
+- Schema do banco / RLS (já está pronto: `qualification_status`, `source`, `match_queue`, `qualify_lead`).
+- Lógica das edge functions já deployadas (apenas validar).
+- Cron (já agendado e ativo).
+
+## Pergunta única antes de começar
+
+Você consegue me passar a string de conexão RFB correta (`postgresql://user:pass@host:5432/db?sslmode=require`)? Assim que aprovar este plano, eu disparo o `add_secret` para você colar o valor de forma segura — depois sigo direto com itens 2–5.
