@@ -113,6 +113,7 @@ import DashboardCoveragePage from "./pages/equity-brain/DashboardCoveragePage";
 import DedupeAdminPage from "./pages/equity-brain/DedupeAdminPage";
 import BenchmarkPage from "./pages/equity-brain/admin/BenchmarkPage";
 import BuyerClassificationPage from "./pages/equity-brain/admin/BuyerClassificationPage";
+import RfbHubPage from "./pages/equity-brain/admin/RfbHubPage";
 import PropostasPage from "./pages/equity-brain/PropostasPage";
 
 // App shell for authenticated end-users (sidebar + topbar)
@@ -300,6 +301,7 @@ const App = () => (
               <Route path="admin/advisors-mapping"  element={<RequireRole roles={["admin"]}><AdvisorsMapping /></RequireRole>} />
               <Route path="admin/benchmark"               element={<RequireRole roles={["admin"]}><BenchmarkPage /></RequireRole>} />
               <Route path="admin/buyer-classification"    element={<RequireRole roles={["admin"]}><BuyerClassificationPage /></RequireRole>} />
+              <Route path="admin/rfb"                     element={<RequireRole roles={["admin","advisor"]}><RfbHubPage /></RequireRole>} />
               <Route path="propostas/:matchId"            element={<RequireRole roles={["admin","advisor"]}><PropostasPage /></RequireRole>} />
               <Route path="propostas"                     element={<RequireRole roles={["admin","advisor"]}><PropostasPage /></RequireRole>} />
             </Route>
