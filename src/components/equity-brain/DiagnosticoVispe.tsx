@@ -20,11 +20,9 @@ export function DiagnosticoVispe({ cnpj }: Props) {
     if (!cnpj) return;
     setRecalculating(true);
     try {
-      const { error } = await supabase.functions.invoke("calculate-vendabilidade-batch", {
-        body: { cnpj },
-      });
+      const { data, error } = await (supabase as any).rpc("recalculate_sv", { p_cnpj: cnpj });
       if (error) throw error;
-      toast.success("Vendabilidade recalculada");
+      toast.success(`Vendabilidade recalculada (score ${(data as any)?.score ?? "—"})`);
       qc.invalidateQueries({ queryKey: ["eb", "sv", cnpj] });
     } catch (e: any) {
       toast.error("Falha: " + (e?.message ?? "erro"));
