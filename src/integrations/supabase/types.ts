@@ -4234,6 +4234,7 @@ export type Database = {
             }
             Returns: Json
           }
+      recalculate_sv: { Args: { p_cnpj: string }; Returns: Json }
       refresh_dashboard_views: { Args: never; Returns: undefined }
       update_mandate_field: {
         Args: { p_field: string; p_mandate_id: string; p_value: string }
