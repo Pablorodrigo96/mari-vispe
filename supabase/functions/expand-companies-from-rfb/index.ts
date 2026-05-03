@@ -126,6 +126,14 @@ serve(async (req) => {
         if (!portes.length && Array.isArray(buyer.porte_alvo)) portes.push(...buyer.porte_alvo);
       }
     }
+    // Se mandate_id (target=buyers): mescla com setor/UF do mandato (para encontrar adquirentes plausíveis)
+    if (mandateId && target === "buyers") {
+      const { data: m } = await sb.schema("equity_brain" as any).from("mandates").select("setor_ma,uf").eq("id", mandateId).maybeSingle();
+      if (m) {
+        if (!setores.length && m.setor_ma) setores.push(String(m.setor_ma));
+        if (!ufs.length && m.uf) ufs.push(String(m.uf));
+      }
+    }
 
     const cnaePrefixes = cnaePrefixesForSetor(setores);
 
