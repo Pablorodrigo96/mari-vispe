@@ -107,8 +107,16 @@ export function MatchesPanel({ mode, entityName }: { mode: Mode; entityName: str
       {mode.type === "buyer" && (
         <ExpandRFBDialog
           buyerId={mode.buyerId}
+          target="companies"
           defaultSetores={mode.buyerSetores}
           defaultUfs={mode.buyerUfs}
+          onCompleted={() => refetch?.()}
+        />
+      )}
+      {mode.type === "mandate" && (
+        <ExpandRFBDialog
+          mandateId={mode.mandateId}
+          target="buyers"
           onCompleted={() => refetch?.()}
         />
       )}

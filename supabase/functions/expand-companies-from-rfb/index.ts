@@ -102,6 +102,8 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const buyerId: string | undefined = body.buyer_id;
+    const mandateId: string | undefined = body.mandate_id;
+    const target: "companies" | "buyers" = body.target === "buyers" ? "buyers" : "companies";
     const filters = body.filters ?? {};
     const setores: string[] = Array.isArray(filters.setores) ? filters.setores : [];
     const ufs: string[] = Array.isArray(filters.ufs) ? filters.ufs : [];
@@ -122,6 +124,14 @@ serve(async (req) => {
         if (!setores.length && Array.isArray(buyer.setores_interesse)) setores.push(...buyer.setores_interesse);
         if (!ufs.length && Array.isArray(buyer.ufs_interesse)) ufs.push(...buyer.ufs_interesse);
         if (!portes.length && Array.isArray(buyer.porte_alvo)) portes.push(...buyer.porte_alvo);
+      }
+    }
+    // Se mandate_id (target=buyers): mescla com setor/UF do mandato (para encontrar adquirentes plausíveis)
+    if (mandateId && target === "buyers") {
+      const { data: m } = await sb.schema("equity_brain" as any).from("mandates").select("setor_ma,uf").eq("id", mandateId).maybeSingle();
+      if (m) {
+        if (!setores.length && m.setor_ma) setores.push(String(m.setor_ma));
+        if (!ufs.length && m.uf) ufs.push(String(m.uf));
       }
     }
 
@@ -201,6 +211,21 @@ serve(async (req) => {
         const cnaeSecundarios = r.cnae_fiscal_secundaria
           ? String(r.cnae_fiscal_secundaria).split(",").map((s: string) => s.trim()).filter(Boolean)
           : [];
+        if (target === "buyers") {
+          // Importa como possível ADQUIRENTE (estratégico cego), só nome/CNPJ + interesse=mandato
+          return {
+            nome: r.razao_social || r.nome_fantasia || `CNPJ ${r.cnpj}`,
+            tipo: "estrategico",
+            cnpj: r.cnpj,
+            setores_interesse: setores.length ? setores : [],
+            ufs_interesse: ufs.length ? ufs : (r.uf ? [r.uf] : []),
+            porte_alvo: [],
+            status: "novo",
+            source: "rfb_expand",
+            qualification_status: "unqualified",
+            raw_data: { capital_social: capital, cnae: r.cnae_fiscal_principal, municipio: r.municipio },
+          };
+        }
         return {
           cnpj: r.cnpj,
           razao_social: r.razao_social,
@@ -226,13 +251,14 @@ serve(async (req) => {
       preview = records.slice(0, 5);
 
       if (dryRun) {
-        return new Response(JSON.stringify({ dry_run: true, would_import: records.length, scanned, preview }), {
+        return new Response(JSON.stringify({ dry_run: true, would_import: records.length, scanned, preview, target }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
+      const tableName = target === "buyers" ? "buyers" : "companies";
       const { error: upErr } = await sb.schema("equity_brain" as any)
-        .from("companies").upsert(records, { onConflict: "cnpj" });
+        .from(tableName).upsert(records, { onConflict: "cnpj" });
       if (upErr) {
         console.error("Upsert error:", upErr);
         return new Response(JSON.stringify({ error: upErr.message }), {
@@ -244,21 +270,25 @@ serve(async (req) => {
       await client.end();
     }
 
-    // Dispara match-buyer (best-effort) para incluir as novas empresas
+    // Dispara matching (best-effort)
     let matchTriggered = false;
-    if (buyerId) {
+    const triggerFn = target === "buyers" ? "match-company-v2" : "match-buyer";
+    const triggerBody: any = target === "buyers"
+      ? (mandateId ? { mandate_id: mandateId } : null)
+      : (buyerId ? { buyer_id: buyerId } : null);
+    if (triggerBody) {
       try {
-        const r = await fetch(`${supabaseUrl}/functions/v1/match-buyer`, {
+        const r = await fetch(`${supabaseUrl}/functions/v1/${triggerFn}`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${serviceKey}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ buyer_id: buyerId }),
+          body: JSON.stringify(triggerBody),
         });
         matchTriggered = r.ok;
       } catch (e) {
-        console.error("match-buyer trigger failed:", e);
+        console.error(`${triggerFn} trigger failed:`, e);
       }
     }
 
