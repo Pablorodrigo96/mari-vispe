@@ -109,6 +109,17 @@ serve(async (req) => {
 
     const aiJson = await aiResp.json();
     const body: string = aiJson?.choices?.[0]?.message?.content?.trim() ?? "";
+
+    try {
+      const { logApiUsage } = await import("../_shared/apiTrack.ts");
+      await logApiUsage({
+        provider: "lovable_ai", category: "llm", model: "google/gemini-2.5-flash",
+        function_name: "generate-dashboard-insight", feature: "dashboard_insight",
+        input_tokens: aiJson?.usage?.prompt_tokens, output_tokens: aiJson?.usage?.completion_tokens,
+        total_tokens: aiJson?.usage?.total_tokens, status: "success", http_status: 200,
+        metadata: { dashboard_type },
+      });
+    } catch (e) { console.error("apiTrack:", e); }
     if (!body) {
       await logHealth(admin, "empty", `${dashboard_type} empty body`);
       return new Response(JSON.stringify({ error: "AI returned empty body" }), {
