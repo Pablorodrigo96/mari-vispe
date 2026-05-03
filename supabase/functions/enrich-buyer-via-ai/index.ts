@@ -51,26 +51,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    const prompt = `Você é analista sênior de M&A no Brasil. Pesquise mentalmente conhecimento público recente (últimos 24 meses) sobre este investidor/comprador:
+    const prompt = `Você é analista sênior de M&A no Brasil. Pesquise no seu conhecimento público recente (últimos 24 meses) sobre este investidor/comprador. Use site oficial, LinkedIn, Crunchbase, releases e mídia BR (Valor, Pipeline, Brazil Journal, Reuters, NeoFeed).
 
 Nome: ${buyer.nome}
+${buyer.cnpj ? `CNPJ: ${buyer.cnpj}` : ""}
 ${buyer.website ? `Website: ${buyer.website}` : ""}
 ${buyer.linkedin_url ? `LinkedIn: ${buyer.linkedin_url}` : ""}
 PE Sponsor: ${buyer.pe_sponsor_name ?? "n/a"}
 Vertical principal: ${buyer.vertical_principal ?? "n/a"}
 
+REGRA CRÍTICA: NÃO INVENTE. Se não tiver informação confiável, use null ou array vazio. É melhor null do que dado errado.
+
 Retorne APENAS JSON válido (sem markdown), no formato:
 {
-  "tese_atualizada": "string ou null",
+  "cnpj": "00.000.000/0001-00 ou null",
+  "website": "https://... ou null",
+  "linkedin_url": "https://linkedin.com/company/... ou null",
+  "email_contato_principal": "email genérico de contato (ri@, contato@) ou null",
+  "telefone_contato": "telefone com DDD ou null",
+  "pe_sponsor_name": "nome do sponsor (se PE-backed) ou null",
+  "vertical_principal": "telecom, saas, saúde, educação... ou null",
+  "metricas": {
+    "deals_realizados": "número total histórico de aquisições (int) ou null",
+    "deals_last_12m": "número de aquisições nos últimos 12 meses (int) ou null",
+    "avg_multiple_paid_recent": "múltiplo médio EV/EBITDA recente (ex: 8.5) ou null",
+    "recent_capital_raise_brl": "valor da última captação em REAIS (não milhões, ex: 500000000) ou null"
+  },
+  "tese_atualizada": "string descrevendo tese de investimento atual ou null",
   "deals_recentes": [{"target":"...","data":"YYYY-MM","valor_brl_mm":null,"setor":"..."}],
   "ultima_captacao": {"valor_brl_mm":null,"data":"YYYY-MM","fonte":"..."},
-  "equipe_chave": ["..."],
+  "equipe_chave": ["Nome (cargo)"],
   "setores_foco": ["..."],
   "regioes_foco": ["..."],
   "fontes_sugeridas": ["url1","url2"]
-}
-
-Se não tiver informação confiável de algum campo, use null ou array vazio.`;
+}`;
 
     const resp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
