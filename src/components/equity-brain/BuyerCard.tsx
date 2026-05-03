@@ -1,3 +1,4 @@
+// DEPRECATED 2026-05-03 — substituído por navigate to /equity-brain/crm/buyer/:id (BuyerDetailPage). Mantido sem invocação.
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";

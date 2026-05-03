@@ -1,105 +1,107 @@
+## Onda E — Ativar BuyerDetailPage + Fix das Views
 
-# Onda D — Inteligência Externa
-
-Objetivo: destravar 3 fluxos encadeados — popular `equity_brain.company_news`, recomputar matches do dia e regerar insights da Mari — para que NewsPage e DashboardPage parem de aparecer vazias.
-
-Custo-alvo total: **abaixo de R$ 1,00** (guard duro). Nenhuma coluna/tabela/função nova, nenhum cron novo ativado sem aprovação.
+Três mudanças encadeadas, custo zero de IA. Validação final no Algar Telecom.
 
 ---
 
-## D.1 — Fix do parser de notícias
+### Job 1 — Substituir drawer por navegação (BuyersPage → BuyerDetailPage)
 
-A função `supabase/functions/ingest-company-news/index.ts` chama Perplexity (`sonar`, domínio restrito a 14 portais BR confiáveis), mas o parser de citações não casa nada e devolve 0 inserts. Hoje:
+Arquivo: `src/pages/equity-brain/BuyersPage.tsx`
 
-- O response esperado: usa `data.citations ?? data.search_results.map(r=>r.url)`.
-- Para cada URL faz `content.split(/\n\n+/)` e procura o bloco que contenha a URL inteira ou o radical do domínio.
-- Provavelmente o `sonar` atual devolve citações em `search_results` (não em `citations`) e o `content` vem como markdown numerado `[1] [2]` sem URLs embutidas — então o `blk.includes(url)` nunca casa e o radical do domínio raramente bate.
-
-### D.1.1 — Investigar (READ ONLY, REPORTAR ANTES DE FIXAR)
-
-1. Reler `searchPerplexity` (linhas 46-137) e mostrar o trecho do parser ao Pablo.
-2. Rodar 1 chamada controlada de teste:
-   - Pegar 1 company qualified com `razao_social` populada (`equity_brain.companies_scored` ordenado por `ma_score`).
-   - Invocar `ingest-company-news` com `{ scope: "top500", limit: 1, dry_run: true }` e capturar `edge_function_logs` para ver o response cru (vamos adicionar 1 `console.log` temporário do payload `data` antes de processar — esse log é descartado depois).
-3. Reportar a Pablo:
-   - Trecho atual do parser.
-   - Resposta crua Perplexity (até 2000 chars).
-   - Hipótese (campo onde vêm citações, formato do content).
-4. **PARAR e aguardar Pablo confirmar a hipótese.**
-
-### D.1.2 — Fix do parser (após Pablo confirmar)
-
-Esperado, baseado em hipótese mais provável:
-
-- Trocar `data.citations ?? data.search_results.map(r=>r.url)` por leitura defensiva de **ambos** + extrair `title` e `published_date` de `search_results[i]` (sonar costuma devolver `{ url, title, date, snippet }`).
-- Quando houver `search_results`, usar `r.title`, `r.snippet`/`r.date` direto, sem regex no markdown.
-- Manter fallback antigo só se nenhum dos dois campos vier.
-- Suportar parâmetro `lookback_days` no body — mapear para `search_recency_filter` (`day`/`week`/`month`/`year`) já que sonar só aceita esses presets; aproximação: `<=1→day, <=7→week, <=30→month, else year`.
-- Remover `console.log` temporário do D.1.1.
-- Re-deploy via `supabase--deploy_edge_functions`.
-
-### D.1.3 — 3 batches sequenciais com guard
-
-Disparar via `supabase--curl_edge_functions` POST `/ingest-company-news`:
-
-- Batch 1: `{ scope: "top500", limit: 5, lookback_days: 7 }` — sanity.
-- Conferir `equity_brain.company_news` (count + amostras das 5min).
-- Se OK → Batch 2: `{ scope: "top500", limit: 20, lookback_days: 30 }`.
-- Se OK → Batch 3: `{ scope: "top500", limit: 50, lookback_days: 30 }`.
-- **Guard:** se >50% das companies do batch retornarem 0 news, ABORTAR e reportar.
-- Conferir custo via `api_usage_logs` (provider=perplexity, function_name=ingest-company-news, últimos 30min).
+- Remover `<Sheet>...<BuyerCard /></Sheet>` (linhas ~174-178), `useState drawerId` e import de `Sheet`/`SheetContent`/`BuyerCard`.
+- Trocar o handler de clique nas linhas da tabela por `onClick={() => navigate('/equity-brain/crm/buyer/' + b.id)}` (adicionar `useNavigate` de `react-router-dom`).
+- Confirmar rota `/equity-brain/crm/buyer/:id` em `App.tsx` (já existe, apontando para `BuyerDetailPage`).
+- Adicionar botão "← Voltar para listagem" no topo do header de `BuyerDetailPage.tsx` (já tem link "Voltar ao CRM"; trocar/duplicar para `navigate('/equity-brain/compradores')`).
+- `BuyerCard.tsx`: **não deletar**. Adicionar comentário no topo: `// DEPRECATED 2026-05-03 — substituído por navigate to /equity-brain/crm/buyer/:id` (única referência hoje é a própria BuyersPage).
 
 ---
 
-## D.2 — Disparar engine de match manualmente
+### Job 2 — Popular 11 thesis_keys órfãs (migration SQL)
 
-Sem custo de IA (determinístico).
+Confirmado via `equity_brain.matches`: **11 keys órfãs, ~155k matches afetados**:
 
-1. `SELECT jobname, schedule, command, active FROM cron.job WHERE jobname='equity-brain-recompute-scores-daily';`
-2. Identificar a edge function que o cron chama (lendo o `command`).
-3. Snapshot ANTES:
-   ```sql
-   SELECT
-     COUNT(*) FILTER (WHERE computed_at > now() - interval '24 hours') AS u24,
-     COUNT(*) FILTER (WHERE computed_at > now() - interval '7 days')  AS u7d,
-     MAX(computed_at) AS mais_recente
-   FROM equity_brain.matches WHERE is_current = true;
-   ```
-4. Disparar manualmente a função (curl) e aguardar conclusão.
-5. Snapshot DEPOIS + buckets 60+/70+/80+ e total `is_current`.
+| key | matches |
+|---|---|
+| generic | 97.536 |
+| pe_platform_buy_and_build | 18.391 |
+| b2b_services_consolidator | 7.153 |
+| consolidator_national_aggressive | 6.319 |
+| family_office_direct | 5.932 |
+| infra_fund_buy_and_hold | 5.201 |
+| health_strategic_vertical | 4.787 |
+| consolidator_regional_strict | 4.762 |
+| education_premium_medical | 4.244 |
+| serial_acquirer_saas_vertical | 992 |
+| integrated_telco | 372 |
+
+Migration `seed_orphan_thesis_keys.sql`:
+
+```sql
+INSERT INTO equity_brain.investment_theses
+  (thesis_key, display_name, description, category, active)
+VALUES
+  ('generic','Tese Genérica','Match gerado sem tese específica identificada','generic',true),
+  ('pe_platform_buy_and_build','PE Plataforma Buy-and-Build','Fundo de PE construindo plataforma via aquisições incrementais','plataforma_pe',true),
+  ('b2b_services_consolidator','Consolidador de Serviços B2B','Player consolidando serviços B2B em vertical fragmentado','consolidacao',true),
+  ('consolidator_national_aggressive','Consolidador Nacional Agressivo','Rollup nacional via aquisições rápidas em vertical fragmentado','consolidacao',true),
+  ('family_office_direct','Family Office Direto','Family office investindo direto em controle/minoria relevante','family_office',true),
+  ('infra_fund_buy_and_hold','Infra Fund Buy-and-Hold','Fundo de infra com horizonte longo e ativo regulado','infra',true),
+  ('health_strategic_vertical','Estratégico Saúde Vertical','Estratégico de saúde expandindo verticalmente','setorial_saude',true),
+  ('consolidator_regional_strict','Consolidador Regional Restrito','Consolidador focado em região específica','consolidacao',true),
+  ('education_premium_medical','Educação Premium / Medicina','Player de educação premium, foco medicina','setorial_educacao',true),
+  ('serial_acquirer_saas_vertical','Serial Acquirer SaaS Vertical','Acquirer recorrente de SaaS verticalizado','plataforma_pe',true),
+  ('integrated_telco','Telco Integrada','Operadora integrada buscando expansão de footprint','setorial_telco',true)
+ON CONFLICT (thesis_key) DO NOTHING;
+```
+
+(Colunas confirmadas: `thesis_key, category, display_name, description, required_signals, boosting_signals, default_pitch_template, active`. Sem coluna `prioridade` — removida da spec.)
 
 ---
 
-## D.3 — Re-rodar `mari-generate-insights`
+### Job 3 — Fix view `equity_brain.matches_enriched`
 
-Pré: D.1 + D.2 concluídos (mesmo parcial).
+Definição atual confirmada — único bug é o `JOIN equity_brain.investment_theses t`. Migration `fix_matches_enriched_join.sql`:
 
-1. Contar `mari_insights` por `kind` ANTES.
-2. `SELECT equity_brain.generate_mari_insights_all();`
-3. Contar novos (últimos 5min) por `kind`, sample de 10 mais recentes, validar especialmente `top_match_novo_24h`.
+```sql
+CREATE OR REPLACE VIEW equity_brain.matches_enriched AS
+SELECT
+  m.id, m.match_score, m.status, m.prioridade, m.assigned_bdr,
+  m.computed_at, m.reasons, m.ai_thesis_summary, m.ai_pitch,
+  m.thesis_key, m.setor_fit, m.geografia_fit, m.porte_fit, m.tese_fit, m.ma_score_emp,
+  c.cnpj, c.razao_social, c.nome_fantasia, c.uf, c.municipio,
+  c.setor_ma, c.subsetor_ma, c.cnae_principal, c.cnae_descricao,
+  c.data_abertura, c.capital_social, c.porte, c.qtd_socios, c.has_listing,
+  cs.ma_score, cs.vispe_score, cs.sucessao_score,
+  b.id AS buyer_id, b.nome AS buyer_nome, b.tipo AS buyer_tipo,
+  b.ticket_min, b.ticket_max, b.setores_interesse,
+  COALESCE(t.display_name, m.thesis_key) AS thesis_name,
+  t.category AS thesis_category,
+  t.description AS thesis_description
+FROM equity_brain.matches m
+JOIN equity_brain.companies c ON c.cnpj::text = m.cnpj::text
+JOIN equity_brain.buyers b ON b.id = m.buyer_id
+LEFT JOIN equity_brain.investment_theses t ON t.thesis_key::text = m.thesis_key::text
+LEFT JOIN equity_brain.company_scores cs ON cs.cnpj::text = m.cnpj::text AND cs.is_current = true
+WHERE m.is_current = true;
+```
+
+Mudança: `JOIN investment_theses` → `LEFT JOIN`, `thesis_name` com `COALESCE` para nunca ser NULL. Espelho `public.eb_matches_enriched` (se existir como wrapper) será atualizado se necessário durante a execução.
 
 ---
 
-## Checkpoint 4 — Stop obrigatório
+### Job 4 — Validação Algar Telecom (`0223c4e9-a46b-415d-9299-46540923ee03`)
 
-Entregar relatório consolidado com:
+Após aplicar 1+2+3:
 
-- Tabela D.1/D.2/D.3 com status, custo, resultado-chave.
-- Custo Onda D + acumulado total.
-- NewsPage (vazia → X), DashboardPage (Y→Z insights), Bucket 80+ antes/depois.
-- Decisões pendentes: agendar `crawl-ma-sources` weekly, investigar bucket 80+, rodar 291 matches `setor_fit<0.7`, próxima onda.
-
-**NÃO** ativar nenhum cron novo. **NÃO** mexer em schema/RLS/enums.
+- SELECT `COUNT(*) FROM eb_matches_enriched WHERE buyer_id = '<algar>'` → esperado ~254
+- COUNT com `ma_score IS NOT NULL` (proxy SAV) → esperado ~24
+- Abrir `/equity-brain/crm/buyer/<algar>` no preview, confirmar tabs Visão geral / Tese / Track / Matches / Notícias / WhatsApp / Documentos renderizam sem erro.
+- Repetir com 1 buyer aleatório `tipo != estrategico`.
 
 ---
 
-## Arquivos tocados
+### Ordem & Custo
+Job 2 → Job 3 → Job 1 → Job 4. Custo IA: R$ 0.
 
-- `supabase/functions/ingest-company-news/index.ts` — único arquivo modificado (D.1.1 log temporário e D.1.2 fix do parser + suporte a `lookback_days`).
-
-## NÃO fazer
-
-- Criar coluna/tabela/enum/função nova.
-- Ativar cron novo (`crawl-ma-sources`, `ingest-company-news`).
-- Tocar em RLS, schema, ou outras edge functions.
-- Rodar batches além do tamanho aprovado (5 → 20 → 50).
+### Não fazer
+Não deletar `BuyerCard.tsx`. Não refatorar motor de match. Não criar tabela/coluna nova. Não mexer em outras views.

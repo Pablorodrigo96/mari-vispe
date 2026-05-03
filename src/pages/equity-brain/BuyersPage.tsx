@@ -1,23 +1,22 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Loader2, AlertTriangle } from "lucide-react";
 import { useVertical } from "@/hooks/useVertical";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { BuyerCard } from "@/components/equity-brain/BuyerCard";
 import { formatBRL, relativeTime } from "@/lib/equityBrain";
 import { cn } from "@/lib/utils";
 
 export default function BuyersPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { buyerVerticalKey, vertical } = useVertical();
-  const [drawerId, setDrawerId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
   const buyers = useQuery({
@@ -116,7 +115,7 @@ export default function BuyersPage() {
           </thead>
           <tbody className="divide-y divide-zinc-800">
             {(buyers.data ?? []).map((b) => (
-              <tr key={b.id} className="hover:bg-zinc-800/40 cursor-pointer" onClick={() => setDrawerId(b.id)}>
+              <tr key={b.id} className="hover:bg-zinc-800/40 cursor-pointer" onClick={() => navigate(`/equity-brain/crm/buyer/${b.id}`)}>
                 <td className="px-3 py-2.5">
                   {b.prioridade_global ? (
                     <span className={cn(
@@ -171,11 +170,6 @@ export default function BuyersPage() {
         </table>
       </div>
 
-      <Sheet open={!!drawerId} onOpenChange={(o) => !o && setDrawerId(null)}>
-        <SheetContent side="right" className="dark bg-zinc-950 border-l border-zinc-800 text-zinc-100 w-full sm:max-w-[600px] p-0 overflow-y-auto">
-          {drawerId && <BuyerCard buyerId={drawerId} />}
-        </SheetContent>
-      </Sheet>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="dark bg-zinc-900 border-zinc-800 text-zinc-100">
