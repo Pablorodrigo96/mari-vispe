@@ -15,13 +15,21 @@ const corsHeaders = {
 };
 
 const PERPLEXITY_API = "https://api.perplexity.ai/chat/completions";
-const TRUSTED_DOMAINS = [
-  "valor.globo.com", "neofeed.com.br", "brazilfunds.com",
-  "infomoney.com.br", "exame.com", "estadao.com.br",
-  "folha.uol.com.br", "money.globo.com", "pipelinevalor.globo.com",
-  "capitalreset.com", "startse.com", "brazilianreport.com",
-  "reuters.com", "bloomberg.com",
+// Blacklist (excluded via "-domain" prefix). Whitelist removed to allow niche BR sources
+// (Teletime, Telesintese, Painel Telecom, etc.) that don't fit a generic top-tier list.
+const BLOCKED_DOMAINS = [
+  "-reddit.com", "-quora.com", "-pinterest.com", "-facebook.com",
+  "-instagram.com", "-tiktok.com", "-youtube.com",
 ];
+const PLACEHOLDER_PREFIXES = ["ISP - ", "SaaS - ", "Telefonia - ", "Clínica médica - "];
+
+function mapRecency(lookbackDays?: number): "day" | "week" | "month" | "year" {
+  if (!lookbackDays || lookbackDays <= 0) return "month";
+  if (lookbackDays <= 1) return "day";
+  if (lookbackDays <= 7) return "week";
+  if (lookbackDays <= 31) return "month";
+  return "year";
+}
 
 interface Target {
   kind: "company" | "buyer" | "listing";
