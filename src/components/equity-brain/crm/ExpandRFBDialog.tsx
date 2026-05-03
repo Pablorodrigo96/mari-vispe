@@ -12,13 +12,19 @@ const SETORES = ["tech","saude","industria","servicos","comercio","educacao","al
 
 export function ExpandRFBDialog({
   buyerId,
+  mandateId,
+  target = "companies",
   defaultSetores,
   defaultUfs,
+  triggerLabel,
   onCompleted,
 }: {
-  buyerId: string;
+  buyerId?: string;
+  mandateId?: string;
+  target?: "companies" | "buyers";
   defaultSetores?: string[];
   defaultUfs?: string[];
+  triggerLabel?: string;
   onCompleted?: () => void;
 }) {
   const [open, setOpen] = useState(false);
