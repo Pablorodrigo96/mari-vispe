@@ -68,8 +68,8 @@ const AdminApiMonitor = () => {
       supabase.from("api_settings" as any).select("*").eq("key", "usd_brl_rate").maybeSingle(),
       supabase.from("api_usage_logs" as any).select("*").order("created_at", { ascending: false }).limit(100),
     ]);
-    if (usageR.data) setUsage(usageR.data as UsageRow[]);
-    if (priceR.data) setPricing(priceR.data as PricingRow[]);
+    if (usageR.data) setUsage(usageR.data as any as UsageRow[]);
+    if (priceR.data) setPricing(priceR.data as any as PricingRow[]);
     if ((settingsR.data as any)?.value) setUsdRate((settingsR.data as any).value);
     if (recentR.data) setRecent(recentR.data);
     setLoading(false);
