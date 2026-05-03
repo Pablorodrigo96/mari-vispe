@@ -2,11 +2,17 @@
 // Logs to public.api_usage_logs (fire-and-forget, never blocks the caller).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const _admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
-  auth: { persistSession: false },
-});
+let _adminCache: ReturnType<typeof createClient> | null = null;
+function getAdmin() {
+  if (_adminCache) return _adminCache;
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) {
+    throw new Error("apiTrack: SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY not set");
+  }
+  _adminCache = createClient(url, key, { auth: { persistSession: false } });
+  return _adminCache;
+}
 
 // In-process pricing cache (refreshes every 5 min)
 let pricingCache: Map<string, any> | null = null;
