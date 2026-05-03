@@ -136,13 +136,7 @@ export async function logApiUsage(p: LogParams) {
     const inTok = p.input_tokens ?? 0;
     const outTok = p.output_tokens ?? 0;
     const calls = p.request_count ?? 1;
-    let cost_usd = 0;
-    if (pricing) {
-      cost_usd =
-        (inTok / 1_000_000) * Number(pricing.input_per_1m_usd ?? 0) +
-        (outTok / 1_000_000) * Number(pricing.output_per_1m_usd ?? 0) +
-        calls * Number(pricing.flat_per_call_usd ?? 0);
-    }
+    const cost_usd = computeCostUsd(pricing, inTok, outTok, calls);
     const cost_brl = cost_usd * rate;
 
     // fire-and-forget
@@ -157,7 +151,7 @@ export async function logApiUsage(p: LogParams) {
         user_id: p.user_id ?? null,
         input_tokens: inTok || null,
         output_tokens: outTok || null,
-        total_tokens: (p.total_tokens ?? (inTok + outTok)) || null,
+        total_tokens: resolveTotalTokens(p.total_tokens, inTok, outTok),
         request_count: calls,
         cost_usd,
         cost_brl,
