@@ -110,6 +110,138 @@ export type Database = {
         }
         Relationships: []
       }
+      api_pricing: {
+        Row: {
+          category: string
+          created_at: string
+          currency: string
+          effective_from: string
+          flat_per_call_usd: number | null
+          id: string
+          input_per_1m_usd: number | null
+          model: string
+          notes: string | null
+          output_per_1m_usd: number | null
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          currency?: string
+          effective_from?: string
+          flat_per_call_usd?: number | null
+          id?: string
+          input_per_1m_usd?: number | null
+          model?: string
+          notes?: string | null
+          output_per_1m_usd?: number | null
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          currency?: string
+          effective_from?: string
+          flat_per_call_usd?: number | null
+          id?: string
+          input_per_1m_usd?: number | null
+          model?: string
+          notes?: string | null
+          output_per_1m_usd?: number | null
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      api_settings: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      api_usage_logs: {
+        Row: {
+          category: string
+          cost_brl: number | null
+          cost_usd: number | null
+          created_at: string
+          error_message: string | null
+          feature: string | null
+          function_name: string | null
+          http_status: number | null
+          id: string
+          input_tokens: number | null
+          latency_ms: number | null
+          metadata: Json | null
+          model: string | null
+          output_tokens: number | null
+          provider: string
+          request_count: number
+          status: string
+          total_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: string
+          cost_brl?: number | null
+          cost_usd?: number | null
+          created_at?: string
+          error_message?: string | null
+          feature?: string | null
+          function_name?: string | null
+          http_status?: number | null
+          id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          model?: string | null
+          output_tokens?: number | null
+          provider: string
+          request_count?: number
+          status?: string
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          cost_brl?: number | null
+          cost_usd?: number | null
+          created_at?: string
+          error_message?: string | null
+          feature?: string | null
+          function_name?: string | null
+          http_status?: number | null
+          id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          model?: string | null
+          output_tokens?: number | null
+          provider?: string
+          request_count?: number
+          status?: string
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       buyer_profiles: {
         Row: {
           buyer_name: string
@@ -1600,6 +1732,25 @@ export type Database = {
       }
     }
     Views: {
+      api_usage_daily_summary: {
+        Row: {
+          avg_latency_ms: number | null
+          calls: number | null
+          category: string | null
+          cost_brl: number | null
+          cost_usd: number | null
+          day: string | null
+          error_rate_pct: number | null
+          errors: number | null
+          function_name: string | null
+          input_tokens: number | null
+          model: string | null
+          output_tokens: number | null
+          provider: string | null
+          total_tokens: number | null
+        }
+        Relationships: []
+      }
       eb_buyer_preferences_history: {
         Row: {
           after_snap: Json | null

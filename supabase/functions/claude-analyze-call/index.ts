@@ -174,6 +174,16 @@ Extraia os sinais no formato JSON pedido.`;
     const tokensOut = claudeJson.usage?.output_tokens ?? 0;
     const costUsd = (tokensIn * COST_INPUT_PER_MTOK / 1_000_000) + (tokensOut * COST_OUTPUT_PER_MTOK / 1_000_000);
 
+    try {
+      const { logApiUsage } = await import("../_shared/apiTrack.ts");
+      await logApiUsage({
+        provider: "anthropic", category: "llm", model: MODEL,
+        function_name: "claude-analyze-call", feature: "call_analysis",
+        input_tokens: tokensIn, output_tokens: tokensOut, total_tokens: tokensIn + tokensOut,
+        status: "success", http_status: 200,
+      });
+    } catch (e) { console.error("apiTrack:", e); }
+
     // NOTA Fase 6: NÃO escreve em company_signals nem em matches.status.
     // Fase 7 (feedback loop) vai consumir parsed_output deste log para:
     //  - inserir signals novos (sinais_novos)

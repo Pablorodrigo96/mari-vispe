@@ -91,6 +91,17 @@ async function extractStructured(perplexityKey: string, sourceUrl: string, title
   }
   const data = await resp.json();
   const content = data?.choices?.[0]?.message?.content;
+
+  try {
+    const { logApiUsage } = await import("../_shared/apiTrack.ts");
+    await logApiUsage({
+      provider: "perplexity", category: "llm", model: body.model,
+      function_name: "extract-news-event", feature: "news_event_extraction",
+      input_tokens: data?.usage?.prompt_tokens, output_tokens: data?.usage?.completion_tokens,
+      total_tokens: data?.usage?.total_tokens, status: "success", http_status: 200,
+    });
+  } catch (e) { console.error("apiTrack:", e); }
+
   try { return JSON.parse(content); } catch { return null; }
 }
 
