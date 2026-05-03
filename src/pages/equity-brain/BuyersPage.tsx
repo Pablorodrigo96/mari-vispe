@@ -115,7 +115,7 @@ export default function BuyersPage() {
           </thead>
           <tbody className="divide-y divide-zinc-800">
             {(buyers.data ?? []).map((b) => (
-              <tr key={b.id} className="hover:bg-zinc-800/40 cursor-pointer" onClick={() => setDrawerId(b.id)}>
+              <tr key={b.id} className="hover:bg-zinc-800/40 cursor-pointer" onClick={() => navigate(`/equity-brain/crm/buyer/${b.id}`)}>
                 <td className="px-3 py-2.5">
                   {b.prioridade_global ? (
                     <span className={cn(
@@ -170,11 +170,6 @@ export default function BuyersPage() {
         </table>
       </div>
 
-      <Sheet open={!!drawerId} onOpenChange={(o) => !o && setDrawerId(null)}>
-        <SheetContent side="right" className="dark bg-zinc-950 border-l border-zinc-800 text-zinc-100 w-full sm:max-w-[600px] p-0 overflow-y-auto">
-          {drawerId && <BuyerCard buyerId={drawerId} />}
-        </SheetContent>
-      </Sheet>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="dark bg-zinc-900 border-zinc-800 text-zinc-100">
