@@ -1,60 +1,29 @@
-# Botão "Mostrar no grafo 3D" — buyer e seller (mandato)
+# Fix: ao abrir Jarvis 3D via ?focus=, trazer vizinhos diretos visíveis
 
-## Objetivo
-Adicionar, na barra de ações de `BuyerDetailPage` e `MandateDetailPage`, um botão **Mostrar no grafo 3D** que abre `/equity-brain/admin/jarvis` já com o nó da entidade selecionado (painel lateral aberto) e a câmera centralizada nele.
+## Problema
+Hoje o handler de `?focus=` só ativa o **tipo** do nó focado (ex.: `buyer_strategic`) e a camada `ma_direct`. Resultado: o buyer aparece sozinho — sellers/thesis/platforms ligados a ele continuam ocultos porque seus tipos não estão em `selectedNodeTypes` e várias camadas (rollup, capital, thesis, etc.) seguem desligadas.
 
-## Como o grafo identifica nós (já existe)
-- Buyer  → `id = "buyer:<buyer.id>"`
-- Seller → `id = "seller:<company.cnpj>"`
+## Fix em `src/components/equity-brain/jarvis/JarvisGraph3D.tsx`
+Substituir o `useEffect` do `focusParam` (linhas 108-135) por uma versão que:
 
-(definido em `src/lib/equityGraphBuilder.ts`)
+1. **Liga todos os node types** (`ALL_NODE_TYPES`) para que vizinhos de qualquer tipo sejam renderizáveis.
+2. **Liga todas as camadas de aresta** (`ALL_LAYERS`) para revelar arestas como capital_match, thesis_fit, rollup, etc.
+3. **Aplica `buyerFilter` no builder** quando `prefix === "buyer"`, para o `buildStrategicGraph` priorizar e manter o subgrafo do buyer (caso contrário o cap de 350 nós pode podar a vizinhança).
+4. (Para `seller`, o builder não tem `sellerFilter`; manter `ALL_*` ativos já basta porque o seller estará entre os 350 nós e suas arestas ficam visíveis.)
 
-## Mudanças
-
-### 1. `JarvisGraph3D.tsx` — aceitar `?focus=<nodeId>`
-- Ler `useSearchParams()` no mount.
-- Se houver `focus`:
-  - Detectar o tipo (`buyer:` / `seller:` / `thesis:` / `platform:`) e **adicionar automaticamente esse tipo a `selectedNodeTypes`** (hoje começa vazio, então o nó ficaria escondido). Para buyer/seller também forçar `enabledLayers` a incluir `ma_direct` para garantir arestas visíveis.
-- Após `graphData` carregar e a simulação aquecer (~`cooldownTicks` ou um `setTimeout` de ~1500ms), procurar o nó por id, fazer:
-  - `setSelectedNode(node)` (já abre o `NodeDetailPanel` e ativa o realce de vizinhos via `focusId`);
-  - `fgRef.current.cameraPosition(...)` reaproveitando exatamente a mesma fórmula do `onNodeClick` atual (linhas 983-993).
-- Executar **só uma vez** por valor de `focus` (guard com `useRef`).
-
-### 2. `BuyerDetailPage.tsx` — botão na barra de ações
-Logo depois do `<EnrichBuyerButton />` (linha 92), inserir:
-```tsx
-<Link
-  to={`/equity-brain/admin/jarvis?focus=buyer:${buyer.id}`}
-  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md
-             bg-transparent border border-zinc-700 text-zinc-200
-             hover:bg-zinc-900 hover:text-emerald-300 text-xs"
->
-  <Network className="h-3.5 w-3.5" />
-  Mostrar no grafo 3D
-</Link>
-```
-(import `Network` de `lucide-react` e `Link` já existe.)
-
-### 3. `MandateDetailPage.tsx` — mesmo botão para seller
-Render condicional a `mandate.company_cnpj`:
-```tsx
-{mandate.company_cnpj && (
-  <Link
-    to={`/equity-brain/admin/jarvis?focus=seller:${mandate.company_cnpj}`}
-    className="..."  // mesmo estilo
-  >
-    <Network className="h-3.5 w-3.5" /> Mostrar no grafo 3D
-  </Link>
-)}
+```ts
+useEffect(() => {
+  if (!focusParam) return;
+  setSelectedNodeTypes(new Set(ALL_NODE_TYPES));
+  setEnabledLayers(new Set(ALL_LAYERS));
+  const [prefix, ...rest] = focusParam.split(":");
+  const id = rest.join(":");
+  if (prefix === "buyer" && id) setBuyerFilter(id);
+}, [focusParam]);
 ```
 
-## Detalhes técnicos / edge cases
-- Se o nó **não estiver no grafo após filtros padrão** (ex.: buyer sem matches que cair fora dos 350 nós), exibir `toast` "Nó não encontrado no grafo atual — ajuste filtros".
-- O guard com `useRef<string|null>` evita re-focar a cada `graphData` rebuild quando o usuário arrasta a câmera.
-- Não mexer no `GrafoJarvisPage.tsx` — o param flui via URL.
-- Sem mudança de banco, sem nova rota, sem edge function.
+Sem mudanças em outros arquivos, sem migration. O destaque visual (dimming dos não-vizinhos) já funciona via `focusId/focusNeighborIds` assim que o nó é selecionado.
 
 ## Não fazer
-- Não criar nova página de grafo focado.
-- Não adicionar `mode=focus` ou outros params além de `focus`.
-- Não alterar comportamento padrão quando `focus` não está presente.
+- Não introduzir `sellerFilter` novo no builder.
+- Não tocar nos defaults para usuários sem `?focus=`.

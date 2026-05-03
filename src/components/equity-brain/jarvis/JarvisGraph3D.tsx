@@ -105,33 +105,15 @@ export function JarvisGraph3D() {
   const focusParam = searchParams.get("focus");
   const focusedOnceRef = useRef<string | null>(null);
 
-  // Quando chega com ?focus=, ativa o tipo do nó para garantir que ele apareça
+  // Quando chega com ?focus=, ligamos todos os tipos/camadas para que o nó
+  // E suas conexões diretas (vizinhos) apareçam no grafo.
   useEffect(() => {
     if (!focusParam) return;
-    const prefix = focusParam.split(":")[0];
-    const typeMap: Record<string, string[]> = {
-      buyer: ["buyer_strategic", "buyer_financial"],
-      seller: ["seller"],
-      thesis: ["thesis"],
-      platform: ["platform"],
-      asset: ["asset"],
-      strategy: ["strategy"],
-    };
-    const types = typeMap[prefix];
-    if (types) {
-      setSelectedNodeTypes((prev) => {
-        const next = new Set(prev);
-        types.forEach((t) => next.add(t));
-        return next;
-      });
-    }
-    if (prefix === "buyer" || prefix === "seller") {
-      setEnabledLayers((prev) => {
-        const next = new Set(prev);
-        next.add("ma_direct" as LayerKey);
-        return next;
-      });
-    }
+    setSelectedNodeTypes(new Set(ALL_NODE_TYPES));
+    setEnabledLayers(new Set(ALL_LAYERS));
+    const [prefix, ...rest] = focusParam.split(":");
+    const id = rest.join(":");
+    if (prefix === "buyer" && id) setBuyerFilter(id);
   }, [focusParam]);
 
   // ---------- Visual prefs (ajustes de fundo, persistidos em localStorage) ----------
