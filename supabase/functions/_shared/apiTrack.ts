@@ -90,7 +90,7 @@ export async function logApiUsage(p: LogParams) {
         user_id: p.user_id ?? null,
         input_tokens: inTok || null,
         output_tokens: outTok || null,
-        total_tokens: p.total_tokens ?? (inTok + outTok) || null,
+        total_tokens: (p.total_tokens ?? (inTok + outTok)) || null,
         request_count: calls,
         cost_usd,
         cost_brl,
@@ -427,7 +427,7 @@ export async function trackedAIFetch(
         provider, category, model: data?.model ?? bodyModel,
         function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
         input_tokens: inTok, output_tokens: outTok,
-        total_tokens: usage.total_tokens ?? ((inTok ?? 0) + (outTok ?? 0)) || undefined,
+        total_tokens: (usage.total_tokens ?? ((inTok ?? 0) + (outTok ?? 0))) || undefined,
         latency_ms: latency, status: "success", http_status: resp.status, metadata: opts.metadata,
       });
     }).catch(() => {});
