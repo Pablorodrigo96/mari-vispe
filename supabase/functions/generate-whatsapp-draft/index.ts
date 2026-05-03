@@ -1,3 +1,4 @@
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 // generate-whatsapp-draft — FASE 1 do redesign WhatsApp (com contexto real).
 //
 // Diferença chave vs versão anterior:
@@ -274,7 +275,7 @@ async function handler(req: Request): Promise<Response> {
     ? "Você é um advisor de M&A brasileiro escrevendo no WhatsApp para um empresário. Tom: humano, direto, profissional, no MÁXIMO 3 frases curtas (~280 caracteres total). Sem assinatura, sem marcadores, no máximo 1 emoji. PT-BR. Apenas o texto puro."
     : "Você é um advisor de M&A brasileiro escrevendo no WhatsApp. VOCÊ JÁ TEM RELAÇÃO ATIVA com essa pessoa — NÃO se apresente, NÃO explique quem é a Vispe, NÃO use frases como 'identificamos uma oportunidade', 'tenho um comprador interessado' ou 'estamos buscando empresas com seu perfil'. Continue de onde parou, fazendo referência específica a algo concreto do histórico (status do mandato, último ponto, documento). MÁXIMO 3 frases curtas (~280 caracteres). Sem assinatura, sem marcadores, no máximo 1 emoji. PT-BR. Apenas o texto puro.";
 
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -284,7 +285,7 @@ async function handler(req: Request): Promise<Response> {
         { role: "user", content: `CONTEXTO REAL DO RELACIONAMENTO:\n${ctxStr}\n\nOBJETIVO DESTA MENSAGEM: ${guide.instruction}\n\nEscreva apenas a mensagem, sem aspas, sem prefixos, sem comentários.` },
       ],
     }),
-  });
+  }, { function_name: "generate-whatsapp-draft" });
 
   if (resp.status === 429) {
     return new Response(JSON.stringify({ error: "rate_limited" }), {

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,14 +18,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function callAI(prompt: string): Promise<string> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [{ role: "user", content: prompt }],
     }),
-  });
+  }, { function_name: "mari-classify-buyer-type" });
   if (!resp.ok) throw new Error(`AI ${resp.status}: ${await resp.text()}`);
   const data = await resp.json();
   return data.choices?.[0]?.message?.content ?? "";

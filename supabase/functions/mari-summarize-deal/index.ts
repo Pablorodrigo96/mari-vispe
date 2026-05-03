@@ -1,3 +1,4 @@
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 // mari-summarize-deal — Gera resumo 3 linhas + sugestão de mensagem WhatsApp
 // para um mandato específico, usando Lovable AI Gateway (gemini-2.5-flash).
 //
@@ -26,7 +27,7 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<{
   tokens_in?: number;
   tokens_out?: number;
 }> {
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const resp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${LOVABLE_API_KEY}`,
@@ -67,7 +68,7 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<{
       ],
       tool_choice: { type: "function", function: { name: "salvar_resumo" } },
     }),
-  });
+  }, { function_name: "mari-summarize-deal" });
 
   if (!resp.ok) {
     const txt = await resp.text();

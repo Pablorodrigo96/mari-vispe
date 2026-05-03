@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { withObservability } from "../_shared/observability.ts";
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -74,7 +75,7 @@ Deno.serve(withObservability(async (req) => {
       return new Response(JSON.stringify({ suggestions: fallback }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -111,7 +112,7 @@ Deno.serve(withObservability(async (req) => {
         }],
         tool_choice: { type: "function", function: { name: "list_actions" } },
       }),
-    });
+    }, { function_name: "mari-suggest-actions" });
 
     if (!aiRes.ok) {
       const status = aiRes.status;
