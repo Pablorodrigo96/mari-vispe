@@ -1,107 +1,79 @@
-## Onda E — Ativar BuyerDetailPage + Fix das Views
+## Diagnóstico — por que está vazio
 
-Três mudanças encadeadas, custo zero de IA. Validação final no Algar Telecom.
+**1. CNPJ / website / linkedin / email / pe_sponsor não vêm**
+- Na DB, `buyers.id=3ddb9d75…` (Brasil TecPar) tem TODOS esses campos `NULL`.
+- O prompt do `enrich-buyer-via-ai` **não pede** esses campos à IA — só pede `tese_atualizada`, `deals_recentes`, `ultima_captacao`, `equipe_chave`, `setores_foco`, `regioes_foco`, `fontes_sugeridas`.
+- O `EnrichReviewModal` também não tem opção de aplicá-los — só salva `tese_text`, `setores_interesse`, `ufs_interesse`, `recent_capital_raise_brl`.
+- Resultado: mesmo se a IA respondesse, não teria onde ir.
+
+**2. Métricas (deals históricos / múltiplo / 12m / captação) zeradas**
+- `deals_realizados=0`, `deals_last_12m=0`, `avg_multiple_paid_recent=NULL`, `recent_capital_raise_brl=NULL`.
+- Mesmo problema: prompt não pede `total_deals`, `deals_12m`, `multiplo_medio`. Modal só aplica captação.
+- Bloco "Deals históricos (Vispe Database)" busca em `equity_brain.benchmark_transactions` por `comprador_nome ILIKE '%Brasil%'` — confirmei que não há registros desse comprador nessa tabela (base é interna).
+
+**3. Notícias vazias**
+- `company_news` tem 25 linhas, **0 com `buyer_id`**. A varredura roda só no escopo `mandates/top500` (Onda D anterior).
+- O `ingest-company-news` já aceita `scope='buyers'`, mas nunca foi disparado para buyers — e não há botão na UI do buyer para forçar coleta sob demanda.
+- `NewsPanel` filtra por `buyer_id`, então naturalmente vazio.
 
 ---
 
-### Job 1 — Substituir drawer por navegação (BuyersPage → BuyerDetailPage)
+## Plano
 
-Arquivo: `src/pages/equity-brain/BuyersPage.tsx`
-
-- Remover `<Sheet>...<BuyerCard /></Sheet>` (linhas ~174-178), `useState drawerId` e import de `Sheet`/`SheetContent`/`BuyerCard`.
-- Trocar o handler de clique nas linhas da tabela por `onClick={() => navigate('/equity-brain/crm/buyer/' + b.id)}` (adicionar `useNavigate` de `react-router-dom`).
-- Confirmar rota `/equity-brain/crm/buyer/:id` em `App.tsx` (já existe, apontando para `BuyerDetailPage`).
-- Adicionar botão "← Voltar para listagem" no topo do header de `BuyerDetailPage.tsx` (já tem link "Voltar ao CRM"; trocar/duplicar para `navigate('/equity-brain/compradores')`).
-- `BuyerCard.tsx`: **não deletar**. Adicionar comentário no topo: `// DEPRECATED 2026-05-03 — substituído por navigate to /equity-brain/crm/buyer/:id` (única referência hoje é a própria BuyersPage).
-
----
-
-### Job 2 — Popular 11 thesis_keys órfãs (migration SQL)
-
-Confirmado via `equity_brain.matches`: **11 keys órfãs, ~155k matches afetados**:
-
-| key | matches |
-|---|---|
-| generic | 97.536 |
-| pe_platform_buy_and_build | 18.391 |
-| b2b_services_consolidator | 7.153 |
-| consolidator_national_aggressive | 6.319 |
-| family_office_direct | 5.932 |
-| infra_fund_buy_and_hold | 5.201 |
-| health_strategic_vertical | 4.787 |
-| consolidator_regional_strict | 4.762 |
-| education_premium_medical | 4.244 |
-| serial_acquirer_saas_vertical | 992 |
-| integrated_telco | 372 |
-
-Migration `seed_orphan_thesis_keys.sql`:
-
-```sql
-INSERT INTO equity_brain.investment_theses
-  (thesis_key, display_name, description, category, active)
-VALUES
-  ('generic','Tese Genérica','Match gerado sem tese específica identificada','generic',true),
-  ('pe_platform_buy_and_build','PE Plataforma Buy-and-Build','Fundo de PE construindo plataforma via aquisições incrementais','plataforma_pe',true),
-  ('b2b_services_consolidator','Consolidador de Serviços B2B','Player consolidando serviços B2B em vertical fragmentado','consolidacao',true),
-  ('consolidator_national_aggressive','Consolidador Nacional Agressivo','Rollup nacional via aquisições rápidas em vertical fragmentado','consolidacao',true),
-  ('family_office_direct','Family Office Direto','Family office investindo direto em controle/minoria relevante','family_office',true),
-  ('infra_fund_buy_and_hold','Infra Fund Buy-and-Hold','Fundo de infra com horizonte longo e ativo regulado','infra',true),
-  ('health_strategic_vertical','Estratégico Saúde Vertical','Estratégico de saúde expandindo verticalmente','setorial_saude',true),
-  ('consolidator_regional_strict','Consolidador Regional Restrito','Consolidador focado em região específica','consolidacao',true),
-  ('education_premium_medical','Educação Premium / Medicina','Player de educação premium, foco medicina','setorial_educacao',true),
-  ('serial_acquirer_saas_vertical','Serial Acquirer SaaS Vertical','Acquirer recorrente de SaaS verticalizado','plataforma_pe',true),
-  ('integrated_telco','Telco Integrada','Operadora integrada buscando expansão de footprint','setorial_telco',true)
-ON CONFLICT (thesis_key) DO NOTHING;
+### Job 1 — Expandir prompt do `enrich-buyer-via-ai`
+Adicionar ao schema JSON pedido:
+```json
+{
+  "cnpj": "00.000.000/0001-00 ou null",
+  "website": "https://… ou null",
+  "linkedin_url": "https://linkedin.com/company/… ou null",
+  "email_contato_principal": "string ou null",
+  "telefone_contato": "string ou null",
+  "pe_sponsor_name": "string ou null",
+  "vertical_principal": "string ou null",
+  "metricas": {
+    "deals_realizados": "número total histórico ou null",
+    "deals_last_12m": "número ou null",
+    "avg_multiple_paid_recent": "ex: 8.5 (EV/EBITDA) ou null",
+    "recent_capital_raise_brl": "valor em R$ (não em milhões) ou null"
+  },
+  "tese_atualizada": …,
+  "deals_recentes": [...],
+  "ultima_captacao": {...},
+  "equipe_chave": [...],
+  "setores_foco": [...],
+  "regioes_foco": [...],
+  "fontes_sugeridas": [...]
+}
 ```
+Reforçar no prompt: "Pesquise especificamente em LinkedIn, site oficial, Crunchbase, releases, mídia BR (Valor, Pipeline, Brazil Journal). Não invente — use null se incerto."
 
-(Colunas confirmadas: `thesis_key, category, display_name, description, required_signals, boosting_signals, default_pitch_template, active`. Sem coluna `prioridade` — removida da spec.)
+### Job 2 — Expandir `EnrichReviewModal`
+Adicionar 2 novas seções com checkboxes:
+- **Identidade & contato** → `cnpj`, `website`, `linkedin_url`, `email_contato_principal`, `telefone_contato`, `pe_sponsor_name`, `vertical_principal` (cada campo com checkbox individual; só aplica os marcados E que vieram preenchidos).
+- **Métricas do comprador** → `deals_realizados`, `deals_last_12m`, `avg_multiple_paid_recent`, `recent_capital_raise_brl` (idem).
 
----
+Mostrar valor sugerido pela IA ao lado do checkbox. Patch direto em `equity_brain.buyers`. Manter "Salvar tudo como nota" como fallback.
 
-### Job 3 — Fix view `equity_brain.matches_enriched`
+### Job 3 — Botão "Buscar notícias agora" no buyer
+Em `BuyerDetailPage` (header, ao lado de Enriquecer via IA) e/ou no topo da aba "Notícias":
+- Botão **"Buscar notícias"** (ícone Newspaper + Loader2)
+- Chama `ingest-company-news` via `supabase.functions.invoke` com body `{ scope: 'buyer', buyer_id, lookback_days: 365 }` — **adicionar suporte a buyer_id único** na função (hoje só aceita scope='buyers' que faz batch de qualified).
+- Toast com nº inserido. Re-fetch do `NewsPanel` (invalidar query / refazer effect).
 
-Definição atual confirmada — único bug é o `JOIN equity_brain.investment_theses t`. Migration `fix_matches_enriched_join.sql`:
+### Job 4 — Ajuste mínimo no `ingest-company-news`
+Aceitar `body.buyer_id` (single): se presente, ignora scope/limit, busca aquele buyer e gera 1 target. Mantém retrocompatibilidade.
 
-```sql
-CREATE OR REPLACE VIEW equity_brain.matches_enriched AS
-SELECT
-  m.id, m.match_score, m.status, m.prioridade, m.assigned_bdr,
-  m.computed_at, m.reasons, m.ai_thesis_summary, m.ai_pitch,
-  m.thesis_key, m.setor_fit, m.geografia_fit, m.porte_fit, m.tese_fit, m.ma_score_emp,
-  c.cnpj, c.razao_social, c.nome_fantasia, c.uf, c.municipio,
-  c.setor_ma, c.subsetor_ma, c.cnae_principal, c.cnae_descricao,
-  c.data_abertura, c.capital_social, c.porte, c.qtd_socios, c.has_listing,
-  cs.ma_score, cs.vispe_score, cs.sucessao_score,
-  b.id AS buyer_id, b.nome AS buyer_nome, b.tipo AS buyer_tipo,
-  b.ticket_min, b.ticket_max, b.setores_interesse,
-  COALESCE(t.display_name, m.thesis_key) AS thesis_name,
-  t.category AS thesis_category,
-  t.description AS thesis_description
-FROM equity_brain.matches m
-JOIN equity_brain.companies c ON c.cnpj::text = m.cnpj::text
-JOIN equity_brain.buyers b ON b.id = m.buyer_id
-LEFT JOIN equity_brain.investment_theses t ON t.thesis_key::text = m.thesis_key::text
-LEFT JOIN equity_brain.company_scores cs ON cs.cnpj::text = m.cnpj::text AND cs.is_current = true
-WHERE m.is_current = true;
-```
-
-Mudança: `JOIN investment_theses` → `LEFT JOIN`, `thesis_name` com `COALESCE` para nunca ser NULL. Espelho `public.eb_matches_enriched` (se existir como wrapper) será atualizado se necessário durante a execução.
+### Job 5 — Hint amigável quando IA volta vazio
+Se a IA retornar todos os campos `null` para um buyer (por ser pequeno/desconhecido), mostrar mensagem no modal: "IA não encontrou informação pública confiável sobre este buyer. Tente preencher manualmente ou buscar pelo CNPJ se você tiver."
 
 ---
 
-### Job 4 — Validação Algar Telecom (`0223c4e9-a46b-415d-9299-46540923ee03`)
+## Não vou fazer
+- Não vou refatorar `BuyerTrackRecordBlock` (a busca em `benchmark_transactions` é correta — só não há dados pra Brasil TecPar lá).
+- Não vou agendar cron novo de notícias por buyer (é sob demanda via botão).
+- Não vou mexer em outras telas/rotas.
 
-Após aplicar 1+2+3:
+**Custo estimado**: ~R$ 0,05 por enrichment (Gemini Flash) + ~R$ 0,01 por busca de notícias (Perplexity sonar). Zero custo recorrente.
 
-- SELECT `COUNT(*) FROM eb_matches_enriched WHERE buyer_id = '<algar>'` → esperado ~254
-- COUNT com `ma_score IS NOT NULL` (proxy SAV) → esperado ~24
-- Abrir `/equity-brain/crm/buyer/<algar>` no preview, confirmar tabs Visão geral / Tese / Track / Matches / Notícias / WhatsApp / Documentos renderizam sem erro.
-- Repetir com 1 buyer aleatório `tipo != estrategico`.
-
----
-
-### Ordem & Custo
-Job 2 → Job 3 → Job 1 → Job 4. Custo IA: R$ 0.
-
-### Não fazer
-Não deletar `BuyerCard.tsx`. Não refatorar motor de match. Não criar tabela/coluna nova. Não mexer em outras views.
+Aprova?

@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Newspaper, ExternalLink, TrendingUp, Building2, Crown, Megaphone, Scale, Users, Sparkles } from "lucide-react";
+import { Newspaper, ExternalLink, TrendingUp, Building2, Crown, Megaphone, Scale, Users, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 type EventType =
   | "ma_closed" | "ma_announced" | "funding_round" | "ipo"
@@ -61,41 +63,87 @@ interface Props {
 export function NewsPanel({ cnpj, buyerId, listingId, limit = 30, emptyMessage }: Props) {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    let q = (supabase as any).schema("equity_brain").from("company_news")
+      .select("*")
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("ingested_at", { ascending: false })
+      .limit(limit);
+    if (cnpj) q = q.eq("cnpj", cnpj);
+    else if (buyerId) q = q.eq("buyer_id", buyerId);
+    else if (listingId) q = q.eq("listing_id", listingId);
+    const { data, error } = await q;
+    if (error) console.error("NewsPanel", error);
+    setItems((data ?? []) as NewsItem[]);
+    setLoading(false);
+  }, [cnpj, buyerId, listingId, limit]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setLoading(true);
-      let q = (supabase as any).schema("equity_brain").from("company_news")
-        .select("*")
-        .order("published_at", { ascending: false, nullsFirst: false })
-        .order("ingested_at", { ascending: false })
-        .limit(limit);
-      if (cnpj) q = q.eq("cnpj", cnpj);
-      else if (buyerId) q = q.eq("buyer_id", buyerId);
-      else if (listingId) q = q.eq("listing_id", listingId);
-      const { data, error } = await q;
+      await load();
       if (cancelled) return;
-      if (error) console.error("NewsPanel", error);
-      setItems((data ?? []) as NewsItem[]);
-      setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [cnpj, buyerId, listingId, limit]);
+  }, [load]);
+
+  async function fetchNow() {
+    if (!buyerId && !cnpj) return;
+    setFetching(true);
+    try {
+      const body: any = { lookback_days: 365 };
+      if (buyerId) body.buyer_id = buyerId;
+      else if (cnpj) { body.scope = "mandates"; body.limit = 1; /* fallback */ }
+      const { data, error } = await supabase.functions.invoke("ingest-company-news", { body });
+      if (error) throw error;
+      const inserted = (data as any)?.inserted ?? 0;
+      toast.success(inserted > 0 ? `${inserted} notícias coletadas` : "Nenhuma notícia nova encontrada");
+      await load();
+    } catch (e: any) {
+      toast.error("Falha ao buscar: " + (e?.message ?? "erro"));
+    } finally {
+      setFetching(false);
+    }
+  }
+
+  const showFetchButton = !!buyerId; // só buyers por enquanto têm fetch sob demanda
 
   if (loading) {
     return <div className="text-xs text-zinc-400 p-4">Carregando notícias…</div>;
   }
   if (items.length === 0) {
     return (
-      <div className="text-xs text-zinc-500 p-6 text-center bg-zinc-900/30 border border-zinc-800 rounded">
-        {emptyMessage ?? "Nenhuma notícia coletada ainda. O sistema varre fontes brasileiras a cada hora."}
+      <div className="space-y-3">
+        {showFetchButton && (
+          <div className="flex justify-end">
+            <Button size="sm" variant="outline" onClick={fetchNow} disabled={fetching}
+              className="bg-transparent border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/20">
+              {fetching ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+              Buscar notícias agora
+            </Button>
+          </div>
+        )}
+        <div className="text-xs text-zinc-500 p-6 text-center bg-zinc-900/30 border border-zinc-800 rounded">
+          {emptyMessage ?? "Nenhuma notícia coletada ainda. O sistema varre fontes brasileiras a cada hora."}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
+      {showFetchButton && (
+        <div className="flex justify-end">
+          <Button size="sm" variant="outline" onClick={fetchNow} disabled={fetching}
+            className="bg-transparent border-emerald-700/60 text-emerald-300 hover:bg-emerald-900/20">
+            {fetching ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+            Atualizar
+          </Button>
+        </div>
+      )}
       {items.map((n) => {
         const meta = EVENT_META[n.event_type] ?? EVENT_META.generic;
         const ev = n.event_data ?? {};

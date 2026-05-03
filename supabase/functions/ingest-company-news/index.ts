@@ -241,9 +241,22 @@ serve(withObservability(async (req) => {
     const limit = Math.min(body.limit ?? 50, 500);
     const dryRun = !!body.dry_run;
     const lookbackDays = typeof body.lookback_days === "number" ? body.lookback_days : undefined;
+    const singleBuyerId: string | undefined = body.buyer_id;
 
-    const targets = await buildTargets(supabase, scope, limit);
-    console.log(`[ingest-company-news] scope=${scope} targets=${targets.length} lookback=${lookbackDays ?? 'default(month)'}`);
+    let targets: Target[];
+    if (singleBuyerId) {
+      const { data: b } = await supabase.schema("equity_brain")
+        .from("buyers").select("id, nome, vertical_principal").eq("id", singleBuyerId).single();
+      if (!b) {
+        return new Response(JSON.stringify({ error: "buyer_not_found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      targets = [{ kind: "buyer", buyer_id: b.id, name: b.nome, context: b.vertical_principal ?? undefined }];
+    } else {
+      targets = await buildTargets(supabase, scope, limit);
+    }
+    console.log(`[ingest-company-news] scope=${singleBuyerId ? "single_buyer" : scope} targets=${targets.length} lookback=${lookbackDays ?? 'default(month)'}`);
 
     let inserted = 0, duplicates = 0, errors = 0;
     const startedAt = new Date().toISOString();
