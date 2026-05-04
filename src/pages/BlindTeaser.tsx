@@ -98,14 +98,22 @@ const BlindTeaser = () => {
       if (!ticker) return;
 
       try {
-        // Try public_listings view first
+        // Try public_listings view first (only active listings)
         let { data, error } = await supabase
           .from('public_listings')
           .select('*')
           .eq('ticker', ticker)
           .maybeSingle();
 
-        // No fallback needed — public_listings view is the safe public access path
+        // Fallback: pending_payment / outros — RLS deixa apenas o dono (ou admin) ver
+        if (!data && !error) {
+          const { data: ownerData } = await supabase
+            .from('listings')
+            .select('id, title, category, description, city, state, neighborhood, asking_price, annual_revenue, annual_profit, equity_score, foundation_year, images, plan, status, ticker, hide_price, sale_reason, additional_info, square_meters, rent_value, iptu_value, created_at, updated_at')
+            .eq('ticker', ticker)
+            .maybeSingle();
+          if (ownerData) data = ownerData as any;
+        }
 
         if (error) throw error;
         if (!data) {
