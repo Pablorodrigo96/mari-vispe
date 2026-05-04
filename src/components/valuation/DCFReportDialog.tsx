@@ -41,8 +41,9 @@ export const DCFReportDialog = ({
   const formatPercent = (value: number) => `${(value * 100).toFixed(2)}%`;
   const formatMultiple = (value: number) => `${value.toFixed(1)}x`;
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('pt-BR', {
+  const formatDate = (date: Date | string) => {
+    const d = date instanceof Date ? date : new Date(date);
+    return d.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
