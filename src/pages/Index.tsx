@@ -8,6 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 import { MariWatermark } from '@/components/brand/MariLogo';
 import { MariDivider } from '@/components/brand/MariDivider';
 import { SearchBar } from '@/components/home/SearchBar';
+import { MariDifferentialCard } from '@/components/home/MariDifferentialCard';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
 import { ParticlesBackground } from '@/components/ui/particles-background';
@@ -77,7 +78,7 @@ const Index = () => {
               transition={{ duration: 0.6, ease, delay: 0 }}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-              <span className="text-xs font-medium tracking-widest uppercase text-accent">Plataforma #1 de M&A no Brasil</span>
+              <span className="text-xs font-medium tracking-widest uppercase text-accent">IA preditiva de M&A no Brasil</span>
             </motion.div>
 
             <motion.h1
@@ -86,9 +87,9 @@ const Index = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease, delay: 0.1 }}
             >
-              A plataforma líder em{' '}
-              <span className="text-gradient-gold">negociação de empresas</span>{' '}
-              do Brasil
+              A IA que prevê quais empresas{' '}
+              <span className="text-gradient-gold">vão ser vendidas</span>{' '}
+              — e por quanto.
             </motion.h1>
 
             <motion.p
@@ -97,20 +98,24 @@ const Index = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease, delay: 0.2 }}
             >
-              Conectamos compradores, vendedores e investidores em um ambiente seguro e transparente para transações de M&A.
+              A mari analisa milhões de sinais de mercado e devolve probabilidade, faixa de valor e razões.
+              Quando não sabe o suficiente, ela se abstém.
             </motion.p>
 
             <motion.div
-              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14"
+              className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease, delay: 0.3 }}
             >
-              <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold h-12 px-8 text-base rounded-xl">
-                <Link to="/marketplace">Explorar Marketplace</Link>
+              <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold h-12 px-6 text-base rounded-xl">
+                <Link to="/vender">Quero vender minha empresa</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 h-12 px-8 text-base rounded-xl bg-transparent">
-                <Link to="/valuation">Avaliar Minha Empresa</Link>
+              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 h-12 px-6 text-base rounded-xl bg-transparent">
+                <Link to="/comprar">Quero comprar uma empresa</Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg" className="text-white/70 hover:text-white hover:bg-white/10 h-12 px-6 text-base rounded-xl">
+                <Link to="/investors">Sou investidor / family office</Link>
               </Button>
             </motion.div>
           </div>
@@ -260,6 +265,8 @@ const Index = () => {
           </Button>
         </motion.div>
       </section>
+
+      <MariDifferentialCard />
 
       <Footer />
     </div>

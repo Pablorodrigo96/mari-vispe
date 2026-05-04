@@ -65,12 +65,12 @@ const Sell = () => {
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
-              Venda sua empresa para{' '}
-              <span className="text-gradient-gold">compradores qualificados</span>
+              Sua empresa pode valer{' '}
+              <span className="text-gradient-gold">mais do que você imagina.</span>
             </h1>
             <p className="text-lg text-white/60 mb-8">
-              Anuncie gratuitamente e conecte-se com investidores e empresários
-              interessados no seu negócio. Processo seguro e confidencial.
+              Anuncie gratuitamente, descubra o valor da sua empresa com IA e conecte-se
+              com compradores qualificados. Processo seguro e confidencial.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
@@ -79,13 +79,13 @@ const Sell = () => {
                 size="lg"
                 className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold text-lg px-8"
               >
-                <Link to="/auth/register">
+                <Link to="/auth?tab=signup&redirect=/vender&role=seller">
                   Criar Conta Grátis
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 bg-transparent">
-                <Link to="/auth/login">Já tenho conta</Link>
+                <Link to="/auth?tab=login&redirect=/vender">Já tenho conta</Link>
               </Button>
             </div>
 
