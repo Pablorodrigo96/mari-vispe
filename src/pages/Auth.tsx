@@ -32,21 +32,47 @@ const roleOptions: { id: UserRole; label: string; description: string }[] = [
   { id: 'franchisee', label: 'Franqueado', description: 'Sou franqueado da rede' },
 ];
 
+const ROLE_HOME: Record<UserRole, string> = {
+  seller: '/meus-anuncios',
+  buyer: '/comprar',
+  advisor: '/equity-brain/hoje',
+  franchisee: '/painel',
+};
+
+async function resolveRoleHome(userId: string, fallback = '/painel'): Promise<string> {
+  try {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+    const roles = (data?.map((r) => r.role) || []) as string[];
+    if (roles.includes('admin') || roles.includes('advisor')) return '/equity-brain/hoje';
+    if (roles.includes('seller')) return ROLE_HOME.seller;
+    if (roles.includes('buyer')) return ROLE_HOME.buyer;
+    if (roles.includes('franchisee')) return ROLE_HOME.franchisee;
+  } catch (_) { /* noop */ }
+  return fallback;
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/';
+  const redirectParam = searchParams.get('redirect');
   const tabParam = searchParams.get('tab');
   const interestParam = searchParams.get('interest');
+  const roleParam = searchParams.get('role') as UserRole | null;
   const { user, signIn, signUp, loading } = useAuth();
-  
-  // Pre-select buyer role when coming from teaser interest flow
-  const defaultRoles: UserRole[] = interestParam === 'true' ? ['buyer'] : [];
-  
+
+  // Pre-select role from query (?role=seller|buyer|advisor|franchisee) or interest flow
+  const validRoles: UserRole[] = ['seller', 'buyer', 'advisor', 'franchisee'];
+  const defaultRoles: UserRole[] =
+    roleParam && validRoles.includes(roleParam) ? [roleParam] :
+    interestParam === 'true' ? ['buyer'] : [];
+
   // Login state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  
+
   // Signup state
   const [signupFullName, setSignupFullName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
@@ -54,14 +80,18 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [signupRoles, setSignupRoles] = useState<UserRole[]>(defaultRoles);
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (user && !loading) {
-      navigate(redirectTo);
+      if (redirectParam) {
+        navigate(redirectParam);
+      } else {
+        resolveRoleHome(user.id).then((dest) => navigate(dest));
+      }
     }
-  }, [user, loading, navigate, redirectTo]);
+  }, [user, loading, navigate, redirectParam]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value);
