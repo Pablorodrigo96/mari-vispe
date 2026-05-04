@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Store, CheckCircle, Camera } from 'lucide-react';
+import { Building2, MapPin, Store, CheckCircle, Camera, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import PlanSelectionModal from './PlanSelectionModal';
 import FinancialDocUpload from './FinancialDocUpload';
 import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { stepValidationSchemas, initialFormData } from './listingSchema';
+import { getMariPrefill, clearMariPrefill, cnaeToCategory } from '@/lib/mariPrefill';
 
 const steps = [
   { id: 1, title: 'Empresa', icon: <Building2 className="w-4 h-4" /> },
