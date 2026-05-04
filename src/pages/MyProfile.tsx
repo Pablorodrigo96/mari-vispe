@@ -434,8 +434,89 @@ const MyProfile = () => {
                 </CardContent>
               </Card>
 
+              {/* Sobre você */}
+              <Card id="card-about">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    Sobre você
+                  </CardTitle>
+                  <CardDescription>
+                    Conte um pouco do que faz — perfis completos recebem mais matches.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mini bio</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Ex: Empreendedor há 12 anos no setor de varejo, buscando sucessor estratégico..."
+                            maxLength={280}
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">{(field.value || '').length}/280</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="website_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Link2 className="h-4 w-4" /> Site ou LinkedIn
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="interests"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Áreas de interesse</FormLabel>
+                        <div className="flex flex-wrap gap-2">
+                          {CATEGORIES.map((c) => {
+                            const active = (field.value || []).includes(c.value);
+                            return (
+                              <button
+                                type="button"
+                                key={c.value}
+                                onClick={() => {
+                                  const cur = field.value || [];
+                                  field.onChange(active ? cur.filter((v) => v !== c.value) : [...cur, c.value]);
+                                }}
+                                className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                                  active
+                                    ? 'bg-accent text-accent-foreground border-accent'
+                                    : 'bg-background text-muted-foreground border-border hover:border-accent/50'
+                                }`}
+                              >
+                                {c.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
               {/* Localização */}
-              <Card>
+              <Card id="card-address">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
