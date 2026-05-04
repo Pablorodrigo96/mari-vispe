@@ -83,16 +83,35 @@ export default function Auth() {
   const [signupRoles, setSignupRoles] = useState<UserRole[]>(defaultRoles);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [mfaState, setMfaState] = useState<{ open: boolean; factorId: string }>({ open: false, factorId: '' });
 
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && !mfaState.open) {
+      // Check if MFA challenge is required before redirecting
+      supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => {
+        if (data && data.currentLevel === 'aal1' && data.nextLevel === 'aal2') {
+          supabase.auth.mfa.listFactors().then(({ data: f }) => {
+            const totp = f?.totp?.find((x) => x.status === 'verified');
+            if (totp) {
+              setMfaState({ open: true, factorId: totp.id });
+              return;
+            }
+            doRedirect();
+          });
+          return;
+        }
+        doRedirect();
+      }).catch(() => doRedirect());
+    }
+    function doRedirect() {
       if (redirectParam) {
         navigate(redirectParam);
       } else {
-        resolveRoleHome(user.id).then((dest) => navigate(dest));
+        resolveRoleHome(user!.id).then((dest) => navigate(dest));
       }
     }
-  }, [user, loading, navigate, redirectParam]);
+  }, [user, loading, navigate, redirectParam, mfaState.open]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value);
