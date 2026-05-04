@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ValuationOnboardingDialog } from './ValuationOnboardingDialog';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,8 +20,11 @@ import { getWhatsAppLink } from '@/lib/whatsapp';
 const ICONS: Record<string, any> = { Cog, ClipboardCheck, Target, TrendingUp };
 
 export function ExecutiveReport({ snapshot, firstName }: { snapshot: ValuationSnapshot | null; firstName: string }) {
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   if (!snapshot) {
     return (
+      <>
       <Card className="mb-6 relative overflow-hidden border-2 border-accent/40 bg-gradient-to-br from-accent/15 via-accent/5 to-transparent shadow-2xl">
         {/* radial glow */}
         <div
@@ -63,21 +67,21 @@ export function ExecutiveReport({ snapshot, firstName }: { snapshot: ValuationSn
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <Button
-                asChild
+                onClick={() => setShowOnboarding(true)}
                 size="lg"
                 className="text-base px-8 py-6 h-auto bg-accent hover:bg-accent/90 text-accent-foreground font-bold shadow-lg shadow-accent/30 hover:shadow-accent/50 hover:scale-[1.02] transition-all"
               >
-                <Link to="/valuation/multiplos">
-                  <Calculator className="h-5 w-5 mr-2" />
-                  Calcular meu valuation agora
-                  <ArrowRight className="h-5 w-5 ml-2" />
-                </Link>
+                <Calculator className="h-5 w-5 mr-2" />
+                Calcular meu valuation agora
+                <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
               <p className="text-xs text-muted-foreground sm:ml-2">Sem cartão · Sem cobrança</p>
             </div>
           </div>
         </CardContent>
       </Card>
+      <ValuationOnboardingDialog open={showOnboarding} onOpenChange={setShowOnboarding} />
+      </>
     );
   }
 
