@@ -124,10 +124,8 @@ export function MariResult({ data }: { data: MariResultData }) {
       </Card>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <Button asChild size="lg" className="flex-1">
-          <Link to={`/auth?tab=signup&role=seller&redirect=/painel&cnpj=${cnpj}`}>
-            Cadastrar minha empresa <ArrowRight className="h-4 w-4 ml-2" />
-          </Link>
+        <Button size="lg" className="flex-1" onClick={handleCadastrar}>
+          Cadastrar minha empresa <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
         <Button asChild size="lg" variant="outline" className="flex-1 bg-transparent">
           <a
