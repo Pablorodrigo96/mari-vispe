@@ -65,13 +65,36 @@ const NewListingWizard = () => {
   const { user } = useAuth();
   const { isPartnerAccountant } = usePartnerAccountant();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    ...initialFormData,
-    images: [],
+  const initialPrefill = useMemo(() => getMariPrefill(), []);
+  const [prefillActive, setPrefillActive] = useState<boolean>(!!initialPrefill);
+  const [formData, setFormData] = useState<FormData>(() => {
+    const base: FormData = { ...initialFormData, images: [] } as FormData;
+    if (initialPrefill) {
+      const cnpjFmt = initialPrefill.cnpj.replace(
+        /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+        '$1.$2.$3/$4-$5',
+      );
+      return {
+        ...base,
+        cnpj: cnpjFmt,
+        title: initialPrefill.razaoSocial ? `${initialPrefill.razaoSocial}` : base.title,
+        category: cnaeToCategory(initialPrefill.cnaeSection) || base.category,
+        state: initialPrefill.uf ?? base.state,
+        city: initialPrefill.cidade ?? base.city,
+      };
+    }
+    return base;
   });
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFinancialFile, setPendingFinancialFile] = useState<File | null>(null);
+
+  const handleClearPrefill = () => {
+    clearMariPrefill();
+    setPrefillActive(false);
+    setFormData({ ...initialFormData, images: [] } as FormData);
+    toast.info('Prefill limpo. Comece do zero.');
+  };
 
   const updateFormData = (field: string, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
