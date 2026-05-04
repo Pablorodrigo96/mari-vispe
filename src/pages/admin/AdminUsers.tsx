@@ -656,6 +656,18 @@ export default function AdminUsers() {
                                   Remover {roleConfig[role].label}
                                 </DropdownMenuItem>
                               ))}
+                              {user.user_id !== currentUser?.id && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => openDelete(user)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Excluir usuário
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
