@@ -265,21 +265,25 @@ export default function MyListings() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button 
-                variant="outline"
-                onClick={() => navigate('/cadastrar-comprador')}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Cadastrar Comprador
-              </Button>
-              <Button variant="outline" onClick={downloadTemplate}>
-                <Download className="w-4 h-4 mr-2" />
-                Baixar Modelo
-              </Button>
-              <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Upload em Lote
-              </Button>
+              {canPartnerOps && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/cadastrar-comprador')}
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    Cadastrar Comprador
+                  </Button>
+                  <Button variant="outline" onClick={downloadTemplate}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar Modelo
+                  </Button>
+                  <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload em Lote
+                  </Button>
+                </>
+              )}
               <Button 
                 onClick={() => navigate('/vender')}
                 className="bg-accent hover:bg-accent/90 text-accent-foreground"
