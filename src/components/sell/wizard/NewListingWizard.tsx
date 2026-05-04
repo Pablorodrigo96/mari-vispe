@@ -291,6 +291,26 @@ const NewListingWizard = () => {
 
   return (
     <>
+      {prefillActive && initialPrefill && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="h-4 w-4 text-accent shrink-0" />
+            <p className="text-sm text-foreground break-words min-w-0">
+              Continuando do cálculo da Mari
+              {initialPrefill.razaoSocial ? ` · ${initialPrefill.razaoSocial}` : ''}
+              {initialPrefill.windowBase ? ` · janela ${initialPrefill.windowBase}%` : ''}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearPrefill}
+            className="shrink-0 h-7 px-2 text-xs"
+          >
+            <X className="h-3.5 w-3.5 mr-1" /> Limpar
+          </Button>
+        </div>
+      )}
       <Card className="p-6 sm:p-8">
         <StepIndicator steps={steps} currentStep={currentStep} />
 
