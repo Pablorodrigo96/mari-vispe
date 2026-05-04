@@ -24,7 +24,26 @@ const TONE_ICON = {
 };
 
 export function MariResult({ data }: { data: MariResultData }) {
-  const { razaoSocial, uf, cnae, porte, window: w, cnpj } = data;
+  const { razaoSocial, uf, cidade, cnae, porte, window: w, cnpj } = data;
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleCadastrar = () => {
+    setMariPrefill({
+      cnpj,
+      razaoSocial,
+      uf,
+      cidade: cidade ?? null,
+      cnaeSection: cnae,
+      porte,
+      windowBase: w.base,
+    });
+    if (user) {
+      navigate("/vender");
+    } else {
+      navigate(`/auth?tab=signup&role=seller&redirect=/vender&cnpj=${cnpj}`);
+    }
+  };
 
   return (
     <div className="space-y-4">
