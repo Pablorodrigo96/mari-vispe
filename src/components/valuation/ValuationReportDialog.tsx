@@ -46,7 +46,7 @@ export const ValuationReportDialog = ({
   const [narrativeOpen, setNarrativeOpen] = useState(false);
   const [diagnosticAnswers, setDiagnosticAnswers] = useState<DiagnosticAnswers | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
-  const equityGap = calculateEquityGap(result, 5);
+  const equityGap = calculateEquityGap(result, 2);
 
   const formatMultiple = (value: number) => `${value.toFixed(1)}x`;
 
@@ -269,7 +269,7 @@ export const ValuationReportDialog = ({
 
     addText(`Gap: ${formatFullCurrency(equityGap.gapValue)} (+${equityGap.gapPercent.toFixed(1)}%)`, margin, yPos, { fontSize: 11, fontStyle: 'bold', color: [16, 185, 129] });
     yPos += 8;
-    const gapExplanation = `Se sua empresa melhorar a margem EBITDA em 5pp (de ${equityGap.currentMargin.toFixed(1)}% para ${equityGap.boostedMargin.toFixed(1)}%), o valor estimado sobe de ${formatFullCurrency(equityGap.currentValue)} para ${formatFullCurrency(equityGap.potentialValue)}.`;
+    const gapExplanation = `Este é o seu Gap de Equity hoje. Empresas atendidas pela mari conseguiram destravar este upside com um trabalho estruturado de governança, fiscal e comercial.`;
     const splitGap = doc.splitTextToSize(gapExplanation, pageWidth - 2 * margin);
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
