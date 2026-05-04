@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProfileHeroCard } from '@/components/profile/ProfileHeroCard';
+import { ProfileQuests } from '@/components/profile/ProfileQuests';
 
 const CATEGORIES = [
   { value: 'food', label: 'Alimentos' },
@@ -354,6 +355,8 @@ const MyProfile = () => {
             missing={missing}
             onAvatarChange={(url) => setAvatarUrl(url)}
           />
+
+          <ProfileQuests userId={user!.id} profileCompletion={completion} />
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
