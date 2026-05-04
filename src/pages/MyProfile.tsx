@@ -65,11 +65,13 @@ const MyProfile = () => {
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  const { isFranchisee } = useUserRoles();
+  const { isFranchisee, isAdmin, isAdvisor, isBuyer, isSeller } = useUserRoles() as any;
   const [regionStates, setRegionStates] = useState<string[]>([]);
   const [regionCategories, setRegionCategories] = useState<string[]>([]);
   const [regionId, setRegionId] = useState<string | null>(null);
   const [isSavingRegion, setIsSavingRegion] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [completion, setCompletion] = useState<number>(0);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -81,8 +83,13 @@ const MyProfile = () => {
       state: '',
       city: '',
       neighborhood: '',
+      bio: '',
+      website_url: '',
+      interests: [],
     },
   });
+
+  const watched = form.watch();
 
   useEffect(() => {
     if (!authLoading && !user) {
