@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { MariWatermark } from '@/components/brand/MariLogo';
 import { CockpitWeekStrip } from '@/components/cockpit/CockpitWeekStrip';
 import { MariOriginBadge } from '@/components/painel/MariOriginBadge';
+import { ExecutiveReport } from '@/components/painel/exec/ExecutiveReport';
+import { buildSnapshot } from '@/lib/painelExecutive';
 
 interface ModuleBox {
   title: string;
@@ -81,7 +83,24 @@ export default function Painel() {
     enabled: !!user,
   });
 
+  const { data: lastValuation } = useQuery({
+    queryKey: ['painel-last-valuation', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('valuation_history')
+        .select('valuation_type, segment, result, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const greetingName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'usuário';
+  const snapshot = buildSnapshot(lastValuation);
 
   // Onboarding progress
   const checks = [
@@ -154,6 +173,9 @@ export default function Painel() {
       <div className="mb-4">
         <MariOriginBadge />
       </div>
+
+      {/* Executive report — Quanto vale, quanto pode valer, quando vender */}
+      <ExecutiveReport snapshot={snapshot} firstName={greetingName} />
 
       {/* Cockpit "Sua semana na Mari" — 5 AI cards */}
       <CockpitWeekStrip />
