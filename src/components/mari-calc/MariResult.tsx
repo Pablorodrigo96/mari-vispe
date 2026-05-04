@@ -107,9 +107,24 @@ export function MariResult({ data }: { data: MariResultData }) {
 
       <Card>
         <CardContent className="p-5">
-          <h4 className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">
-            Por que essa janela?
-          </h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
+              Por que essa janela?
+            </h4>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="text-muted-foreground hover:text-foreground transition" aria-label="Como calculamos">
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 text-xs leading-relaxed">
+                <p className="font-semibold text-foreground mb-1">Como a Mari calcula</p>
+                <p className="text-muted-foreground break-words">
+                  Cruzamos <strong>UF</strong> (praça de M&A), <strong>CNAE</strong> (apetite do setor) e <strong>porte</strong> declarado na Receita (via BrasilAPI) com nosso histórico de transações. Estimativa direcional — sem usar nenhum dado privado da sua empresa.
+                </p>
+              </PopoverContent>
+            </Popover>
+          </div>
           <ul className="space-y-2">
             {w.reasons.map((r, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground break-words">
@@ -124,22 +139,75 @@ export function MariResult({ data }: { data: MariResultData }) {
         </CardContent>
       </Card>
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Button size="lg" className="flex-1" onClick={handleCadastrar}>
-          Cadastrar minha empresa <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
-        <Button asChild size="lg" variant="outline" className="flex-1 bg-transparent">
-          <a
-            href={`https://wa.me/5551992338258?text=${encodeURIComponent(
-              `Oi! Calculei a janela do CNPJ ${cnpj} na Mari e quero falar com um advisor.`,
-            )}`}
-            target="_blank"
-            rel="noreferrer"
+      {/* Gap de Valuation — CTA forte */}
+      <Card className="border-accent/40 bg-gradient-to-br from-accent/15 via-accent/5 to-transparent overflow-hidden relative">
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+        <CardContent className="p-6 relative">
+          <Badge className="bg-accent text-accent-foreground mb-3 text-[10px] uppercase tracking-wider">
+            Próximo passo
+          </Badge>
+          <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2 break-words leading-tight">
+            Quanto antes você se preparar, mais dinheiro entra no seu bolso.
+          </h3>
+          <p className="text-sm text-muted-foreground mb-5 break-words">
+            Empresas que se preparam com 18–24 meses de antecedência fecham por{" "}
+            <strong className="text-foreground">até 40% acima</strong> do múltiplo de mercado. A Mari mostra exatamente onde está o seu gap.
+          </p>
+
+          <div className="grid sm:grid-cols-3 gap-3 mb-5">
+            <div className="p-3 rounded-lg bg-background/60 border border-border/60">
+              <div className="h-8 w-8 rounded-md bg-accent/20 text-accent flex items-center justify-center mb-2">
+                <BarChart3 className="h-4 w-4" />
+              </div>
+              <p className="text-xs font-semibold text-foreground mb-1">Gap de Valuation</p>
+              <p className="text-[11px] text-muted-foreground break-words leading-snug">
+                Quanto vale hoje vs. quanto poderia valer preparada.
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-background/60 border border-border/60">
+              <div className="h-8 w-8 rounded-md bg-accent/20 text-accent flex items-center justify-center mb-2">
+                <Target className="h-4 w-4" />
+              </div>
+              <p className="text-xs font-semibold text-foreground mb-1">Compradores possíveis</p>
+              <p className="text-[11px] text-muted-foreground break-words leading-snug">
+                Fundos e estratégicos com tese ativa no seu setor e porte.
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-background/60 border border-border/60">
+              <div className="h-8 w-8 rounded-md bg-accent/20 text-accent flex items-center justify-center mb-2">
+                <Rocket className="h-4 w-4" />
+              </div>
+              <p className="text-xs font-semibold text-foreground mb-1">Plano de aceleração</p>
+              <p className="text-[11px] text-muted-foreground break-words leading-snug">
+                Checklist Mari pra fechar o gap em 12–24 meses.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="lg"
+            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold h-12 text-base"
+            onClick={handleCadastrar}
           >
-            Falar com um advisor
-          </a>
-        </Button>
-      </div>
+            Ver meu Gap de Valuation gratuito <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+          <p className="text-[11px] text-muted-foreground text-center mt-2">
+            Grátis · 60 segundos · Sem cartão
+          </p>
+        </CardContent>
+      </Card>
+
+      <Button asChild size="lg" variant="outline" className="w-full bg-transparent">
+        <a
+          href={`https://wa.me/5551992338258?text=${encodeURIComponent(
+            `Oi! Calculei a janela do CNPJ ${cnpj} na Mari e quero falar com um advisor.`,
+          )}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Falar com um advisor
+        </a>
+      </Button>
 
       <p className="text-[10px] text-muted-foreground text-center break-words">
         Estimativa direcional baseada em dados públicos. Não é recomendação de venda nem oferta de M&A.
