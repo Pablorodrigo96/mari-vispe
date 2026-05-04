@@ -23,6 +23,7 @@ const brazilStates = [
 export default function RegisterBuyer() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
