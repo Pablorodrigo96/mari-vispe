@@ -36,6 +36,7 @@ import RegisterBuyer from "./pages/RegisterBuyer";
 import MyCapitalRequests from "./pages/MyCapitalRequests";
 import CapitalRequestDetail from "./pages/CapitalRequestDetail";
 import MariCalculator from "./pages/MariCalculator";
+import AwaitingApproval from "./pages/AwaitingApproval";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -53,6 +54,7 @@ import MondayImport from "./pages/admin/MondayImport";
 import MondayParity from "./pages/admin/MondayParity";
 import AdvisorsMapping from "./pages/admin/AdvisorsMapping";
 import AdminApiMonitor from "./pages/admin/AdminApiMonitor";
+import AdminApprovals from "./pages/admin/AdminApprovals";
 import MatchingBuyers from "./pages/MatchingBuyers";
 import CapitalCase from "./pages/CapitalCase";
 import CapitalBySegment from "./pages/CapitalBySegment";
@@ -182,6 +184,7 @@ const App = () => (
               <Route path="/admin" element={<RequireRole roles={["admin"]}><AdminDashboard /></RequireRole>} />
               <Route path="/admin/crm" element={<RequireRole roles={["admin"]}><AdminCRM /></RequireRole>} />
               <Route path="/admin/users" element={<RequireRole roles={["admin"]}><AdminUsers /></RequireRole>} />
+              <Route path="/admin/aprovacoes" element={<RequireRole roles={["admin"]}><AdminApprovals /></RequireRole>} />
               <Route path="/admin/advisors/:advisorId/whatsapp-setup" element={<RequireRole roles={["admin"]}><AdvisorWhatsAppSetup /></RequireRole>} />
               <Route path="/admin/whatsapp-monitor" element={<RequireRole roles={["admin"]}><AdminWhatsAppMonitor /></RequireRole>} />
               <Route path="/admin/listings" element={<RequireRole roles={["admin"]}><AdminListings /></RequireRole>} />

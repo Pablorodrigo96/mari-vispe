@@ -79,7 +79,7 @@ export default function AwaitingApproval() {
 
           <div className="flex flex-col sm:flex-row gap-2 pt-4">
             <Button asChild variant="outline" className="bg-transparent flex-1">
-              <a href={getWhatsAppLink(5551992338258, 'Olá, gostaria de acompanhar meu pedido de acesso na Mari.')} target="_blank" rel="noreferrer">
+              <a href={getWhatsAppLink('Olá, gostaria de acompanhar meu pedido de acesso na Mari.')} target="_blank" rel="noreferrer">
                 <MessageCircle className="h-4 w-4 mr-2" />Falar com a equipe
               </a>
             </Button>
