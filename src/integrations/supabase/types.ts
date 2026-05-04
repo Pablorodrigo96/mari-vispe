@@ -332,6 +332,7 @@ export type Database = {
           file_url: string
           id: string
           request_id: string
+          source_doc_id: string | null
           status: string | null
           uploaded_at: string | null
           uploaded_by: string | null
@@ -341,6 +342,7 @@ export type Database = {
           file_url: string
           id?: string
           request_id: string
+          source_doc_id?: string | null
           status?: string | null
           uploaded_at?: string | null
           uploaded_by?: string | null
@@ -350,6 +352,7 @@ export type Database = {
           file_url?: string
           id?: string
           request_id?: string
+          source_doc_id?: string | null
           status?: string | null
           uploaded_at?: string | null
           uploaded_by?: string | null
@@ -874,36 +877,42 @@ export type Database = {
         Row: {
           ai_extracted_data: Json | null
           created_at: string
+          doc_type: string
           equity_score: Json | null
           file_name: string | null
           file_type: string | null
           file_url: string
           id: string
           listing_id: string
+          source_doc_id: string | null
           status: string
           user_id: string
         }
         Insert: {
           ai_extracted_data?: Json | null
           created_at?: string
+          doc_type?: string
           equity_score?: Json | null
           file_name?: string | null
           file_type?: string | null
           file_url: string
           id?: string
           listing_id: string
+          source_doc_id?: string | null
           status?: string
           user_id: string
         }
         Update: {
           ai_extracted_data?: Json | null
           created_at?: string
+          doc_type?: string
           equity_score?: Json | null
           file_name?: string | null
           file_type?: string | null
           file_url?: string
           id?: string
           listing_id?: string
+          source_doc_id?: string | null
           status?: string
           user_id?: string
         }
