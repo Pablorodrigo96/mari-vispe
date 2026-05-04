@@ -359,6 +359,10 @@ const MyProfile = () => {
 
           <ProfileQuests userId={user!.id} profileCompletion={completion} />
 
+          <div id="card-security">
+            <TwoFactorSection />
+          </div>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Dados Pessoais */}
