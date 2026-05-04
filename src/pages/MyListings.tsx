@@ -392,7 +392,7 @@ export default function MyListings() {
           ) : (
             <div className="space-y-4">
               {listings.map(listing => (
-                <Card key={listing.id} className="bg-card border-border hover:border-accent/50 transition-colors">
+                <Card key={listing.id} className="bg-card border-border hover:border-accent/50 transition-colors cursor-pointer" onClick={() => navigate(`/meus-anuncios/${listing.id}`)}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row gap-4">
                       {/* Image */}
