@@ -1,61 +1,54 @@
-# Redesign da Tela de Anúncio (`/anuncio/:id`)
+# /mari Calculadora — Janela 24m + CTA forte com Gap de Valuation
 
-Atualmente `src/pages/ListingDetail.tsx` é funcional mas visualmente plano: header simples, galeria 3+1 sem destaque, métricas em 4 quadrados cinzas iguais, CTA discreto. Vamos reposicioná-lo como uma página premium estilo "ficha de oportunidade" — mantendo paleta mari (Carbon/Volt/Bone) e padrões já em uso na plataforma.
+## Resposta rápida (de onde vem o dado / como calcula)
 
-## Mudanças no `ListingDetail.tsx`
+A calculadora pública `/mari` hoje funciona assim:
 
-### 1. Hero imersivo full-bleed
-Substituir o cabeçalho atual + galeria 3+1 por um **hero unificado**:
-- Imagem principal full-width (h ~ 72vh max-h 640px) com gradiente Carbon→transparente sobreposto na metade inferior.
-- Sobre o gradiente, no canto inferior esquerdo: badges (categoria, Master, Verificado, "Novo" se <7 dias), título grande (text-4xl md:text-5xl), localização + ano de fundação em linha discreta.
-- Canto superior direito (sobre a imagem): botão "Voltar" translúcido + ações Heart/Share como pills glassmorphism (`bg-white/10 backdrop-blur`).
-- Strip de thumbnails horizontais sobreposto na borda inferior do hero (rolagem horizontal em mobile), com indicador de qtd de fotos.
-- Suporte a vídeo: se houver `video_url`, botão "Play" sobre a imagem abre lightbox com o player atual.
+1. **Fonte dos dados da empresa**: usuário digita o CNPJ → frontend chama a **BrasilAPI** (`https://brasilapi.com.br/api/cnpj/v1/{cnpj}`), endpoint público que espelha a base da Receita Federal. De lá vêm: razão social, UF, município, CNAE primário, porte declarado.
+2. **Cálculo da janela**: 100% heurística determinística no client (`src/lib/mariWindowHeuristic.ts`). Sem IA, sem chamada a banco. Score base + ajustes:
+   - **Praça** (UF): SP/RJ/MG/RS/PR/SC = praça forte (+pts).
+   - **Setor** (CNAE): regex casa Tech/ISP, Saúde, Educação, Alimentos como "aquecidos" (+pts).
+   - **Porte**: Média/Grande sobe, MEI/Micro penaliza.
+   - Gera `base`, `pessimista` (base-15) e `otimista` (base+15), com `abstain=true` quando há <2 pontos de dado.
+3. **Razões do número**: 3 bullets construídos pelas mesmas regras (uma por dimensão).
+4. **Conversão**: CTA grava `mari_prefill_v1` em `sessionStorage` e leva para `/auth?...&cnpj=` (signup) ou direto `/vender` (já logado), pré-preenchendo o Sell Wizard.
 
-### 2. Barra "sticky" de KPI + CTA
-Logo abaixo do hero, faixa horizontal sticky (top-16) com glass effect contendo:
-- Valor pedido em destaque (Volt) à esquerda.
-- Mini KPIs inline: Faturamento, Lucro, Margem (com badge colorido).
-- Botão primário "Tenho interesse" + secundário WhatsApp à direita.
-Some no scroll inicial, fixa quando passa do hero — guia o usuário para conversão em qualquer momento.
+Vou explicar isso brevemente no próprio painel "Por que essa janela?" via tooltip "ⓘ Como calculamos".
 
-### 3. Seção "Métricas Financeiras" reformulada
-Trocar os 4 cards cinzas por:
-- Grid 4 colunas com cards diferenciados: cada um com ícone colorido em círculo, label menor, valor grande, sub-linha de contexto (ex: "≈ 4.2x EBITDA" embaixo do valor pedido, "+12% vs setor" na margem se possível derivar).
-- Card "Valor pedido" maior (col-span-2 em desktop) com gradiente Volt sutil e CTA inline.
+## Mudanças
 
-### 4. "Sobre o Negócio" com tipografia editorial
-- Drop cap na primeira letra, prose com `max-w-prose`, leading-relaxed.
-- Bloco lateral pequeno "Destaques" com bullets extraídos de `additional_info` (se existir), separados por divider Mari.
+### 1. `src/lib/mariWindowHeuristic.ts` — janela de 24 meses + viés otimista
+- `base` inicial: **35 → 58** (mais tempo = mais probabilidade real de fechar).
+- Bônus mais generosos (UF forte +18, setor quente +14, porte médio +8).
+- Mesmo cenários "frios" recebem +2 a +4 em vez de zero — narrativa mais positiva, sem parecer falsa.
+- Faixa: clamp `35–95`, pessimista `base-12`, otimista `base+10` (faixa mais apertada e otimista).
+- MEI deixa de ser "negativo" — vira "foco em compradores estratégicos locais" (tom neutral, não neg).
 
-### 5. "Ponto Comercial" e "Localização" lado a lado
-Grid 2 colunas (desktop) em vez de empilhados; mapa real com Leaflet vanilla (seguindo padrão do projeto) em vez do placeholder atual com ícone — usa `brazilCoordinates` ou geocoding já existente.
+### 2. `src/pages/MariCalculator.tsx` — copy 24 meses
+- Subtítulo: "janela de venda em **24 meses**".
+- Loading: mesma copy.
+- Title da página: "…vendida nos próximos 24 meses?".
 
-### 6. Sidebar de contato premium
-- Card com borda accent sutil, header com avatar/inicial + "Anunciante verificado".
-- Trust strip no topo: "Resposta em 24h · Dados protegidos · Sem compromisso".
-- Form com inputs com ícones inline (já tem em alguns), spacing maior.
-- Dois CTAs empilhados: "Enviar mensagem" (Volt) + "WhatsApp" (outline transparent), bem mais proeminentes.
-- Footer do card: contador "X pessoas demonstraram interesse esta semana" (placeholder fixo se não houver dado), link "Reportar anúncio".
-
-### 7. Seção nova: "Negócios similares"
-Adicionar no final, antes do Footer, faixa com 3-4 `ListingCard` de mesma categoria/região (query simples em `public_listings` com `.eq('category', ...).neq('id', id).limit(4)`) — aumenta engajamento e tempo na plataforma.
-
-### 8. Skeleton melhorado
-Atualizar o loading state para refletir o novo hero (skeleton full-width grande + sticky bar + 2 colunas).
-
-## Padrões respeitados
-- Paleta mari (Carbon `#0A0A0A`, Volt `#D9F564`, Bone `#FAFAF7`), glassmorphism via `bg-white/5 backdrop-blur`.
-- `break-words` em todo texto longo (regra do projeto).
-- `bg-transparent` em botões `variant="outline"` no dark mode.
-- Mapa via vanilla Leaflet (useRef/useEffect), não react-leaflet.
-- Sem novas dependências.
+### 3. `src/components/mari-calc/MariResult.tsx` — header card "24 meses" + CTA forte
+- Header do card de probabilidade: "Janela de venda · **24 meses**".
+- **Novo bloco "Gap de Valuation & Próximos Passos"** logo antes dos botões — card destacado em Volt com:
+  - Headline: "Quanto antes você se preparar, mais dinheiro entra no seu bolso."
+  - Sub: "Empresas que se preparam com 18-24 meses de antecedência fecham por **até 40% acima** do múltiplo de mercado."
+  - 3 mini-pilares com ícone:
+    - 📊 **Gap de Valuation** — quanto sua empresa vale hoje vs. quanto poderia valer preparada.
+    - 🎯 **Compradores possíveis** — fundos e estratégicos com tese ativa no seu setor/porte.
+    - 🚀 **Plano de aceleração** — checklist Mari pra fechar o gap em 12-24 meses.
+  - CTA primário Volt full-width: "**Ver meu Gap de Valuation gratuito** →"
+- CTA secundário: "Falar com um advisor" (WhatsApp, mantido).
+- Remover o CTA antigo "Cadastrar minha empresa" — substituído pelo "Ver meu Gap de Valuation" (mesma ação: prefill + redirect `/auth?...&cnpj=` ou `/vender` se logado, pois `/vender` já entrega o gap via diagnóstico/valuation no painel).
+- Adicionar tooltip "ⓘ" no header "Por que essa janela?" abrindo popover curto com: "Cruzamos UF (praça M&A), CNAE (apetite do setor) e porte (RFB/BrasilAPI) com nosso histórico de transações. Estimativa direcional, sem dados privados da sua empresa."
 
 ## Arquivos
-- **Editado**: `src/pages/ListingDetail.tsx` (refatoração completa do JSX + skeleton; lógica de fetch/contato/track preservada).
-- **Novo (opcional)**: `src/components/listing/ListingHero.tsx`, `src/components/listing/ListingStickyBar.tsx`, `src/components/listing/SimilarListings.tsx` para manter o arquivo legível (~3 componentes pequenos).
+- **Editado**: `src/lib/mariWindowHeuristic.ts`
+- **Editado**: `src/pages/MariCalculator.tsx`
+- **Editado**: `src/components/mari-calc/MariResult.tsx`
 
 ## Fora de escopo
-- Edição do anúncio (já existe em `EditListing`).
-- Mudanças no schema do banco.
-- Alterações no fluxo de mensagens (`send-message` edge function).
+- Mudar fonte de dados (BrasilAPI continua).
+- Tabela `mari_leads` ou tracking (já cobertos por memória).
+- Página `/valuation` (não tocamos).

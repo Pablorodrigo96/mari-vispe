@@ -25,17 +25,19 @@ const HOT_SECTORS = [
 ];
 
 export function computeWindow(input: WindowInput): WindowResult {
-  let base = 35;
+  // Janela 24 meses → base mais otimista (mais tempo = mais chance de match real)
+  let base = 58;
   const reasons: WindowResult["reasons"] = [];
   let dataPoints = 0;
 
   if (input.uf) {
     dataPoints++;
     if (STRONG_UFS.has(input.uf.toUpperCase())) {
-      base += 15;
+      base += 18;
       reasons.push({ label: `Praça forte de M&A (${input.uf.toUpperCase()})`, tone: "pos" });
     } else {
-      reasons.push({ label: `Mercado regional menos líquido (${input.uf.toUpperCase()})`, tone: "neutral" });
+      base += 4;
+      reasons.push({ label: `Mercado regional em consolidação (${input.uf.toUpperCase()})`, tone: "neutral" });
     }
   }
 
@@ -43,10 +45,11 @@ export function computeWindow(input: WindowInput): WindowResult {
     dataPoints++;
     const hot = HOT_SECTORS.find((h) => h.match.test(input.cnaeSection!));
     if (hot) {
-      base += 10;
+      base += 14;
       reasons.push({ label: hot.label, tone: "pos" });
     } else {
-      reasons.push({ label: "Setor com demanda moderada de compradores", tone: "neutral" });
+      base += 3;
+      reasons.push({ label: "Setor com demanda ativa de compradores", tone: "neutral" });
     }
   }
 
@@ -54,19 +57,20 @@ export function computeWindow(input: WindowInput): WindowResult {
     dataPoints++;
     const p = input.porte.toLowerCase();
     if (/m[eé]dia|grande|demais/i.test(p)) {
-      base += 5;
+      base += 8;
       reasons.push({ label: "Porte atrativo para fundos e estratégicos", tone: "pos" });
     } else if (/mei|micro/i.test(p)) {
-      base -= 10;
-      reasons.push({ label: "Porte pequeno reduz liquidez de compradores", tone: "neg" });
+      base -= 4;
+      reasons.push({ label: "Porte pequeno: foco em compradores estratégicos locais", tone: "neutral" });
     } else {
-      reasons.push({ label: `Porte declarado: ${input.porte}`, tone: "neutral" });
+      base += 2;
+      reasons.push({ label: `Porte ${input.porte} no radar de compradores`, tone: "pos" });
     }
   }
 
-  base = Math.max(5, Math.min(92, base));
-  const pessimista = Math.max(2, base - 15);
-  const otimista = Math.min(96, base + 15);
+  base = Math.max(35, Math.min(95, base));
+  const pessimista = Math.max(20, base - 12);
+  const otimista = Math.min(98, base + 10);
 
   return {
     base,
