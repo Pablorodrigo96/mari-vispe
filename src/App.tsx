@@ -140,6 +140,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/aguardando-aprovacao" element={<AwaitingApproval />} />
             <Route path="/investors" element={<Investors />} />
             <Route path="/comprar" element={<Investors />} />
 
