@@ -13,6 +13,7 @@ import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { MariWatermark } from '@/components/brand/MariLogo';
+import { CockpitWeekStrip } from '@/components/cockpit/CockpitWeekStrip';
 
 interface ModuleBox {
   title: string;
@@ -147,6 +148,9 @@ export default function Painel() {
         </div>
         <p className="text-sm text-muted-foreground">Bem-vindo de volta à plataforma. Acesse os módulos abaixo para começar.</p>
       </div>
+
+      {/* Cockpit "Sua semana na Mari" — 5 AI cards */}
+      <CockpitWeekStrip />
 
       {/* KPIs row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
