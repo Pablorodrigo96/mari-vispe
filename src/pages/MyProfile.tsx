@@ -122,8 +122,18 @@ const MyProfile = () => {
             state: profile.state || '',
             city: profile.city || '',
             neighborhood: profile.neighborhood || '',
+            bio: (profile as any).bio || '',
+            website_url: (profile as any).website_url || '',
+            interests: (profile as any).interests || [],
           });
+          setAvatarUrl((profile as any).avatar_url || null);
         }
+
+        // Profile completion %
+        try {
+          const { data: pct } = await supabase.rpc('profile_completion' as any, { _user_id: user.id });
+          if (typeof pct === 'number') setCompletion(pct);
+        } catch (_e) { /* function may not exist yet */ }
 
         // Fetch subscription
         const { data: sub, error: subError } = await supabase
