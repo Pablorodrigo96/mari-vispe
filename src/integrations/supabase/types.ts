@@ -1510,6 +1510,30 @@ export type Database = {
         }
         Relationships: []
       }
+      sector_market_trends: {
+        Row: {
+          ano: number
+          num_deals: number
+          segment: string
+          tendencia: string
+          volume_m: number
+        }
+        Insert: {
+          ano: number
+          num_deals: number
+          segment: string
+          tendencia: string
+          volume_m: number
+        }
+        Update: {
+          ano?: number
+          num_deals?: number
+          segment?: string
+          tendencia?: string
+          volume_m?: number
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
