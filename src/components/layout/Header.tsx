@@ -233,7 +233,7 @@ export function Header() {
 
             {showLoggedOutUI ? (
               <Button className="bg-volt hover:bg-volt-light text-carbon shadow-volt font-medium" asChild>
-                <Link to="/vender">Anunciar Grátis</Link>
+                <Link to="/mari">Analisar empresa grátis ✓</Link>
               </Button>
             ) : (
               <Button className="bg-volt hover:bg-volt-light text-carbon shadow-volt font-medium" asChild>
@@ -367,7 +367,7 @@ export function Header() {
                 )}
                 {showLoggedOutUI ? (
                   <Button className="w-full justify-center bg-volt hover:bg-volt-light text-carbon font-medium" asChild>
-                    <Link to="/vender">Anunciar Grátis</Link>
+                    <Link to="/mari">Analisar empresa grátis ✓</Link>
                   </Button>
                 ) : (
                   <Button className="w-full justify-center bg-volt hover:bg-volt-light text-carbon font-medium" asChild>
