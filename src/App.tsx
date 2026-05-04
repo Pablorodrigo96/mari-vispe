@@ -25,6 +25,7 @@ import ValuationCertifier from "./pages/ValuationCertifier";
 import Investors from "./pages/Investors";
 import Capital from "./pages/Capital";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Terms from "./pages/Terms";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import MapView from "./pages/MapView";
