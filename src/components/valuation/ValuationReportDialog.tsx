@@ -823,22 +823,7 @@ export const ValuationReportDialog = ({
             </p>
           </div>
 
-          {/* Análise de Impacto */}
-          <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-300/30 dark:border-red-800/30 rounded-xl p-5 text-center">
-            <h3 className="font-semibold text-foreground mb-2">
-              📊 Análise de Impacto Financeiro
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Descubra quanto sua empresa está perdendo por mês e como fechar o gap de valuation.
-            </p>
-            <Button
-              onClick={() => setDiagnosticOpen(true)}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
-              <BarChart2 className="w-4 h-4 mr-2" />
-              Diagnóstico de Valor
-            </Button>
-          </div>
+          {/* Análise de Impacto agora aparece no topo, abaixo do Mashup Value */}
 
           {/* CTA WhatsApp */}
           <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border border-emerald-500/30 rounded-xl p-5 text-center">
