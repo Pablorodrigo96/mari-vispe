@@ -1,14 +1,17 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Building2, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { WindowResult } from "@/lib/mariWindowHeuristic";
+import { setMariPrefill } from "@/lib/mariPrefill";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface MariResultData {
   cnpj: string;
   razaoSocial: string | null;
   uf: string | null;
+  cidade?: string | null;
   cnae: string | null;
   porte: string | null;
   window: WindowResult;
@@ -21,7 +24,26 @@ const TONE_ICON = {
 };
 
 export function MariResult({ data }: { data: MariResultData }) {
-  const { razaoSocial, uf, cnae, porte, window: w, cnpj } = data;
+  const { razaoSocial, uf, cidade, cnae, porte, window: w, cnpj } = data;
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleCadastrar = () => {
+    setMariPrefill({
+      cnpj,
+      razaoSocial,
+      uf,
+      cidade: cidade ?? null,
+      cnaeSection: cnae,
+      porte,
+      windowBase: w.base,
+    });
+    if (user) {
+      navigate("/vender");
+    } else {
+      navigate(`/auth?tab=signup&role=seller&redirect=/vender&cnpj=${cnpj}`);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -102,10 +124,8 @@ export function MariResult({ data }: { data: MariResultData }) {
       </Card>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <Button asChild size="lg" className="flex-1">
-          <Link to={`/auth?tab=signup&role=seller&redirect=/painel&cnpj=${cnpj}`}>
-            Cadastrar minha empresa <ArrowRight className="h-4 w-4 ml-2" />
-          </Link>
+        <Button size="lg" className="flex-1" onClick={handleCadastrar}>
+          Cadastrar minha empresa <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
         <Button asChild size="lg" variant="outline" className="flex-1 bg-transparent">
           <a

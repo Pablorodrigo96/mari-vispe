@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Store, CheckCircle, Camera } from 'lucide-react';
+import { Building2, MapPin, Store, CheckCircle, Camera, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import PlanSelectionModal from './PlanSelectionModal';
 import FinancialDocUpload from './FinancialDocUpload';
 import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { stepValidationSchemas, initialFormData } from './listingSchema';
+import { getMariPrefill, clearMariPrefill, cnaeToCategory } from '@/lib/mariPrefill';
 
 const steps = [
   { id: 1, title: 'Empresa', icon: <Building2 className="w-4 h-4" /> },
@@ -64,13 +65,36 @@ const NewListingWizard = () => {
   const { user } = useAuth();
   const { isPartnerAccountant } = usePartnerAccountant();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    ...initialFormData,
-    images: [],
+  const initialPrefill = useMemo(() => getMariPrefill(), []);
+  const [prefillActive, setPrefillActive] = useState<boolean>(!!initialPrefill);
+  const [formData, setFormData] = useState<FormData>(() => {
+    const base: FormData = { ...initialFormData, images: [] } as FormData;
+    if (initialPrefill) {
+      const cnpjFmt = initialPrefill.cnpj.replace(
+        /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+        '$1.$2.$3/$4-$5',
+      );
+      return {
+        ...base,
+        cnpj: cnpjFmt,
+        title: initialPrefill.razaoSocial ? `${initialPrefill.razaoSocial}` : base.title,
+        category: cnaeToCategory(initialPrefill.cnaeSection) || base.category,
+        state: initialPrefill.uf ?? base.state,
+        city: initialPrefill.cidade ?? base.city,
+      };
+    }
+    return base;
   });
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFinancialFile, setPendingFinancialFile] = useState<File | null>(null);
+
+  const handleClearPrefill = () => {
+    clearMariPrefill();
+    setPrefillActive(false);
+    setFormData({ ...initialFormData, images: [] } as FormData);
+    toast.info('Prefill limpo. Comece do zero.');
+  };
 
   const updateFormData = (field: string, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -253,7 +277,8 @@ const NewListingWizard = () => {
 
       setShowPlanModal(false);
       toast.success('Anúncio criado com sucesso!');
-      
+      clearMariPrefill();
+
       // Navigate to Blind Teaser page
       navigate(`/teaser/${ticker}`);
     } catch (error) {
@@ -266,6 +291,26 @@ const NewListingWizard = () => {
 
   return (
     <>
+      {prefillActive && initialPrefill && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="h-4 w-4 text-accent shrink-0" />
+            <p className="text-sm text-foreground break-words min-w-0">
+              Continuando do cálculo da Mari
+              {initialPrefill.razaoSocial ? ` · ${initialPrefill.razaoSocial}` : ''}
+              {initialPrefill.windowBase ? ` · janela ${initialPrefill.windowBase}%` : ''}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearPrefill}
+            className="shrink-0 h-7 px-2 text-xs"
+          >
+            <X className="h-3.5 w-3.5 mr-1" /> Limpar
+          </Button>
+        </div>
+      )}
       <Card className="p-6 sm:p-8">
         <StepIndicator steps={steps} currentStep={currentStep} />
 

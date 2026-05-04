@@ -230,8 +230,12 @@ export default function Auth() {
       } else {
         toast.success('Conta criada com sucesso!');
       }
-      // Determine destination: explicit redirect wins, else first selected role's home
-      const dest = redirectParam ?? ROLE_HOME[signupRoles[0]] ?? '/painel';
+      // Determine destination: explicit redirect wins, else mari prefill → /vender, else role home
+      const hasMariPrefill = (() => {
+        try { return !!sessionStorage.getItem('mari_prefill_v1'); } catch { return false; }
+      })();
+      const dest = redirectParam
+        ?? (hasMariPrefill && signupRoles.includes('seller') ? '/vender' : (ROLE_HOME[signupRoles[0]] ?? '/painel'));
       navigate(dest);
     }
   };

@@ -54,6 +54,7 @@ export default function MariCalculator() {
       cnpj,
       razaoSocial: info.razao_social ?? info.nome_fantasia ?? null,
       uf: info.uf ?? null,
+      cidade: (info as { municipio?: string | null }).municipio ?? null,
       cnae: info.cnae_fiscal_descricao ?? null,
       porte: info.porte ?? null,
       window,

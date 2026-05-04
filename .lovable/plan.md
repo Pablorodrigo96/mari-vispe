@@ -1,62 +1,53 @@
 
-# FASE 3 — Calculadora pública `/mari`
+# FASE 4 — Fechar o loop `/mari` → cadastro → primeiro anúncio
 
-## Objetivo
-Transformar a rota `/mari` (hoje aliasada para `Valuation`) numa **calculadora pública** de janela de venda por CNPJ — vitrine do motor da Mari, sem login, com captura de lead.
+## Por quê
+Hoje a Calculadora Pública (Fase 3) gera um lead e joga em `/auth?...&cnpj=XXX`, mas o CNPJ é só hint na URL — some no signup. O usuário chega no Painel "vazio" e tem que digitar tudo de novo no Sell Wizard. Fase 4 conecta os pontos: o CNPJ do `/mari` vira **rascunho de anúncio pré-preenchido** assim que ele cadastra.
 
 ## Princípio
-- 100% pública (sem auth wall até o final).
-- Usa edge function `company-lookup` que já existe.
-- Mostra **probabilidade + faixa + 3 razões + abstenção** (mesma narrativa da Carroceria) para criar coerência.
-- Sempre converte: CTA dupla (assinar/entrar em contato) ao final.
-- **Não** mostra valor de venda em R$ (isso é Valuation, fica em `/valuation`).
+- Sem nova tabela. Usa `sessionStorage` (ou query param) pra carregar o CNPJ + dados do `company-lookup` do `/mari` direto no Sell Wizard.
+- Auth não muda schema. Só lê `?cnpj=` e guarda no `sessionStorage`.
+- Sell Wizard ganha hidratação inicial: se houver `mari_prefill` no storage, prefilla `cnpj`, `companyName` (→ title), `state`, `city` (do CNAE/UF retornado), e abre direto no Step 1 já preenchido.
+- Banner discreto no topo do wizard: "Continuando do cálculo da Mari • [limpar]".
 
 ## Fluxo
 ```text
-1. Hero: "Quanto tempo até sua empresa ser vendida?"
-2. Input CNPJ (com máscara) → botão "Calcular"
-3. Loading 2s (sensação de "rodando o motor")
-4. Resultado:
-   ├─ Empresa identificada (razão social, UF, CNAE) — vem do company-lookup
-   ├─ Card grande: % janela 12m + faixa pessimista/otimista
-   ├─ 3 razões (badges com ícones, geradas por heurística do CNAE/porte/UF)
-   ├─ Badge "Abstenção" se dados insuficientes (CNAE genérico, sem porte)
-   └─ CTAs: [Quero falar com um advisor] [Cadastrar minha empresa]
-5. Disclaimer: "Estimativa direcional. Não é recomendação de venda."
+/mari → calcula → CTA "Cadastrar minha empresa"
+   ↓ salva sessionStorage.mari_prefill = { cnpj, razao, uf, cidade, cnae, porte, windowResult }
+/auth?tab=signup&role=seller&redirect=/sell&cnpj=XXX
+   ↓ signup completa
+/sell → SellWizard detecta mari_prefill → hidrata form → mostra banner
+   ↓ usuário só revisa/completa faturamento etc
+publica anúncio
 ```
-
-## Heurística (sem chamar IA)
-- Base: 35%.
-- +15% se UF ∈ {SP, RJ, MG, RS, PR, SC}.
-- +10% se CNAE setor = ISP/Tech/Saúde/Educação.
-- +5% se porte = Médio/Grande.
-- −10% se MEI/ME.
-- Faixa: ±15 pp.
-- Abstenção: dispara quando fonte retornou < 3 campos válidos.
 
 ## Arquivos
 
 ### Criar
-- `src/pages/MariCalculator.tsx` — página pública.
-- `src/components/mari-calc/CnpjInput.tsx` — input mascarado.
-- `src/components/mari-calc/MariResult.tsx` — card de resultado.
-- `src/lib/mariWindowHeuristic.ts` — função pura `computeWindow({ uf, cnaeSection, porte })`.
+- `src/lib/mariPrefill.ts` — `setMariPrefill(data)`, `getMariPrefill()`, `clearMariPrefill()` usando `sessionStorage` com TTL 30min.
 
 ### Editar
-- `src/App.tsx`: trocar `<Route path="/mari" element={<Valuation />} />` por `<Route path="/mari" element={<MariCalculator />} />`. Manter `/valuation` como antes.
-- `src/components/layout/Header.tsx`: adicionar item público "Calculadora" → `/mari` (se ainda não tiver).
+- `src/components/mari-calc/MariResult.tsx` — antes de redirecionar pro `/auth`, chamar `setMariPrefill({ cnpj, razao, uf, cidade, cnaeSection, porte, windowResult })`.
+- `src/pages/Auth.tsx` — após signup bem-sucedido com role=seller, se `mari_prefill` existir → forçar redirect para `/sell` (em vez do `ROLE_HOME.seller = /meus-anuncios`).
+- `src/components/sell/wizard/NewListingWizard.tsx` (ou equivalente em `src/pages/Sell.tsx`) — no mount, ler `getMariPrefill()`; se existir, mesclar com `initialFormData` (campos: `cnpj`, `title` ← razão social, `state`, `city`, `category` ← derivado do CNAE) e renderizar um banner pequeno no topo: `"Continuando do cálculo da Mari · Limpar"`.
+- `src/lib/mariWindowHeuristic.ts` (opcional, só se não bater) — exportar mapeamento `cnaeSection → category` pra reuso.
 
 ### Não tocar
-- `src/pages/Valuation.tsx`, hooks de valuation, edge functions de valuation.
-- Equity Brain.
-- Cockpit (Fase 2).
+- Schema do banco (zero migrations).
+- `/valuation`, Equity Brain, Cockpit (Fase 2).
+- `company-lookup` edge function.
 
-## Captura de lead
-Quando usuário clicar em qualquer CTA pós-resultado, redireciona pra `/auth?tab=signup&redirect=/painel&role=seller&cnpj={cnpj}`. (Auth já aceita query params da Fase 1; o `cnpj` fica como hint só na URL — sem persistir nesta fase pra não mexer em schema.)
+## Detalhes técnicos
+- TTL 30min evita prefill velho de sessão antiga.
+- Se usuário já estiver logado quando clicar no CTA da Mari (caso raro), pular `/auth` e ir direto pra `/sell` com o prefill.
+- Limpar `mari_prefill` ao publicar anúncio (sucesso) ou clicar "Limpar" no banner.
+- Mapping CNAE→category usa as 12 categorias do projeto (via memória `business-categories`); fallback pra `'Outros'` se sem match.
 
 ## Critério de pronto
-- `/mari` carrega sem login, com input CNPJ funcional.
-- Após "Calcular", mostra empresa real (via `company-lookup`) + janela estimada + razões + CTAs.
-- CNPJ inválido / lookup vazio → mensagem clara, sem quebrar.
-- Mobile: tudo em uma coluna; desktop: hero centralizado max-width 720px.
-- Nenhuma migration, nenhuma edge function nova.
+- Usuário entra em `/mari`, calcula, clica "Cadastrar minha empresa".
+- Faz signup como seller.
+- É redirecionado para `/sell` (não `/meus-anuncios`).
+- Wizard abre com CNPJ, título sugerido, UF e cidade já preenchidos + banner "Continuando do cálculo da Mari".
+- Botão "Limpar" no banner reseta o prefill.
+- Logado direto no `/mari` → CTA pula `/auth` e vai pra `/sell` prefillado.
+- Zero migrations, zero edge functions novas.
