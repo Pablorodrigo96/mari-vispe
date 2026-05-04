@@ -8,6 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 import { MariWatermark } from '@/components/brand/MariLogo';
 import { MariDivider } from '@/components/brand/MariDivider';
 import { SearchBar } from '@/components/home/SearchBar';
+import { HeroCarousel } from '@/components/home/HeroCarousel';
 import { MariDifferentialCard } from '@/components/home/MariDifferentialCard';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
@@ -69,60 +70,37 @@ const Index = () => {
         <ParticlesBackground variant="dark" />
         
         <div className="container mx-auto px-4 lg:px-8 relative z-10">
-          <div className="text-center max-w-4xl mx-auto mb-14">
-            {/* Badge */}
-            <motion.div
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent/30 bg-accent/10 mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease, delay: 0 }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-              <span className="text-xs font-medium tracking-widest uppercase text-accent">IA preditiva de M&A no Brasil</span>
-            </motion.div>
+          <HeroCarousel />
 
-            <motion.h1
-              className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-[1.1] tracking-tight text-balance"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease, delay: 0.1 }}
+          {/* Pós-hero: pitch direto + CTA principal */}
+          <motion.div
+            className="mt-14 max-w-2xl mx-auto text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease, delay: 0.3 }}
+          >
+            <p className="text-base md:text-lg text-white/80 leading-relaxed mb-4 break-words">
+              Mari analisa sua empresa, seu mercado e os compradores esperando por você.
+            </p>
+            <p className="text-sm md:text-base text-white/60 mb-3">Em 1 minuto, você descobre:</p>
+            <ul className="text-sm md:text-base text-white/75 space-y-1 mb-6 inline-block text-left">
+              <li>• Se sua empresa está em <span className="text-volt font-medium">janela de venda</span> nos próximos 12 meses</li>
+              <li>• <span className="text-volt font-medium">Quanto</span> ela pode valer</li>
+              <li>• <span className="text-volt font-medium">Quem</span> poderia comprar você</li>
+            </ul>
+            <p className="text-xs md:text-sm text-white/40 mb-6">Sem cadastro obrigatório. Sem surpresa. Sem achismo.</p>
+            <Button
+              asChild
+              size="lg"
+              className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-14 px-8 text-base md:text-lg rounded-xl font-bold"
             >
-              A IA que prevê quais empresas{' '}
-              <span className="text-gradient-gold bg-accent text-secondary-foreground border-secondary-foreground font-extrabold">vão ser vendidas</span>,{' '}
-              e por quanto.
-            </motion.h1>
-
-            <motion.p
-              className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed whitespace-pre-line"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease, delay: 0.2 }}
-            >
-              A mari analisa milhões de sinais de mercado e devolve probabilidade, faixa de valor e os melhores compradores para sua empresa. {"\n\n"}
-              A dúvida não é SE você vai vender, mas QUANDO e principalmente POR QUANTO.{"\n\n"}
-              Nós já temos essa resposta!
-            </motion.p>
-
-            <motion.div
-              className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease, delay: 0.3 }}
-            >
-              <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold h-12 px-6 text-base rounded-xl">
-                <Link to="/vender">Quero cadastrar minha empresa</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 h-12 px-6 text-base rounded-xl bg-transparent">
-                <Link to="/comprar">Quero comprar uma empresa</Link>
-              </Button>
-              <Button asChild variant="ghost" size="lg" className="text-white/70 hover:text-white hover:bg-white/10 h-12 px-6 text-base rounded-xl">
-                <Link to="/investors">Sou investidor / family office</Link>
-              </Button>
-            </motion.div>
-          </div>
+              <Link to="/mari">→ Analisar minha empresa AGORA</Link>
+            </Button>
+          </motion.div>
 
           {/* Search Bar */}
           <motion.div
+            className="mt-16"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease, delay: 0.4 }}
@@ -134,10 +112,10 @@ const Index = () => {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-16 max-w-4xl mx-auto">
             {[
-              { label: 'Empresas Listadas', value: formatNumber(stats.totalListings) },
-              { label: 'Transações Fechadas', value: formatNumber(stats.totalTransactions) },
-              { label: 'Volume Negociado', value: formatCurrency(stats.totalVolume) },
-              { label: 'Dias Médio de Venda', value: `${stats.averageTime} dias` },
+              { label: 'Empresas em janela identificadas pela Mari', value: formatNumber(stats.totalListings) },
+              { label: 'Deals fechados via plataforma', value: formatNumber(stats.totalTransactions) },
+              { label: 'Volume transacionado (compradores + vendedores alinhados)', value: formatCurrency(stats.totalVolume) },
+              { label: 'Tempo médio entre identificação da janela e oferta', value: `${stats.averageTime} dias` },
             ].map((stat, i) => (
               <motion.div
                 key={i}
@@ -158,10 +136,13 @@ const Index = () => {
       {/* Categories Section */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">É um investidor e quer encontrar a melhor empresa para alocar seu capital?</h2>
-            <div className="w-12 h-1 bg-accent mx-auto rounded-full mt-3 mb-3" />
-            <p className="text-muted-foreground">Encontre oportunidades no segmento ideal para você</p>
+          <div className="text-center mb-12 max-w-3xl mx-auto">
+            <p className="text-xs font-semibold tracking-widest uppercase text-accent mb-3">Está procurando comprar?</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3 break-words">É um investidor e quer encontrar a melhor empresa para alocar seu capital?</h2>
+            <div className="w-12 h-1 bg-accent mx-auto rounded-full mb-4" />
+            <p className="text-muted-foreground leading-relaxed break-words">
+              Mari mostra as empresas com maior probabilidade de fechar deal nos próximos 12 meses — ranqueadas por <span className="text-foreground font-medium">assimetria de valor</span> (não só disponibilidade). Filtre por setor, valor e localização. Mari faz o resto.
+            </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {categories.map((cat) => (
