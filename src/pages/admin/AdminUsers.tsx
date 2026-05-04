@@ -708,6 +708,80 @@ export default function AdminUsers() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar usuário</DialogTitle>
+              <DialogDescription>Atualize os dados de {selectedUser?.full_name || 'usuário'}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Nome completo</label>
+                <Input value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Telefone</label>
+                <Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Empresa</label>
+                <Input value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Cidade</label>
+                  <Input value={editForm.city} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">UF</label>
+                  <Input maxLength={2} value={editForm.state} onChange={(e) => setEditForm({ ...editForm, state: e.target.value.toUpperCase() })} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
+                <Button onClick={handleSaveEdit} disabled={editSaving}>
+                  {editSaving ? 'Salvando…' : 'Salvar'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete User Dialog */}
+        <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" /> Excluir usuário
+              </DialogTitle>
+              <DialogDescription>
+                Esta ação é <strong>irreversível</strong>. Vamos remover permanentemente o login,
+                perfil, anúncios, valuations, notificações e demais dados de{' '}
+                <strong>{selectedUser?.full_name || selectedUser?.user_id}</strong>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground">
+                  Para confirmar, digite <strong>EXCLUIR</strong> abaixo:
+                </label>
+                <Input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder="EXCLUIR" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancelar</Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteUser}
+                  disabled={deleteConfirm !== 'EXCLUIR' || deleting}
+                >
+                  {deleting ? 'Excluindo…' : 'Excluir definitivamente'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
     </AdminLayout>
   );
 }
