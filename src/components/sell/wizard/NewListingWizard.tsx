@@ -277,7 +277,8 @@ const NewListingWizard = () => {
 
       setShowPlanModal(false);
       toast.success('Anúncio criado com sucesso!');
-      
+      clearMariPrefill();
+
       // Navigate to Blind Teaser page
       navigate(`/teaser/${ticker}`);
     } catch (error) {
