@@ -74,23 +74,25 @@ function ValuationTriCard({ snapshot }: { snapshot: ValuationSnapshot }) {
     <>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <BigCard
-          label="Quanto vale hoje"
+          label={snapshot.hasDiagnostic ? 'Quanto vale hoje (True Value)' : 'Quanto vale hoje (Estimado)'}
           value={brl(snapshot.valorAtual)}
-          ic={`IC: ${brl(snapshot.icLow)} – ${brl(snapshot.icHigh)}`}
+          ic={snapshot.hasDiagnostic
+            ? `Estimado de mercado: ${brl(snapshot.valorEstimado)} • −${(snapshot.degradationPct * 100).toFixed(0)}% pelo diagnóstico`
+            : `IC: ${brl(snapshot.icLow)} – ${brl(snapshot.icHigh)}`}
           hint={snapshot.ebitdaMargin ? `EBITDA: ${snapshot.ebitdaMargin.toFixed(1)}%` : `Método: ${snapshot.method === 'dcf' ? 'DCF' : 'Múltiplos'}`}
           tone="muted"
         />
         <BigCard
           label="Quanto pode valer (2027)"
           value={brl(snapshot.valorPotencial)}
-          ic={`IC: ${brl(snapshot.icLowPot)} – ${brl(snapshot.icHighPot)}`}
+          ic={`Estimado × 1,78 • IC: ${brl(snapshot.icLowPot)} – ${brl(snapshot.icHighPot)}`}
           hint={snapshot.ebitdaMarginPotential ? `EBITDA alvo: ${snapshot.ebitdaMarginPotential.toFixed(1)}%` : 'Com estrutura ideal'}
           tone="accent"
         />
         <BigCard
           label="Seu delta de valor"
           value={`+${brl(snapshot.gap)}`}
-          ic={`+${snapshot.gapPct.toFixed(0)}% sobre o valuation atual`}
+          ic={`+${snapshot.gapPct.toFixed(0)}% sobre o valor de hoje`}
           hint="Se você se organizar até 2027"
           tone="emerald"
         />
@@ -101,7 +103,9 @@ function ValuationTriCard({ snapshot }: { snapshot: ValuationSnapshot }) {
             <span className="text-foreground font-semibold">O que isso significa:</span> Se você completar o roadmap de preparação que mostramos abaixo, sua empresa pode valer
             {' '}<span className="text-accent font-bold">{snapshot.gapPct.toFixed(0)}% mais</span> em 2027. Isso é realista porque
             você terá estrutura profissional, crescimento consistente e uma narrativa clara para o comprador.
-            {snapshot.source === 'lossMetrics' && ' O potencial usa o diagnóstico de degradação que você respondeu.'}
+            {snapshot.hasDiagnostic
+              ? ' O "Quanto vale hoje" é o seu True Value (Estimado descontando os pontos do diagnóstico que ainda não estão resolvidos), exatamente como aparece no relatório de Valuation.'
+              : ' Você ainda não respondeu o diagnóstico no relatório — por isso o "Quanto vale hoje" mostra o Estimado puro. Responda o diagnóstico no Valuation para ver seu True Value e o gap real.'}
           </p>
         </CardContent>
       </Card>
