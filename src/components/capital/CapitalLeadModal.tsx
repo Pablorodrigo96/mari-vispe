@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, Eye, Lock } from 'lucide-react';
+import { CheckCircle2, Eye, Lock, User as UserIcon, Building2, Mail, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -64,6 +64,7 @@ const capitalTypeOptions = [
 export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObjective, simulatorData }: CapitalLeadModalProps) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -79,6 +80,45 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
       capitalType: initialObjective === 'socio' ? 'equity' : '',
     },
   });
+
+  // Pre-fill from profile when logged in
+  useEffect(() => {
+    if (!isOpen || !user) {
+      setProfileLoaded(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, company_name, phone')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      form.reset({
+        fullName: data?.full_name || user.user_metadata?.full_name || '',
+        companyName: data?.company_name || '',
+        email: user.email || '',
+        phone: data?.phone || '',
+        password: '',
+        objective: initialObjective,
+        capitalType: initialObjective === 'socio' ? 'equity' : '',
+      });
+      setProfileLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, user, initialObjective, form]);
+
+  // Auto-redirect after success (logged-in users)
+  useEffect(() => {
+    if (!isSubmitted || !user) return;
+    const t = setTimeout(() => {
+      handleClose();
+      navigate('/minhas-captacoes');
+    }, 2500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSubmitted, user]);
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
@@ -151,132 +191,251 @@ export function CapitalLeadModal({ isOpen, onClose, initialAmount, initialObject
     onClose();
   };
 
+  // Watch values for the logged-in summary view
+  const watchedName = form.watch('fullName');
+  const watchedCompany = form.watch('companyName');
+  const watchedEmail = form.watch('email');
+  const watchedPhone = form.watch('phone');
+  const needsCompany = !watchedCompany;
+  const needsPhone = !watchedPhone || watchedPhone.length < 10;
+
+  const renderLoggedInView = () => (
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-2xl font-bold text-foreground">
+          Confirmar solicitação de captação
+        </DialogTitle>
+        <p className="text-muted-foreground">
+          Valor:{' '}
+          <span className="font-semibold text-accent">{formatFullCurrency(initialAmount)}</span>
+          {simulatorData && (
+            <span className="ml-2 text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+              Score: {simulatorData.approvalScore}%
+            </span>
+          )}
+        </p>
+      </DialogHeader>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit, () => {
+          toast({ title: 'Campos obrigatórios', description: 'Preencha os campos pendentes.', variant: 'destructive' });
+        })} className="space-y-4 mt-4">
+          {/* Read-only summary */}
+          <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
+            <div className="flex items-center gap-2 text-foreground">
+              <UserIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="font-medium">{watchedName || 'Sem nome no perfil'}</span>
+            </div>
+            <div className="flex items-center gap-2 text-foreground">
+              <Mail className="w-4 h-4 text-muted-foreground" />
+              <span>{watchedEmail}</span>
+            </div>
+            {!needsPhone && (
+              <div className="flex items-center gap-2 text-foreground">
+                <Phone className="w-4 h-4 text-muted-foreground" />
+                <span>{watchedPhone}</span>
+              </div>
+            )}
+            {!needsCompany && (
+              <div className="flex items-center gap-2 text-foreground">
+                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <span>{watchedCompany}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Inline-only completion for missing essentials */}
+          {needsCompany && (
+            <FormField control={form.control} name="companyName" render={({ field }) => (
+              <FormItem>
+                <Label>Nome da Empresa *</Label>
+                <FormControl><Input placeholder="Nome da sua empresa" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          )}
+          {needsPhone && (
+            <FormField control={form.control} name="phone" render={({ field }) => (
+              <FormItem>
+                <Label>WhatsApp para contato *</Label>
+                <FormControl><Input placeholder="(11) 99999-9999" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          )}
+
+          <FormField control={form.control} name="capitalType" render={({ field }) => (
+            <FormItem>
+              <Label>Tipo de Captação *</Label>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Como deseja captar?" /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {capitalTypeOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <FormField control={form.control} name="objective" render={({ field }) => (
+            <FormItem>
+              <Label>Objetivo do Capital *</Label>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Selecione o objetivo" /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {objectiveOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <Button type="submit" disabled={isLoading || !profileLoaded} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold mt-4">
+            {isLoading ? 'Enviando...' : 'Confirmar e enviar para especialista'}
+          </Button>
+
+          <p className="text-xs text-center text-muted-foreground">
+            Você poderá acompanhar tudo em <span className="text-foreground font-medium">Minhas Captações</span>.
+          </p>
+        </form>
+      </Form>
+    </>
+  );
+
+  const renderGuestView = () => (
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-2xl font-bold text-foreground">
+          Cadastrar Proposta
+        </DialogTitle>
+        <p className="text-muted-foreground">
+          Valor solicitado:{' '}
+          <span className="font-semibold text-accent">{formatFullCurrency(initialAmount)}</span>
+          {simulatorData && (
+            <span className="ml-2 text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+              Score: {simulatorData.approvalScore}%
+            </span>
+          )}
+        </p>
+      </DialogHeader>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit, () => {
+          toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos marcados com *.', variant: 'destructive' });
+        })} className="space-y-4 mt-4">
+          <FormField control={form.control} name="capitalType" render={({ field }) => (
+            <FormItem>
+              <Label>Tipo de Captação *</Label>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Como deseja captar?" /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {capitalTypeOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <FormField control={form.control} name="fullName" render={({ field }) => (
+            <FormItem>
+              <Label>Nome Completo *</Label>
+              <FormControl><Input placeholder="Seu nome completo" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <FormField control={form.control} name="companyName" render={({ field }) => (
+            <FormItem>
+              <Label>Nome da Empresa *</Label>
+              <FormControl><Input placeholder="Nome da sua empresa" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField control={form.control} name="email" render={({ field }) => (
+              <FormItem>
+                <Label>Email *</Label>
+                <FormControl><Input type="email" placeholder="seu@empresa.com" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="phone" render={({ field }) => (
+              <FormItem>
+                <Label>WhatsApp *</Label>
+                <FormControl><Input placeholder="(11) 99999-9999" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </div>
+
+          <FormField control={form.control} name="password" render={({ field }) => (
+            <FormItem>
+              <Label className="flex items-center gap-1">
+                <Lock className="w-3 h-3" /> Crie uma senha para acompanhar *
+              </Label>
+              <FormControl><Input type="password" placeholder="Mínimo 8 caracteres" {...field} /></FormControl>
+              <p className="text-xs text-muted-foreground">Uma conta será criada para acompanhar sua solicitação.</p>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <FormField control={form.control} name="objective" render={({ field }) => (
+            <FormItem>
+              <Label>Objetivo do Capital *</Label>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Selecione o objetivo" /></SelectTrigger></FormControl>
+                <SelectContent>
+                  {objectiveOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <Button type="submit" disabled={isLoading} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold mt-6">
+            {isLoading ? 'Enviando...' : 'Cadastrar Proposta'}
+          </Button>
+
+          <p className="text-xs text-center text-muted-foreground">
+            Seus dados estão protegidos. Não compartilhamos informações com terceiros.
+          </p>
+        </form>
+      </Form>
+    </>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         {!isSubmitted ? (
-          <>
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-foreground">
-                Cadastrar Proposta
-              </DialogTitle>
-              <p className="text-muted-foreground">
-                Valor solicitado:{' '}
-                <span className="font-semibold text-accent">{formatFullCurrency(initialAmount)}</span>
-                {simulatorData && (
-                  <span className="ml-2 text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
-                    Score: {simulatorData.approvalScore}%
-                  </span>
-                )}
-              </p>
-            </DialogHeader>
-
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit, () => {
-                toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos marcados com *.', variant: 'destructive' });
-              })} className="space-y-4 mt-4">
-                {/* Capital Type */}
-                <FormField control={form.control} name="capitalType" render={({ field }) => (
-                  <FormItem>
-                    <Label>Tipo de Captação *</Label>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Como deseja captar?" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {capitalTypeOptions.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="fullName" render={({ field }) => (
-                  <FormItem>
-                    <Label>Nome Completo *</Label>
-                    <FormControl><Input placeholder="Seu nome completo" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="companyName" render={({ field }) => (
-                  <FormItem>
-                    <Label>Nome da Empresa *</Label>
-                    <FormControl><Input placeholder="Nome da sua empresa" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem>
-                      <Label>Email *</Label>
-                      <FormControl><Input type="email" placeholder="seu@empresa.com" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem>
-                      <Label>WhatsApp *</Label>
-                      <FormControl><Input placeholder="(11) 99999-9999" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-
-                {!user && (
-                  <FormField control={form.control} name="password" render={({ field }) => (
-                    <FormItem>
-                      <Label className="flex items-center gap-1">
-                        <Lock className="w-3 h-3" /> Crie uma senha para acompanhar *
-                      </Label>
-                      <FormControl><Input type="password" placeholder="Mínimo 8 caracteres" {...field} /></FormControl>
-                      <p className="text-xs text-muted-foreground">Uma conta será criada para acompanhar sua solicitação.</p>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                )}
-
-                <FormField control={form.control} name="objective" render={({ field }) => (
-                  <FormItem>
-                    <Label>Objetivo do Capital *</Label>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione o objetivo" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {objectiveOptions.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <Button type="submit" disabled={isLoading} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold mt-6">
-                  {isLoading ? 'Enviando...' : 'Cadastrar Proposta'}
-                </Button>
-
-                <p className="text-xs text-center text-muted-foreground">
-                  Seus dados estão protegidos. Não compartilhamos informações com terceiros.
-                </p>
-              </form>
-            </Form>
-          </>
+          user ? renderLoggedInView() : renderGuestView()
         ) : (
           <div className="py-8 text-center">
             <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6 animate-fade-in">
               <CheckCircle2 className="w-8 h-8 text-emerald-500" />
             </div>
-            <h3 className="text-2xl font-bold text-foreground mb-2">Proposta cadastrada com sucesso!</h3>
+            <h3 className="text-2xl font-bold text-foreground mb-2">
+              {user ? 'Solicitação enviada!' : 'Proposta cadastrada com sucesso!'}
+            </h3>
             <p className="text-muted-foreground mb-8">
-              Sua solicitação foi registrada. Acompanhe o status e propostas recebidas.
-              {!user && ' Verifique seu email para confirmar a conta.'}
+              {user
+                ? 'Nosso especialista entra em contato em até 24h. Redirecionando para Minhas Captações...'
+                : 'Sua solicitação foi registrada. Acompanhe o status e propostas recebidas. Verifique seu email para confirmar a conta.'}
             </p>
             <div className="flex flex-col gap-3">
               <Button onClick={() => { handleClose(); navigate('/minhas-captacoes'); }} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Eye className="w-4 h-4 mr-2" /> Acompanhar Solicitação
+                <Eye className="w-4 h-4 mr-2" /> Acompanhar em Minhas Captações
               </Button>
-              <Button onClick={handleClose} variant="outline">Voltar ao início</Button>
+              <Button onClick={handleClose} variant="outline">Fechar</Button>
             </div>
           </div>
         )}
