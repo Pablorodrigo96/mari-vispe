@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      advisor_requests: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       advisor_whatsapp_config: {
         Row: {
           access_token_secret_id: string
@@ -4177,6 +4207,14 @@ export type Database = {
       }
     }
     Functions: {
+      approve_advisor_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
+      approve_franchisee_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
       buyer_neutral_description: {
         Args: {
           _setores: string[]
@@ -4488,6 +4526,14 @@ export type Database = {
           }
       recalculate_sv: { Args: { p_cnpj: string }; Returns: Json }
       refresh_dashboard_views: { Args: never; Returns: undefined }
+      reject_advisor_request: {
+        Args: { p_reason?: string; p_request_id: string }
+        Returns: undefined
+      }
+      reject_franchisee_request: {
+        Args: { p_reason?: string; p_request_id: string }
+        Returns: undefined
+      }
       update_mandate_field: {
         Args: { p_field: string; p_mandate_id: string; p_value: string }
         Returns: undefined

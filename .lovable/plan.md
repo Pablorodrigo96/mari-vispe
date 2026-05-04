@@ -1,31 +1,49 @@
-## Blindagem das rotas de parceiro
+# Gate de aprovação admin para roles sensíveis (advisor + franchisee)
 
-Hoje `/parceiro` e `/potencial-carteira` estão registradas em `src/App.tsx` sem `RequireRole`. A sidebar já esconde os links para vendedor puro, mas qualquer logado consegue acessar digitando a URL direto. Vamos fechar esse gap.
+## Objetivo
+Ninguém vira **advisor** ou **franchisee** só marcando checkbox no signup. Esses roles passam a depender de aprovação explícita de um admin. Vendedor e comprador continuam liberados na hora.
 
-### Mudanças
+## Comportamento alvo
 
-**`src/App.tsx`** (linhas 172-173): envolver as duas rotas com `RequireRole` aceitando os perfis que realmente operam parceria:
+| Role escolhido no signup | Antes | Depois |
+|---|---|---|
+| seller | entra direto | igual (entra direto) |
+| buyer | entra direto | igual |
+| advisor | entra direto + acesso total ao EB/CRM | **cria request `pending`, NÃO ganha role; vê tela "aguardando aprovação"** |
+| franchisee | entra direto + request cosmético | **cria request `pending`, NÃO ganha role; vê tela "aguardando aprovação"** |
 
-```tsx
-<Route path="/parceiro" element={
-  <RequireRole roles={["advisor","admin","franchisee","partner_accountant"]}>
-    <PartnerDashboard />
-  </RequireRole>
-} />
-<Route path="/potencial-carteira" element={
-  <RequireRole roles={["advisor","admin","franchisee","partner_accountant"]}>
-    <PortfolioPotential />
-  </RequireRole>
-} />
-```
+## Mudanças
 
-### Validação rápida pós-mudança
+### 1. Banco
+- Nova tabela `public.advisor_requests` (espelha `franchisee_requests`): `user_id`, `status` (pending/approved/rejected), `reviewed_by`, `reviewed_at`, `reason`, `created_at`. RLS: usuário vê o próprio; admin vê/edita tudo.
+- Atualizar `handle_new_user` trigger:
+  - `valid_roles` passa a ser apenas `['seller','buyer']` para auto-insert em `user_roles`.
+  - Se metadata.roles inclui `advisor` → cria linha em `advisor_requests` (pending) + notifica admins. **Não** insere em `user_roles`.
+  - Se metadata.roles inclui `franchisee` → cria linha em `franchisee_requests` (pending) + notifica admins. **Não** insere em `user_roles`.
+- Função `approve_advisor_request(request_id)` SECURITY DEFINER, restrita a admin: insere `user_roles(user_id, 'advisor')`, marca request approved, dispara notificação ao usuário.
+- Função análoga `approve_franchisee_request(request_id)` (já existe fluxo parcial — consolidar para também inserir o role só agora).
+- Funções de reject que apenas marcam status + notificam.
 
-1. Conferir que `RequireRole` aceita o array acima (ver tipo do componente em `src/components/auth/RequireRole.tsx`); se ele só conhecer roles do enum `app_role` puro e tratar `partner_accountant` separado (via `is_partner_accountant` no profiles), ajusto pra usar a checagem correta — possivelmente `roles={["advisor","admin","franchisee"]}` + fallback no componente para `isPartnerAccountant`.
-2. Testar acesso URL-direta como vendedor puro → deve redirecionar/bloquear.
-3. Testar como advisor/admin/franqueado → deve continuar entrando normalmente.
+### 2. Front
+- `Auth.tsx`: ao concluir signup com advisor/franchisee, mensagem de sucesso muda para "Conta criada. Acesso de Assessor/Franqueado aguardando aprovação." e redireciona para `/aguardando-aprovacao` (ou `/painel` se também tiver seller/buyer).
+- Nova página leve `/aguardando-aprovacao` mostrando status do(s) request(s) do usuário e CTA para WhatsApp.
+- Remover, do `Auth.tsx`, o INSERT direto em `franchisee_requests` (vai pra trigger).
+- `useUserRoles` não muda — roles continuam vindos de `user_roles`. Como o role só existe após aprovação, sidebar/rotas (RequireRole, sidebar role-strict) já bloqueiam automaticamente.
 
-### Fora do escopo
+### 3. Painel admin
+- Em `AdminUsers` (ou nova aba `AdminApprovals`): lista de `advisor_requests` + `franchisee_requests` pendentes com botões Aprovar / Rejeitar (chama as funções RPC). Mostra nome, email, telefone, data.
 
-- `/painel` continua aberto a qualquer logado (cada user vê o próprio).
-- Sidebar e edge function `assign-buyer-role` permanecem como estão.
+### 4. Limpeza retroativa (opcional, te confirmo antes de rodar)
+- Migration de auditoria: lista usuários atuais com role `advisor` ou `franchisee` que **não** têm request approved. Apenas lista — não revoga automaticamente para evitar quebrar contas legítimas. Você decide quem manter.
+
+## Fora de escopo (confirmado por você)
+- Valuations continuam **não** indo para o grafo EB. Sem mudança no fluxo de valuation.
+- Listings continuam entrando no grafo via fluxo atual (sync admin). Sem mudança aqui.
+- Sem mudança em rotas/sidebar — a proteção já existe, só estamos cortando a fonte do role.
+
+## Validação pós-deploy
+- Signup como "Assessor" → conta criada, sem role advisor, redireciona para tela de aguardando, admin recebe notificação.
+- Admin aprova → usuário ganha role advisor, vê EB normalmente.
+- Signup como "Franqueado" → idem fluxo.
+- Signup seller/buyer → continua funcionando igual.
+- Usuário existente já advisor/franchisee continua funcionando (não mexemos em quem já tem o role).
