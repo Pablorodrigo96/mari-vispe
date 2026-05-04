@@ -15,6 +15,7 @@ import Sell from "./pages/Sell";
 import Vender from "./pages/Vender";
 import ListingDetail from "./pages/ListingDetail";
 import MyListings from "./pages/MyListings";
+import ListingCockpit from "./pages/ListingCockpit";
 import MyProfile from "./pages/MyProfile";
 import MyValuations from "./pages/MyValuations";
 import Valuation from "./pages/Valuation";
