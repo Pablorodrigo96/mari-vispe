@@ -55,6 +55,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { BulkUploadDialog, downloadTemplate } from '@/components/sell/BulkUploadDialog';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 interface Listing {
   id: string;
