@@ -12,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
+import { getMariPrefill } from '@/lib/mariPrefill';
+import { logMariLead } from '@/lib/mariLeadTracking';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
