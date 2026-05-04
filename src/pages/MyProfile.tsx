@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, MapPin, CreditCard, Crown, Check, Loader2, ExternalLink, Globe } from 'lucide-react';
+import { User, MapPin, CreditCard, Crown, Check, Loader2, ExternalLink, Globe, Sparkles, Link2 } from 'lucide-react';
 import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ProfileHeroCard } from '@/components/profile/ProfileHeroCard';
 
 const CATEGORIES = [
   { value: 'food', label: 'Alimentos' },
