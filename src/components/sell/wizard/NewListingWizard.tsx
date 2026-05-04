@@ -16,6 +16,7 @@ import FinancialDocUpload from './FinancialDocUpload';
 import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { stepValidationSchemas, initialFormData } from './listingSchema';
 import { getMariPrefill, clearMariPrefill, cnaeToCategory } from '@/lib/mariPrefill';
+import { logMariListing } from '@/lib/mariLeadTracking';
 
 const steps = [
   { id: 1, title: 'Empresa', icon: <Building2 className="w-4 h-4" /> },
@@ -222,7 +223,14 @@ const NewListingWizard = () => {
           asking_price: parseCurrencyToNumber(formData.askingPrice),
           hide_price: formData.hidePrice,
           description: formData.description,
-          additional_info: formData.additionalInfo || null,
+          additional_info: (() => {
+            const baseInfo = formData.additionalInfo || '';
+            if (initialPrefill) {
+              const tag = `Origem: Calculadora Mari${initialPrefill.windowBase != null ? ` (janela ${initialPrefill.windowBase}%)` : ''}`;
+              return baseInfo ? `${tag}\n\n${baseInfo}` : tag;
+            }
+            return baseInfo || null;
+          })(),
           cep: formData.cep,
           street: formData.street || null,
           neighborhood: formData.neighborhood || null,
@@ -277,6 +285,9 @@ const NewListingWizard = () => {
 
       setShowPlanModal(false);
       toast.success('Anúncio criado com sucesso!');
+      if (initialPrefill && data?.id) {
+        await logMariListing(initialPrefill, data.id, user.id);
+      }
       clearMariPrefill();
 
       // Navigate to Blind Teaser page

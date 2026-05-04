@@ -9,6 +9,7 @@ import { openWhatsAppForContact } from "@/lib/whatsappBridge";
 import { toast } from "sonner";
 import { useDealDrawer } from "@/contexts/DealDrawerContext";
 import { MariInsightsSection } from "@/components/equity-brain/MariInsightsSection";
+import { MariLeadCard } from "@/components/equity-brain/today/MariLeadCard";
 
 function fmtBRL(v: number | null) {
   if (v == null) return "—";
@@ -214,6 +215,11 @@ export default function TodayPage() {
 
         {/* Insights proativos da Mari */}
         <MariInsightsSection />
+
+        {/* Leads da Calculadora pública */}
+        <div className="mt-4">
+          <MariLeadCard />
+        </div>
 
         {/* Conteúdo */}
         {isLoading && (

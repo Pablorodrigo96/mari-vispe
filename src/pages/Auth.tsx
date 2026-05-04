@@ -12,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
+import { getMariPrefill } from '@/lib/mariPrefill';
+import { logMariLead } from '@/lib/mariLeadTracking';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
@@ -231,9 +233,16 @@ export default function Auth() {
         toast.success('Conta criada com sucesso!');
       }
       // Determine destination: explicit redirect wins, else mari prefill → /vender, else role home
-      const hasMariPrefill = (() => {
-        try { return !!sessionStorage.getItem('mari_prefill_v1'); } catch { return false; }
-      })();
+      const prefill = getMariPrefill();
+      const hasMariPrefill = !!prefill;
+      if (hasMariPrefill && signupRoles.includes('seller')) {
+        try {
+          const { data: { user: newUser } } = await supabase.auth.getUser();
+          if (newUser) await logMariLead(prefill!, newUser.id);
+        } catch (err) {
+          console.error('logMariLead error', err);
+        }
+      }
       const dest = redirectParam
         ?? (hasMariPrefill && signupRoles.includes('seller') ? '/vender' : (ROLE_HOME[signupRoles[0]] ?? '/painel'));
       navigate(dest);
