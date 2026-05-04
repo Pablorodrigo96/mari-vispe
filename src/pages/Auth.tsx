@@ -14,6 +14,8 @@ import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import { getMariPrefill } from '@/lib/mariPrefill';
 import { logMariLead } from '@/lib/mariLeadTracking';
+import { ForgotPasswordDialog } from '@/components/auth/ForgotPasswordDialog';
+import { MfaChallengeDialog } from '@/components/auth/MfaChallengeDialog';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
