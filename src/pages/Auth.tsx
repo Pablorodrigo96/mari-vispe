@@ -133,7 +133,7 @@ export default function Auth() {
       }
     } else {
       toast.success('Login realizado com sucesso!');
-      navigate(redirectTo);
+      // useEffect handles role-based redirect once user state updates
     }
   };
 
@@ -230,7 +230,9 @@ export default function Auth() {
       } else {
         toast.success('Conta criada com sucesso!');
       }
-      navigate(redirectTo);
+      // Determine destination: explicit redirect wins, else first selected role's home
+      const dest = redirectParam ?? ROLE_HOME[signupRoles[0]] ?? '/painel';
+      navigate(dest);
     }
   };
 
