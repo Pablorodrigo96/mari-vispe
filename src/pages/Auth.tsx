@@ -485,6 +485,17 @@ export default function Auth() {
           </Link>
         </div>
       </div>
+
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} defaultEmail={loginEmail} />
+      <MfaChallengeDialog
+        open={mfaState.open}
+        onOpenChange={(v) => setMfaState((s) => ({ ...s, open: v }))}
+        factorId={mfaState.factorId}
+        onVerified={() => {
+          setMfaState({ open: false, factorId: '' });
+          // useEffect will re-evaluate AAL and redirect
+        }}
+      />
     </div>
   );
 }
