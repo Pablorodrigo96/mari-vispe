@@ -98,14 +98,22 @@ const BlindTeaser = () => {
       if (!ticker) return;
 
       try {
-        // Try public_listings view first
+        // Try public_listings view first (only active listings)
         let { data, error } = await supabase
           .from('public_listings')
           .select('*')
           .eq('ticker', ticker)
           .maybeSingle();
 
-        // No fallback needed — public_listings view is the safe public access path
+        // Fallback: pending_payment / outros — RLS deixa apenas o dono (ou admin) ver
+        if (!data && !error) {
+          const { data: ownerData } = await supabase
+            .from('listings')
+            .select('id, title, category, description, city, state, neighborhood, asking_price, annual_revenue, annual_profit, equity_score, foundation_year, images, plan, status, ticker, hide_price, sale_reason, additional_info, square_meters, rent_value, iptu_value, created_at, updated_at')
+            .eq('ticker', ticker)
+            .maybeSingle();
+          if (ownerData) data = ownerData as any;
+        }
 
         if (error) throw error;
         if (!data) {
@@ -173,8 +181,16 @@ const BlindTeaser = () => {
     );
   }
 
+  const isPending = (listing as any).status === 'pending_payment';
+
   return (
     <div className="min-h-screen bg-gray-950">
+      {isPending && (
+        <div className="bg-amber-500/10 border-b border-amber-500/40 text-amber-100 px-4 py-3 text-center text-sm">
+          🔒 Este teaser está com <strong>pagamento pendente</strong> — só você consegue visualizar. Conclua o pagamento do plano Master para publicar.{' '}
+          <a href="/meus-anuncios" className="underline font-semibold ml-1">Ir para Meus Anúncios →</a>
+        </div>
+      )}
       <TeaserHero ticker={listing.ticker} totalViews={totalViews} uniqueViews={uniqueViews} />
       <TeaserIntro
         description={listing.description}

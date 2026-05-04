@@ -292,9 +292,9 @@ const NewListingWizard = () => {
 
       // Navigate to Blind Teaser page
       navigate(`/teaser/${ticker}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating listing:', error);
-      toast.error('Erro ao criar anúncio. Tente novamente.');
+      toast.error('Erro ao criar anúncio: ' + (error?.message || 'tente novamente'));
     } finally {
       setIsSubmitting(false);
     }
