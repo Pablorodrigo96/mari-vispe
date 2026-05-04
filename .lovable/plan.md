@@ -1,50 +1,66 @@
-## Bug: Blind Teaser não aparece após criar anúncio
+## O que será feito
 
-### Diagnóstico
+Duas melhorias de segurança na autenticação:
 
-Após `NewListingWizard.handleSelectPlan` criar a listing e navegar para `/teaser/{ticker}`, a página `BlindTeaser.tsx` consulta a view `public_listings` que **filtra apenas `status = 'active'`**:
+1. **Recuperação de senha** no fluxo de login
+2. **Autenticação de 2 fatores (2FA)** opcional via app autenticador (Google Authenticator, Authy, 1Password etc.) no perfil do usuário
 
-```sql
-SELECT ... FROM listings WHERE status = 'active'
-```
+---
 
-Mas no fluxo atual:
-- Plano **Basic** → `status = 'active'` ✅ aparece
-- Plano **Master** → `status = 'pending_payment'` ❌ teaser fica "não encontrado" / em loading
+### 1. Esqueci minha senha (em `/auth`)
 
-Confirmado pelo último teste do usuário (linha do banco): `ticker INDU01, plan master, status pending_payment` — não aparece em `public_listings`.
+- Adicionar link **"Esqueci minha senha"** abaixo do campo de senha na aba "Entrar" de `src/pages/Auth.tsx`.
+- Abrir um diálogo simples (Dialog do shadcn) pedindo o e-mail e disparar:
+  ```ts
+  supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`
+  })
+  ```
+- Toast de confirmação ("Enviamos um link para seu e-mail").
+- Criar nova página pública **`/reset-password`** (`src/pages/ResetPassword.tsx`) que:
+  - Detecta o token de recuperação na URL (Supabase já cria sessão tipo `recovery`).
+  - Mostra formulário de "Nova senha" + "Confirmar senha".
+  - Chama `supabase.auth.updateUser({ password })` e redireciona para `/painel`.
+- Registrar a rota em `src/App.tsx` como rota pública (fora do AppShell).
 
-O "erro" no primeiro teste provavelmente foi a mesma causa OU `pendingFinancialFile` nulo OK; o segundo teste é o Basic que renderizou parcialmente. De qualquer forma, a correção principal é o teaser conseguir carregar a listing recém-criada do dono mesmo quando ainda não está `active`.
+### 2. Autenticação de 2 fatores (TOTP)
 
-### Correções
+- Habilitar TOTP MFA no projeto (já vem ativo por padrão no Supabase Auth — não precisa migration).
+- Criar componente **`TwoFactorSection`** dentro de `src/pages/MyProfile.tsx` (nova seção "Segurança"):
+  - **Estado desativado**: botão "Ativar autenticação em 2 fatores" → chama `supabase.auth.mfa.enroll({ factorType: 'totp' })`, mostra QR code (`data.totp.qr_code`) + chave manual, pede código de 6 dígitos, finaliza com `supabase.auth.mfa.challenge` + `verify`. Toast de sucesso.
+  - **Estado ativado**: mostra "2FA ativo" com badge verde + botão "Desativar" (chama `supabase.auth.mfa.unenroll`).
+  - Listagem dos fatores via `supabase.auth.mfa.listFactors()`.
+- Atualizar **fluxo de login** em `Auth.tsx`:
+  - Após `signIn` bem-sucedido, chamar `supabase.auth.mfa.getAuthenticatorAssuranceLevel()`.
+  - Se `currentLevel === 'aal1'` e `nextLevel === 'aal2'`, exibir tela de "Digite o código do seu app autenticador" (modal/step) em vez de redirecionar.
+  - Validar com `supabase.auth.mfa.challengeAndVerify({ factorId, code })`.
+  - Só após sucesso → redirect normal (`/painel`).
+- Logout/sessão: nada a mudar — Supabase persiste o AAL2.
 
-**1. `src/pages/BlindTeaser.tsx` — fallback para o owner**
+### 3. Memória
 
-Quando `public_listings` retorna vazio, fazer um segundo SELECT direto em `listings` filtrando pelo ticker. RLS já garante que apenas o dono (ou advisor/admin) consegue ler quando `status != 'active'`. Para o público externo, segue retornando "não encontrado", o que está correto (anúncio Master sem pagamento ainda não deve ser público).
+Atualizar `mem://index.md` com referência:
+- `[Auth Security: Reset & 2FA](mem://features/auth-security)` — Reset password via `/reset-password` + TOTP MFA opcional gerenciado em `MyProfile`, com gate de AAL2 no login.
 
-```ts
-let { data, error } = await supabase.from('public_listings')
-  .select('*').eq('ticker', ticker).maybeSingle();
+---
 
-if (!data && !error) {
-  const { data: ownerData } = await supabase.from('listings')
-    .select('id,title,category,description,city,state,neighborhood,asking_price,annual_revenue,annual_profit,equity_score,foundation_year,images,plan,status,ticker,hide_price,sale_reason,additional_info,square_meters,rent_value,iptu_value,created_at,updated_at')
-    .eq('ticker', ticker).maybeSingle();
-  if (ownerData) data = ownerData as any;
-}
-```
+## Arquivos afetados
 
-**2. Banner de status pendente**
+**Criados:**
+- `src/pages/ResetPassword.tsx`
+- `src/components/auth/ForgotPasswordDialog.tsx`
+- `src/components/auth/MfaChallengeDialog.tsx`
+- `src/components/profile/TwoFactorSection.tsx`
+- `mem://features/auth-security`
 
-Quando `listing.status === 'pending_payment'`, mostrar um banner amarelo no topo do teaser:
-> "🔒 Este teaser ainda está em pagamento pendente — só você consegue visualizar. Conclua o pagamento do plano Master para publicar."
+**Editados:**
+- `src/pages/Auth.tsx` — link "Esqueci senha" + gate MFA pós-login
+- `src/App.tsx` — rota pública `/reset-password`
+- `src/pages/MyProfile.tsx` — adicionar `<TwoFactorSection />`
+- `mem://index.md`
 
-Com botão "Concluir pagamento" → `/meus-anuncios` (ou a rota de checkout existente).
+## Notas técnicas
 
-**3. `NewListingWizard.tsx` — log do erro real**
-
-No `catch (error)` do `handleSelectPlan`, em vez do toast genérico, logar `error.message` e mostrar no toast: `toast.error('Erro: ' + (error.message || 'tente novamente'))`. Ajuda o usuário a entender o que aconteceu no primeiro teste.
-
-### Arquivos editados
-- `src/pages/BlindTeaser.tsx` (fallback owner + banner pending_payment)
-- `src/components/sell/wizard/NewListingWizard.tsx` (mensagem de erro detalhada)
+- TOTP MFA já vem habilitado por padrão no Supabase Auth — não requer migration nem mudança em `config.toml`.
+- Não usaremos SMS MFA (custo + setup adicional).
+- O reset de senha usa o template padrão de e-mail do Lovable Cloud (já funciona out-of-the-box).

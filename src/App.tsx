@@ -25,6 +25,7 @@ import ValuationCertifier from "./pages/ValuationCertifier";
 import Investors from "./pages/Investors";
 import Capital from "./pages/Capital";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Terms from "./pages/Terms";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import MapView from "./pages/MapView";
@@ -139,6 +140,7 @@ const App = () => (
 
             {/* Pure public-only routes — no shell wrapping */}
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/aguardando-aprovacao" element={<AwaitingApproval />} />
