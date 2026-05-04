@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { MariWatermark } from '@/components/brand/MariLogo';
 import { CockpitWeekStrip } from '@/components/cockpit/CockpitWeekStrip';
+import { MariOriginBadge } from '@/components/painel/MariOriginBadge';
 
 interface ModuleBox {
   title: string;
