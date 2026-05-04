@@ -623,7 +623,7 @@ export default function MyListings() {
                                       variant="outline"
                                       size="sm"
                                       className="text-amber-500 border-amber-500/50 hover:bg-amber-500/10"
-                                      onClick={() => navigate('/vender')}
+                                      onClick={(e) => { e.stopPropagation(); navigate('/vender'); }}
                                     >
                                       <Crown className="w-3.5 h-3.5 mr-1" />
                                       Upgrade Master
