@@ -19,6 +19,7 @@ import { useUserRoles } from '@/hooks/useUserRoles';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProfileHeroCard } from '@/components/profile/ProfileHeroCard';
 import { ProfileQuests } from '@/components/profile/ProfileQuests';
+import { TwoFactorSection } from '@/components/profile/TwoFactorSection';
 
 const CATEGORIES = [
   { value: 'food', label: 'Alimentos' },
