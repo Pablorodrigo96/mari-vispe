@@ -45,6 +45,9 @@ const profileSchema = z.object({
   state: z.string().optional().or(z.literal('')),
   city: z.string().max(100).optional().or(z.literal('')),
   neighborhood: z.string().max(100).optional().or(z.literal('')),
+  bio: z.string().max(280).optional().or(z.literal('')),
+  website_url: z.string().max(200).optional().or(z.literal('')),
+  interests: z.array(z.string()).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
