@@ -28,15 +28,15 @@ const formatPhone = (value: string) => {
 };
 
 const roleOptions: { id: UserRole; label: string; description: string }[] = [
-  { id: 'seller', label: 'Vendedor', description: 'Quero cadastrar minha empresa' },
+  { id: 'seller', label: 'Empreendedor', description: 'Quero avaliar, captar investimento ou vender minha empresa' },
   { id: 'buyer', label: 'Comprador/Investidor', description: 'Quero comprar ou investir' },
   { id: 'advisor', label: 'Assessor/Representante', description: 'Represento empresas' },
   { id: 'franchisee', label: 'Franqueado', description: 'Sou franqueado da rede' },
 ];
 
 const ROLE_HOME: Record<UserRole, string> = {
-  seller: '/meus-anuncios',
-  buyer: '/comprar',
+  seller: '/painel',
+  buyer: '/painel',
   advisor: '/equity-brain/hoje',
   franchisee: '/painel',
 };
@@ -49,9 +49,6 @@ async function resolveRoleHome(userId: string, fallback = '/painel'): Promise<st
       .eq('user_id', userId);
     const roles = (data?.map((r) => r.role) || []) as string[];
     if (roles.includes('admin') || roles.includes('advisor')) return '/equity-brain/hoje';
-    if (roles.includes('seller')) return ROLE_HOME.seller;
-    if (roles.includes('buyer')) return ROLE_HOME.buyer;
-    if (roles.includes('franchisee')) return ROLE_HOME.franchisee;
   } catch (_) { /* noop */ }
   return fallback;
 }

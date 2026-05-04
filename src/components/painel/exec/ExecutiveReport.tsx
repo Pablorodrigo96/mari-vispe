@@ -21,19 +21,60 @@ const ICONS: Record<string, any> = { Cog, ClipboardCheck, Target, TrendingUp };
 export function ExecutiveReport({ snapshot, firstName }: { snapshot: ValuationSnapshot | null; firstName: string }) {
   if (!snapshot) {
     return (
-      <Card className="mb-6 border-accent/30 bg-gradient-to-br from-accent/5 to-transparent">
-        <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
-          <div className="h-14 w-14 rounded-xl bg-accent/15 text-accent flex items-center justify-center shrink-0">
-            <Calculator className="h-7 w-7" />
-          </div>
-          <div className="flex-1 min-w-0 break-words">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1">Comece pelo seu valuation</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Para mostrar quanto você pode ganhar nos próximos anos, a Mari precisa primeiro saber quanto sua empresa vale hoje. Calcule em 60 segundos.
+      <Card className="mb-6 relative overflow-hidden border-2 border-accent/40 bg-gradient-to-br from-accent/15 via-accent/5 to-transparent shadow-2xl">
+        {/* radial glow */}
+        <div
+          className="pointer-events-none absolute -top-32 -right-32 h-[420px] w-[420px] rounded-full opacity-30 blur-3xl"
+          style={{ background: 'radial-gradient(circle, hsl(var(--accent)) 0%, transparent 70%)' }}
+        />
+        {/* deco icon */}
+        <Calculator className="pointer-events-none absolute right-6 bottom-6 h-40 w-40 text-accent/10 hidden md:block" strokeWidth={1} />
+
+        <CardContent className="relative p-8 md:p-12">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/20 border border-accent/40 mb-5">
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+              <span className="text-[11px] uppercase tracking-[0.2em] font-bold text-accent">Comece por aqui · Passo 1</span>
+            </div>
+
+            <h2 className="text-3xl md:text-5xl font-bold text-foreground tracking-tight mb-4 leading-[1.1]">
+              Quanto vale sua empresa <span className="text-accent">hoje?</span>
+            </h2>
+
+            <p className="text-base md:text-lg text-muted-foreground mb-7 leading-relaxed">
+              Para mostrar quanto você pode ganhar nos próximos anos, a Mari precisa primeiro saber quanto sua empresa vale hoje.{' '}
+              <span className="font-semibold text-foreground">Calcule em <span className="text-accent">60 segundos</span>.</span>
             </p>
-            <Button asChild>
-              <Link to="/valuation/multiplos">Calcular meu valuation <ArrowRight className="h-4 w-4 ml-1.5" /></Link>
-            </Button>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+              {[
+                { icon: Sparkles, label: 'Grátis · 60 segundos' },
+                { icon: ShieldCheck, label: 'Dados reais do mercado BR' },
+                { icon: Target, label: 'Mostra seu potencial em 5 anos' },
+              ].map((b) => (
+                <div key={b.label} className="flex items-center gap-2 text-xs text-foreground/80">
+                  <div className="h-7 w-7 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
+                    <b.icon className="h-3.5 w-3.5 text-accent" />
+                  </div>
+                  <span className="font-medium">{b.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <Button
+                asChild
+                size="lg"
+                className="text-base px-8 py-6 h-auto bg-accent hover:bg-accent/90 text-accent-foreground font-bold shadow-lg shadow-accent/30 hover:shadow-accent/50 hover:scale-[1.02] transition-all"
+              >
+                <Link to="/valuation/multiplos">
+                  <Calculator className="h-5 w-5 mr-2" />
+                  Calcular meu valuation agora
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Link>
+              </Button>
+              <p className="text-xs text-muted-foreground sm:ml-2">Sem cartão · Sem cobrança</p>
+            </div>
           </div>
         </CardContent>
       </Card>
