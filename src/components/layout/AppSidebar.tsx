@@ -50,7 +50,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
       id: 'buy', name: 'Comprar', icon: UserSearch,
       children: [
         { name: 'Cadastrar comprador', href: '/cadastrar-comprador', icon: UserSearch },
-        { name: 'Matching automático', href: '/matching', icon: Target },
+        { name: 'Compradores compatíveis', href: '/matching', icon: Target },
         { name: 'Resultados', href: '/matching/resultados', icon: ChartBar },
       ],
     },

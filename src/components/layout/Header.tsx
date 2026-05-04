@@ -28,7 +28,7 @@ const navigation = [
   { name: 'Valuation', href: '/valuation' },
   { name: 'Investidores', href: '/investors' },
   { name: 'Captação', href: '/capital' },
-  { name: 'Matching', href: '/matching' },
+  { name: 'Compradores', href: '/matching' },
 ];
 
 function useScrollPosition() {
