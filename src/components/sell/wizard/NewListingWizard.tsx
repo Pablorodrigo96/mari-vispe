@@ -16,6 +16,7 @@ import FinancialDocUpload from './FinancialDocUpload';
 import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 import { stepValidationSchemas, initialFormData } from './listingSchema';
 import { getMariPrefill, clearMariPrefill, cnaeToCategory } from '@/lib/mariPrefill';
+import { logMariListing } from '@/lib/mariLeadTracking';
 
 const steps = [
   { id: 1, title: 'Empresa', icon: <Building2 className="w-4 h-4" /> },
