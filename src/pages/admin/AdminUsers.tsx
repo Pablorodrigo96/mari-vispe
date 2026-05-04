@@ -274,7 +274,6 @@ export default function AdminUsers() {
       setDeleting(false);
     }
   }
-  }
 
   async function handleTogglePartnerAccountant(userId: string, currentValue: boolean) {
     try {
