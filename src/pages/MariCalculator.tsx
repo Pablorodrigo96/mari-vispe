@@ -63,7 +63,7 @@ export default function MariCalculator() {
   };
 
   useEffect(() => {
-    document.title = "Calculadora Mari · Quanto tempo até sua empresa ser vendida?";
+    document.title = "Calculadora Mari · Quanto sua empresa pode valer nos próximos 24 meses?";
   }, []);
 
   return (
@@ -80,7 +80,7 @@ export default function MariCalculator() {
               Quanto tempo até sua empresa ser vendida?
             </h1>
             <p className="text-base md:text-lg text-muted-foreground break-words">
-              Digite o CNPJ. A Mari estima a <strong className="text-foreground">janela de venda em 12 meses</strong>,
+              Digite o CNPJ. A Mari estima a <strong className="text-foreground">janela de venda nos próximos 24 meses</strong>,
               com faixa otimista/pessimista e as razões por trás do número.
             </p>
           </div>
