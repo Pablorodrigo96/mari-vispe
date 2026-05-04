@@ -175,19 +175,30 @@ export const DCFWizard = ({ onBack }: DCFWizardProps) => {
 
       const result = calculateDCF(inputs);
       
-      // Salvar no histórico (bloqueado)
-      await supabase.from('valuation_history').insert([{
-        user_id: user.id,
-        valuation_type: 'dcf',
-        company_type: formData.companyType,
-        segment: formData.segment,
-        inputs: inputs as unknown as Json,
-        result: result as unknown as Json,
-        status: 'completed',
-        locked_at: new Date().toISOString(),
-      }]);
+      // Salvar no histórico ANTES de consumir crédito
+      const { data: insertedValuation, error: insertError } = await supabase
+        .from('valuation_history')
+        .insert([{
+          user_id: user.id,
+          valuation_type: 'dcf',
+          company_type: formData.companyType,
+          segment: formData.segment,
+          inputs: inputs as unknown as Json,
+          result: result as unknown as Json,
+          status: 'completed',
+          locked_at: new Date().toISOString(),
+        }])
+        .select('id')
+        .single();
 
-      // Consumir crédito
+      if (insertError || !insertedValuation) {
+        console.error('Falha ao salvar DCF', insertError);
+        toast.error('Não conseguimos salvar seu valuation. Seu crédito foi preservado, tente novamente.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Consumir crédito SOMENTE após persistir
       await consumeDCFAccess();
 
       setDcfResult(result);
