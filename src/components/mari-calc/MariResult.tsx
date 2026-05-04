@@ -1,14 +1,17 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Building2, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { WindowResult } from "@/lib/mariWindowHeuristic";
+import { setMariPrefill } from "@/lib/mariPrefill";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface MariResultData {
   cnpj: string;
   razaoSocial: string | null;
   uf: string | null;
+  cidade?: string | null;
   cnae: string | null;
   porte: string | null;
   window: WindowResult;
