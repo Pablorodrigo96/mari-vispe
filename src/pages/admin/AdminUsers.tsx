@@ -73,6 +73,7 @@ interface FranchiseeRequest {
 
 export default function AdminUsers() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [franchiseeRequests, setFranchiseeRequests] = useState<FranchiseeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,12 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [newRole, setNewRole] = useState<AppRole | ''>('');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ full_name: '', phone: '', company_name: '', city: '', state: '' });
+  const [editSaving, setEditSaving] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const advisorIds = useMemo(
     () => users.filter(u => u.roles.includes('advisor') || u.roles.includes('admin')).map(u => u.user_id),
