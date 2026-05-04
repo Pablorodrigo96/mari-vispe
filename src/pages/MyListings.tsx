@@ -434,15 +434,19 @@ export default function MyListings() {
 
                           {/* Actions Dropdown */}
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                               <Button variant="ghost" size="icon" className="flex-shrink-0">
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem onClick={() => navigate(`/meus-anuncios/${listing.id}`)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Cockpit do anúncio
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => navigate(`/anuncio/${listing.id}`)}>
                                 <Eye className="w-4 h-4 mr-2" />
-                                Visualizar
+                                Ver página pública
                               </DropdownMenuItem>
                               {listing.ticker && (
                                 <>
