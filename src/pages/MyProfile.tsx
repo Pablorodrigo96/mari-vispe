@@ -190,12 +190,19 @@ const MyProfile = () => {
           state: data.state || null,
           city: data.city || null,
           neighborhood: data.neighborhood || null,
+          bio: data.bio || null,
+          website_url: data.website_url || null,
+          interests: data.interests || [],
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' });
+        } as any, { onConflict: 'user_id' });
 
       if (error) throw error;
 
       toast.success('Perfil atualizado com sucesso!');
+      try {
+        const { data: pct } = await supabase.rpc('profile_completion' as any, { _user_id: user.id });
+        if (typeof pct === 'number') setCompletion(pct);
+      } catch {}
     } catch (error) {
       console.error('Error saving profile:', error);
       toast.error('Erro ao salvar perfil');
