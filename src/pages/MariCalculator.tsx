@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Helmet } from "react-helmet-async";
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { CnpjInput } from "@/components/mari-calc/CnpjInput";
 import { MariResult, MariResultData } from "@/components/mari-calc/MariResult";
@@ -62,16 +61,12 @@ export default function MariCalculator() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    document.title = "Calculadora Mari · Quanto tempo até sua empresa ser vendida?";
+  }, []);
+
   return (
     <>
-      <Helmet>
-        <title>Calculadora Mari · Quanto tempo até sua empresa ser vendida?</title>
-        <meta
-          name="description"
-          content="Estime a janela de venda da sua empresa em 12 meses. Digite o CNPJ e veja probabilidade, faixa e razões — pelo motor da Mari."
-        />
-        <link rel="canonical" href="https://mari.vispe.com.br/mari" />
-      </Helmet>
 
       <main className="min-h-[100dvh] bg-background">
         <section className="px-4 py-12 md:py-20">
