@@ -97,6 +97,8 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 
 export default function MyListings() {
   const { user, loading: authLoading } = useAuth();
+  const { isAdmin, isAdvisor, isFranchisee } = useUserRoles();
+  const canPartnerOps = isAdmin || isAdvisor || isFranchisee;
   const navigate = useNavigate();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
