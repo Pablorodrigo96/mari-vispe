@@ -310,10 +310,7 @@ function SummaryStat({ label, value, accent }: { label: string; value: string; a
 function AnonBuyersCard({ firstName }: { firstName: string }) {
   const count = useMemo(() => Math.floor(Math.random() * 12) + 3, []);
   const [open, setOpen] = useState(false);
-  const waLink = getWhatsAppLink(
-    5551992338258,
-    `Olá! Sou ${firstName} e quero conversar com um advisor sobre a venda da minha empresa.`,
-  );
+  const waLink = getWhatsAppLink(`Olá! Sou ${firstName} e quero conversar com um advisor sobre a venda da minha empresa.`);
   return (
     <>
       <Card className="border-accent/40 bg-gradient-to-br from-accent/10 via-card to-card overflow-hidden relative">
