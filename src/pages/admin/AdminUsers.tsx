@@ -187,8 +187,8 @@ export default function AdminUsers() {
     } catch (error) {
       console.error('Error removing role:', error);
       toast.error('Erro ao remover role');
+    }
   }
-
 
   function openEdit(user: UserWithRoles) {
     setSelectedUser(user);
