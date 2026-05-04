@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock, MessageSquare } from 'lucide-react';
+import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock, MessageSquare, Pencil, AlertTriangle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useAdvisorWhatsAppStatus } from '@/hooks/useAdvisorWhatsAppStatus';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,6 +73,7 @@ interface FranchiseeRequest {
 
 export default function AdminUsers() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [franchiseeRequests, setFranchiseeRequests] = useState<FranchiseeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +82,12 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [newRole, setNewRole] = useState<AppRole | ''>('');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ full_name: '', phone: '', company_name: '', city: '', state: '' });
+  const [editSaving, setEditSaving] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const advisorIds = useMemo(
     () => users.filter(u => u.roles.includes('advisor') || u.roles.includes('admin')).map(u => u.user_id),
@@ -179,6 +187,91 @@ export default function AdminUsers() {
     } catch (error) {
       console.error('Error removing role:', error);
       toast.error('Erro ao remover role');
+    }
+  }
+
+  function openEdit(user: UserWithRoles) {
+    setSelectedUser(user);
+    setEditForm({
+      full_name: user.full_name ?? '',
+      phone: user.phone ?? '',
+      company_name: '',
+      city: '',
+      state: '',
+    });
+    // load full profile
+    supabase
+      .from('profiles')
+      .select('full_name, phone, company_name, city, state')
+      .eq('user_id', user.user_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setEditForm({
+            full_name: data.full_name ?? '',
+            phone: data.phone ?? '',
+            company_name: (data as any).company_name ?? '',
+            city: data.city ?? '',
+            state: data.state ?? '',
+          });
+        }
+      });
+    setIsEditOpen(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!selectedUser) return;
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editForm.full_name || null,
+          phone: editForm.phone || null,
+          company_name: editForm.company_name || null,
+          city: editForm.city || null,
+          state: editForm.state || null,
+        } as any)
+        .eq('user_id', selectedUser.user_id);
+      if (error) throw error;
+      toast.success('Usuário atualizado');
+      setIsEditOpen(false);
+      fetchUsers();
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erro ao salvar: ' + (e.message ?? 'desconhecido'));
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  function openDelete(user: UserWithRoles) {
+    setSelectedUser(user);
+    setDeleteConfirm('');
+    setIsDeleteOpen(true);
+  }
+
+  async function handleDeleteUser() {
+    if (!selectedUser) return;
+    if (selectedUser.user_id === currentUser?.id) {
+      toast.error('Você não pode excluir a si mesmo');
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_id: selectedUser.user_id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success('Usuário excluído');
+      setIsDeleteOpen(false);
+      fetchUsers();
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erro ao excluir: ' + (e.message ?? 'desconhecido'));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -525,6 +618,10 @@ export default function AdminUsers() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => openEdit(user)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Editar dados
+                              </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => {
                                   setSelectedUser(user);
@@ -559,6 +656,18 @@ export default function AdminUsers() {
                                   Remover {roleConfig[role].label}
                                 </DropdownMenuItem>
                               ))}
+                              {user.user_id !== currentUser?.id && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => openDelete(user)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Excluir usuário
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -606,6 +715,80 @@ export default function AdminUsers() {
                   disabled={!newRole}
                 >
                   Adicionar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar usuário</DialogTitle>
+              <DialogDescription>Atualize os dados de {selectedUser?.full_name || 'usuário'}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Nome completo</label>
+                <Input value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Telefone</label>
+                <Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Empresa</label>
+                <Input value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Cidade</label>
+                  <Input value={editForm.city} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">UF</label>
+                  <Input maxLength={2} value={editForm.state} onChange={(e) => setEditForm({ ...editForm, state: e.target.value.toUpperCase() })} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
+                <Button onClick={handleSaveEdit} disabled={editSaving}>
+                  {editSaving ? 'Salvando…' : 'Salvar'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete User Dialog */}
+        <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" /> Excluir usuário
+              </DialogTitle>
+              <DialogDescription>
+                Esta ação é <strong>irreversível</strong>. Vamos remover permanentemente o login,
+                perfil, anúncios, valuations, notificações e demais dados de{' '}
+                <strong>{selectedUser?.full_name || selectedUser?.user_id}</strong>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground">
+                  Para confirmar, digite <strong>EXCLUIR</strong> abaixo:
+                </label>
+                <Input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder="EXCLUIR" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancelar</Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteUser}
+                  disabled={deleteConfirm !== 'EXCLUIR' || deleting}
+                >
+                  {deleting ? 'Excluindo…' : 'Excluir definitivamente'}
                 </Button>
               </div>
             </div>
