@@ -149,6 +149,11 @@ export default function Painel() {
         <p className="text-sm text-muted-foreground">Bem-vindo de volta à plataforma. Acesse os módulos abaixo para começar.</p>
       </div>
 
+      {/* Mari origin badge (se veio da calculadora pública) */}
+      <div className="mb-4">
+        <MariOriginBadge />
+      </div>
+
       {/* Cockpit "Sua semana na Mari" — 5 AI cards */}
       <CockpitWeekStrip />
 
