@@ -225,8 +225,13 @@ export default function Auth() {
           console.error('logMariLead error', err);
         }
       }
+      const firstAutoRole = autoRoles[0];
       const dest = redirectParam
-        ?? (hasMariPrefill && signupRoles.includes('seller') ? '/vender' : (ROLE_HOME[signupRoles[0]] ?? '/painel'));
+        ?? (hasMariPrefill && signupRoles.includes('seller')
+              ? '/vender'
+              : firstAutoRole
+                  ? ROLE_HOME[firstAutoRole]
+                  : (needsApproval ? '/aguardando-aprovacao' : '/painel'));
       navigate(dest);
     }
   };
