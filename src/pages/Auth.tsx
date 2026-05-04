@@ -198,41 +198,23 @@ export default function Auth() {
         toast.error('Erro ao criar conta. Tente novamente.');
       }
     } else {
-      // If franchisee role selected, create franchisee request and notify admins
-      if (signupRoles.includes('franchisee')) {
-        try {
-          const { data: { user: newUser } } = await supabase.auth.getUser();
-          if (newUser) {
-            // Create franchisee request
-            await supabase.from('franchisee_requests' as any).insert({
-              user_id: newUser.id,
-              status: 'pending',
-            });
+      // Roles que dependem de aprovação admin (request criado via trigger handle_new_user)
+      const needsApproval =
+        signupRoles.includes('advisor') || signupRoles.includes('franchisee');
+      const autoRoles = signupRoles.filter((r) => r === 'seller' || r === 'buyer') as UserRole[];
 
-            // Notify admins
-            const { data: admins } = await supabase
-              .from('user_roles')
-              .select('user_id')
-              .eq('role', 'admin');
-
-            if (admins && admins.length > 0) {
-              const notifications = admins.map(admin => ({
-                user_id: admin.user_id,
-                type: 'system',
-                title: 'Novo franqueado pendente de aprovação',
-                content: `${signupFullName} solicitou aprovação como franqueado.`,
-              }));
-              await supabase.from('notifications').insert(notifications as any);
-            }
-          }
-        } catch (err) {
-          console.error('Error creating franchisee request:', err);
-        }
-        toast.success('Conta criada! Sua aprovação como franqueado está em análise.');
+      if (needsApproval) {
+        const labels: string[] = [];
+        if (signupRoles.includes('advisor')) labels.push('Assessor');
+        if (signupRoles.includes('franchisee')) labels.push('Franqueado');
+        toast.success(
+          `Conta criada! Acesso de ${labels.join(' e ')} aguardando aprovação do admin.`
+        );
       } else {
         toast.success('Conta criada com sucesso!');
       }
-      // Determine destination: explicit redirect wins, else mari prefill → /vender, else role home
+
+      // Determine destination
       const prefill = getMariPrefill();
       const hasMariPrefill = !!prefill;
       if (hasMariPrefill && signupRoles.includes('seller')) {
