@@ -1,81 +1,34 @@
-## Objetivo
+## Fixes no Relatório de Valuation
 
-Replicar a experiência da tela de detalhe da captação (`/minhas-captacoes/:id`) para os anúncios do vendedor, criando um "cockpit do anúncio" com pipeline, resumo, score, compradores interessados, próximos passos, checklist de documentos e WhatsApp. Documentos enviados em um lado (anúncio ou captação) aparecem automaticamente no outro.
+### 1. Hero "Mashup Value" — texto invisível no fundo verde
+`src/components/valuation/ValuationReportDialog.tsx` linhas ~459-467: o card grande verde tem `text-emerald-100` em cima de gradient `emerald-500/600` — fica ilegível. Trocar para `text-white` puro (com `drop-shadow` leve) e o subtítulo "Mashup Value (Valor de Mercado Estimado)" / linha "Implícito: Xx Receita | Yy EBITDA" para `text-white/95`. Ajustar também o card "VALOR POTENCIAL" do `ValuationNarrativeReport` (mesmo problema possível).
 
-## Telas e mudanças
+### 2. Reduzir o upside do Valuation pela metade
+`src/lib/diagnosticCalculator.ts`: `VISPE_APPRECIATION_FACTOR` cai de **1.78 → 1.35** (uplift máximo passa de +78% para +35%). Atualizar a copy "Média de **+78% de valorização**" no `ValuationNarrativeReport` para "**+35% de valorização**".
 
-### 1. Nova rota: `/meus-anuncios/:id` (`ListingCockpit.tsx`)
+`src/components/valuation/ValuationReportDialog.tsx`: o `Gap de Equity` simula EBITDA +5pp via `calculateEquityGap`. Reduzir o boost para **+2pp** (uma melhoria mais realista) — diminui automaticamente o gap pela metade.
 
-Layout idêntico ao `CapitalRequestDetail.tsx`, em 3 colunas:
+### 3. Remover frase técnica "Se sua empresa melhorar a margem EBITDA em 5pp..."
+`ValuationReportDialog.tsx` linhas ~749-752 (modal) **e** ~272 (PDF): remover esse parágrafo. Substituir por uma chamada curta:
+> "Empresas atendidas pela mari conseguiram destravar este upside com um trabalho estruturado de governança, fiscal e comercial. **Quer entender o que falta na sua?**"
 
-**Coluna principal (2/3):**
-- Header: voltar · título do anúncio (codename + título) · badge de status (`pending` / `active` / `paused` / `sold`) · botão "Editar anúncio" → `/editar-anuncio/:id`
-- Barra "Progresso geral" (combina docs enviados + status do anúncio + completude do cadastro)
-- Card **Pipeline** (`ListingTimeline`) com 5 etapas: Cadastrado → Em Análise → Publicado → Compradores Interessados → Negociação/Vendido
-- Card **Documentos** (componente compartilhado, ver §3)
-- Card **Fale com um Analista** com botão WhatsApp (mesmo padrão visual do print)
-- Botão **Baixar Relatório PDF** (`window.print()` com header de impressão idêntico)
+### 4. Trocar "Falar com Franqueado Regional" por "Falar com um especialista"
+Linhas ~754-765: botão do bloco Gap de Equity. Texto do botão e mensagem do WhatsApp devem usar "especialista mari" (não franqueado regional).
 
-**Coluna lateral (1/3):**
-- Card **Resumo**: nome, codename, categoria, faturamento anual, ticket pedido, data de criação
-- Card **Equity Score** (reutiliza `CapitalScoreCard` com `equity_score` da listing — fallback "calcule via Valuation")
-- Card **Compradores Interessados (N)**: lista compradores que demonstraram interesse via `partner_opportunity_interests` + matches do `MatchingBuyers` com barra de score (mesmo visual de "Provedores")
-- Card **Próximos Passos** dinâmico por status:
-  - `pending`: "Envie documentos para acelerar publicação", "Complete dados financeiros para gerar Equity Score", "Após análise, publicaremos para nossa rede de compradores"
-  - `active`: "Seu anúncio está visível no marketplace", "Compradores qualificados receberão alertas", "Acompanhe interessados aqui"
-  - etc.
+### 5. Subir "Análise de Impacto Financeiro" e melhorar copy
+Hoje o card vermelho aparece DEPOIS de Methodology + Disclaimer. Mover para **logo abaixo do hero Mashup Value** (antes dos cards Dados da Empresa). Reescrever copy:
 
-### 2. Entrada na lista `MyListings.tsx`
+- Título: **"⚡ Antes de continuar: descubra seu valor real"**
+- Subtítulo: "O Mashup Value acima é apenas o ponto de partida. Em 90 segundos, respondendo 12 perguntas sobre fiscal, governança e operação, você descobre **quanto a sua empresa está valendo de menos hoje** — e o que precisa mudar para destravar o valor potencial."
+- Bullets curtos (3): "📉 Quanto você perde por mês" · "🎯 Itens que mais derrubam seu valor" · "🚀 Plano de ação personalizado"
+- Botão maior, primário, com seta animada: **"Iniciar Diagnóstico de Valor →"**
+- Manter o card visível em destaque (border vermelho/laranja, sombra) — mas agora no topo.
 
-Card de cada anúncio fica clicável → `/meus-anuncios/:id`. Adicionar item "Cockpit" no `DropdownMenu` (acima de "Visualizar"). "Visualizar" continua indo para `/anuncio/:id` (visão pública).
+### 6. Memória
+Atualizar `mem://features/valuation-diagnostic-degradation` com novo fator (1.35) e nova ordem do relatório (Diagnóstico em destaque no topo).
 
-### 3. Componente compartilhado `EntityDocChecklist`
-
-Refatorar `CapitalDocChecklist.tsx` em um `EntityDocChecklist` genérico que aceita `scope: 'capital' | 'listing'` + `entityId`. Mesma UI (obrigatórios + opcionais + barra + dica em verde). Mesma lista de tipos de documento (`contrato_social`, `balancete`, `dre`, `comprovante_faturamento`, `irpj`, `certidao_negativa`, `extratos_bancarios`, `relatorio_vendas`).
-
-`CapitalDocChecklist` vira um wrapper fino em torno de `EntityDocChecklist scope="capital"` para não quebrar callers.
-
-### 4. Sync automático de documentos (Anúncio ↔ Captação)
-
-Critério: documentos pertencem ao **usuário** (não à captação ou anúncio individualmente). Ao enviar em qualquer lado:
-
-1. Arquivo sobe para o bucket `financial-docs` em `${user_id}/shared/${doc_type}_${ts}_${name}` (caminho compartilhado, não mais aninhado por `requestId`/`listingId`).
-2. Edge Function nova `sync-user-doc` (chamada após upload) faz INSERT do mesmo registro em:
-   - `capital_documents` para **todas** as `capital_requests` ativas do usuário (`status != 'closed'`)
-   - `listing_financial_docs` para **todos** os `listings` do usuário com `status in ('pending','active')`
-3. Deduplicação: antes de inserir, verifica se já existe row com mesmo `(entity_id, doc_type, file_url)`.
-4. Trigger de score (`update_lead_score_on_doc`) continua funcionando normalmente em cada lado.
-
-Resultado prático: sobe Contrato Social no cockpit do anúncio → aparece automaticamente em todas as captações do usuário com status "Enviado", e vice-versa.
-
-### 5. Migração SQL
-
-- Adicionar coluna `doc_type text` em `listing_financial_docs` (default `'outro'`) para alinhar com `capital_documents`.
-- Adicionar coluna `source_doc_id uuid` em ambas as tabelas (rastreia qual upload original gerou o espelho — útil para deletar em cascata no futuro).
-- Index em `(user_id, doc_type)` em ambas para a lookup do sync.
-- Função `has_user_doc(_user_id uuid, _doc_type text)` retornando boolean (usada pelo cockpit do anúncio para mostrar status sem precisar varrer tabelas).
-
-### 6. Detalhes técnicos
-
-- `ListingTimeline.tsx`: novo componente espelhado em `CapitalTimeline` (5 ícones com check progressivo).
-- WhatsApp button reusa `getWhatsAppLink(5551992338258)` (memória existente).
-- Print CSS replicado (header de impressão "Relatório do Anúncio — mari").
-- Tooltip (i) padronizado em cards seguindo `mem://style/info-hints-pattern`.
-- `RequireRole` não muda — qualquer dono do listing acessa.
-
-## Arquivos
-
-**Novos:**
-- `src/pages/ListingCockpit.tsx`
-- `src/components/listing/ListingTimeline.tsx`
-- `src/components/shared/EntityDocChecklist.tsx`
-- `supabase/functions/sync-user-doc/index.ts`
-- `supabase/migrations/<ts>_listing_doc_sync.sql`
-
-**Editados:**
-- `src/App.tsx` (rota `/meus-anuncios/:id`)
-- `src/pages/MyListings.tsx` (card clicável + item no menu)
-- `src/components/capital/CapitalDocChecklist.tsx` (vira wrapper, chama edge function de sync após insert)
-- `mem://index.md` + nova memória `mem://features/listing-cockpit-and-doc-sync`
-
-Sem alterar `/anuncio/:id` (visão pública) nem o fluxo de captação atual.
+## Arquivos editados
+- `src/lib/diagnosticCalculator.ts` (factor 1.78 → 1.35)
+- `src/components/valuation/ValuationReportDialog.tsx` (hero text color, EBITDA boost +5→+2pp, remover copy técnica, trocar texto botão, mover Análise de Impacto pro topo + copy nova)
+- `src/components/valuation/ValuationNarrativeReport.tsx` (texto +78% → +35% e cor do card potencial)
+- `mem://features/valuation-diagnostic-degradation`

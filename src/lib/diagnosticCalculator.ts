@@ -42,7 +42,8 @@ export const diagnosticItems: DiagnosticItem[] = [
   { key: 'fixedAssetsRegistered', label: 'Existe inventário e controle patrimonial de máquinas, equipamentos e imóveis?', description: 'Ativos não registrados não podem ser considerados no cálculo de valor da empresa.', penalty: 0.03, category: 'operational' },
 ];
 
-export const VISPE_APPRECIATION_FACTOR = 1.78;
+// Reduzido (de 1.78 → 1.35) para representar uplift mais realista após consultoria
+export const VISPE_APPRECIATION_FACTOR = 1.35;
 
 export const categoryLabels: Record<string, string> = {
   fiscal: 'Fiscal / Tributário',
