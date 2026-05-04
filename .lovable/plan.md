@@ -1,49 +1,42 @@
-# Gate de aprovação admin para roles sensíveis (advisor + franchisee)
+## 3 correções pontuais
 
-## Objetivo
-Ninguém vira **advisor** ou **franchisee** só marcando checkbox no signup. Esses roles passam a depender de aprovação explícita de um admin. Vendedor e comprador continuam liberados na hora.
+### 1. Carrossel da home rodando rápido demais
+**Arquivo:** `src/components/home/HeroCarousel.tsx` (linha 56)
+- Hoje: `AUTOPLAY_DELAY = 6500` (6,5s)
+- Mudar para `8000` (8s). A barra de progresso já lê dessa constante, então acompanha automaticamente.
 
-## Comportamento alvo
+### 2. Tela branca ao clicar "Ver Relatório" em valuation antigo
+**Causa raiz:** `ValuationReportDialog` e `DCFReportDialog` chamam `result.calculatedAt.toLocaleDateString(...)`. Quando o valuation acabou de ser calculado, `calculatedAt` é um `Date` (vem do `valuationCalculator.ts`). Mas quando vem do `valuation_history` (JSON do Supabase), `calculatedAt` é uma **string** ISO — então `.toLocaleDateString is not a function` derruba a página inteira (o erro do console confirma).
 
-| Role escolhido no signup | Antes | Depois |
-|---|---|---|
-| seller | entra direto | igual (entra direto) |
-| buyer | entra direto | igual |
-| advisor | entra direto + acesso total ao EB/CRM | **cria request `pending`, NÃO ganha role; vê tela "aguardando aprovação"** |
-| franchisee | entra direto + request cosmético | **cria request `pending`, NÃO ganha role; vê tela "aguardando aprovação"** |
+**Correção:** em `src/components/valuation/ValuationReportDialog.tsx` (linha 53) e `src/components/valuation/DCFReportDialog.tsx` (linha 44), tornar `formatDate` tolerante:
+```ts
+const formatDate = (date: Date | string) => {
+  const d = date instanceof Date ? date : new Date(date);
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+};
+```
+Aplica também onde é passado para o `addText` do PDF (mesmas linhas 83/450 e 74/184 — já cobertas pela mesma função).
 
-## Mudanças
+### 3. "Não conseguimos salvar seu valuation" ao criar novo
+**Causa raiz (confirmada pelo console):**
+```
+type "equity_brain.qualification_status_enum" does not exist
+```
+A migration `20260501151525_...sql` (linha 74) criou o trigger `guard_synthetic_company_unqualified` referenciando o tipo `equity_brain.qualification_status_enum`, mas o tipo real chama-se `equity_brain.qualification_status` (sem o sufixo `_enum`). Esse trigger dispara em `BEFORE INSERT` em `equity_brain.companies`.
 
-### 1. Banco
-- Nova tabela `public.advisor_requests` (espelha `franchisee_requests`): `user_id`, `status` (pending/approved/rejected), `reviewed_by`, `reviewed_at`, `reason`, `created_at`. RLS: usuário vê o próprio; admin vê/edita tudo.
-- Atualizar `handle_new_user` trigger:
-  - `valid_roles` passa a ser apenas `['seller','buyer']` para auto-insert em `user_roles`.
-  - Se metadata.roles inclui `advisor` → cria linha em `advisor_requests` (pending) + notifica admins. **Não** insere em `user_roles`.
-  - Se metadata.roles inclui `franchisee` → cria linha em `franchisee_requests` (pending) + notifica admins. **Não** insere em `user_roles`.
-- Função `approve_advisor_request(request_id)` SECURITY DEFINER, restrita a admin: insere `user_roles(user_id, 'advisor')`, marca request approved, dispara notificação ao usuário.
-- Função análoga `approve_franchisee_request(request_id)` (já existe fluxo parcial — consolidar para também inserir o role só agora).
-- Funções de reject que apenas marcam status + notificam.
+O fluxo é: insert em `valuation_history` → trigger `trg_sync_valuation_to_eb` → `ingest_valuation()` → insert em `equity_brain.companies` com CNPJ sintético `VL…` → trigger guard quebra com tipo inexistente → insert raiz falha → toast de erro.
 
-### 2. Front
-- `Auth.tsx`: ao concluir signup com advisor/franchisee, mensagem de sucesso muda para "Conta criada. Acesso de Assessor/Franqueado aguardando aprovação." e redireciona para `/aguardando-aprovacao` (ou `/painel` se também tiver seller/buyer).
-- Nova página leve `/aguardando-aprovacao` mostrando status do(s) request(s) do usuário e CTA para WhatsApp.
-- Remover, do `Auth.tsx`, o INSERT direto em `franchisee_requests` (vai pra trigger).
-- `useUserRoles` não muda — roles continuam vindos de `user_roles`. Como o role só existe após aprovação, sidebar/rotas (RequireRole, sidebar role-strict) já bloqueiam automaticamente.
+**Correção (alinhada à decisão anterior: valuations NÃO entram no grafo):** nova migration que:
+1. `DROP TRIGGER IF EXISTS trg_sync_valuation_to_eb ON public.valuation_history;` — remove a sincronização automática de valuation → grafo (advisor pode puxar manualmente quando quiser).
+2. Corrige o cast do trigger guard: `…::equity_brain.qualification_status_enum` → `…::equity_brain.qualification_status` (mantém a proteção para outros CNPJs sintéticos `VL%`/`CR%` que já existirem ou venham de outras origens).
+3. Mantemos as funções `ingest_valuation` / `sync_valuation_to_eb` no banco (não destrutivo) para uso manual futuro.
 
-### 3. Painel admin
-- Em `AdminUsers` (ou nova aba `AdminApprovals`): lista de `advisor_requests` + `franchisee_requests` pendentes com botões Aprovar / Rejeitar (chama as funções RPC). Mostra nome, email, telefone, data.
+### Fora de escopo
+- Não mexer na lógica de crédito (já está correta: salva antes de consumir).
+- Não mexer em RLS / roles.
+- Não tocar em `equity_brain.companies` existentes que vieram de valuation antigos (se houver — limpeza pode ser feita depois sob demanda).
 
-### 4. Limpeza retroativa (opcional, te confirmo antes de rodar)
-- Migration de auditoria: lista usuários atuais com role `advisor` ou `franchisee` que **não** têm request approved. Apenas lista — não revoga automaticamente para evitar quebrar contas legítimas. Você decide quem manter.
-
-## Fora de escopo (confirmado por você)
-- Valuations continuam **não** indo para o grafo EB. Sem mudança no fluxo de valuation.
-- Listings continuam entrando no grafo via fluxo atual (sync admin). Sem mudança aqui.
-- Sem mudança em rotas/sidebar — a proteção já existe, só estamos cortando a fonte do role.
-
-## Validação pós-deploy
-- Signup como "Assessor" → conta criada, sem role advisor, redireciona para tela de aguardando, admin recebe notificação.
-- Admin aprova → usuário ganha role advisor, vê EB normalmente.
-- Signup como "Franqueado" → idem fluxo.
-- Signup seller/buyer → continua funcionando igual.
-- Usuário existente já advisor/franchisee continua funcionando (não mexemos em quem já tem o role).
+### Resultado esperado
+- Carrossel troca a cada 8s.
+- "Ver Relatório" abre normalmente para qualquer valuation salvo.
+- Novo valuation salva sem erro e o grafo de empresas fica intocado por valuations.

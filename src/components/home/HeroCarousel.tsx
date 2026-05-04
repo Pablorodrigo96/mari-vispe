@@ -53,7 +53,7 @@ const SLIDES: Slide[] = [
   },
 ];
 
-const AUTOPLAY_DELAY = 6500;
+const AUTOPLAY_DELAY = 8000;
 
 export function HeroCarousel() {
   const autoplay = useRef(
