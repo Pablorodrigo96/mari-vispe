@@ -1,53 +1,79 @@
+## Plano — Refinamento Narrativo da Home com Carrossel
 
-# FASE 4 — Fechar o loop `/mari` → cadastro → primeiro anúncio
+### 1. Novo componente `src/components/home/HeroCarousel.tsx`
+Carrossel auto-rotativo com 5 slides usando o `Carousel` de `src/components/ui/carousel.tsx` (embla) já existente.
 
-## Por quê
-Hoje a Calculadora Pública (Fase 3) gera um lead e joga em `/auth?...&cnpj=XXX`, mas o CNPJ é só hint na URL — some no signup. O usuário chega no Painel "vazio" e tem que digitar tudo de novo no Sell Wizard. Fase 4 conecta os pontos: o CNPJ do `/mari` vira **rascunho de anúncio pré-preenchido** assim que ele cadastra.
+**Comportamento:**
+- Auto-advance a cada 5,5s (plugin `embla-carousel-autoplay` — adicionar dependência se ainda não estiver disponível; fallback: `setInterval` + `api.scrollNext()`).
+- Pause em hover/touch.
+- Loop infinito.
+- Dots clicáveis no rodapé (5 bolinhas, ativa em Volt).
+- Transição fade/slide horizontal padrão do embla.
+- Keyboard accessible (setas).
+- Mobile-first: texto encolhe (`text-3xl md:text-5xl lg:text-6xl`).
 
-## Princípio
-- Sem nova tabela. Usa `sessionStorage` (ou query param) pra carregar o CNPJ + dados do `company-lookup` do `/mari` direto no Sell Wizard.
-- Auth não muda schema. Só lê `?cnpj=` e guarda no `sessionStorage`.
-- Sell Wizard ganha hidratação inicial: se houver `mari_prefill` no storage, prefilla `cnpj`, `companyName` (→ title), `state`, `city` (do CNAE/UF retornado), e abre direto no Step 1 já preenchido.
-- Banner discreto no topo do wizard: "Continuando do cálculo da Mari • [limpar]".
+**Estrutura por slide:**
+- Badge pequena no topo (cor Volt, uppercase, tracking widest).
+- Headline branco bold (`font-display`).
+- Frase-chave destacada com `text-gradient-gold bg-accent text-secondary-foreground border-secondary-foreground font-extrabold` (mantém o padrão visual aprovado).
+- Subtítulo cinza com `whitespace-pre-line` para preservar quebras.
+- CTA `<Button>` Volt, link para `/mari`.
 
-## Fluxo
-```text
-/mari → calcula → CTA "Cadastrar minha empresa"
-   ↓ salva sessionStorage.mari_prefill = { cnpj, razao, uf, cidade, cnae, porte, windowResult }
-/auth?tab=signup&role=seller&redirect=/sell&cnpj=XXX
-   ↓ signup completa
-/sell → SellWizard detecta mari_prefill → hidrata form → mostra banner
-   ↓ usuário só revisa/completa faturamento etc
-publica anúncio
-```
+**Conteúdo dos 5 slides** (badge / headline / frase-chave / subtítulo / CTA):
+1. PARA TODO EMPRESÁRIO · "Você não decide quando vender sua empresa." · "O mercado decide." · "E a maioria dos empresários percebe isso tarde demais…" · `Descobrir meu timing →`
+2. PARA TODO EMPRESÁRIO · "Todo empresário vai vender a empresa um dia." · "Mas poucos sabem quanto ela realmente vale." · "E menos ainda sabem quem poderia comprar você AGORA…" · `Ver quem está olhando →`
+3. PARA TODO EMPRESÁRIO · "Você está perdendo dinheiro." · "E nem sabe." · "Não é por falta de esforço. É por falta de informação…" · `Acessar essa inteligência →`
+4. INTELIGÊNCIA PREDITIVA · "Vender empresa não é sorte." · "É timing, preparação e comprador certo." · "A Mari analisa sua empresa, seu mercado e possíveis compradores…" · `Calcular meu timing →`
+5. A DIFERENÇA MARI · "Eu estou olhando para a sua empresa." · "Antes de você pedir." · "Mari não espera você se cadastrar… 21 milhões de CNPJs…" · `Descobrir agora →`
 
-## Arquivos
+(Textos integrais conforme prompt enviado.)
 
-### Criar
-- `src/lib/mariPrefill.ts` — `setMariPrefill(data)`, `getMariPrefill()`, `clearMariPrefill()` usando `sessionStorage` com TTL 30min.
+### 2. Editar `src/pages/Index.tsx`
 
-### Editar
-- `src/components/mari-calc/MariResult.tsx` — antes de redirecionar pro `/auth`, chamar `setMariPrefill({ cnpj, razao, uf, cidade, cnaeSection, porte, windowResult })`.
-- `src/pages/Auth.tsx` — após signup bem-sucedido com role=seller, se `mari_prefill` existir → forçar redirect para `/sell` (em vez do `ROLE_HOME.seller = /meus-anuncios`).
-- `src/components/sell/wizard/NewListingWizard.tsx` (ou equivalente em `src/pages/Sell.tsx`) — no mount, ler `getMariPrefill()`; se existir, mesclar com `initialFormData` (campos: `cnpj`, `title` ← razão social, `state`, `city`, `category` ← derivado do CNAE) e renderizar um banner pequeno no topo: `"Continuando do cálculo da Mari · Limpar"`.
-- `src/lib/mariWindowHeuristic.ts` (opcional, só se não bater) — exportar mapeamento `cnaeSection → category` pra reuso.
+**Hero section (linhas 72–122):**
+- Substituir o bloco atual de `motion.div` (badge), `motion.h1` e `motion.p` (subtítulo + CTAs antigos) pelo `<HeroCarousel />`.
+- Manter o background gradiente, watermark, ParticlesBackground e wrapper section.
 
-### Não tocar
-- Schema do banco (zero migrations).
-- `/valuation`, Equity Brain, Cockpit (Fase 2).
-- `company-lookup` edge function.
+**Bloco "pós-hero" (logo abaixo do carrossel, antes do SearchBar):**
+Adicionar novo bloco centralizado com:
+- Texto:
+  > Mari analisa sua empresa, seu mercado e os compradores esperando por você.
+  > Em 1 minuto, você descobre:
+  > • Se sua empresa está em janela de venda nos próximos 12 meses
+  > • Quanto ela pode valer
+  > • Quem poderia comprar você
+  > Sem cadastro obrigatório. Sem surpresa. Sem achismo.
+- CTA destacado Volt grande: `→ Analisar minha empresa AGORA` → `/mari`.
 
-## Detalhes técnicos
-- TTL 30min evita prefill velho de sessão antiga.
-- Se usuário já estiver logado quando clicar no CTA da Mari (caso raro), pular `/auth` e ir direto pra `/sell` com o prefill.
-- Limpar `mari_prefill` ao publicar anúncio (sucesso) ou clicar "Limpar" no banner.
-- Mapping CNAE→category usa as 12 categorias do projeto (via memória `business-categories`); fallback pra `'Outros'` se sem match.
+**Stats (linhas 136–141):** novos labels (mesmos números):
+- "Empresas em janela identificadas pela Mari"
+- "Deals fechados via plataforma"
+- "Volume transacionado (compradores + vendedores alinhados)"
+- "Tempo médio entre identificação da janela e oferta"
 
-## Critério de pronto
-- Usuário entra em `/mari`, calcula, clica "Cadastrar minha empresa".
-- Faz signup como seller.
-- É redirecionado para `/sell` (não `/meus-anuncios`).
-- Wizard abre com CNPJ, título sugerido, UF e cidade já preenchidos + banner "Continuando do cálculo da Mari".
-- Botão "Limpar" no banner reseta o prefill.
-- Logado direto no `/mari` → CTA pula `/auth` e vai pra `/sell` prefillado.
-- Zero migrations, zero edge functions novas.
+**Bloco Categorias (linha 159–188):** acima do grid, adicionar pequeno intro:
+- Eyebrow: "ESTÁ PROCURANDO COMPRAR?"
+- Subtexto: "Mari mostra as empresas com maior probabilidade de fechar deal nos próximos 12 meses — ranqueadas por assimetria de valor (não só disponibilidade). Filtre por setor, valor e localização. Mari faz o resto."
+- Mantém H2 atual ("É um investidor e quer encontrar a melhor empresa…") como headline secundária.
+
+### 3. Editar `src/components/layout/Header.tsx`
+- Renomear item de menu "Matching" → "Compradores" (rota mantida).
+- CTA Volt principal: "Anunciar Grátis" → "Analisar empresa grátis ✓" apontando para `/mari` (em vez de `/vender`).
+- Validar versões desktop e mobile.
+
+### 4. Detalhes técnicos
+- Reutilizar tokens existentes: `bg-accent`, `text-accent`, `text-volt`, `glass-card`, `gradient-navy-deep`.
+- Carrossel usa `embla-carousel-react` (já em `carousel.tsx`); para autoplay, importar `embla-carousel-autoplay` — adicionar via `bun add embla-carousel-autoplay` se não estiver instalado.
+- Pause em hover via prop `stopOnInteraction` + `stopOnMouseEnter` do plugin.
+- Acessibilidade: `aria-label` em dots, `role="region"` no carousel.
+- Sem chamadas de IA, sem alterações de schema/DB.
+
+### 5. Fora do escopo
+- Não mexer em `/painel`, `/equity-brain`, `/mari` (calculadora) ou em qualquer rota fora da Home.
+- Não alterar Footer, MariDifferentialCard, Featured Listings ou CTA section final.
+- Não rodar Lighthouse (validação manual pelo usuário após deploy).
+
+### Arquivos a tocar
+- **Novo:** `src/components/home/HeroCarousel.tsx`
+- **Editado:** `src/pages/Index.tsx`, `src/components/layout/Header.tsx`
+- **Possível:** `package.json` (adição de `embla-carousel-autoplay`)
