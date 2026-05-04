@@ -215,6 +215,11 @@ export default function TodayPage() {
         {/* Insights proativos da Mari */}
         <MariInsightsSection />
 
+        {/* Leads da Calculadora pública */}
+        <div className="mt-4">
+          <MariLeadCard />
+        </div>
+
         {/* Conteúdo */}
         {isLoading && (
           <div className="flex items-center gap-3 text-zinc-400 py-12 justify-center">
