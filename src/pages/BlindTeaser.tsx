@@ -181,8 +181,16 @@ const BlindTeaser = () => {
     );
   }
 
+  const isPending = (listing as any).status === 'pending_payment';
+
   return (
     <div className="min-h-screen bg-gray-950">
+      {isPending && (
+        <div className="bg-amber-500/10 border-b border-amber-500/40 text-amber-100 px-4 py-3 text-center text-sm">
+          🔒 Este teaser está com <strong>pagamento pendente</strong> — só você consegue visualizar. Conclua o pagamento do plano Master para publicar.{' '}
+          <a href="/meus-anuncios" className="underline font-semibold ml-1">Ir para Meus Anúncios →</a>
+        </div>
+      )}
       <TeaserHero ticker={listing.ticker} totalViews={totalViews} uniqueViews={uniqueViews} />
       <TeaserIntro
         description={listing.description}
