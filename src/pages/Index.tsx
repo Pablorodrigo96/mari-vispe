@@ -1,5 +1,5 @@
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowRight, Building2 } from 'lucide-react';
+import { ArrowRight, Building2, Clock, Wallet, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -69,64 +69,89 @@ const Index = () => {
 
         <ParticlesBackground variant="dark" />
         
-        <div className="container mx-auto px-4 lg:px-8 relative z-10">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-12 relative z-10">
           <HeroCarousel />
 
-          {/* Pós-hero: pitch direto + CTA principal */}
+          {/* Pós-hero: 3 outputs da Mari em cards */}
           <motion.div
-            className="mt-14 max-w-2xl mx-auto text-center"
+            className="mt-20 lg:mt-24 grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5"
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease, delay: 0.3 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease }}
           >
-            <p className="text-base md:text-lg text-white/80 leading-relaxed mb-4 break-words">
-              Mari analisa sua empresa, seu mercado e os compradores esperando por você.
-            </p>
-            <p className="text-sm md:text-base text-white/60 mb-3">Em 1 minuto, você descobre:</p>
-            <ul className="text-sm md:text-base text-white/75 space-y-1 mb-6 inline-block text-left">
-              <li>• Se sua empresa está em <span className="text-volt font-medium">janela de venda</span> nos próximos 12 meses</li>
-              <li>• <span className="text-volt font-medium">Quanto</span> ela pode valer</li>
-              <li>• <span className="text-volt font-medium">Quem</span> poderia comprar você</li>
-            </ul>
-            <p className="text-xs md:text-sm text-white/40 mb-6">Sem cadastro obrigatório. Sem surpresa. Sem achismo.</p>
+            {[
+              { icon: Clock, label: 'Janela', text: 'Se sua empresa está em janela de venda nos próximos 12 meses.' },
+              { icon: Wallet, label: 'Valor', text: 'Quanto ela pode valer no mercado de M&A hoje.' },
+              { icon: Users, label: 'Comprador', text: 'Quem são os compradores prováveis olhando para o seu setor.' },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, ease, delay: i * 0.1 }}
+                className="glass-card rounded-xl p-6 border border-white/10 hover:border-volt/30 transition-colors group"
+              >
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="h-8 w-8 rounded-lg bg-volt/10 border border-volt/20 flex items-center justify-center text-volt">
+                    <item.icon className="h-4 w-4" />
+                  </div>
+                  <span className="text-[10px] font-semibold tracking-[0.25em] uppercase text-volt/80">{item.label}</span>
+                </div>
+                <p className="text-sm md:text-base text-white/75 leading-relaxed break-words">{item.text}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.div
+            className="mt-10 flex flex-col items-center"
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, ease, delay: 0.4 }}
+          >
             <Button
               asChild
               size="lg"
-              className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-14 px-8 text-base md:text-lg rounded-xl font-bold"
+              className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-14 px-10 text-base md:text-lg rounded-xl font-bold"
             >
-              <Link to="/mari">→ Analisar minha empresa AGORA</Link>
+              <Link to="/mari">Analisar minha empresa AGORA →</Link>
             </Button>
+            <p className="text-xs text-white/40 mt-4 tracking-wide">Sem cadastro obrigatório · Resultado em 60 segundos</p>
           </motion.div>
 
           {/* Search Bar */}
           <motion.div
-            className="mt-16"
+            className="mt-20"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease, delay: 0.4 }}
           >
-            <p className="text-center text-white/40 text-sm tracking-widest uppercase mb-4">Encontre o negócio ideal</p>
+            <p className="text-center text-white/40 text-xs tracking-[0.3em] uppercase mb-4">Encontre o negócio ideal</p>
             <SearchBar />
           </motion.div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-16 max-w-4xl mx-auto">
+          {/* Stats — terminal-style */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-16">
             {[
-              { label: 'Empresas em janela identificadas pela Mari', value: formatNumber(stats.totalListings) },
-              { label: 'Deals fechados via plataforma', value: formatNumber(stats.totalTransactions) },
-              { label: 'Volume transacionado (compradores + vendedores alinhados)', value: formatCurrency(stats.totalVolume) },
-              { label: 'Tempo médio entre identificação da janela e oferta', value: `${stats.averageTime} dias` },
+              { label: 'Empresas em janela', value: formatNumber(stats.totalListings) },
+              { label: 'Deals fechados', value: formatNumber(stats.totalTransactions) },
+              { label: 'Volume transacionado', value: formatCurrency(stats.totalVolume) },
+              { label: 'Tempo médio até oferta', value: `${stats.averageTime} dias` },
             ].map((stat, i) => (
               <motion.div
                 key={i}
-                className="glass-card rounded-xl p-5 text-center group hover:border-accent/30 transition-all duration-300"
-                initial={{ opacity: 0, y: 20 }}
+                className="glass-card rounded-lg px-4 py-4 border border-white/10 hover:border-volt/30 transition-all duration-300"
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease, delay: 0.5 + i * 0.08 }}
+                transition={{ duration: 0.5, ease, delay: 0.5 + i * 0.06 }}
               >
-                <p className="text-2xl md:text-3xl font-bold text-white font-mono tracking-tight">{stat.value}</p>
-                <div className="w-8 h-px bg-accent/40 mx-auto my-2" />
-                <p className="text-xs text-white/50">{stat.label}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-1 h-1 rounded-full bg-volt animate-pulse" />
+                  <p className="text-[9px] text-white/40 uppercase tracking-[0.25em] truncate">{stat.label}</p>
+                </div>
+                <p className="text-xl md:text-2xl font-bold text-white font-mono tracking-tight tabular-nums">{stat.value}</p>
               </motion.div>
             ))}
           </div>
@@ -136,13 +161,19 @@ const Index = () => {
       {/* Categories Section */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center mb-12 max-w-3xl mx-auto">
-            <p className="text-xs font-semibold tracking-widest uppercase text-accent mb-3">Está procurando comprar?</p>
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3 break-words">É um investidor e quer encontrar a melhor empresa para alocar seu capital?</h2>
-            <div className="w-12 h-1 bg-accent mx-auto rounded-full mb-4" />
-            <p className="text-muted-foreground leading-relaxed break-words">
-              Mari mostra as empresas com maior probabilidade de fechar deal nos próximos 12 meses — ranqueadas por <span className="text-foreground font-medium">assimetria de valor</span> (não só disponibilidade). Filtre por setor, valor e localização. Mari faz o resto.
-            </p>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 mb-12 max-w-6xl mx-auto items-end">
+            <div className="lg:col-span-7">
+              <p className="text-xs font-semibold tracking-[0.3em] uppercase text-accent mb-4">Está procurando comprar?</p>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-[1.05] tracking-[-0.02em] break-words">
+                É um investidor e quer encontrar a melhor empresa para alocar seu capital?
+              </h2>
+              <div className="w-12 h-1 bg-accent rounded-full mt-5" />
+            </div>
+            <div className="lg:col-span-5">
+              <p className="text-muted-foreground leading-relaxed break-words">
+                Mari mostra as empresas com maior probabilidade de fechar deal nos próximos 12 meses — ranqueadas por <span className="text-foreground font-medium">assimetria de valor</span> (não só disponibilidade). Filtre por setor, valor e localização. Mari faz o resto.
+              </p>
+            </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {categories.map((cat) => (
