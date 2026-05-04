@@ -284,6 +284,9 @@ const NewListingWizard = () => {
 
       setShowPlanModal(false);
       toast.success('Anúncio criado com sucesso!');
+      if (initialPrefill && data?.id) {
+        await logMariListing(initialPrefill, data.id, user.id);
+      }
       clearMariPrefill();
 
       // Navigate to Blind Teaser page
