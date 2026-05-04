@@ -1079,6 +1079,83 @@ export type Database = {
         }
         Relationships: []
       }
+      mari_leads: {
+        Row: {
+          cidade: string | null
+          cnae: string | null
+          cnpj: string
+          created_at: string
+          id: string
+          listing_id: string | null
+          porte: string | null
+          razao_social: string | null
+          status: string
+          uf: string | null
+          updated_at: string
+          user_id: string
+          window_base: number | null
+        }
+        Insert: {
+          cidade?: string | null
+          cnae?: string | null
+          cnpj: string
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          porte?: string | null
+          razao_social?: string | null
+          status?: string
+          uf?: string | null
+          updated_at?: string
+          user_id: string
+          window_base?: number | null
+        }
+        Update: {
+          cidade?: string | null
+          cnae?: string | null
+          cnpj?: string
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          porte?: string | null
+          razao_social?: string | null
+          status?: string
+          uf?: string | null
+          updated_at?: string
+          user_id?: string
+          window_base?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mari_leads_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mari_leads_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings_blind"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mari_leads_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "partner_opportunity_pool"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mari_leads_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           created_at: string | null
