@@ -169,8 +169,8 @@ const App = () => (
               <Route path="/minhas-captacoes/:id" element={<CapitalRequestDetail />} />
               <Route path="/matching/resultados" element={<MatchingResults />} />
               <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />
-              <Route path="/potencial-carteira" element={<PortfolioPotential />} />
-              <Route path="/parceiro" element={<PartnerDashboard />} />
+              <Route path="/potencial-carteira" element={<RequireRole roles={["advisor","admin","franchisee"]} allowPartnerAccountant><PortfolioPotential /></RequireRole>} />
+              <Route path="/parceiro" element={<RequireRole roles={["advisor","admin","franchisee"]} allowPartnerAccountant><PartnerDashboard /></RequireRole>} />
 
               {/* Top-level dashboards (admin/advisor) */}
               <Route path="/dashboard/executivo" element={<RequireRole roles={["admin", "advisor"]}><DashboardExecutivoPage /></RequireRole>} />
