@@ -187,7 +187,92 @@ export default function AdminUsers() {
     } catch (error) {
       console.error('Error removing role:', error);
       toast.error('Erro ao remover role');
+  }
+
+  function openEdit(user: UserWithRoles) {
+    setSelectedUser(user);
+    setEditForm({
+      full_name: user.full_name ?? '',
+      phone: user.phone ?? '',
+      company_name: '',
+      city: '',
+      state: '',
+    });
+    // load full profile
+    supabase
+      .from('profiles')
+      .select('full_name, phone, company_name, city, state')
+      .eq('user_id', user.user_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setEditForm({
+            full_name: data.full_name ?? '',
+            phone: data.phone ?? '',
+            company_name: (data as any).company_name ?? '',
+            city: data.city ?? '',
+            state: data.state ?? '',
+          });
+        }
+      });
+    setIsEditOpen(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!selectedUser) return;
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editForm.full_name || null,
+          phone: editForm.phone || null,
+          company_name: editForm.company_name || null,
+          city: editForm.city || null,
+          state: editForm.state || null,
+        } as any)
+        .eq('user_id', selectedUser.user_id);
+      if (error) throw error;
+      toast.success('Usuário atualizado');
+      setIsEditOpen(false);
+      fetchUsers();
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erro ao salvar: ' + (e.message ?? 'desconhecido'));
+    } finally {
+      setEditSaving(false);
     }
+  }
+
+  function openDelete(user: UserWithRoles) {
+    setSelectedUser(user);
+    setDeleteConfirm('');
+    setIsDeleteOpen(true);
+  }
+
+  async function handleDeleteUser() {
+    if (!selectedUser) return;
+    if (selectedUser.user_id === currentUser?.id) {
+      toast.error('Você não pode excluir a si mesmo');
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_id: selectedUser.user_id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success('Usuário excluído');
+      setIsDeleteOpen(false);
+      fetchUsers();
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erro ao excluir: ' + (e.message ?? 'desconhecido'));
+    } finally {
+      setDeleting(false);
+    }
+  }
   }
 
   async function handleTogglePartnerAccountant(userId: string, currentValue: boolean) {
