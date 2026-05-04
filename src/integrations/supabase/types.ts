@@ -1458,6 +1458,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
+          bio: string | null
           cep: string | null
           city: string | null
           company_name: string | null
@@ -1465,6 +1467,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          interests: string[] | null
           is_partner_accountant: boolean
           neighborhood: string | null
           notification_preference: string | null
@@ -1476,8 +1479,11 @@ export type Database = {
           stripe_customer_id: string | null
           updated_at: string
           user_id: string
+          website_url: string | null
         }
         Insert: {
+          avatar_url?: string | null
+          bio?: string | null
           cep?: string | null
           city?: string | null
           company_name?: string | null
@@ -1485,6 +1491,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          interests?: string[] | null
           is_partner_accountant?: boolean
           neighborhood?: string | null
           notification_preference?: string | null
@@ -1496,8 +1503,11 @@ export type Database = {
           stripe_customer_id?: string | null
           updated_at?: string
           user_id: string
+          website_url?: string | null
         }
         Update: {
+          avatar_url?: string | null
+          bio?: string | null
           cep?: string | null
           city?: string | null
           company_name?: string | null
@@ -1505,6 +1515,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          interests?: string[] | null
           is_partner_accountant?: boolean
           neighborhood?: string | null
           notification_preference?: string | null
@@ -1516,6 +1527,7 @@ export type Database = {
           stripe_customer_id?: string | null
           updated_at?: string
           user_id?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -4501,6 +4513,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      profile_completion: { Args: { _user_id: string }; Returns: number }
       qualify_lead:
         | {
             Args: {

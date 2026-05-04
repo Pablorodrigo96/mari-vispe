@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, MapPin, CreditCard, Crown, Check, Loader2, ExternalLink, Globe } from 'lucide-react';
+import { User, MapPin, CreditCard, Crown, Check, Loader2, ExternalLink, Globe, Sparkles, Link2 } from 'lucide-react';
 import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ProfileHeroCard } from '@/components/profile/ProfileHeroCard';
 
 const CATEGORIES = [
   { value: 'food', label: 'Alimentos' },
@@ -43,6 +45,9 @@ const profileSchema = z.object({
   state: z.string().optional().or(z.literal('')),
   city: z.string().max(100).optional().or(z.literal('')),
   neighborhood: z.string().max(100).optional().or(z.literal('')),
+  bio: z.string().max(280).optional().or(z.literal('')),
+  website_url: z.string().max(200).optional().or(z.literal('')),
+  interests: z.array(z.string()).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -60,11 +65,13 @@ const MyProfile = () => {
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  const { isFranchisee } = useUserRoles();
+  const { isFranchisee, isAdmin, isAdvisor, isBuyer, isSeller } = useUserRoles() as any;
   const [regionStates, setRegionStates] = useState<string[]>([]);
   const [regionCategories, setRegionCategories] = useState<string[]>([]);
   const [regionId, setRegionId] = useState<string | null>(null);
   const [isSavingRegion, setIsSavingRegion] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [completion, setCompletion] = useState<number>(0);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -76,8 +83,13 @@ const MyProfile = () => {
       state: '',
       city: '',
       neighborhood: '',
+      bio: '',
+      website_url: '',
+      interests: [],
     },
   });
+
+  const watched = form.watch();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -110,8 +122,18 @@ const MyProfile = () => {
             state: profile.state || '',
             city: profile.city || '',
             neighborhood: profile.neighborhood || '',
+            bio: (profile as any).bio || '',
+            website_url: (profile as any).website_url || '',
+            interests: (profile as any).interests || [],
           });
+          setAvatarUrl((profile as any).avatar_url || null);
         }
+
+        // Profile completion %
+        try {
+          const { data: pct } = await supabase.rpc('profile_completion' as any, { _user_id: user.id });
+          if (typeof pct === 'number') setCompletion(pct);
+        } catch (_e) { /* function may not exist yet */ }
 
         // Fetch subscription
         const { data: sub, error: subError } = await supabase
@@ -168,12 +190,19 @@ const MyProfile = () => {
           state: data.state || null,
           city: data.city || null,
           neighborhood: data.neighborhood || null,
+          bio: data.bio || null,
+          website_url: data.website_url || null,
+          interests: data.interests || [],
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' });
+        } as any, { onConflict: 'user_id' });
 
       if (error) throw error;
 
       toast.success('Perfil atualizado com sucesso!');
+      try {
+        const { data: pct } = await supabase.rpc('profile_completion' as any, { _user_id: user.id });
+        if (typeof pct === 'number') setCompletion(pct);
+      } catch {}
     } catch (error) {
       console.error('Error saving profile:', error);
       toast.error('Erro ao salvar perfil');
@@ -292,22 +321,44 @@ const MyProfile = () => {
     );
   }
 
+  // Build dynamic completion suggestions based on what's missing
+  const missing = [
+    !watched.full_name && { key: 'name', label: 'Nome completo', targetId: 'card-personal' },
+    !avatarUrl && { key: 'avatar', label: 'Foto de perfil' },
+    !watched.phone && { key: 'phone', label: 'Telefone', targetId: 'card-personal' },
+    !watched.cpf_cnpj && { key: 'doc', label: 'CPF/CNPJ', targetId: 'card-personal' },
+    !(watched.bio && watched.bio.length >= 20) && { key: 'bio', label: 'Mini bio', targetId: 'card-about' },
+    !watched.website_url && !(watched.interests && watched.interests.length) && { key: 'web', label: 'Site / Interesses', targetId: 'card-about' },
+    !(watched.cep || (watched.city && watched.state)) && { key: 'addr', label: 'Endereço', targetId: 'card-address' },
+  ].filter(Boolean) as { key: string; label: string; targetId?: string }[];
+
+  const cpfCnpjDigits = (watched.cpf_cnpj || '').replace(/\D/g, '');
+  const isCnpj = cpfCnpjDigits.length === 14;
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Meu Perfil</h1>
-            <p className="text-muted-foreground mt-2">
-              Gerencie suas informações pessoais e seu plano
-            </p>
-          </div>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <ProfileHeroCard
+            userId={user!.id}
+            email={user?.email}
+            fullName={watched.full_name}
+            avatarUrl={avatarUrl}
+            plan={subscription?.plan}
+            hasPhone={!!(watched.phone && watched.phone.length >= 10)}
+            hasCpfCnpj={cpfCnpjDigits.length >= 11}
+            hasCnpj={isCnpj}
+            roles={{ isAdmin, isAdvisor, isFranchisee, isBuyer, isSeller }}
+            completion={completion}
+            missing={missing}
+            onAvatarChange={(url) => setAvatarUrl(url)}
+          />
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Dados Pessoais */}
-              <Card>
+              <Card id="card-personal">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
@@ -383,8 +434,89 @@ const MyProfile = () => {
                 </CardContent>
               </Card>
 
+              {/* Sobre você */}
+              <Card id="card-about">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    Sobre você
+                  </CardTitle>
+                  <CardDescription>
+                    Conte um pouco do que faz — perfis completos recebem mais matches.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mini bio</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Ex: Empreendedor há 12 anos no setor de varejo, buscando sucessor estratégico..."
+                            maxLength={280}
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">{(field.value || '').length}/280</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="website_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Link2 className="h-4 w-4" /> Site ou LinkedIn
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="interests"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Áreas de interesse</FormLabel>
+                        <div className="flex flex-wrap gap-2">
+                          {CATEGORIES.map((c) => {
+                            const active = (field.value || []).includes(c.value);
+                            return (
+                              <button
+                                type="button"
+                                key={c.value}
+                                onClick={() => {
+                                  const cur = field.value || [];
+                                  field.onChange(active ? cur.filter((v) => v !== c.value) : [...cur, c.value]);
+                                }}
+                                className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                                  active
+                                    ? 'bg-accent text-accent-foreground border-accent'
+                                    : 'bg-background text-muted-foreground border-border hover:border-accent/50'
+                                }`}
+                              >
+                                {c.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
               {/* Localização */}
-              <Card>
+              <Card id="card-address">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
