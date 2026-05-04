@@ -73,7 +73,7 @@ export function MariResult({ data }: { data: MariResultData }) {
         <CardContent className="p-6">
           <div className="flex items-baseline justify-between mb-1">
             <h4 className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Janela de venda · 12 meses
+              Janela de venda · 24 meses
             </h4>
             {w.abstain && (
               <Badge variant="outline" className="text-[9px] uppercase border-amber-500/50 text-amber-600">
