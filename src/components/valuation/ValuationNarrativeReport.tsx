@@ -146,7 +146,7 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
           {formatFullCurrency(degradation.potentialValue)}
         </p>
         <p className="text-muted-foreground text-sm mt-2">
-          Média de <strong>+78% de valorização</strong> em clientes atendidos pela Vispe
+          Média de <strong>+35% de valorização</strong> em clientes atendidos pela mari
         </p>
       </motion.div>
 
@@ -339,7 +339,7 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
           Quer fechar esse gap e capturar o valor potencial?
         </h3>
         <p className="text-emerald-100 text-sm mb-6 max-w-lg mx-auto">
-          A Vispe já gerou em média +78% de valorização nos clientes atendidos. Comece agora.
+          A mari já gerou em média +35% de valorização nos clientes atendidos. Comece agora.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button size="lg" onClick={handleDiagnostic} disabled={loading}
