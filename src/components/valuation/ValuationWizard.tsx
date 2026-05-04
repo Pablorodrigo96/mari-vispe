@@ -170,20 +170,30 @@ export const ValuationWizard = ({ onBack }: ValuationWizardProps) => {
 
       const result = calculateValuation(inputs);
       
-      // Salvar no histórico (bloqueado)
-      const { data: insertedValuation } = await supabase.from('valuation_history').insert([{
-        user_id: user.id,
-        valuation_type: 'multiples',
-        segment: formData.segment,
-        inputs: inputs as unknown as Json,
-        result: result as unknown as Json,
-        status: 'completed',
-        locked_at: new Date().toISOString(),
-      }]).select('id').single();
+      // Salvar no histórico ANTES de consumir crédito
+      const { data: insertedValuation, error: insertError } = await supabase
+        .from('valuation_history')
+        .insert([{
+          user_id: user.id,
+          valuation_type: 'multiples',
+          segment: formData.segment,
+          inputs: inputs as unknown as Json,
+          result: result as unknown as Json,
+          status: 'completed',
+          locked_at: new Date().toISOString(),
+        }])
+        .select('id')
+        .single();
 
-      setLastValuationId(insertedValuation?.id || null);
+      if (insertError || !insertedValuation) {
+        console.error('Falha ao salvar valuation', insertError);
+        toast.error('Não conseguimos salvar seu valuation. Seu crédito foi preservado, tente novamente.');
+        setIsSubmitting(false);
+        return;
+      }
 
-      // Consumir crédito
+      setLastValuationId(insertedValuation.id);
+      // Consumir crédito SOMENTE após persistir
       await consumeMultiplesAccess();
 
       setValuationResult(result);
