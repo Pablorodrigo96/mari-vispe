@@ -80,8 +80,15 @@ export default function RegisterBuyer() {
       toast.error('Erro ao cadastrar comprador.');
       console.error(error);
     } else {
-      toast.success('Comprador cadastrado com sucesso!');
-      navigate('/mapa');
+      // Atribui a role buyer (idempotente) — libera menu Comprar
+      try {
+        await supabase.functions.invoke('assign-buyer-role');
+        await queryClient.invalidateQueries({ queryKey: ['user-roles', user.id] });
+      } catch (e) {
+        console.warn('Falha ao atribuir role buyer (cadastro salvo)', e);
+      }
+      toast.success('Comprador cadastrado! Acesso liberado.');
+      navigate('/matching');
     }
   };
 
