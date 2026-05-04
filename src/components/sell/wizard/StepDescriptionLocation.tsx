@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { MapPin, FileText, Search, Loader2 } from 'lucide-react';
+import { AnonymityDisclaimer } from '@/components/sell/AnonymityDisclaimer';
 import { toast } from 'sonner';
 
 interface StepDescriptionLocationProps {
@@ -82,6 +83,8 @@ const StepDescriptionLocation = ({ data, onChange }: StepDescriptionLocationProp
           Descreva seu negócio e informe a localização
         </p>
       </div>
+
+      <AnonymityDisclaimer variant="compact" />
 
       {/* Description */}
       <div className="space-y-4">
@@ -206,15 +209,21 @@ const StepDescriptionLocation = ({ data, onChange }: StepDescriptionLocationProp
             />
           </div>
 
-          <div className="flex items-center space-x-2 md:col-span-2 p-4 bg-muted/50 rounded-lg">
+          <div className="flex items-start space-x-2 md:col-span-2 p-4 bg-muted/50 rounded-lg">
             <Checkbox
               id="showAddress"
               checked={data.showAddress}
               onCheckedChange={(checked) => onChange('showAddress', checked === true)}
+              className="mt-0.5"
             />
-            <Label htmlFor="showAddress" className="text-sm cursor-pointer">
-              Exibir endereço completo no anúncio
-            </Label>
+            <div className="flex-1">
+              <Label htmlFor="showAddress" className="text-sm cursor-pointer">
+                Exibir endereço completo no anúncio
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1 break-words">
+                Recomendado deixar <span className="font-semibold">desmarcado</span> — assim só cidade e UF aparecem no teaser público, mantendo sua empresa anônima.
+              </p>
+            </div>
           </div>
         </div>
       </div>
