@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { categories } from '@/data/mockData';
 import { UserSearch, DollarSign, MapPin } from 'lucide-react';
 
@@ -22,6 +23,7 @@ const brazilStates = [
 export default function RegisterBuyer() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -78,8 +80,15 @@ export default function RegisterBuyer() {
       toast.error('Erro ao cadastrar comprador.');
       console.error(error);
     } else {
-      toast.success('Comprador cadastrado com sucesso!');
-      navigate('/mapa');
+      // Atribui a role buyer (idempotente) — libera menu Comprar
+      try {
+        await supabase.functions.invoke('assign-buyer-role');
+        await queryClient.invalidateQueries({ queryKey: ['user-roles', user.id] });
+      } catch (e) {
+        console.warn('Falha ao atribuir role buyer (cadastro salvo)', e);
+      }
+      toast.success('Comprador cadastrado! Acesso liberado.');
+      navigate('/matching');
     }
   };
 

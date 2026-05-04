@@ -1,89 +1,105 @@
-# Painel Executivo — Quanto vale, quanto pode valer, quando vender
+## Problema
 
-Vou transformar `/painel` num relatório executivo visual seguindo o anexo, mantendo os módulos atuais como rodapé. Nenhum custo de IA — tudo vem do último valuation salvo + tabelas estáticas por setor.
+1. **Permissões muito amplas**: vendedor (role `seller`) está vendo Cockpit Interno, Equity Brain, Dashboards (Executivo/Mandato/Match/NBO), grupo "Mandatos (tabela)" e "Parcerias" no sidebar. Esses só deveriam aparecer para `admin`/`advisor`.
+2. **Menu mal organizado pra vendedor**: o grupo "Comprar" aparece solto no topo. Para um vendedor, o atalho "Compradores compatíveis" (que é interesse legítimo dele) deveria viver dentro de "Vender", não num grupo separado que sugere que ele já é comprador.
+3. **Cadastro de comprador**: ao clicar em "Cadastrar comprador" o vendedor deve ir pra `/cadastrar-comprador` (já existe) e, ao concluir, ganhar a role `buyer` — só então o grupo "Comprar" completo (matching + resultados) aparece.
+4. **Valuation não salvou e consumiu crédito grátis**: em `ValuationWizard.tsx` (linhas 174–187) o `insert` em `valuation_history` não checa `error`. Se o insert falha (RLS, rede, validação), o catch genérico não dispara porque `supabase-js` retorna o erro no objeto, não em throw — e em seguida `consumeMultiplesAccess()` é chamado, queimando o crédito. Mesmo bug em `DCFWizard.tsx` (linhas 179–191).
 
-## Estrutura final do `/painel`
+## Escopo da mudança
+
+### A. Sidebar por role (`src/components/layout/AppSidebar.tsx`)
+
+Definir um vendedor "puro" como: tem `seller` e **não** tem `buyer`/`advisor`/`admin`/`franchisee`/`isPartnerAccountant`.
 
 ```text
-[Saudação personalizada + badges de role]
-─────────────────────────────────────────
-ZONA 1 · QUANTO VOCÊ VALE
-  3 cards: Hoje · Potencial 2027 · Delta (+50%)
-  (Se sem valuation → CTA "Calcule seu valuation primeiro")
-─────────────────────────────────────────
-ZONA 2 · CONTEXTO DE MERCADO
-  Gráfico recharts 2022-2028 do setor (pico 2027 destacado)
-  Timeline Agora / Ideal / Depois (você-está-aqui)
-─────────────────────────────────────────
-ZONA 3 · PLANO DE AÇÃO
-  4 pilares (Máquina vendas, Controladoria, M&A, Crescimento)
-  Resumo ROI consolidado
-  Compradores anônimos (número 3-14 por sessão)
-─────────────────────────────────────────
-ZONA 4 · MÓDULOS CLÁSSICOS (mantém)
-  CockpitWeekStrip, KPIs, módulos 2x2, onboarding, atividade
+Visão Geral        → todos
+Marketplace        → todos
+Vender             → seller (e quem mais tiver)
+  ├─ Meus anúncios
+  ├─ Anunciar empresa
+  └─ Compradores compatíveis ← MOVIDO pra cá quando user é seller-puro
+Comprar            → só se isBuyer (matching + resultados);
+                     se NÃO é buyer mas é seller, mostrar item único
+                     "Cadastrar como comprador" (CTA fora do grupo Vender)
+Valuation          → todos
+Capital            → todos
+Parcerias          → advisor | partnerAccountant | franchisee | admin   (já ok)
+Mandatos (tabela)  → admin | advisor                                    (já ok)
+Dashboards         → admin | advisor                                    (já ok)
+Cockpit Interno    → admin | advisor                                    (já ok)
 ```
 
-## Dados já disponíveis (sem migrations novas obrigatórias)
+Lógica nova:
+- `isSellerOnly = isSeller && !isBuyer && !isAdvisor && !isAdmin && !isFranchisee && !isPartnerAccountant`
+- Se `isSellerOnly`: injeta `{ name: 'Compradores compatíveis', href: '/matching', icon: Target }` como 3º filho do grupo `sell`. Substitui o grupo `buy` por um único atalho "Cadastrar como comprador" (item solo, pode ser um sub-card no fim do grupo Vender ou item no rodapé).
+- Os grupos `dashboards`, `mandatos_tabela`, `partners` e o bloco "Cockpit Interno" continuam protegidos por `isAdmin || isAdvisor` — eles já estão, mas a ordem do `if` em torno de `groups.push({...}, {...})` (linha 102–119) está sintaticamente errada: o segundo objeto está fora do array de push. Corrigir pra dois `push` separados.
 
-`valuation_history.result` (último registro do user) traz:
-- **multiples**: `mashupValue`, `metrics.ebitda`, `metrics.ebitdaMargin`, `inputs.segment`, `inputs.annualRevenue`, e quando há diagnóstico, `lossMetrics.potentialValue` / `lossMetrics.gap` (já é a versão "real" do potencial)
-- **dcf**: `enterpriseValue`, `valueLow`, `valueHigh`
+### B. Route guards (`src/App.tsx`)
 
-Lógica do hook `useValuationSnapshot`:
-1. Se houver `lossMetrics.potentialValue` → usa como potencial 2027; senão `valor × 1.5`.
-2. `valorAtual` = `mashupValue` ou `enterpriseValue`.
-3. IC = `valueLow/valueHigh` (DCF) ou `± 10%` (multiples).
-4. `segment` define o setor para o gráfico/pilares.
+Hoje `/equity-brain/*`, `/dashboard/*` e `/admin/*` já usam `RequireRole`. Precisamos auditar:
+- Confirmar que **todas** as rotas `/equity-brain/...` estão envolvidas em `RequireRole roles={["admin","advisor"]}`. Se alguma estiver solta, embrulhar.
+- Confirmar `/parceiro`, `/potencial-carteira` exigem `advisor|admin|franchisee|partnerAccountant`. Adicionar `RequireRole` se faltar.
+- `/matching`, `/matching/resultados`, `/cadastrar-comprador` ficam abertos pra qualquer logado (vendedor pode chegar via "Cadastrar como comprador").
 
-## Tabela nova (estática, populada por seed)
+### C. Cadastro de comprador estende perfil
 
-```sql
-create table public.sector_market_trends (
-  segment text not null,
-  ano int not null,
-  num_deals int not null,
-  volume_m numeric not null,
-  tendencia text not null check (tendencia in ('historical','estimated','projection')),
-  primary key (segment, ano)
-);
-alter table public.sector_market_trends enable row level security;
-create policy "public read" on public.sector_market_trends for select using (true);
+`src/pages/RegisterBuyer.tsx` (já existe) — ao concluir o cadastro com sucesso, chamar uma edge function (ou `INSERT` direto) que:
+1. Insere em `buyer_profiles` (já faz).
+2. Adiciona role `buyer` em `public.user_roles` para `auth.uid()` (via edge function com service role, pra não depender de policy de insert na tabela). Idempotente (`ON CONFLICT DO NOTHING`).
+3. Invalida `useQuery(['user-roles', user.id])` no client → sidebar reage e libera grupo "Comprar" completo.
+
+Pré-preencher o form com `profiles.full_name`, `phone`, `city`, `state`, `cpf_cnpj` do user já logado (campos extras: budget, categories, descrição).
+
+### D. Valuation: refund de crédito em falha
+
+`src/components/valuation/ValuationWizard.tsx` (linhas ~158–197):
+
+```ts
+const { data: insertedValuation, error: insertError } = await supabase
+  .from('valuation_history')
+  .insert([{ ... }])
+  .select('id')
+  .single();
+
+if (insertError || !insertedValuation) {
+  console.error('Falha ao salvar valuation', insertError);
+  toast.error('Não conseguimos salvar seu valuation. Seu crédito foi preservado, tente novamente.');
+  return; // NÃO consome crédito
+}
+
+setLastValuationId(insertedValuation.id);
+const consumed = await consumeMultiplesAccess();
+if (!consumed) {
+  // edge case: salvou mas não consumiu — log e segue (admin tolera)
+  console.warn('Valuation salvo, mas crédito não consumido', insertedValuation.id);
+}
 ```
-Seed inicial 2022–2028 para os segmentos que aparecem no valuation (Varejo, Indústria, Serviços, Tecnologia, Saúde, Agronegócio, Construção, Telecom/ISP, Outros). Pico em 2027. Fallback para "Outros" quando segmento não bater.
 
-## Componentes novos (`src/components/painel/exec/`)
+Mesma correção em `src/components/valuation/DCFWizard.tsx`.
 
-- `ExecutiveReport.tsx` — orquestra zonas 1-3, recebe snapshot do valuation.
-- `NoValuationCTA.tsx` — card cheio quando `valuation_history` está vazio, link para `/valuation/multiplos`.
-- `ValuationTriCard.tsx` — 3 cards (Hoje cinza, Potencial volt, Delta verde), formatação brasileira `R$ 7,1M`, IC e EBITDA por baixo.
-- `SectorTrendChart.tsx` — `LineChart` recharts, linha histórica tracejada cinza + linha projeção volt sólida, `ReferenceDot` em 2027 com label "PICO 2027". Lê `sector_market_trends` por segmento (react-query).
-- `MarketTimeline.tsx` — 3 colunas (Agora 2026 / Ideal 2027 / Depois 2028), bloco do meio em volt, marcador "VOCÊ ESTÁ AQUI" embaixo do bloco atual.
-- `ActionPillars.tsx` — 4 cards (ícones lucide: Cog, ClipboardCheck, Target, TrendingUp). Cada card: problema · o que fazer · impacto · investimento · retorno · ROI %. Templates por segmento em `src/lib/painelPillars.ts` (default fallback).
-- `RoiSummary.tsx` — Soma investimento/retorno/ROI dos 4 pilares.
-- `AnonBuyersCard.tsx` — `useMemo` com `Math.floor(Math.random()*12)+3`, distribuição fixa 60/30/10. Botão abre `AdvisorGateModal`.
-- `AdvisorGateModal.tsx` — Dialog explicando NDAs + CTA "Agendar conversa com advisor" → `https://wa.me/5551992338258?text=...` via `getWhatsAppLink`.
+### E. Refund retroativo do usuário atual
 
-## Mudanças em `Painel.tsx`
+O usuário relatou que perdeu o crédito grátis. Após deploy:
+- Identificar o user via `auth.uid()` informado pelo usuário (precisarei do email; assumir que é o mesmo logado agora e ajustar via SQL/insert tool).
+- `UPDATE subscriptions SET multiples_used = GREATEST(multiples_used - 1, 0) WHERE user_id = '<id>'` — feito via migration de data (insert tool).
 
-- Adicionar query `useQuery(['painel-last-valuation'])` para `valuation_history` ordenado desc limit 1 do user.
-- Renderizar `<ExecutiveReport snapshot={...} />` logo após a saudação e antes do `CockpitWeekStrip`.
-- Manter intactos: CockpitWeekStrip, grid de KPIs, módulos 2x2, onboarding, atividade recente, boxes contextuais (advisor/franqueado/EB/admin).
-- Saudação atualizada para incluir subtítulo "Sua janela de venda começa agora..." quando há valuation.
+### F. Memória
 
-## Detalhes visuais
-
-- Tema dark mantido (Carbon/Volt/Bone). Cards usam `bg-card`/`border-border`, destaques em `text-accent` (volt) e `text-emerald-500` (delta).
-- Tipografia: títulos `text-3xl font-bold tracking-tight`, números grandes `text-4xl font-bold tabular-nums`.
-- Mobile: cada zona empilha; gráfico mantém `ResponsiveContainer` com altura 280.
-- `break-words` em todos os textos longos.
+Atualizar `mem://index.md` Core com regra: "Sidebar é estritamente role-based; vendedor-puro NÃO vê EB/Cockpit/Dashboards. 'Compradores compatíveis' fica dentro de 'Vender' pra seller-only."
 
 ## Fora de escopo
 
-- Sem alterar `/equity-brain`, `/mari`, Sell Wizard, Header, Footer, AppShell.
-- Sem nova IA / edge function.
-- Dashboard admin para editar `sector_market_trends` fica para próxima iteração (seed manual agora).
+- Refatorar todo o EquityBrainLayout (já tem guard próprio).
+- Reescrever o cálculo de valuation.
+- Mudar planos/preços.
 
-## Memória
+## Arquivos tocados
 
-Ao concluir, registrar em `mem://features/painel-executive-report` resumindo zonas, fonte de dados (`valuation_history` + `sector_market_trends`) e fallback aleatório 3–14 de buyers.
+- `src/components/layout/AppSidebar.tsx` (reorganização role-aware)
+- `src/App.tsx` (verificar/ajustar `RequireRole` faltantes)
+- `src/components/valuation/ValuationWizard.tsx` (error handling + refund)
+- `src/components/valuation/DCFWizard.tsx` (error handling + refund)
+- `src/pages/RegisterBuyer.tsx` (atribuir role buyer ao concluir)
+- nova edge function `assign-buyer-role` (service role, idempotente)
+- migration de data: refundar `multiples_used` do usuário afetado
+- `mem://index.md` + nova memória `mem://constraints/sidebar-role-strict.md`

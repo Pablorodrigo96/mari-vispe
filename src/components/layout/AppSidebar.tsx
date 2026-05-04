@@ -27,6 +27,19 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
   const { user, signOut } = useAuth();
   const eff = useEffectiveRoles();
 
+  // Vendedor "puro" = só seller, sem outras roles operacionais.
+  const isInsider = eff.isAdmin || eff.isAdvisor || eff.isPartnerAccountant || eff.isFranchisee;
+  const isSellerOnly = eff.isSeller && !eff.isBuyer && !isInsider;
+
+  const sellChildren: NavChild[] = [
+    { name: 'Meus anúncios', href: '/meus-anuncios', icon: ClipboardList },
+    { name: 'Anunciar empresa', href: '/vender', icon: Plus },
+  ];
+  if (isSellerOnly) {
+    sellChildren.push({ name: 'Compradores compatíveis', href: '/matching', icon: Target });
+    sellChildren.push({ name: 'Cadastrar como comprador', href: '/cadastrar-comprador', icon: UserSearch });
+  }
+
   const groups: NavGroup[] = [
     {
       id: 'overview', name: 'Visão Geral', icon: LayoutDashboard,
@@ -41,19 +54,23 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
     },
     {
       id: 'sell', name: 'Vender', icon: Building2,
-      children: [
-        { name: 'Meus anúncios', href: '/meus-anuncios', icon: ClipboardList },
-        { name: 'Anunciar empresa', href: '/vender', icon: Plus },
-      ],
+      children: sellChildren,
     },
-    {
+  ];
+
+  // Grupo "Comprar" só pra quem já é buyer (ou insider que opera o produto).
+  if (eff.isBuyer || isInsider) {
+    groups.push({
       id: 'buy', name: 'Comprar', icon: UserSearch,
       children: [
         { name: 'Cadastrar comprador', href: '/cadastrar-comprador', icon: UserSearch },
         { name: 'Compradores compatíveis', href: '/matching', icon: Target },
         { name: 'Resultados', href: '/matching/resultados', icon: ChartBar },
       ],
-    },
+    });
+  }
+
+  groups.push(
     {
       id: 'valuation', name: 'Valuation', icon: ChartBar,
       children: [
@@ -71,7 +88,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         { name: 'Minhas captações', href: '/minhas-captacoes', icon: DollarSign },
       ],
     },
-  ];
+  );
 
   if (eff.isAdvisor || eff.isPartnerAccountant || eff.isFranchisee || eff.isAdmin) {
     groups.push({
@@ -106,8 +123,8 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         { name: 'Cobertura dashboards', href: '/equity-brain/admin/dashboard-coverage', icon: ChartBar },
         { name: 'Novo mandato', href: '/equity-brain/crm/mandate/new', icon: Plus },
       ],
-    },
-    {
+    });
+    groups.push({
       id: 'dashboards', name: '📊 Dashboards', icon: BarChart3,
       children: [
         { name: 'Executivo M&A', href: '/dashboard/executivo', icon: BarChart3 },
