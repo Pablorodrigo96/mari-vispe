@@ -1,10 +1,20 @@
 // Helpers for the Painel Executivo
+// Fonte única: valuation_history.result. Usa as MESMAS fórmulas do relatório
+// (src/lib/diagnosticCalculator.ts) para garantir coerência entre /valuation e /painel.
+import { VISPE_APPRECIATION_FACTOR } from './diagnosticCalculator';
 
 export interface ValuationSnapshot {
+  /** Quanto vale hoje. Igual ao True Value do relatório quando há diagnóstico; senão = Estimado. */
   valorAtual: number;
+  /** Estimado puro de mercado (mashup dos múltiplos ou EV do DCF). */
+  valorEstimado: number;
+  /** Quanto pode valer em 2027 = Estimado × VISPE_APPRECIATION_FACTOR (1,78). */
   valorPotencial: number;
+  /** Potencial − Atual. */
   gap: number;
   gapPct: number;
+  /** % de perda aplicada pelo diagnóstico (0..1). 0 quando não há diagnóstico. */
+  degradationPct: number;
   segment: string;
   ebitdaMargin?: number;
   ebitdaMarginPotential?: number;
@@ -13,7 +23,7 @@ export interface ValuationSnapshot {
   icLowPot: number;
   icHighPot: number;
   method: 'multiples' | 'dcf';
-  source: 'lossMetrics' | 'heuristic';
+  /** True quando o usuário respondeu o diagnóstico de degradação. */
   hasDiagnostic: boolean;
   createdAt: string;
 }
