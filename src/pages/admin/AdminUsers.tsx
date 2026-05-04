@@ -619,6 +619,10 @@ export default function AdminUsers() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => openEdit(user)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Editar dados
+                              </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => {
                                   setSelectedUser(user);
