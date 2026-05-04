@@ -325,6 +325,16 @@ export default function Auth() {
                 >
                   {isSubmitting ? 'Entrando...' : 'Entrar'}
                 </Button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setForgotOpen(true)}
+                    className="text-sm text-muted-foreground hover:text-accent underline-offset-4 hover:underline"
+                  >
+                    Esqueci minha senha
+                  </button>
+                </div>
               </form>
             </TabsContent>
 
