@@ -392,7 +392,7 @@ export default function MyListings() {
           ) : (
             <div className="space-y-4">
               {listings.map(listing => (
-                <Card key={listing.id} className="bg-card border-border hover:border-accent/50 transition-colors">
+                <Card key={listing.id} className="bg-card border-border hover:border-accent/50 transition-colors cursor-pointer" onClick={() => navigate(`/meus-anuncios/${listing.id}`)}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row gap-4">
                       {/* Image */}
@@ -434,15 +434,19 @@ export default function MyListings() {
 
                           {/* Actions Dropdown */}
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                               <Button variant="ghost" size="icon" className="flex-shrink-0">
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem onClick={() => navigate(`/meus-anuncios/${listing.id}`)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Cockpit do anúncio
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => navigate(`/anuncio/${listing.id}`)}>
                                 <Eye className="w-4 h-4 mr-2" />
-                                Visualizar
+                                Ver página pública
                               </DropdownMenuItem>
                               {listing.ticker && (
                                 <>
@@ -570,7 +574,7 @@ export default function MyListings() {
                         {interests[listing.id] && interests[listing.id].length > 0 && (
                           <div className="mt-3 border-t border-border pt-3">
                             <button
-                              onClick={() => setExpandedInterests(prev => ({ ...prev, [listing.id]: !prev[listing.id] }))}
+                              onClick={(e) => { e.stopPropagation(); setExpandedInterests(prev => ({ ...prev, [listing.id]: !prev[listing.id] })); }}
                               className="flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
                             >
                               <Users className="w-4 h-4" />
@@ -619,7 +623,7 @@ export default function MyListings() {
                                       variant="outline"
                                       size="sm"
                                       className="text-amber-500 border-amber-500/50 hover:bg-amber-500/10"
-                                      onClick={() => navigate('/vender')}
+                                      onClick={(e) => { e.stopPropagation(); navigate('/vender'); }}
                                     >
                                       <Crown className="w-3.5 h-3.5 mr-1" />
                                       Upgrade Master

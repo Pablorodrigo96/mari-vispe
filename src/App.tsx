@@ -15,6 +15,7 @@ import Sell from "./pages/Sell";
 import Vender from "./pages/Vender";
 import ListingDetail from "./pages/ListingDetail";
 import MyListings from "./pages/MyListings";
+import ListingCockpit from "./pages/ListingCockpit";
 import MyProfile from "./pages/MyProfile";
 import MyValuations from "./pages/MyValuations";
 import Valuation from "./pages/Valuation";
@@ -164,6 +165,7 @@ const App = () => (
               {/* Authenticated-only routes (AppShell will redirect to /auth via the page itself) */}
               <Route path="/painel" element={<Painel />} />
               <Route path="/meus-anuncios" element={<MyListings />} />
+              <Route path="/meus-anuncios/:id" element={<ListingCockpit />} />
               <Route path="/editar-anuncio/:id" element={<EditListing />} />
               <Route path="/meu-perfil" element={<MyProfile />} />
               <Route path="/meus-valuations" element={<MyValuations />} />
