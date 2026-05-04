@@ -140,6 +140,7 @@ const App = () => (
 
             {/* Pure public-only routes — no shell wrapping */}
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/aguardando-aprovacao" element={<AwaitingApproval />} />
