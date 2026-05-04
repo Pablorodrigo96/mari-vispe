@@ -222,7 +222,14 @@ const NewListingWizard = () => {
           asking_price: parseCurrencyToNumber(formData.askingPrice),
           hide_price: formData.hidePrice,
           description: formData.description,
-          additional_info: formData.additionalInfo || null,
+          additional_info: (() => {
+            const baseInfo = formData.additionalInfo || '';
+            if (initialPrefill) {
+              const tag = `Origem: Calculadora Mari${initialPrefill.windowBase != null ? ` (janela ${initialPrefill.windowBase}%)` : ''}`;
+              return baseInfo ? `${tag}\n\n${baseInfo}` : tag;
+            }
+            return baseInfo || null;
+          })(),
           cep: formData.cep,
           street: formData.street || null,
           neighborhood: formData.neighborhood || null,
