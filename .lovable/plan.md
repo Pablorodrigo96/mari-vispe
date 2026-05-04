@@ -1,100 +1,89 @@
-## Diagnóstico
+# Painel Executivo — Quanto vale, quanto pode valer, quando vender
 
-A home atual sofre de "centered column syndrome": o `HeroCarousel` usa `max-w-5xl mx-auto` + `text-center`, deixando ~30% de cada lateral vazia em telas ≥1280px. Isso reduz a presença visual da marca, deixa o hero parecendo um slide de PowerPoint e não aproveita o watermark/tagline já presentes.
+Vou transformar `/painel` num relatório executivo visual seguindo o anexo, mantendo os módulos atuais como rodapé. Nenhum custo de IA — tudo vem do último valuation salvo + tabelas estáticas por setor.
 
-## Proposta de redesign (nível editorial / financial-tech)
-
-### 1. Hero: grid assimétrico 7/5 ao invés de coluna central
+## Estrutura final do `/painel`
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│ [eyebrow chip]                          ┌────────────────────┐  │
-│                                         │  RIGHT RAIL        │  │
-│ Headline grande (display, -tracking)    │                    │  │
-│ Lorem ipsum dolor sit                   │  Live ticker       │  │
-│ amet consectetur.                       │  • 21M CNPJs       │  │
-│                                         │  • 1.247 em janela │  │
-│ ▸ HIGHLIGHT marca-texto Volt           │  • R$ 4.2B volume  │  │
-│                                         │                    │  │
-│ Body em 2 parágrafos curtos, alinhado   │  Mini-card "Mari   │  │
-│ à esquerda, ~520px max.                 │  está olhando      │  │
-│                                         │  agora" pulsando   │  │
-│ [CTA primário] [CTA secundário ghost]   │                    │  │
-│                                         │  Avatar Mari +     │  │
-│ ●●○○○ dots à esquerda + numeração       │  status dot        │  │
-│ "03 / 05" tipografia mono               └────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+[Saudação personalizada + badges de role]
+─────────────────────────────────────────
+ZONA 1 · QUANTO VOCÊ VALE
+  3 cards: Hoje · Potencial 2027 · Delta (+50%)
+  (Se sem valuation → CTA "Calcule seu valuation primeiro")
+─────────────────────────────────────────
+ZONA 2 · CONTEXTO DE MERCADO
+  Gráfico recharts 2022-2028 do setor (pico 2027 destacado)
+  Timeline Agora / Ideal / Depois (você-está-aqui)
+─────────────────────────────────────────
+ZONA 3 · PLANO DE AÇÃO
+  4 pilares (Máquina vendas, Controladoria, M&A, Crescimento)
+  Resumo ROI consolidado
+  Compradores anônimos (número 3-14 por sessão)
+─────────────────────────────────────────
+ZONA 4 · MÓDULOS CLÁSSICOS (mantém)
+  CockpitWeekStrip, KPIs, módulos 2x2, onboarding, atividade
 ```
 
-- Coluna esquerda (`lg:col-span-7`): conteúdo do slide alinhado à esquerda (`text-left`), headline em `text-5xl lg:text-7xl`, tracking apertado.
-- Coluna direita (`lg:col-span-5`): "right rail" persistente (não muda entre slides) com:
-  - **Live ticker glass-card** com 3 stats principais animadas (number flip).
-  - **Status card "Mari está analisando agora"** — dot pulsando Volt, contador incrementando, microcopy.
-  - **Avatar/símbolo Mari** grande, levemente girando ou com glow.
-- Mobile (`<lg`): stack vertical, right rail vira faixa horizontal compacta abaixo do CTA.
+## Dados já disponíveis (sem migrations novas obrigatórias)
 
-### 2. Tipografia & ritmo
+`valuation_history.result` (último registro do user) traz:
+- **multiples**: `mashupValue`, `metrics.ebitda`, `metrics.ebitdaMargin`, `inputs.segment`, `inputs.annualRevenue`, e quando há diagnóstico, `lossMetrics.potentialValue` / `lossMetrics.gap` (já é a versão "real" do potencial)
+- **dcf**: `enterpriseValue`, `valueLow`, `valueHigh`
 
-- Headline: `font-display`, `tracking-[-0.03em]`, `leading-[0.95]`, peso 700.
-- Highlight: manter `bg-accent text-secondary-foreground font-extrabold` mas em bloco inline mais discreto (sem `border-secondary-foreground`, que polui), com `px-2 py-0.5 rounded-sm` ao invés de `rounded-md`, simulando marca-texto físico.
-- Body: `text-white/65`, `text-base lg:text-lg`, `max-w-[520px]` — nunca centralizado.
-- Eyebrow: chip menor, alinhado à esquerda, sem o `animate-pulse` (mais sóbrio).
+Lógica do hook `useValuationSnapshot`:
+1. Se houver `lossMetrics.potentialValue` → usa como potencial 2027; senão `valor × 1.5`.
+2. `valorAtual` = `mashupValue` ou `enterpriseValue`.
+3. IC = `valueLow/valueHigh` (DCF) ou `± 10%` (multiples).
+4. `segment` define o setor para o gráfico/pilares.
 
-### 3. Controles do carrossel
+## Tabela nova (estática, populada por seed)
 
-- Dots à esquerda + contador "03 / 05" em `font-mono text-xs text-white/40`.
-- Setas `< >` discretas no canto inferior direito do hero (apenas desktop).
-- Progress bar fina (1px) na base do hero indicando o autoplay (5500ms preenchendo).
-- Mantém autoplay/hover-pause/keyboard nav.
+```sql
+create table public.sector_market_trends (
+  segment text not null,
+  ano int not null,
+  num_deals int not null,
+  volume_m numeric not null,
+  tendencia text not null check (tendencia in ('historical','estimated','projection')),
+  primary key (segment, ano)
+);
+alter table public.sector_market_trends enable row level security;
+create policy "public read" on public.sector_market_trends for select using (true);
+```
+Seed inicial 2022–2028 para os segmentos que aparecem no valuation (Varejo, Indústria, Serviços, Tecnologia, Saúde, Agronegócio, Construção, Telecom/ISP, Outros). Pico em 2027. Fallback para "Outros" quando segmento não bater.
 
-### 4. "Pós-hero" (bloco abaixo)
+## Componentes novos (`src/components/painel/exec/`)
 
-Hoje está centralizado e repetitivo com o slide. Proposta:
-- Virar uma **faixa de 3 cards lado a lado** ("Janela", "Valor", "Comprador") — cada um com ícone, headline curto, 1 frase. Isso reforça os 3 outputs da Mari sem competir com o hero.
-- CTA "Analisar minha empresa AGORA" vira um botão único centralizado abaixo dos 3 cards, com microcopy "Sem cadastro · 60s".
+- `ExecutiveReport.tsx` — orquestra zonas 1-3, recebe snapshot do valuation.
+- `NoValuationCTA.tsx` — card cheio quando `valuation_history` está vazio, link para `/valuation/multiplos`.
+- `ValuationTriCard.tsx` — 3 cards (Hoje cinza, Potencial volt, Delta verde), formatação brasileira `R$ 7,1M`, IC e EBITDA por baixo.
+- `SectorTrendChart.tsx` — `LineChart` recharts, linha histórica tracejada cinza + linha projeção volt sólida, `ReferenceDot` em 2027 com label "PICO 2027". Lê `sector_market_trends` por segmento (react-query).
+- `MarketTimeline.tsx` — 3 colunas (Agora 2026 / Ideal 2027 / Depois 2028), bloco do meio em volt, marcador "VOCÊ ESTÁ AQUI" embaixo do bloco atual.
+- `ActionPillars.tsx` — 4 cards (ícones lucide: Cog, ClipboardCheck, Target, TrendingUp). Cada card: problema · o que fazer · impacto · investimento · retorno · ROI %. Templates por segmento em `src/lib/painelPillars.ts` (default fallback).
+- `RoiSummary.tsx` — Soma investimento/retorno/ROI dos 4 pilares.
+- `AnonBuyersCard.tsx` — `useMemo` com `Math.floor(Math.random()*12)+3`, distribuição fixa 60/30/10. Botão abre `AdvisorGateModal`.
+- `AdvisorGateModal.tsx` — Dialog explicando NDAs + CTA "Agendar conversa com advisor" → `https://wa.me/5551992338258?text=...` via `getWhatsAppLink`.
 
-### 5. Stats (4 cards atuais)
+## Mudanças em `Painel.tsx`
 
-- Reduzir para `grid-cols-4 gap-3` mais denso, glass-card mais fino, números em `font-mono`, label em `text-[10px] uppercase tracking-[0.2em] text-white/40`. Estilo Bloomberg/terminal.
-- Adicionar ponto Volt à esquerda de cada número (status indicator).
+- Adicionar query `useQuery(['painel-last-valuation'])` para `valuation_history` ordenado desc limit 1 do user.
+- Renderizar `<ExecutiveReport snapshot={...} />` logo após a saudação e antes do `CockpitWeekStrip`.
+- Manter intactos: CockpitWeekStrip, grid de KPIs, módulos 2x2, onboarding, atividade recente, boxes contextuais (advisor/franqueado/EB/admin).
+- Saudação atualizada para incluir subtítulo "Sua janela de venda começa agora..." quando há valuation.
 
-### 6. Container & largura
+## Detalhes visuais
 
-- Trocar `container mx-auto px-4` por `max-w-[1440px] mx-auto px-6 lg:px-12` no hero — aproveita até 1440px, mantém respiro nas bordas.
-- Watermark `MariWatermark` reposicionado para não competir com o right rail (mover para trás do conteúdo, opacidade 0.04, blur).
-
-### 7. Categorias ("É um investidor...")
-
-Manter, mas o `text-2xl md:text-3xl` da pergunta é tímido. Subir para `text-3xl md:text-5xl`, alinhar à esquerda dentro de um container `max-w-6xl`, e jogar o `<p>` de descrição ao lado direito (grid 2 colunas no header da seção). Mais editorial, menos landing page genérica.
-
-## Arquivos a alterar
-
-- **`src/components/home/HeroCarousel.tsx`** — refator grande:
-  - Novo layout grid `lg:grid-cols-12`.
-  - `SlideView` → `text-left`, alinhado à esquerda da coluna 7.
-  - Novo subcomponente `HeroRightRail` (stats animados + status Mari + avatar).
-  - Controles: dots à esquerda + contador "NN / NN" + setas + progress bar.
-  - Highlight: classes mais sóbrias.
-- **`src/pages/Index.tsx`**:
-  - Hero section: trocar `container mx-auto` por `max-w-[1440px]`, remover `text-center` do bloco pós-hero.
-  - Pós-hero: virar grid de 3 cards (Janela / Valor / Comprador) + CTA centralizado abaixo.
-  - Stats: estilo terminal mais denso.
-  - Categorias: header em 2 colunas (título esquerda, descrição direita), eyebrow alinhado à esquerda.
-- **Sem mudanças** em Header, Footer, MariDifferentialCard, Featured Listings, CTA final, `/painel`, `/equity-brain`, `/mari`.
-
-## Detalhes técnicos
-
-- Reusar tokens existentes: `glass-card`, `bg-volt`, `shadow-volt`, `text-accent`, `gradient-navy-deep`, `font-display`, `font-mono`.
-- Animações: manter `framer-motion` + `embla-carousel-autoplay`. Adicionar `motion.div` com `animate={{ scale }}` no dot pulsante do right rail.
-- Number flip simples no ticker: `useEffect` + `setInterval` incrementando 1 a cada 4s (visual de "live"), sem chamada real ao backend.
-- Acessibilidade preservada: `role="region"`, `aria-label`, `aria-current` nos dots, `aria-live="polite"` no contador.
-- Responsivo:
-  - `<lg`: stack vertical, right rail vira faixa horizontal de 3 mini-cards com scroll-snap.
-  - `<md`: headline `text-4xl`, esconde setas, mantém dots + contador.
-- Sem novas dependências.
+- Tema dark mantido (Carbon/Volt/Bone). Cards usam `bg-card`/`border-border`, destaques em `text-accent` (volt) e `text-emerald-500` (delta).
+- Tipografia: títulos `text-3xl font-bold tracking-tight`, números grandes `text-4xl font-bold tabular-nums`.
+- Mobile: cada zona empilha; gráfico mantém `ResponsiveContainer` com altura 280.
+- `break-words` em todos os textos longos.
 
 ## Fora de escopo
 
-- Mudanças no copy dos 5 slides (mantém os textos atuais).
-- Mudar paleta, fontes globais ou tokens do design system.
-- Editar `/mari`, `/painel`, `/equity-brain`, Auth, Sell Wizard.
+- Sem alterar `/equity-brain`, `/mari`, Sell Wizard, Header, Footer, AppShell.
+- Sem nova IA / edge function.
+- Dashboard admin para editar `sector_market_trends` fica para próxima iteração (seed manual agora).
+
+## Memória
+
+Ao concluir, registrar em `mem://features/painel-executive-report` resumindo zonas, fonte de dados (`valuation_history` + `sector_market_trends`) e fallback aleatório 3–14 de buyers.
