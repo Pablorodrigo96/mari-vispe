@@ -321,22 +321,44 @@ const MyProfile = () => {
     );
   }
 
+  // Build dynamic completion suggestions based on what's missing
+  const missing = [
+    !watched.full_name && { key: 'name', label: 'Nome completo', targetId: 'card-personal' },
+    !avatarUrl && { key: 'avatar', label: 'Foto de perfil' },
+    !watched.phone && { key: 'phone', label: 'Telefone', targetId: 'card-personal' },
+    !watched.cpf_cnpj && { key: 'doc', label: 'CPF/CNPJ', targetId: 'card-personal' },
+    !(watched.bio && watched.bio.length >= 20) && { key: 'bio', label: 'Mini bio', targetId: 'card-about' },
+    !watched.website_url && !(watched.interests && watched.interests.length) && { key: 'web', label: 'Site / Interesses', targetId: 'card-about' },
+    !(watched.cep || (watched.city && watched.state)) && { key: 'addr', label: 'Endereço', targetId: 'card-address' },
+  ].filter(Boolean) as { key: string; label: string; targetId?: string }[];
+
+  const cpfCnpjDigits = (watched.cpf_cnpj || '').replace(/\D/g, '');
+  const isCnpj = cpfCnpjDigits.length === 14;
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Meu Perfil</h1>
-            <p className="text-muted-foreground mt-2">
-              Gerencie suas informações pessoais e seu plano
-            </p>
-          </div>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <ProfileHeroCard
+            userId={user!.id}
+            email={user?.email}
+            fullName={watched.full_name}
+            avatarUrl={avatarUrl}
+            plan={subscription?.plan}
+            hasPhone={!!(watched.phone && watched.phone.length >= 10)}
+            hasCpfCnpj={cpfCnpjDigits.length >= 11}
+            hasCnpj={isCnpj}
+            roles={{ isAdmin, isAdvisor, isFranchisee, isBuyer, isSeller }}
+            completion={completion}
+            missing={missing}
+            onAvatarChange={(url) => setAvatarUrl(url)}
+          />
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Dados Pessoais */}
-              <Card>
+              <Card id="card-personal">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
