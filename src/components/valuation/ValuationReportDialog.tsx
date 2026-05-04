@@ -46,7 +46,7 @@ export const ValuationReportDialog = ({
   const [narrativeOpen, setNarrativeOpen] = useState(false);
   const [diagnosticAnswers, setDiagnosticAnswers] = useState<DiagnosticAnswers | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
-  const equityGap = calculateEquityGap(result, 5);
+  const equityGap = calculateEquityGap(result, 2);
 
   const formatMultiple = (value: number) => `${value.toFixed(1)}x`;
 
@@ -269,7 +269,7 @@ export const ValuationReportDialog = ({
 
     addText(`Gap: ${formatFullCurrency(equityGap.gapValue)} (+${equityGap.gapPercent.toFixed(1)}%)`, margin, yPos, { fontSize: 11, fontStyle: 'bold', color: [16, 185, 129] });
     yPos += 8;
-    const gapExplanation = `Se sua empresa melhorar a margem EBITDA em 5pp (de ${equityGap.currentMargin.toFixed(1)}% para ${equityGap.boostedMargin.toFixed(1)}%), o valor estimado sobe de ${formatFullCurrency(equityGap.currentValue)} para ${formatFullCurrency(equityGap.potentialValue)}.`;
+    const gapExplanation = `Este é o seu Gap de Equity hoje. Empresas atendidas pela mari conseguiram destravar este upside com um trabalho estruturado de governança, fiscal e comercial.`;
     const splitGap = doc.splitTextToSize(gapExplanation, pageWidth - 2 * margin);
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
@@ -456,14 +456,51 @@ export const ValuationReportDialog = ({
 
         <div ref={reportRef} className="space-y-6 pt-6">
           {/* Main Valuation - Mashup Value */}
-          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-6 text-center text-white">
-            <p className="text-emerald-100 text-sm mb-2">Mashup Value (Valor de Mercado Estimado)</p>
-            <p className="text-4xl font-bold">
+          <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-xl p-6 text-center text-white shadow-lg">
+            <p className="text-white/95 text-sm mb-2 font-medium" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}>
+              Mashup Value (Valor de Mercado Estimado)
+            </p>
+            <p className="text-4xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
               {formatFullCurrency(result.mashupValue)}
             </p>
-            <p className="text-emerald-100 text-sm mt-3">
+            <p className="text-white/95 text-sm mt-3" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}>
               Implícito: {formatMultiple(result.impliedMultiples.impliedRevMultiple)} Receita | {formatMultiple(result.impliedMultiples.impliedEbitdaMultiple)} EBITDA
             </p>
+          </div>
+
+          {/* Análise de Impacto Financeiro - DESTAQUE NO TOPO */}
+          <div className="bg-gradient-to-br from-red-500/15 via-orange-500/10 to-red-500/5 border-2 border-red-400/40 dark:border-red-700/40 rounded-xl p-6 shadow-lg animate-fade-in">
+            <div className="text-center mb-4">
+              <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2">
+                ⚡ Antes de continuar: descubra seu valor real
+              </h3>
+              <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto">
+                O Mashup Value acima é apenas o <strong>ponto de partida</strong>. Em 90 segundos, respondendo 12 perguntas sobre fiscal, governança e operação, você descobre <strong className="text-red-600 dark:text-red-400">quanto a sua empresa está valendo de menos hoje</strong> — e o que precisa mudar para destravar o valor potencial.
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3 mb-5 text-center">
+              <div className="bg-background/60 rounded-lg p-3 border border-border/50">
+                <p className="text-2xl mb-1">📉</p>
+                <p className="text-xs font-medium text-foreground">Quanto você perde por mês</p>
+              </div>
+              <div className="bg-background/60 rounded-lg p-3 border border-border/50">
+                <p className="text-2xl mb-1">🎯</p>
+                <p className="text-xs font-medium text-foreground">Itens que mais derrubam seu valor</p>
+              </div>
+              <div className="bg-background/60 rounded-lg p-3 border border-border/50">
+                <p className="text-2xl mb-1">🚀</p>
+                <p className="text-xs font-medium text-foreground">Plano de ação personalizado</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setDiagnosticOpen(true)}
+              size="lg"
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-base shadow-md group"
+            >
+              <BarChart2 className="w-5 h-5 mr-2" />
+              Iniciar Diagnóstico de Valor
+              <ArrowUpRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+            </Button>
           </div>
 
           {/* Grid with Company and Financial Data */}
@@ -747,21 +784,20 @@ export const ValuationReportDialog = ({
                 </div>
 
                 <p className="text-sm text-muted-foreground mb-4">
-                  Se sua empresa melhorar a margem EBITDA em 5pp (de {equityGap.currentMargin.toFixed(1)}% para {equityGap.boostedMargin.toFixed(1)}%), 
-                  o valor estimado sobe de {formatFullCurrency(equityGap.currentValue)} para {formatFullCurrency(equityGap.potentialValue)}.
+                  Este é o seu <strong>Gap de Equity</strong> hoje. Empresas atendidas pela mari conseguiram destravar este upside com um trabalho estruturado de governança, fiscal e comercial. <strong className="text-foreground">Quer entender o que falta na sua?</strong>
                 </p>
 
                 <Button
                   className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
                   onClick={async () => {
-                    const opened = await openWhatsApp(`Olá! Vi meu Gap de Equity de ${formatFullCurrency(equityGap.gapValue)} e gostaria de falar com um franqueado Vispe na minha região.`);
+                    const opened = await openWhatsApp(`Olá! Vi meu Gap de Equity de ${formatFullCurrency(equityGap.gapValue)} e gostaria de falar com um especialista mari.`);
                     if (!opened) {
                       toast.success('Link do WhatsApp copiado! Cole no navegador para abrir.');
                     }
                   }}
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
-                  Falar com Franqueado Regional
+                  Falar com um especialista
                 </Button>
               </div>
             );
@@ -787,22 +823,7 @@ export const ValuationReportDialog = ({
             </p>
           </div>
 
-          {/* Análise de Impacto */}
-          <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-300/30 dark:border-red-800/30 rounded-xl p-5 text-center">
-            <h3 className="font-semibold text-foreground mb-2">
-              📊 Análise de Impacto Financeiro
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Descubra quanto sua empresa está perdendo por mês e como fechar o gap de valuation.
-            </p>
-            <Button
-              onClick={() => setDiagnosticOpen(true)}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
-              <BarChart2 className="w-4 h-4 mr-2" />
-              Diagnóstico de Valor
-            </Button>
-          </div>
+          {/* Análise de Impacto agora aparece no topo, abaixo do Mashup Value */}
 
           {/* CTA WhatsApp */}
           <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border border-emerald-500/30 rounded-xl p-5 text-center">
