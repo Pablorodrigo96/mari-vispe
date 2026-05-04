@@ -55,6 +55,31 @@ export function buildSnapshot(row: any): ValuationSnapshot | null {
 
   const lossPotential = Number(r?.lossMetrics?.potentialValue) || 0;
   const valorPotencial = lossPotential > valorAtual ? lossPotential : Math.round(valorAtual * 1.5);
+export function buildSnapshot(row: any): ValuationSnapshot | null {
+  if (!row?.result) return null;
+  const r = row.result;
+  const isDcf = row.valuation_type === 'dcf' || row.valuation_type === 'dcf_single';
+
+  // 1) Valor Estimado: número neutro de mercado (mesmo do relatório)
+  const valorEstimado = Number(isDcf ? (r.enterpriseValue ?? r.valueLow) : r.mashupValue) || 0;
+  if (!valorEstimado) return null;
+
+  // 2) Diagnóstico: usa o que o relatório salvou em lossMetrics (totalDegradation + trueValue)
+  // Mesma fórmula de src/lib/diagnosticCalculator.ts (calculateTrueValue).
+  const lm = r?.lossMetrics;
+  const hasDiagnostic = !!(lm && (lm.trueValue || typeof lm.totalDegradation === 'number'));
+  const degradationPct = hasDiagnostic ? Number(lm.totalDegradation) || 0 : 0;
+  const trueValue = hasDiagnostic
+    ? Number(lm.trueValue) || (valorEstimado * (1 - degradationPct))
+    : valorEstimado;
+
+  // 3) Valor Potencial 2027: SEMPRE Estimado × 1,78 (mesma constante do relatório).
+  const valorPotencial = hasDiagnostic && Number(lm.potentialValue) > 0
+    ? Number(lm.potentialValue)
+    : Math.round(valorEstimado * VISPE_APPRECIATION_FACTOR);
+
+  // 4) Gap derivado: nunca recalculado por outro caminho.
+  const valorAtual = trueValue;
   const gap = valorPotencial - valorAtual;
   const gapPct = valorAtual ? (gap / valorAtual) * 100 : 0;
 
@@ -63,9 +88,11 @@ export function buildSnapshot(row: any): ValuationSnapshot | null {
 
   return {
     valorAtual,
+    valorEstimado,
     valorPotencial,
     gap,
     gapPct,
+    degradationPct,
     segment: normalizeSegment(row.segment ?? r?.inputs?.segment),
     ebitdaMargin: r?.metrics?.ebitdaMargin ?? r?.inputs?.ebitdaMargin,
     ebitdaMarginPotential: r?.metrics?.ebitdaMargin ? Math.min(35, r.metrics.ebitdaMargin + 5) : undefined,
@@ -73,8 +100,7 @@ export function buildSnapshot(row: any): ValuationSnapshot | null {
     icLowPot: valorPotencial * 0.9,
     icHighPot: valorPotencial * 1.1,
     method: isDcf ? 'dcf' : 'multiples',
-    source: lossPotential > valorAtual ? 'lossMetrics' : 'heuristic',
-    hasDiagnostic: !!r?.lossMetrics,
+    hasDiagnostic,
     createdAt: row.created_at,
   };
 }
