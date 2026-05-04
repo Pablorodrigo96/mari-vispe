@@ -35,6 +35,7 @@ import BlindTeaser from "./pages/BlindTeaser";
 import RegisterBuyer from "./pages/RegisterBuyer";
 import MyCapitalRequests from "./pages/MyCapitalRequests";
 import CapitalRequestDetail from "./pages/CapitalRequestDetail";
+import MariCalculator from "./pages/MariCalculator";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -149,7 +150,7 @@ const App = () => (
               <Route path="/vender" element={<Vender />} />
               <Route path="/anuncio/:id" element={<ListingDetail />} />
               <Route path="/valuation" element={<Valuation />} />
-              <Route path="/mari" element={<Valuation />} />
+              <Route path="/mari" element={<MariCalculator />} />
               <Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
               <Route path="/valuation/dcf" element={<ValuationDCF />} />
               <Route path="/valuation/certificador" element={<ValuationCertifier />} />
