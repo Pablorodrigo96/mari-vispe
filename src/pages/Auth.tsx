@@ -28,7 +28,7 @@ const formatPhone = (value: string) => {
 };
 
 const roleOptions: { id: UserRole; label: string; description: string }[] = [
-  { id: 'seller', label: 'Vendedor', description: 'Quero vender minha empresa' },
+  { id: 'seller', label: 'Vendedor', description: 'Quero cadastrar minha empresa' },
   { id: 'buyer', label: 'Comprador/Investidor', description: 'Quero comprar ou investir' },
   { id: 'advisor', label: 'Assessor/Representante', description: 'Represento empresas' },
   { id: 'franchisee', label: 'Franqueado', description: 'Sou franqueado da rede' },

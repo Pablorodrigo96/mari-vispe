@@ -26,11 +26,12 @@ export function MariDifferentialCard() {
         <div className="max-w-3xl mx-auto text-center mb-14">
           <p className="text-[10px] uppercase tracking-[0.4em] text-accent mb-4">o que a mari faz de diferente</p>
           <h2 className="text-2xl md:text-4xl font-bold text-foreground text-balance">
-            Não é busca. Não é planilha. É <span className="text-gradient-gold">previsão.</span>
+            Não é busca. Não é planilha. É <span className="text-gradient-gold bg-accent text-secondary-foreground border-secondary-foreground font-extrabold">previsão.</span>
           </h2>
-          <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
-            A mari analisa milhões de sinais de mercado e devolve probabilidade, faixa de valor e razões.
-            Quando não sabe o suficiente, ela se abstém.
+          <p className="text-muted-foreground mt-4 max-w-2xl mx-auto whitespace-pre-line">
+            A mari analisa milhões de sinais de mercado e devolve probabilidade, faixa de valor e os melhores compradores para sua empresa.{"\n\n"}
+            A dúvida não é SE você vai vender, mas QUANDO e principalmente POR QUANTO.{"\n\n"}
+            Nós já temos essa resposta!
           </p>
         </div>
 

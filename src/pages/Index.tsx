@@ -88,18 +88,19 @@ const Index = () => {
               transition={{ duration: 0.6, ease, delay: 0.1 }}
             >
               A IA que prevê quais empresas{' '}
-              <span className="text-gradient-gold">vão ser vendidas</span>{' '}
-              — e por quanto.
+              <span className="text-gradient-gold bg-accent text-secondary-foreground border-secondary-foreground font-extrabold">vão ser vendidas</span>,{' '}
+              e por quanto.
             </motion.h1>
 
             <motion.p
-              className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed"
+              className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed whitespace-pre-line"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease, delay: 0.2 }}
             >
-              A mari analisa milhões de sinais de mercado e devolve probabilidade, faixa de valor e razões.
-              Quando não sabe o suficiente, ela se abstém.
+              A mari analisa milhões de sinais de mercado e devolve probabilidade, faixa de valor e os melhores compradores para sua empresa. {"\n\n"}
+              A dúvida não é SE você vai vender, mas QUANDO e principalmente POR QUANTO.{"\n\n"}
+              Nós já temos essa resposta!
             </motion.p>
 
             <motion.div
@@ -109,7 +110,7 @@ const Index = () => {
               transition={{ duration: 0.6, ease, delay: 0.3 }}
             >
               <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold h-12 px-6 text-base rounded-xl">
-                <Link to="/vender">Quero vender minha empresa</Link>
+                <Link to="/vender">Quero cadastrar minha empresa</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 h-12 px-6 text-base rounded-xl bg-transparent">
                 <Link to="/comprar">Quero comprar uma empresa</Link>
@@ -158,7 +159,7 @@ const Index = () => {
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Explore por Setor</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">É um investidor e quer encontrar a melhor empresa para alocar seu capital?</h2>
             <div className="w-12 h-1 bg-accent mx-auto rounded-full mt-3 mb-3" />
             <p className="text-muted-foreground">Encontre oportunidades no segmento ideal para você</p>
           </div>
