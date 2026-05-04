@@ -574,7 +574,7 @@ export default function MyListings() {
                         {interests[listing.id] && interests[listing.id].length > 0 && (
                           <div className="mt-3 border-t border-border pt-3">
                             <button
-                              onClick={() => setExpandedInterests(prev => ({ ...prev, [listing.id]: !prev[listing.id] }))}
+                              onClick={(e) => { e.stopPropagation(); setExpandedInterests(prev => ({ ...prev, [listing.id]: !prev[listing.id] })); }}
                               className="flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
                             >
                               <Users className="w-4 h-4" />
