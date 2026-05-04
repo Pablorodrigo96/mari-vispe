@@ -138,6 +138,7 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/investors" element={<Investors />} />
+            <Route path="/comprar" element={<Investors />} />
 
             {/* Hybrid routes: AppShell wraps them; for visitors AppShell renders the page raw */}
             <Route element={<AppShell />}>
@@ -148,6 +149,7 @@ const App = () => (
               <Route path="/vender" element={<Vender />} />
               <Route path="/anuncio/:id" element={<ListingDetail />} />
               <Route path="/valuation" element={<Valuation />} />
+              <Route path="/mari" element={<Valuation />} />
               <Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
               <Route path="/valuation/dcf" element={<ValuationDCF />} />
               <Route path="/valuation/certificador" element={<ValuationCertifier />} />
