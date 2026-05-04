@@ -50,15 +50,6 @@ export function buildSnapshot(row: any): ValuationSnapshot | null {
   if (!row?.result) return null;
   const r = row.result;
   const isDcf = row.valuation_type === 'dcf' || row.valuation_type === 'dcf_single';
-  const valorAtual = Number(isDcf ? (r.enterpriseValue ?? r.valueLow) : r.mashupValue) || 0;
-  if (!valorAtual) return null;
-
-  const lossPotential = Number(r?.lossMetrics?.potentialValue) || 0;
-  const valorPotencial = lossPotential > valorAtual ? lossPotential : Math.round(valorAtual * 1.5);
-export function buildSnapshot(row: any): ValuationSnapshot | null {
-  if (!row?.result) return null;
-  const r = row.result;
-  const isDcf = row.valuation_type === 'dcf' || row.valuation_type === 'dcf_single';
 
   // 1) Valor Estimado: número neutro de mercado (mesmo do relatório)
   const valorEstimado = Number(isDcf ? (r.enterpriseValue ?? r.valueLow) : r.mashupValue) || 0;
