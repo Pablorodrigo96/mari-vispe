@@ -1,37 +1,24 @@
-## Objetivo
-Criar um campo dedicado **só para a senha** do banco RFB, separado da connection string completa. Você cola apenas a senha pura (ex: `vivekdb...`), sem precisar lidar com `postgresql://`, `@`, `?sslmode=require`, etc.
+## Root cause confirmado
+Edge functions Supabase rodam em rede que **não alcança host direto IPv6** `db.<ref>.supabase.co`. O erro `28P01 password authentication failed` é enganoso — na prática o socket nem completa handshake corretamente. A imagem do dashboard confirma: o caminho recomendado é o **Shared Pooler IPv4**.
 
-## Mudanças
+## Correção
 
-### 1) Edge function `supabase/functions/national-search/index.ts`
-Trocar a leitura de `EXTERNAL_DB_URL` por uma montagem a partir de variáveis separadas:
+### 1) Alterar defaults em `supabase/functions/national-search/index.ts`
+- `EXTERNAL_DB_HOST` default: `aws-1-us-east-1.pooler.supabase.com`
+- `EXTERNAL_DB_USER` default: `postgres.oyarjshdqeaatlmlzvbx` (user com ref embutido — exigência do pooler)
+- `EXTERNAL_DB_PORT` default: `5432`
+- `EXTERNAL_DB_NAME` default: `postgres`
 
-- `EXTERNAL_DB_PASSWORD` (novo secret, **só a senha**)
-- `EXTERNAL_DB_HOST` (opcional, default `db.oyarjshdqeaatlmlzvbx.supabase.co`)
-- `EXTERNAL_DB_USER` (opcional, default `postgres`)
-- `EXTERNAL_DB_NAME` (opcional, default `postgres`)
-- `EXTERNAL_DB_PORT` (opcional, default `5432`)
+### 2) Aplicar mesmas mudanças em `cnpj-db-inspect` e `enrich-company-via-rfb`
+Para os 3 edge functions baterem no pooler.
 
-A função monta:
-```
-postgresql://${USER}:${encodeURIComponent(PASSWORD)}@${HOST}:${PORT}/${DB}?sslmode=require
-```
-
-`encodeURIComponent` resolve qualquer caractere especial automaticamente. Mantém o fallback antigo (`EXTERNAL_DB_URL`) por compatibilidade — se você só preencher `EXTERNAL_DB_PASSWORD`, ela tem prioridade.
-
-### 2) Aplicar o mesmo padrão em `cnpj-db-inspect` e `enrich-company-via-rfb`
-Para os três edge functions consumirem o mesmo secret e ficarem consistentes.
-
-### 3) Pedir o secret `EXTERNAL_DB_PASSWORD`
-Após implementar, abro o diálogo `add_secret` para você colar **apenas a senha** (nada mais — sem `postgres:`, sem `@host`, sem `?sslmode`).
+### 3) Reabrir campo `EXTERNAL_DB_PASSWORD`
+Você cola **apenas a senha** (o que vai no `[YOUR-PASSWORD]` da string do dashboard).
 
 ### 4) Validar
-Chamar `national-search` com `{type:"search", query:"VIVO", state:"SP"}` e confirmar que retorna empresas reais (não mais `degraded: true`).
-
-## O que NÃO muda
-- Schema do banco, lógica de mapeamento CNAE, cache, RLS, planos pagos.
-- O fallback BrasilAPI por CNPJ direto continua funcionando.
-- O secret antigo `EXTERNAL_DB_URL` segue suportado (não precisa apagar).
+- Chamar `national-search` com `{type:"search", query:"VIVO", state:"SP"}`.
+- Confirmar response com `companies.length > 0` (não mais `degraded:true`).
+- Se falhar de novo, o `diag` no JSON traz código/mensagem exatos do Postgres.
 
 ## Aprovação
-Aprove este plano para eu implementar e abrir o campo `EXTERNAL_DB_PASSWORD` para você colar a senha.
+Aprove para eu sair do plan mode, aplicar as mudanças e reabrir o campo da senha.
