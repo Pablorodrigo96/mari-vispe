@@ -75,6 +75,7 @@ export function useNationalSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPaidPlanRequired, setIsPaidPlanRequired] = useState(false);
+  const [degraded, setDegraded] = useState<null | string>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = async (options: SearchOptions) => {
