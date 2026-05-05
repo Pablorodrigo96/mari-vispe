@@ -1,38 +1,51 @@
 ## Diagnóstico
 
-O cadastro do anúncio falha no momento de inserir (não no plano). Erros recentes do Postgres:
+A conexão com a base nacional da Receita Federal (`EXTERNAL_DB_URL`) está **quebrada**. Os logs do edge function `national-search` mostram, em todas as chamadas recentes:
 
 ```
-duplicate key value violates unique constraint "listings_ticker_key"
+PostgresError: password authentication failed for user "postgres"
+code: 28P01  severity: FATAL
 ```
 
-`generateTicker()` em `NewListingWizard.tsx` calcula o próximo número via:
-```ts
-const { count } = await supabase.from('listings').select('*', { count: 'exact', head: true }).like('ticker', `${prefix}%`);
+Isso afeta TODAS as buscas RFB (por nome, por setor e por CNPJ). Por isso, ao procurar "Vivo", "Claro", "TIM", "Algar", etc. você só vê empresas do CRM da Vispe — o painel `Base Nacional de Empresas` está retornando vazio (ou caindo em erro silencioso) e a UI mostra apenas resultados locais.
+
+### Causa
+O secret `EXTERNAL_DB_URL` (configurado em Lovable Cloud) tem senha inválida ou expirada. Provavelmente:
+- senha do usuário `postgres` na base externa foi rotacionada;
+- ou a string de conexão foi truncada/escapada incorretamente quando salva.
+
+A base em si não muda — é a base mensal da RFB que vocês já usam — só a credencial precisa ser atualizada.
+
+## O que vou fazer
+
+### 1) Atualizar o secret `EXTERNAL_DB_URL`
+Vou pedir a string de conexão atualizada via `add_secret`. Formato esperado:
 ```
-Mas a RLS de `listings` só deixa o usuário comum ver **os próprios** anúncios (`auth.uid() = user_id`) ou os com `status='active'`. Para um usuário novo (carlos.bampi@vispe.com.br) o count vem muito menor que o real, gera ex. `TECH02`, e o INSERT explode no índice único.
+postgresql://USER:SENHA@HOST:5432/DB?sslmode=require
+```
+Após salvar, os edge functions `national-search`, `cnpj-db-inspect` e `enrich-company-via-rfb` voltam a funcionar automaticamente — não há deploy necessário.
 
-## Correção
+### 2) Validar com 3 testes
+- `cnpj-db-inspect` (audit do schema) — confirma conexão básica.
+- `national-search` type=`cnpj` com CNPJ da Vivo (`02.558.157/0001-62`) — confirma JOIN empresas+estabelecimentos.
+- `national-search` type=`search` com `query="VIVO"` e `state="SP"` — confirma busca por nome.
 
-Vamos garantir ticker único via retry server-side, sem mexer em RLS nem em schema.
+### 3) Hardening: fallback BrasilAPI para busca por nome (opcional, mas recomendo)
+Hoje o fallback BrasilAPI só roda em `type=cnpj`. Quando a base externa cai, busca por nome devolve lista vazia silenciosamente — exatamente o sintoma reportado. Vou adicionar:
+- detectar erro de conexão Postgres em `type=search` e `type=sector`;
+- retornar `{ companies: [], degraded: true, reason: "rfb_db_unavailable" }` em vez de 500;
+- mostrar banner discreto no `NationalSearchPanel`: "Base RFB temporariamente indisponível — tente buscar pelo CNPJ direto" (CNPJ direto cairia no BrasilAPI).
 
-### 1. `src/components/sell/wizard/NewListingWizard.tsx`
-
-- Reescrever `generateTicker(category)` para devolver um candidato com sufixo aleatório (`PREFIX` + 4 dígitos `0000–9999`), evitando depender do count.
-- Em `handleSelectPlan`, envolver o `insert` em um **loop de até 5 tentativas**: se o erro for `23505` (unique violation) em `listings_ticker_key`, regenerar o ticker e tentar de novo. Outros erros caem no catch normal.
-- Manter a mensagem de erro detalhada que já existe.
-
-### 2. (Opcional, rápido) Fallback de prefixo
-
-Se a categoria não estiver no `prefixMap`, fazer slug ASCII de até 4 chars maiúsculos antes do número, evitando `Tecnologia & Telecom...` virar prefixo gigante.
+Isso garante que, mesmo se a senha cair de novo no futuro, o usuário entende o que está acontecendo em vez de achar que a busca não tem dados.
 
 ## Arquivos afetados
+- Secret: `EXTERNAL_DB_URL` (atualização — sem código).
+- `supabase/functions/national-search/index.ts` — try/catch granular + flag `degraded`.
+- `src/components/matching/NationalSearchPanel.tsx` — banner de degradação.
 
-**Editado:**
-- `src/components/sell/wizard/NewListingWizard.tsx` (apenas `generateTicker` + `handleSelectPlan`)
+## O que NÃO muda
+- Schema do banco, lógica de mapeamento CNAE→categoria, cache `cnpj_cache`, RLS, planos pagos — tudo intacto.
+- Nada relacionado a valuation, listings ou wizard de venda.
 
-## Notas técnicas
-
-- 4 dígitos aleatórios = 10.000 espaços por prefixo; com 5 retries a chance de colisão é < 1 em 10⁹.
-- Sem migration, sem mudança de RLS.
-- Não toca nada relacionado ao seletor de plano (UI continua igual; o erro só estava aparecendo *depois* do clique no plano).
+## O que preciso de você
+Para o passo 1, vou abrir o diálogo `add_secret` pedindo a nova string `EXTERNAL_DB_URL`. Você cola a connection string atualizada (com a senha correta) e eu prossigo com testes + hardening.
