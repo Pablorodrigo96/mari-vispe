@@ -75,6 +75,7 @@ export function useNationalSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPaidPlanRequired, setIsPaidPlanRequired] = useState(false);
+  const [degraded, setDegraded] = useState<null | string>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = async (options: SearchOptions) => {
@@ -92,6 +93,7 @@ export function useNationalSearch() {
     setLoading(true);
     setError(null);
     setIsPaidPlanRequired(false);
+    setDegraded(null);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('national-search', {
@@ -110,6 +112,10 @@ export function useNationalSearch() {
         setIsPaidPlanRequired(true);
         setResults([]);
         return;
+      }
+
+      if (data?.degraded) {
+        setDegraded(data.reason || 'rfb_db_unavailable');
       }
 
       setResults(data?.companies || []);
@@ -158,6 +164,7 @@ export function useNationalSearch() {
     loading,
     error,
     isPaidPlanRequired,
+    degraded,
     search,
     debouncedSearch,
     lookupCnpj,
