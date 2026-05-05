@@ -260,7 +260,9 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   );
+
+  if (embedded) return content;
+  return <div className="min-h-screen bg-zinc-950 text-zinc-100">{content}</div>;
 }
