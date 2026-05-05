@@ -44,6 +44,25 @@ export function useCompanyResolver(idOrCode?: string | null) {
           .eq("cnpj", cnpj)
           .maybeSingle();
         if (data?.cnpj) return { ...data, source: "cnpj" };
+
+        // Cold CNPJ: try enrich via RFB (admin/advisor only). Best-effort.
+        try {
+          const { data: rolesData } = await supabase
+            .from("user_roles")
+            .select("role")
+            .in("role", ["admin", "advisor"] as any)
+            .limit(1);
+          if (rolesData && rolesData.length > 0) {
+            await supabase.functions.invoke("enrich-company-via-rfb", { body: { cnpj } });
+            const { data: after } = await eb
+              .from("companies")
+              .select("cnpj,codename,razao_social,listing_id")
+              .eq("cnpj", cnpj)
+              .maybeSingle();
+            if (after?.cnpj) return { ...after, source: "cnpj" };
+          }
+        } catch {}
+
         return { cnpj, codename: null, razao_social: null, listing_id: null, source: "cnpj" };
       }
 
