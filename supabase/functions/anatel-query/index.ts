@@ -180,10 +180,12 @@ serve(async (req) => {
           // Descobre 2 períodos (atual e ~12m atrás) baseado em (ano, mês)
           const periods = await client.queryObject({
             text: `
-              SELECT DISTINCT ano, "mês" AS mes
-              FROM "${table}"
-              WHERE ano IS NOT NULL AND "mês" IS NOT NULL
-              ORDER BY ano::int DESC, "mês"::int DESC
+              SELECT ano, mes FROM (
+                SELECT DISTINCT ano, "mês" AS mes
+                FROM "${table}"
+                WHERE ano IS NOT NULL AND "mês" IS NOT NULL
+              ) p
+              ORDER BY ano::int DESC, mes::int DESC
               LIMIT 24
             `,
           });
