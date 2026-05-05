@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { Newspaper, RefreshCw } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Newspaper, RefreshCw, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { NewsPanel } from "@/components/equity-brain/news/NewsPanel";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import AnatelCruzamentoPage from "./AnatelCruzamentoPage";
 
 const TYPES = ["all", "ma_closed", "ma_announced", "funding_round", "ipo", "leadership_change", "expansion", "regulatory", "generic"];
 const TYPE_LABEL: Record<string, string> = {
@@ -19,6 +22,8 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export default function NewsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") === "anatel" ? "anatel" : "noticias";
   const [filter, setFilter] = useState("all");
   const [stats, setStats] = useState<{ total: number; last7d: number; last30d: number }>({ total: 0, last7d: 0, last30d: 0 });
   const [running, setRunning] = useState(false);
@@ -51,51 +56,75 @@ export default function NewsPage() {
 
   return (
     <div className="p-6 space-y-4 bg-zinc-950 min-h-full">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-4">
-        <div className="flex items-center gap-3">
-          <Newspaper className="h-6 w-6 text-[#D9F564]" />
-          <div>
-            <h1 className="text-xl font-bold text-zinc-100">Inteligência de Notícias</h1>
-            <p className="text-xs text-zinc-400">Varredura automática de portais brasileiros (Valor, NeoFeed, InfoMoney, Exame, etc.)</p>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => {
+          const next = new URLSearchParams(searchParams);
+          if (v === "anatel") next.set("tab", "anatel"); else next.delete("tab");
+          setSearchParams(next, { replace: true });
+        }}
+      >
+        <TabsList className="bg-zinc-900 border border-zinc-800">
+          <TabsTrigger value="noticias" className="data-[state=active]:bg-[#D9F564] data-[state=active]:text-black">
+            <Newspaper className="h-3.5 w-3.5 mr-1" /> Notícias
+          </TabsTrigger>
+          <TabsTrigger value="anatel" className="data-[state=active]:bg-[#D9F564] data-[state=active]:text-black">
+            <Database className="h-3.5 w-3.5 mr-1" /> Cruzamento Anatel
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="noticias" className="space-y-4 mt-4">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+            <div className="flex items-center gap-3">
+              <Newspaper className="h-6 w-6 text-[#D9F564]" />
+              <div>
+                <h1 className="text-xl font-bold text-zinc-100">Inteligência de Notícias</h1>
+                <p className="text-xs text-zinc-400">Varredura automática de portais brasileiros (Valor, NeoFeed, InfoMoney, Exame, etc.)</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => triggerRun("mandates")} disabled={running}
+                      className="bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800 text-[11px]">
+                <RefreshCw className={`h-3 w-3 mr-1 ${running ? "animate-spin" : ""}`} /> Coletar mandatos
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => triggerRun("all")} disabled={running}
+                      className="bg-transparent border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/10 text-[11px]">
+                <RefreshCw className={`h-3 w-3 mr-1 ${running ? "animate-spin" : ""}`} /> Coletar tudo
+              </Button>
+            </div>
+          </header>
+
+          <div className="grid grid-cols-3 gap-3">
+            {[{ k: "total", v: stats.total, label: "Total no banco" },
+              { k: "last30d", v: stats.last30d, label: "Últimos 30 dias" },
+              { k: "last7d", v: stats.last7d, label: "Últimos 7 dias" }].map((s) => (
+              <div key={s.k} className="bg-zinc-900/60 border border-zinc-800 rounded p-3">
+                <div className="text-[10px] uppercase text-zinc-400">{s.label}</div>
+                <div className="text-2xl font-bold text-[#D9F564]">{s.v.toLocaleString("pt-BR")}</div>
+              </div>
+            ))}
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => triggerRun("mandates")} disabled={running}
-                  className="bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800 text-[11px]">
-            <RefreshCw className={`h-3 w-3 mr-1 ${running ? "animate-spin" : ""}`} /> Coletar mandatos
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => triggerRun("all")} disabled={running}
-                  className="bg-transparent border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/10 text-[11px]">
-            <RefreshCw className={`h-3 w-3 mr-1 ${running ? "animate-spin" : ""}`} /> Coletar tudo
-          </Button>
-        </div>
-      </header>
 
-      <div className="grid grid-cols-3 gap-3">
-        {[{ k: "total", v: stats.total, label: "Total no banco" },
-          { k: "last30d", v: stats.last30d, label: "Últimos 30 dias" },
-          { k: "last7d", v: stats.last7d, label: "Últimos 7 dias" }].map((s) => (
-          <div key={s.k} className="bg-zinc-900/60 border border-zinc-800 rounded p-3">
-            <div className="text-[10px] uppercase text-zinc-400">{s.label}</div>
-            <div className="text-2xl font-bold text-[#D9F564]">{s.v.toLocaleString("pt-BR")}</div>
+          <div className="flex flex-wrap gap-1 border-b border-zinc-800 pb-2">
+            {TYPES.map((t) => (
+              <button key={t} onClick={() => setFilter(t)}
+                className={`px-3 py-1 text-[11px] rounded ${filter === t ? "bg-[#D9F564] text-black font-bold" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}>
+                {TYPE_LABEL[t]}
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-zinc-800 pb-2">
-        {TYPES.map((t) => (
-          <button key={t} onClick={() => setFilter(t)}
-            className={`px-3 py-1 text-[11px] rounded ${filter === t ? "bg-[#D9F564] text-black font-bold" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}>
-            {TYPE_LABEL[t]}
-          </button>
-        ))}
-      </div>
+          {filter === "all" ? (
+            <NewsPanel limit={50} />
+          ) : (
+            <FilteredNewsPanel eventType={filter} />
+          )}
+        </TabsContent>
 
-      {filter === "all" ? (
-        <NewsPanel limit={50} />
-      ) : (
-        <FilteredNewsPanel eventType={filter} />
-      )}
+        <TabsContent value="anatel" className="mt-4">
+          <AnatelCruzamentoPage embedded />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -118,7 +147,6 @@ function FilteredNewsPanel({ eventType }: { eventType: string }) {
 
   if (loading) return <div className="text-xs text-zinc-400 p-4">Carregando…</div>;
   if (items.length === 0) return <div className="text-xs text-zinc-500 p-6 text-center">Nenhuma notícia deste tipo ainda.</div>;
-  // Reaproveita renderização individual via NewsPanel — passamos cnpj=null e filtramos client-side
   return (
     <div className="space-y-3">
       {items.map((n) => (
