@@ -1,66 +1,83 @@
 ## O que será feito
 
-Duas melhorias de segurança na autenticação:
-
-1. **Recuperação de senha** no fluxo de login
-2. **Autenticação de 2 fatores (2FA)** opcional via app autenticador (Google Authenticator, Authy, 1Password etc.) no perfil do usuário
+Expandir a lista de setores nos seletores de Valuation (Wizard padrão e Certificador), com **Tecnologia & Telecom (ISP)** como primeiro item e cobertura ampla de setores PME brasileiras. Criar um **DE-PARA** central que mapeia cada setor novo para o múltiplo de mercado existente mais próximo — sem mexer no cálculo de valuation nem nos benchmarks.
 
 ---
 
-### 1. Esqueci minha senha (em `/auth`)
+### 1. Novo módulo `src/lib/sectorMapping.ts`
 
-- Adicionar link **"Esqueci minha senha"** abaixo do campo de senha na aba "Entrar" de `src/pages/Auth.tsx`.
-- Abrir um diálogo simples (Dialog do shadcn) pedindo o e-mail e disparar:
-  ```ts
-  supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`
-  })
-  ```
-- Toast de confirmação ("Enviamos um link para seu e-mail").
-- Criar nova página pública **`/reset-password`** (`src/pages/ResetPassword.tsx`) que:
-  - Detecta o token de recuperação na URL (Supabase já cria sessão tipo `recovery`).
-  - Mostra formulário de "Nova senha" + "Confirmar senha".
-  - Chama `supabase.auth.updateUser({ password })` e redireciona para `/painel`.
-- Registrar a rota em `src/App.tsx` como rota pública (fora do AppShell).
+Centraliza:
+- `SECTOR_OPTIONS: { label, benchmarkKey }[]` — lista exibida na UI (~35 setores).
+- `resolveBenchmarkKey(label)` — converte o label exibido para a chave usada por `sectorMultiples` (`SaaS`, `Fintech`, `E-commerce`, `Saúde`, `Agronegócio`, `Educação`, `Logística`, `Indústria`, `Varejo`, `Serviços`, `Outros`).
 
-### 2. Autenticação de 2 fatores (TOTP)
+**Ordem da lista (Tecnologia/Telecom ISP no topo):**
 
-- Habilitar TOTP MFA no projeto (já vem ativo por padrão no Supabase Auth — não precisa migration).
-- Criar componente **`TwoFactorSection`** dentro de `src/pages/MyProfile.tsx` (nova seção "Segurança"):
-  - **Estado desativado**: botão "Ativar autenticação em 2 fatores" → chama `supabase.auth.mfa.enroll({ factorType: 'totp' })`, mostra QR code (`data.totp.qr_code`) + chave manual, pede código de 6 dígitos, finaliza com `supabase.auth.mfa.challenge` + `verify`. Toast de sucesso.
-  - **Estado ativado**: mostra "2FA ativo" com badge verde + botão "Desativar" (chama `supabase.auth.mfa.unenroll`).
-  - Listagem dos fatores via `supabase.auth.mfa.listFactors()`.
-- Atualizar **fluxo de login** em `Auth.tsx`:
-  - Após `signIn` bem-sucedido, chamar `supabase.auth.mfa.getAuthenticatorAssuranceLevel()`.
-  - Se `currentLevel === 'aal1'` e `nextLevel === 'aal2'`, exibir tela de "Digite o código do seu app autenticador" (modal/step) em vez de redirecionar.
-  - Validar com `supabase.auth.mfa.challengeAndVerify({ factorId, code })`.
-  - Só após sucesso → redirect normal (`/painel`).
-- Logout/sessão: nada a mudar — Supabase persiste o AAL2.
+| Label exibido (UI) | Proxy de benchmark (cálculo) |
+|---|---|
+| Tecnologia & Telecom (ISP / Provedores de Internet) | SaaS |
+| Tecnologia (Software / SaaS) | SaaS |
+| Telecom (Operadoras / Infraestrutura) | SaaS |
+| TI / Outsourcing / Data Center | Serviços |
+| Fintech | Fintech |
+| Serviços Financeiros / Crédito | Fintech |
+| Seguros / Insurtech | Fintech |
+| E-commerce / Marketplace | E-commerce |
+| Marketing Digital / Mídia / Publicidade | Serviços |
+| Saúde (Clínicas / Hospitais) | Saúde |
+| Laboratórios / Diagnósticos | Saúde |
+| Farmacêutica / Healthtech | Saúde |
+| Beleza & Estética | Serviços |
+| Educação / Edtech | Educação |
+| Indústria / Manufatura | Indústria |
+| Construção Civil / Engenharia | Indústria |
+| Imobiliário / Real Estate | Indústria |
+| Energia & Utilities | Indústria |
+| Mineração / Metalurgia | Indústria |
+| Automotivo / Autopeças | Indústria |
+| Química / Petroquímica | Indústria |
+| Varejo / Comércio | Varejo |
+| Alimentos & Bebidas (Indústria) | Indústria |
+| Restaurantes / Food Service | Serviços |
+| Bens de Consumo | Varejo |
+| Logística / Transporte | Logística |
+| Agronegócio / Agro | Agronegócio |
+| Pet & Veterinária | Varejo |
+| Consultoria / Serviços Profissionais | Serviços |
+| Jurídico / Contábil | Serviços |
+| Recursos Humanos / Recrutamento | Serviços |
+| Turismo / Hospitalidade / Hotelaria | Serviços |
+| Mídia / Entretenimento / Eventos | Serviços |
+| Limpeza / Facilities / Segurança | Serviços |
+| Outros | Outros |
 
-### 3. Memória
+### 2. Plugar nos seletores
 
-Atualizar `mem://index.md` com referência:
-- `[Auth Security: Reset & 2FA](mem://features/auth-security)` — Reset password via `/reset-password` + TOTP MFA opcional gerenciado em `MyProfile`, com gate de AAL2 no login.
+- **`src/components/valuation/StepCompanyProfile.tsx`** — substituir o array hardcoded `segments` por `SECTOR_OPTIONS`. O `<SelectItem value>` passa a ser `option.label` (preserva o que é gravado no banco).
+- **`src/components/valuation/CertifierWizard.tsx`** — trocar `Object.keys(sectorMultiples)` por `SECTOR_OPTIONS`, mesmo padrão.
+
+### 3. Garantir que o cálculo continue funcionando
+
+- **`src/lib/valuationCalculator.ts`** — em `normalizeSegment`, antes do fallback final, chamar `resolveBenchmarkKey(segment)` quando a chave não existe direto em `sectorMultiples`. Assim "Telecom (Operadoras / Infraestrutura)" usa os múltiplos de SaaS, "Construção Civil" usa Indústria, etc. Cálculo permanece o mesmo — só a resolução do segmento ganha o passo extra.
+
+### 4. Nada muda
+
+- Múltiplos de mercado em `sectorMultiples` — intactos.
+- DCFWizard usa `'Outros'` como default e não tem seletor de setor — fica igual.
+- Listings/categorias em outros lugares (cadastro de anúncio, marketplace, perfil) — fora de escopo.
 
 ---
 
 ## Arquivos afetados
 
 **Criados:**
-- `src/pages/ResetPassword.tsx`
-- `src/components/auth/ForgotPasswordDialog.tsx`
-- `src/components/auth/MfaChallengeDialog.tsx`
-- `src/components/profile/TwoFactorSection.tsx`
-- `mem://features/auth-security`
+- `src/lib/sectorMapping.ts`
 
 **Editados:**
-- `src/pages/Auth.tsx` — link "Esqueci senha" + gate MFA pós-login
-- `src/App.tsx` — rota pública `/reset-password`
-- `src/pages/MyProfile.tsx` — adicionar `<TwoFactorSection />`
-- `mem://index.md`
+- `src/components/valuation/StepCompanyProfile.tsx`
+- `src/components/valuation/CertifierWizard.tsx`
+- `src/lib/valuationCalculator.ts` (apenas `normalizeSegment` ganha um passo de proxy)
 
 ## Notas técnicas
 
-- TOTP MFA já vem habilitado por padrão no Supabase Auth — não requer migration nem mudança em `config.toml`.
-- Não usaremos SMS MFA (custo + setup adicional).
-- O reset de senha usa o template padrão de e-mail do Lovable Cloud (já funciona out-of-the-box).
+- O label gravado em `valuation_history.segment` será o novo (mais descritivo) — histórico antigo continua válido porque `normalizeSegment` ainda faz o match case-insensitive contra as chaves originais.
+- Sem migration de banco. Sem mudança em RLS.
