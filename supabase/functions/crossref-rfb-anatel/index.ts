@@ -127,9 +127,10 @@ serve(async (req) => {
       } catch (e) { console.warn("cache update failed:", e); }
     }
 
-    return new Response(JSON.stringify({ ok: true, ...result }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ ok: true, ...result }, (_k, v) => (typeof v === "bigint" ? v.toString() : v)),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e: any) {
     console.error("crossref-rfb-anatel error:", e);
     return new Response(JSON.stringify({ error: e?.message ?? "Unknown error" }), {
