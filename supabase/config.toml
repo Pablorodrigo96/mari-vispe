@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.anatel-query]
+verify_jwt = false
+
+[functions.crossref-rfb-anatel]
+verify_jwt = false
