@@ -1,83 +1,38 @@
-## O que será feito
+## Diagnóstico
 
-Expandir a lista de setores nos seletores de Valuation (Wizard padrão e Certificador), com **Tecnologia & Telecom (ISP)** como primeiro item e cobertura ampla de setores PME brasileiras. Criar um **DE-PARA** central que mapeia cada setor novo para o múltiplo de mercado existente mais próximo — sem mexer no cálculo de valuation nem nos benchmarks.
+O cadastro do anúncio falha no momento de inserir (não no plano). Erros recentes do Postgres:
 
----
+```
+duplicate key value violates unique constraint "listings_ticker_key"
+```
 
-### 1. Novo módulo `src/lib/sectorMapping.ts`
+`generateTicker()` em `NewListingWizard.tsx` calcula o próximo número via:
+```ts
+const { count } = await supabase.from('listings').select('*', { count: 'exact', head: true }).like('ticker', `${prefix}%`);
+```
+Mas a RLS de `listings` só deixa o usuário comum ver **os próprios** anúncios (`auth.uid() = user_id`) ou os com `status='active'`. Para um usuário novo (carlos.bampi@vispe.com.br) o count vem muito menor que o real, gera ex. `TECH02`, e o INSERT explode no índice único.
 
-Centraliza:
-- `SECTOR_OPTIONS: { label, benchmarkKey }[]` — lista exibida na UI (~35 setores).
-- `resolveBenchmarkKey(label)` — converte o label exibido para a chave usada por `sectorMultiples` (`SaaS`, `Fintech`, `E-commerce`, `Saúde`, `Agronegócio`, `Educação`, `Logística`, `Indústria`, `Varejo`, `Serviços`, `Outros`).
+## Correção
 
-**Ordem da lista (Tecnologia/Telecom ISP no topo):**
+Vamos garantir ticker único via retry server-side, sem mexer em RLS nem em schema.
 
-| Label exibido (UI) | Proxy de benchmark (cálculo) |
-|---|---|
-| Tecnologia & Telecom (ISP / Provedores de Internet) | SaaS |
-| Tecnologia (Software / SaaS) | SaaS |
-| Telecom (Operadoras / Infraestrutura) | SaaS |
-| TI / Outsourcing / Data Center | Serviços |
-| Fintech | Fintech |
-| Serviços Financeiros / Crédito | Fintech |
-| Seguros / Insurtech | Fintech |
-| E-commerce / Marketplace | E-commerce |
-| Marketing Digital / Mídia / Publicidade | Serviços |
-| Saúde (Clínicas / Hospitais) | Saúde |
-| Laboratórios / Diagnósticos | Saúde |
-| Farmacêutica / Healthtech | Saúde |
-| Beleza & Estética | Serviços |
-| Educação / Edtech | Educação |
-| Indústria / Manufatura | Indústria |
-| Construção Civil / Engenharia | Indústria |
-| Imobiliário / Real Estate | Indústria |
-| Energia & Utilities | Indústria |
-| Mineração / Metalurgia | Indústria |
-| Automotivo / Autopeças | Indústria |
-| Química / Petroquímica | Indústria |
-| Varejo / Comércio | Varejo |
-| Alimentos & Bebidas (Indústria) | Indústria |
-| Restaurantes / Food Service | Serviços |
-| Bens de Consumo | Varejo |
-| Logística / Transporte | Logística |
-| Agronegócio / Agro | Agronegócio |
-| Pet & Veterinária | Varejo |
-| Consultoria / Serviços Profissionais | Serviços |
-| Jurídico / Contábil | Serviços |
-| Recursos Humanos / Recrutamento | Serviços |
-| Turismo / Hospitalidade / Hotelaria | Serviços |
-| Mídia / Entretenimento / Eventos | Serviços |
-| Limpeza / Facilities / Segurança | Serviços |
-| Outros | Outros |
+### 1. `src/components/sell/wizard/NewListingWizard.tsx`
 
-### 2. Plugar nos seletores
+- Reescrever `generateTicker(category)` para devolver um candidato com sufixo aleatório (`PREFIX` + 4 dígitos `0000–9999`), evitando depender do count.
+- Em `handleSelectPlan`, envolver o `insert` em um **loop de até 5 tentativas**: se o erro for `23505` (unique violation) em `listings_ticker_key`, regenerar o ticker e tentar de novo. Outros erros caem no catch normal.
+- Manter a mensagem de erro detalhada que já existe.
 
-- **`src/components/valuation/StepCompanyProfile.tsx`** — substituir o array hardcoded `segments` por `SECTOR_OPTIONS`. O `<SelectItem value>` passa a ser `option.label` (preserva o que é gravado no banco).
-- **`src/components/valuation/CertifierWizard.tsx`** — trocar `Object.keys(sectorMultiples)` por `SECTOR_OPTIONS`, mesmo padrão.
+### 2. (Opcional, rápido) Fallback de prefixo
 
-### 3. Garantir que o cálculo continue funcionando
-
-- **`src/lib/valuationCalculator.ts`** — em `normalizeSegment`, antes do fallback final, chamar `resolveBenchmarkKey(segment)` quando a chave não existe direto em `sectorMultiples`. Assim "Telecom (Operadoras / Infraestrutura)" usa os múltiplos de SaaS, "Construção Civil" usa Indústria, etc. Cálculo permanece o mesmo — só a resolução do segmento ganha o passo extra.
-
-### 4. Nada muda
-
-- Múltiplos de mercado em `sectorMultiples` — intactos.
-- DCFWizard usa `'Outros'` como default e não tem seletor de setor — fica igual.
-- Listings/categorias em outros lugares (cadastro de anúncio, marketplace, perfil) — fora de escopo.
-
----
+Se a categoria não estiver no `prefixMap`, fazer slug ASCII de até 4 chars maiúsculos antes do número, evitando `Tecnologia & Telecom...` virar prefixo gigante.
 
 ## Arquivos afetados
 
-**Criados:**
-- `src/lib/sectorMapping.ts`
-
-**Editados:**
-- `src/components/valuation/StepCompanyProfile.tsx`
-- `src/components/valuation/CertifierWizard.tsx`
-- `src/lib/valuationCalculator.ts` (apenas `normalizeSegment` ganha um passo de proxy)
+**Editado:**
+- `src/components/sell/wizard/NewListingWizard.tsx` (apenas `generateTicker` + `handleSelectPlan`)
 
 ## Notas técnicas
 
-- O label gravado em `valuation_history.segment` será o novo (mais descritivo) — histórico antigo continua válido porque `normalizeSegment` ainda faz o match case-insensitive contra as chaves originais.
-- Sem migration de banco. Sem mudança em RLS.
+- 4 dígitos aleatórios = 10.000 espaços por prefixo; com 5 retries a chance de colisão é < 1 em 10⁹.
+- Sem migration, sem mudança de RLS.
+- Não toca nada relacionado ao seletor de plano (UI continua igual; o erro só estava aparecendo *depois* do clique no plano).

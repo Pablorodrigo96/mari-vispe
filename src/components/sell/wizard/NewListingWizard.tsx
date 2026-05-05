@@ -168,35 +168,25 @@ const NewListingWizard = () => {
     }
   };
 
-  const generateTicker = async (category: string): Promise<string> => {
+  const getTickerPrefix = (category: string): string => {
     const prefixMap: Record<string, string> = {
       tech: 'TECH', commerce: 'COME', industry: 'INDU', services: 'SERV',
       food: 'FOOD', health: 'HEAL', education: 'EDUC', logistics: 'LOGI',
       telecom: 'TELE', energy: 'ENER', construction: 'CONS', agro: 'AGRO',
     };
-    const prefix = prefixMap[category] || category.substring(0, 4).toUpperCase();
-    
-    const { count } = await supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .like('ticker', `${prefix}%`);
-    
-    let seq = (count || 0) + 1;
-    let ticker = `${prefix}${seq.toString().padStart(2, '0')}`;
-    
-    // Check uniqueness
-    const { data: existing } = await supabase
-      .from('listings')
-      .select('ticker')
-      .eq('ticker', ticker)
-      .maybeSingle();
-    
-    if (existing) {
-      seq++;
-      ticker = `${prefix}${seq.toString().padStart(2, '0')}`;
-    }
-    
-    return ticker;
+    if (prefixMap[category]) return prefixMap[category];
+    const ascii = (category || 'GEN')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z]/g, '')
+      .toUpperCase();
+    return (ascii.substring(0, 4) || 'GEN').padEnd(3, 'X');
+  };
+
+  const generateTicker = (category: string): string => {
+    const prefix = getTickerPrefix(category);
+    const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `${prefix}${rand}`;
   };
 
   const handleSelectPlan = async (plan: 'basic' | 'master') => {
