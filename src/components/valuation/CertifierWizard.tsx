@@ -38,7 +38,7 @@ export const CertifierWizard = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CertificationResult | null>(null);
 
-  const segments = Object.keys(sectorMultiples);
+  const segments = SECTOR_OPTIONS.map((s) => s.label);
 
   const parseBRL = (val: string) => {
     const cleaned = val.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
