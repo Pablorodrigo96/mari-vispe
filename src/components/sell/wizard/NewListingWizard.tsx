@@ -168,35 +168,25 @@ const NewListingWizard = () => {
     }
   };
 
-  const generateTicker = async (category: string): Promise<string> => {
+  const getTickerPrefix = (category: string): string => {
     const prefixMap: Record<string, string> = {
       tech: 'TECH', commerce: 'COME', industry: 'INDU', services: 'SERV',
       food: 'FOOD', health: 'HEAL', education: 'EDUC', logistics: 'LOGI',
       telecom: 'TELE', energy: 'ENER', construction: 'CONS', agro: 'AGRO',
     };
-    const prefix = prefixMap[category] || category.substring(0, 4).toUpperCase();
-    
-    const { count } = await supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .like('ticker', `${prefix}%`);
-    
-    let seq = (count || 0) + 1;
-    let ticker = `${prefix}${seq.toString().padStart(2, '0')}`;
-    
-    // Check uniqueness
-    const { data: existing } = await supabase
-      .from('listings')
-      .select('ticker')
-      .eq('ticker', ticker)
-      .maybeSingle();
-    
-    if (existing) {
-      seq++;
-      ticker = `${prefix}${seq.toString().padStart(2, '0')}`;
-    }
-    
-    return ticker;
+    if (prefixMap[category]) return prefixMap[category];
+    const ascii = (category || 'GEN')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z]/g, '')
+      .toUpperCase();
+    return (ascii.substring(0, 4) || 'GEN').padEnd(3, 'X');
+  };
+
+  const generateTicker = (category: string): string => {
+    const prefix = getTickerPrefix(category);
+    const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `${prefix}${rand}`;
   };
 
   const handleSelectPlan = async (plan: 'basic' | 'master') => {
@@ -208,49 +198,67 @@ const NewListingWizard = () => {
     setIsSubmitting(true);
 
     try {
-      const ticker = await generateTicker(formData.category);
+      let ticker = generateTicker(formData.category);
+      let data: any = null;
+      let lastError: any = null;
 
-      const { data, error } = await supabase
-        .from('listings')
-        .insert({
-          user_id: user.id,
-          title: formData.title,
-          category: formData.category,
-          foundation_year: formData.foundationYear ? parseInt(formData.foundationYear) : null,
-          cnpj: formData.cnpj || null,
-          annual_revenue: parseCurrencyToNumber(formData.annualRevenue),
-          annual_profit: parseCurrencyToNumber(formData.annualProfit),
-          asking_price: parseCurrencyToNumber(formData.askingPrice),
-          hide_price: formData.hidePrice,
-          description: formData.description,
-          additional_info: (() => {
-            const baseInfo = formData.additionalInfo || '';
-            if (initialPrefill) {
-              const tag = `Origem: Calculadora Mari${initialPrefill.windowBase != null ? ` (janela ${initialPrefill.windowBase}%)` : ''}`;
-              return baseInfo ? `${tag}\n\n${baseInfo}` : tag;
-            }
-            return baseInfo || null;
-          })(),
-          cep: formData.cep,
-          street: formData.street || null,
-          neighborhood: formData.neighborhood || null,
-          city: formData.city,
-          state: formData.state,
-          show_address: formData.showAddress,
-          square_meters: parseNumberString(formData.squareMeters) || null,
-          rent_value: parseCurrencyToNumber(formData.rentValue) || null,
-          iptu_value: parseCurrencyToNumber(formData.iptuValue) || null,
-          sale_reason: formData.saleReason,
-          images: formData.images,
-          video_url: formData.videoUrl || null,
-          plan: plan,
-          status: plan === 'basic' ? 'active' : 'pending_payment',
-          ticker: ticker,
-        })
-        .select()
-        .single();
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const insertRes = await supabase
+          .from('listings')
+          .insert({
+            user_id: user.id,
+            title: formData.title,
+            category: formData.category,
+            foundation_year: formData.foundationYear ? parseInt(formData.foundationYear) : null,
+            cnpj: formData.cnpj || null,
+            annual_revenue: parseCurrencyToNumber(formData.annualRevenue),
+            annual_profit: parseCurrencyToNumber(formData.annualProfit),
+            asking_price: parseCurrencyToNumber(formData.askingPrice),
+            hide_price: formData.hidePrice,
+            description: formData.description,
+            additional_info: (() => {
+              const baseInfo = formData.additionalInfo || '';
+              if (initialPrefill) {
+                const tag = `Origem: Calculadora Mari${initialPrefill.windowBase != null ? ` (janela ${initialPrefill.windowBase}%)` : ''}`;
+                return baseInfo ? `${tag}\n\n${baseInfo}` : tag;
+              }
+              return baseInfo || null;
+            })(),
+            cep: formData.cep,
+            street: formData.street || null,
+            neighborhood: formData.neighborhood || null,
+            city: formData.city,
+            state: formData.state,
+            show_address: formData.showAddress,
+            square_meters: parseNumberString(formData.squareMeters) || null,
+            rent_value: parseCurrencyToNumber(formData.rentValue) || null,
+            iptu_value: parseCurrencyToNumber(formData.iptuValue) || null,
+            sale_reason: formData.saleReason,
+            images: formData.images,
+            video_url: formData.videoUrl || null,
+            plan: plan,
+            status: plan === 'basic' ? 'active' : 'pending_payment',
+            ticker: ticker,
+          })
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (!insertRes.error) {
+          data = insertRes.data;
+          lastError = null;
+          break;
+        }
+
+        lastError = insertRes.error;
+        const isTickerDup =
+          insertRes.error.code === '23505' &&
+          (insertRes.error.message?.includes('listings_ticker_key') ||
+            insertRes.error.message?.includes('ticker'));
+        if (!isTickerDup) break;
+        ticker = generateTicker(formData.category);
+      }
+
+      if (lastError) throw lastError;
 
       // Upload pending financial doc if partner accountant
       if (pendingFinancialFile && data?.id) {
