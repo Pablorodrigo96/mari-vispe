@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Building2, Rocket, Zap } from 'lucide-react';
+import { SECTOR_OPTIONS } from '@/lib/sectorMapping';
 
 interface StepCompanyProfileProps {
   data: {
