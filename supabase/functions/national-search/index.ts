@@ -440,8 +440,8 @@ serve(async (req) => {
     // --- National search ---
     // Prefer dedicated EXTERNAL_DB_PASSWORD (paste-only-the-password). Fallback to full EXTERNAL_DB_URL.
     const RFB_PASSWORD = Deno.env.get("EXTERNAL_DB_PASSWORD");
-    const RFB_HOST = Deno.env.get("EXTERNAL_DB_HOST") || "db.oyarjshdqeaatlmlzvbx.supabase.co";
-    const RFB_USER = Deno.env.get("EXTERNAL_DB_USER") || "postgres";
+    const RFB_HOST = Deno.env.get("EXTERNAL_DB_HOST") || "aws-1-us-east-1.pooler.supabase.com";
+    const RFB_USER = Deno.env.get("EXTERNAL_DB_USER") || "postgres.oyarjshdqeaatlmlzvbx";
     const RFB_DB = Deno.env.get("EXTERNAL_DB_NAME") || "postgres";
     const RFB_PORT = Deno.env.get("EXTERNAL_DB_PORT") || "5432";
     let EXTERNAL_DB_URL = Deno.env.get("EXTERNAL_DB_URL");
