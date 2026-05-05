@@ -93,6 +93,7 @@ export function useNationalSearch() {
     setLoading(true);
     setError(null);
     setIsPaidPlanRequired(false);
+    setDegraded(null);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('national-search', {
@@ -111,6 +112,10 @@ export function useNationalSearch() {
         setIsPaidPlanRequired(true);
         setResults([]);
         return;
+      }
+
+      if (data?.degraded) {
+        setDegraded(data.reason || 'rfb_db_unavailable');
       }
 
       setResults(data?.companies || []);
