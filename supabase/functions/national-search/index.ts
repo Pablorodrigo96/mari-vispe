@@ -446,6 +446,23 @@ serve(async (req) => {
       );
     }
 
+    // Diagnostic: log parsed connection (no password) to detect URL-encoding issues
+    try {
+      const u = new URL(EXTERNAL_DB_URL);
+      console.log("national-search: RFB conn target", {
+        protocol: u.protocol,
+        user: u.username,
+        host: u.hostname,
+        port: u.port,
+        db: u.pathname,
+        passwordLen: u.password.length,
+        passwordHasSpecial: /[@#:/?&%+ ]/.test(decodeURIComponent(u.password || "")),
+        sslmode: u.searchParams.get("sslmode"),
+      });
+    } catch (parseErr) {
+      console.error("national-search: EXTERNAL_DB_URL not a valid URL:", parseErr);
+    }
+
     const { Client } = await import("https://deno.land/x/postgres@v0.17.0/mod.ts");
     let client: any;
     try {
@@ -453,10 +470,26 @@ serve(async (req) => {
       await client.connect();
     } catch (connErr) {
       console.error("national-search: failed to connect to RFB DB:", connErr);
-      return new Response(
-        JSON.stringify({ companies: [], total: 0, degraded: true, reason: "rfb_db_unavailable" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Retry with explicit config object (bypasses URL parser when password has special chars)
+      try {
+        const u = new URL(EXTERNAL_DB_URL);
+        client = new Client({
+          user: decodeURIComponent(u.username),
+          password: decodeURIComponent(u.password),
+          hostname: u.hostname,
+          port: parseInt(u.port || "5432"),
+          database: u.pathname.replace(/^\//, "") || "postgres",
+          tls: { enabled: true, enforce: false },
+        });
+        await client.connect();
+        console.log("national-search: connected via explicit config fallback");
+      } catch (retryErr) {
+        console.error("national-search: fallback connect also failed:", retryErr);
+        return new Response(
+          JSON.stringify({ companies: [], total: 0, degraded: true, reason: "rfb_db_unavailable" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const conditions: string[] = ["e.situacao_cadastral = '02'"]; // ATIVA
