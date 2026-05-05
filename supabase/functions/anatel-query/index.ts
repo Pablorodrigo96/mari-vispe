@@ -168,9 +168,113 @@ serve(async (req) => {
         // ----- 6) Stats agregados -----
         case "stats": {
           const table = String(params.table ?? "");
+          const kind = String(params.kind ?? "total");
+          const limit = Math.min(Number(params.limit ?? 50), 500);
           if (!IDENT_RE.test(table)) throw new Error("invalid table name");
-          const total = await client.queryObject({ text: `SELECT count(*)::bigint AS total FROM "${table}"` });
-          return ok({ table, total: Number((total.rows[0] as any).total) });
+
+          if (kind === "total") {
+            const total = await client.queryObject({ text: `SELECT count(*)::bigint AS total FROM "${table}"` });
+            return ok({ table, total: Number((total.rows[0] as any).total) });
+          }
+
+          // Descobre 2 períodos (atual e ~12m atrás) baseado em (ano, mês)
+          const periods = await client.queryObject({
+            text: `
+              SELECT DISTINCT ano, "mês" AS mes
+              FROM "${table}"
+              WHERE ano IS NOT NULL AND "mês" IS NOT NULL
+              ORDER BY ano::int DESC, "mês"::int DESC
+              LIMIT 24
+            `,
+          });
+          const periodRows = periods.rows as Array<{ ano: string; mes: string }>;
+          if (periodRows.length === 0) {
+            return ok({ table, kind, rows: [], note: "sem períodos" });
+          }
+          const latest = periodRows[0];
+          const prev12 =
+            periodRows.find(
+              (p) =>
+                Number(p.ano) === Number(latest.ano) - 1 &&
+                Number(p.mes) === Number(latest.mes),
+            ) ?? periodRows[Math.min(11, periodRows.length - 1)];
+
+          if (kind === "top_growth") {
+            const r = await client.queryObject({
+              text: `
+                WITH cur AS (
+                  SELECT cnpj, MAX(empresa) AS empresa,
+                         SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos_atual
+                  FROM "${table}"
+                  WHERE ano = $1 AND "mês" = $2 AND cnpj IS NOT NULL
+                  GROUP BY cnpj
+                ),
+                prev AS (
+                  SELECT cnpj,
+                         SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos_prev
+                  FROM "${table}"
+                  WHERE ano = $3 AND "mês" = $4 AND cnpj IS NOT NULL
+                  GROUP BY cnpj
+                )
+                SELECT cur.cnpj, cur.empresa,
+                       cur.acessos_atual::bigint AS acessos_atual,
+                       COALESCE(prev.acessos_prev,0)::bigint AS acessos_prev,
+                       CASE WHEN COALESCE(prev.acessos_prev,0) = 0 THEN NULL
+                            ELSE round(((cur.acessos_atual - prev.acessos_prev)::numeric
+                                  / prev.acessos_prev::numeric) * 100, 2)
+                       END AS delta_pct
+                FROM cur LEFT JOIN prev USING (cnpj)
+                WHERE cur.acessos_atual IS NOT NULL AND cur.acessos_atual > 100
+                ORDER BY delta_pct DESC NULLS LAST
+                LIMIT ${limit}
+              `,
+              args: [latest.ano, latest.mes, prev12.ano, prev12.mes],
+            });
+            return ok({
+              table, kind,
+              period_current: latest, period_prev: prev12,
+              rows: r.rows,
+            });
+          }
+
+          if (kind === "share_by_municipio") {
+            const r = await client.queryObject({
+              text: `
+                WITH base AS (
+                  SELECT cidade, estado, empresa, cnpj,
+                         SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
+                  FROM "${table}"
+                  WHERE ano = $1 AND "mês" = $2 AND cidade IS NOT NULL
+                  GROUP BY cidade, estado, empresa, cnpj
+                ),
+                ranked AS (
+                  SELECT cidade, estado, empresa, cnpj, acessos,
+                         SUM(acessos) OVER (PARTITION BY cidade, estado) AS total_municipio,
+                         COUNT(*) OVER (PARTITION BY cidade, estado) AS n_provedores,
+                         ROW_NUMBER() OVER (PARTITION BY cidade, estado ORDER BY acessos DESC) AS rk
+                  FROM base
+                )
+                SELECT cidade, estado,
+                       total_municipio::bigint AS acessos,
+                       n_provedores::int AS n_provedores,
+                       empresa AS lider,
+                       cnpj AS lider_cnpj,
+                       round((acessos::numeric / NULLIF(total_municipio,0)::numeric) * 100, 2) AS share_lider
+                FROM ranked
+                WHERE rk = 1
+                ORDER BY total_municipio DESC
+                LIMIT ${limit}
+              `,
+              args: [latest.ano, latest.mes],
+            });
+            return ok({
+              table, kind,
+              period_current: latest,
+              rows: r.rows,
+            });
+          }
+
+          throw new Error(`unknown stats kind: ${kind}`);
         }
 
         default:
