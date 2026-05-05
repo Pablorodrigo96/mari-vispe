@@ -164,6 +164,7 @@ export function useNationalSearch() {
     loading,
     error,
     isPaidPlanRequired,
+    degraded,
     search,
     debouncedSearch,
     lookupCnpj,
