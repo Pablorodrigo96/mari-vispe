@@ -198,49 +198,67 @@ const NewListingWizard = () => {
     setIsSubmitting(true);
 
     try {
-      const ticker = await generateTicker(formData.category);
+      let ticker = generateTicker(formData.category);
+      let data: any = null;
+      let lastError: any = null;
 
-      const { data, error } = await supabase
-        .from('listings')
-        .insert({
-          user_id: user.id,
-          title: formData.title,
-          category: formData.category,
-          foundation_year: formData.foundationYear ? parseInt(formData.foundationYear) : null,
-          cnpj: formData.cnpj || null,
-          annual_revenue: parseCurrencyToNumber(formData.annualRevenue),
-          annual_profit: parseCurrencyToNumber(formData.annualProfit),
-          asking_price: parseCurrencyToNumber(formData.askingPrice),
-          hide_price: formData.hidePrice,
-          description: formData.description,
-          additional_info: (() => {
-            const baseInfo = formData.additionalInfo || '';
-            if (initialPrefill) {
-              const tag = `Origem: Calculadora Mari${initialPrefill.windowBase != null ? ` (janela ${initialPrefill.windowBase}%)` : ''}`;
-              return baseInfo ? `${tag}\n\n${baseInfo}` : tag;
-            }
-            return baseInfo || null;
-          })(),
-          cep: formData.cep,
-          street: formData.street || null,
-          neighborhood: formData.neighborhood || null,
-          city: formData.city,
-          state: formData.state,
-          show_address: formData.showAddress,
-          square_meters: parseNumberString(formData.squareMeters) || null,
-          rent_value: parseCurrencyToNumber(formData.rentValue) || null,
-          iptu_value: parseCurrencyToNumber(formData.iptuValue) || null,
-          sale_reason: formData.saleReason,
-          images: formData.images,
-          video_url: formData.videoUrl || null,
-          plan: plan,
-          status: plan === 'basic' ? 'active' : 'pending_payment',
-          ticker: ticker,
-        })
-        .select()
-        .single();
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const insertRes = await supabase
+          .from('listings')
+          .insert({
+            user_id: user.id,
+            title: formData.title,
+            category: formData.category,
+            foundation_year: formData.foundationYear ? parseInt(formData.foundationYear) : null,
+            cnpj: formData.cnpj || null,
+            annual_revenue: parseCurrencyToNumber(formData.annualRevenue),
+            annual_profit: parseCurrencyToNumber(formData.annualProfit),
+            asking_price: parseCurrencyToNumber(formData.askingPrice),
+            hide_price: formData.hidePrice,
+            description: formData.description,
+            additional_info: (() => {
+              const baseInfo = formData.additionalInfo || '';
+              if (initialPrefill) {
+                const tag = `Origem: Calculadora Mari${initialPrefill.windowBase != null ? ` (janela ${initialPrefill.windowBase}%)` : ''}`;
+                return baseInfo ? `${tag}\n\n${baseInfo}` : tag;
+              }
+              return baseInfo || null;
+            })(),
+            cep: formData.cep,
+            street: formData.street || null,
+            neighborhood: formData.neighborhood || null,
+            city: formData.city,
+            state: formData.state,
+            show_address: formData.showAddress,
+            square_meters: parseNumberString(formData.squareMeters) || null,
+            rent_value: parseCurrencyToNumber(formData.rentValue) || null,
+            iptu_value: parseCurrencyToNumber(formData.iptuValue) || null,
+            sale_reason: formData.saleReason,
+            images: formData.images,
+            video_url: formData.videoUrl || null,
+            plan: plan,
+            status: plan === 'basic' ? 'active' : 'pending_payment',
+            ticker: ticker,
+          })
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (!insertRes.error) {
+          data = insertRes.data;
+          lastError = null;
+          break;
+        }
+
+        lastError = insertRes.error;
+        const isTickerDup =
+          insertRes.error.code === '23505' &&
+          (insertRes.error.message?.includes('listings_ticker_key') ||
+            insertRes.error.message?.includes('ticker'));
+        if (!isTickerDup) break;
+        ticker = generateTicker(formData.category);
+      }
+
+      if (lastError) throw lastError;
 
       // Upload pending financial doc if partner accountant
       if (pendingFinancialFile && data?.id) {
