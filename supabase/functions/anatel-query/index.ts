@@ -192,7 +192,11 @@ serve(async (req) => {
 });
 
 function ok(payload: any) {
-  return new Response(JSON.stringify({ ok: true, ...payload }), {
+  const body = JSON.stringify(
+    { ok: true, ...payload },
+    (_k, v) => (typeof v === "bigint" ? v.toString() : v),
+  );
+  return new Response(body, {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
