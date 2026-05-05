@@ -1,22 +1,29 @@
-## Integrar Cruzamento Anatel dentro de "Mercado"
+## Fix: "Carregar rankings" não carrega em Top Crescimento e Market Share
 
-Hoje `/equity-brain/mercado` (NewsPage) só mostra notícias e o cruzamento Anatel vive numa rota solta `/equity-brain/anatel/cruzamento`. Vamos unificar dentro de Mercado.
+### Causa
+
+A edge function `anatel-query` só implementa `action: "stats"` com totais. O front chama `params.kind: "top_growth"` e `"share_by_municipio"`, que cai em "unknown action" silencioso (a função retorna 500 mas o front mostra apenas o estado vazio).
+
+Schema real da tabela `base_anatel`: `ano`, `mês` (com acento), `empresa`, `cnpj`, `estado`, `cidade`, `acessos` (todos `text`).
 
 ### Mudanças
 
-**1. `src/pages/equity-brain/AnatelCruzamentoPage.tsx`**
-- Adicionar prop opcional `embedded?: boolean`.
-- Quando `embedded`, remover o wrapper `min-h-screen` + `max-w-7xl px-6 py-8` + breadcrumb "voltar" e o header duplicado, devolvendo apenas o conteúdo (busca CNPJ + Tabs internas).
+**`supabase/functions/anatel-query/index.ts`** — expandir o `case "stats"` para suportar 3 valores de `kind`:
 
-**2. `src/pages/equity-brain/NewsPage.tsx`**
-- Envolver o conteúdo atual em um Tabs externo:
-  - Aba **"Notícias"** (default) — todo o conteúdo atual (stats + filtros + NewsPanel).
-  - Aba **"Cruzamento Anatel"** — `<AnatelCruzamentoPage embedded />`.
-- Sincronizar aba ativa com querystring `?tab=anatel|noticias` via `useSearchParams` (deep-link).
+1. **`total`** (já existe) — count.
 
-**3. `src/App.tsx`**
-- Trocar a rota `anatel/cruzamento` por um `<Navigate to="/equity-brain/mercado?tab=anatel" replace />` para preservar links antigos.
+2. **`top_growth`** — Top 50 ISPs por crescimento de acessos:
+   - Descobre 2 períodos (último e 12m atrás) via `SELECT DISTINCT ano, "mês" ORDER BY DESC`.
+   - CTE `cur` (período atual) + `prev` (12m atrás), agrupando por `cnpj`, somando `acessos` (cast `text → bigint` via `regexp_replace`).
+   - Calcula `delta_pct = (atual - prev) / prev * 100`.
+   - Retorna `{ cnpj, empresa, acessos_atual, acessos_prev, delta_pct }`.
+
+3. **`share_by_municipio`** — Líder + concorrentes por cidade:
+   - Window function `ROW_NUMBER() OVER (PARTITION BY cidade, estado ORDER BY acessos DESC)` para pegar líder.
+   - Retorna `{ cidade, estado, acessos, n_provedores, lider, lider_cnpj, share_lider }`.
+
+Ambas usam `"mês"` (entre aspas, acento), `regexp_replace(acessos,'[^0-9-]','','g')::bigint` para converter texto numérico, e LIMIT parametrizado.
 
 ### Resultado
 
-Usuário em **Mercado** vê duas abas no topo: Notícias (default) e Cruzamento Anatel. URLs antigas redirecionam automaticamente.
+Ao clicar **Carregar rankings** na aba Top Crescimento e Market Share, as tabelas serão preenchidas com dados reais da `base_anatel`.
