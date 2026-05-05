@@ -69,23 +69,24 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
     setCnpj(clean);
   }
 
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto max-w-7xl px-6 py-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Link to="/equity-brain/hoje" className="text-zinc-500 hover:text-zinc-200 inline-flex items-center gap-1 text-xs">
-              <ArrowLeft className="h-3 w-3" /> voltar
-            </Link>
-            <h1 className="text-2xl font-semibold mt-2 flex items-center gap-2">
-              <Database className="h-5 w-5 text-emerald-400" />
-              Cruzamento RFB × Anatel
-            </h1>
-            <p className="text-sm text-zinc-400 mt-1">
-              Cruze dados públicos da Receita Federal com a base Anatel para gerar insights de mercado por CNPJ, município e tendência.
-            </p>
+  const content = (
+    <div className={embedded ? "space-y-6" : "mx-auto max-w-7xl px-6 py-8 space-y-6"}>
+        {!embedded && (
+          <div className="flex items-center justify-between">
+            <div>
+              <Link to="/equity-brain/hoje" className="text-zinc-500 hover:text-zinc-200 inline-flex items-center gap-1 text-xs">
+                <ArrowLeft className="h-3 w-3" /> voltar
+              </Link>
+              <h1 className="text-2xl font-semibold mt-2 flex items-center gap-2">
+                <Database className="h-5 w-5 text-emerald-400" />
+                Cruzamento RFB × Anatel
+              </h1>
+              <p className="text-sm text-zinc-400 mt-1">
+                Cruze dados públicos da Receita Federal com a base Anatel para gerar insights de mercado por CNPJ, município e tendência.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {schema.isLoading && (
           <div className="flex items-center gap-2 text-sm text-zinc-400">
