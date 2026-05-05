@@ -66,17 +66,26 @@ export interface ValuationResult {
   calculatedAt: Date;
 }
 
-// Normaliza o segmento para corresponder às chaves do sectorMultiples
+// Normaliza o segmento para corresponder às chaves do sectorMultiples.
+// Se o label vier da lista expandida (ex: "Telecom (Operadoras...)"), usa o
+// DE-PARA em sectorMapping.ts para resolver o proxy de mercado.
+import { resolveBenchmarkKey } from './sectorMapping';
+
 function normalizeSegment(segment: string): string {
   if (sectorMultiples[segment]) {
     return segment;
   }
-  
+
   const normalizedKey = Object.keys(sectorMultiples).find(
     key => key.toLowerCase() === segment.toLowerCase()
   );
-  
-  return normalizedKey || 'Outros';
+  if (normalizedKey) return normalizedKey;
+
+  // DE-PARA: usa proxy definido em SECTOR_OPTIONS
+  const proxy = resolveBenchmarkKey(segment);
+  if (sectorMultiples[proxy]) return proxy;
+
+  return 'Outros';
 }
 
 export function calculateValuation(inputs: ValuationInputs): ValuationResult {
