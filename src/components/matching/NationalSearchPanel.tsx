@@ -77,7 +77,7 @@ function CompanyCard({ company }: { company: NationalCompany }) {
 export function NationalSearchPanel() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { results, loading, error, isPaidPlanRequired, debouncedSearch } = useNationalSearch();
+  const { results, loading, error, isPaidPlanRequired, degraded, debouncedSearch } = useNationalSearch();
 
   const [query, setQuery] = useState('');
   const [state, setState] = useState('');
