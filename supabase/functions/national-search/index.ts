@@ -500,10 +500,15 @@ serve(async (req) => {
         });
         await client.connect();
         console.log("national-search: connected via explicit config fallback");
-      } catch (retryErr) {
+      } catch (retryErr: any) {
         console.error("national-search: fallback connect also failed:", retryErr);
+        const errCode = retryErr?.fields?.code || retryErr?.code || "unknown";
+        const errMsg = retryErr?.fields?.message || retryErr?.message || String(retryErr);
         return new Response(
-          JSON.stringify({ companies: [], total: 0, degraded: true, reason: "rfb_db_unavailable" }),
+          JSON.stringify({
+            companies: [], total: 0, degraded: true, reason: "rfb_db_unavailable",
+            diag: { code: errCode, message: errMsg, pwLen: (Deno.env.get("EXTERNAL_DB_PASSWORD") || "").length, pwPrefix: parsedPwPrefix, pwSuffix: parsedPwSuffix },
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
