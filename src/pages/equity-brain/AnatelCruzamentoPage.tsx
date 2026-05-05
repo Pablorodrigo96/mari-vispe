@@ -14,7 +14,7 @@ function fmt(n: number | null | undefined) {
   return new Intl.NumberFormat("pt-BR").format(Number(n));
 }
 
-export default function AnatelCruzamentoPage() {
+export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [cnpjInput, setCnpjInput] = useState("");
   const [cnpj, setCnpj] = useState<string | null>(null);
   const schema = useAnatelSchema();
