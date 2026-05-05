@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Building2, Rocket, Zap } from 'lucide-react';
+import { SECTOR_OPTIONS } from '@/lib/sectorMapping';
 
 interface StepCompanyProfileProps {
   data: {
@@ -38,19 +39,7 @@ const companyTypes = [
   },
 ];
 
-const segments = [
-  'SaaS',
-  'Fintech',
-  'E-commerce',
-  'Saúde',
-  'Agronegócio',
-  'Educação',
-  'Logística',
-  'Indústria',
-  'Varejo',
-  'Serviços',
-  'Outros',
-];
+const segments = SECTOR_OPTIONS.map((s) => s.label);
 
 export const StepCompanyProfile = ({ data, onChange }: StepCompanyProfileProps) => {
   return (

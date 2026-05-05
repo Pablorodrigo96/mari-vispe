@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CertificationReport } from './CertificationReport';
 import { calculateValuation, sectorMultiples, type ValuationInputs } from '@/lib/valuationCalculator';
+import { SECTOR_OPTIONS } from '@/lib/sectorMapping';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -37,7 +38,7 @@ export const CertifierWizard = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CertificationResult | null>(null);
 
-  const segments = Object.keys(sectorMultiples);
+  const segments = SECTOR_OPTIONS.map((s) => s.label);
 
   const parseBRL = (val: string) => {
     const cleaned = val.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
