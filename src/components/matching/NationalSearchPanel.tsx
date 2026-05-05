@@ -171,6 +171,19 @@ export function NationalSearchPanel() {
         </div>
       )}
 
+      {/* Degraded banner — RFB DB unavailable */}
+      {degraded && !loading && (
+        <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+          <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <p className="font-medium text-foreground">Base nacional temporariamente indisponível</p>
+            <p className="text-muted-foreground mt-1 break-words">
+              A busca por nome/setor está fora do ar no momento. Tente buscar diretamente pelo CNPJ — esse fluxo continua funcionando via fonte pública.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="flex items-center gap-2 text-sm text-destructive">
