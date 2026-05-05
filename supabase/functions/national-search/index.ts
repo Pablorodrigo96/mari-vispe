@@ -438,7 +438,17 @@ serve(async (req) => {
     }
 
     // --- National search ---
-    const EXTERNAL_DB_URL = Deno.env.get("EXTERNAL_DB_URL");
+    // Prefer dedicated EXTERNAL_DB_PASSWORD (paste-only-the-password). Fallback to full EXTERNAL_DB_URL.
+    const RFB_PASSWORD = Deno.env.get("EXTERNAL_DB_PASSWORD");
+    const RFB_HOST = Deno.env.get("EXTERNAL_DB_HOST") || "db.oyarjshdqeaatlmlzvbx.supabase.co";
+    const RFB_USER = Deno.env.get("EXTERNAL_DB_USER") || "postgres";
+    const RFB_DB = Deno.env.get("EXTERNAL_DB_NAME") || "postgres";
+    const RFB_PORT = Deno.env.get("EXTERNAL_DB_PORT") || "5432";
+    let EXTERNAL_DB_URL = Deno.env.get("EXTERNAL_DB_URL");
+    if (RFB_PASSWORD && RFB_PASSWORD.length > 0) {
+      EXTERNAL_DB_URL = `postgresql://${RFB_USER}:${encodeURIComponent(RFB_PASSWORD)}@${RFB_HOST}:${RFB_PORT}/${RFB_DB}?sslmode=require`;
+      console.log("national-search: using EXTERNAL_DB_PASSWORD (assembled URL)");
+    }
     if (!EXTERNAL_DB_URL) {
       return new Response(
         JSON.stringify({ companies: [], total: 0, degraded: true, reason: "rfb_db_not_configured" }),
