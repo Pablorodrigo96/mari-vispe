@@ -447,8 +447,9 @@ serve(async (req) => {
     }
 
     const { Client } = await import("https://deno.land/x/postgres@v0.17.0/mod.ts");
-    const client = new Client(EXTERNAL_DB_URL);
+    let client: any;
     try {
+      client = new Client(EXTERNAL_DB_URL);
       await client.connect();
     } catch (connErr) {
       console.error("national-search: failed to connect to RFB DB:", connErr);
