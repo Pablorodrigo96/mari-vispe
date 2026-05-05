@@ -439,11 +439,24 @@ serve(async (req) => {
 
     // --- National search ---
     const EXTERNAL_DB_URL = Deno.env.get("EXTERNAL_DB_URL");
-    if (!EXTERNAL_DB_URL) throw new Error("EXTERNAL_DB_URL not configured");
+    if (!EXTERNAL_DB_URL) {
+      return new Response(
+        JSON.stringify({ companies: [], total: 0, degraded: true, reason: "rfb_db_not_configured" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const { Client } = await import("https://deno.land/x/postgres@v0.17.0/mod.ts");
     const client = new Client(EXTERNAL_DB_URL);
-    await client.connect();
+    try {
+      await client.connect();
+    } catch (connErr) {
+      console.error("national-search: failed to connect to RFB DB:", connErr);
+      return new Response(
+        JSON.stringify({ companies: [], total: 0, degraded: true, reason: "rfb_db_unavailable" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const conditions: string[] = ["e.situacao_cadastral = '02'"]; // ATIVA
     const params: string[] = [];
