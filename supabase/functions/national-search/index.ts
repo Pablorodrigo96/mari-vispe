@@ -446,17 +446,24 @@ serve(async (req) => {
       );
     }
 
-    // Diagnostic: log parsed connection (no password) to detect URL-encoding issues
+    // Diagnostic: log parsed connection (no full password) to detect issues
+    let parsedPwPrefix = "";
+    let parsedPwSuffix = "";
     try {
       const u = new URL(EXTERNAL_DB_URL);
+      const decoded = decodeURIComponent(u.password || "");
+      parsedPwPrefix = decoded.slice(0, 2);
+      parsedPwSuffix = decoded.slice(-2);
       console.log("national-search: RFB conn target", {
         protocol: u.protocol,
         user: u.username,
         host: u.hostname,
         port: u.port,
         db: u.pathname,
-        passwordLen: u.password.length,
-        passwordHasSpecial: /[@#:/?&%+ ]/.test(decodeURIComponent(u.password || "")),
+        passwordLen: decoded.length,
+        passwordPrefix: parsedPwPrefix,
+        passwordSuffix: parsedPwSuffix,
+        passwordHasSpecial: /[@#:/?&%+ ]/.test(decoded),
         sslmode: u.searchParams.get("sslmode"),
       });
     } catch (parseErr) {
