@@ -84,6 +84,28 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
     });
   }, [layers]);
 
+  // Cidades com sobreposição de rede (atendidas por 2+ provedores selecionados)
+  const overlapInfo = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const layer of resolvedLayers) {
+      const seenLayer = new Set<string>();
+      for (const r of layer.resolved) {
+        const k = r.codigo_ibge_cidade
+          ? `ibge:${r.codigo_ibge_cidade}`
+          : `nm:${(r.cidade || "").toLowerCase()}|${r.estado}`;
+        if (seenLayer.has(k)) continue;
+        seenLayer.add(k);
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [resolvedLayers]);
+  const OVERLAP_COLOR = "#EF4444";
+  const cityKeyOf = (r: AnatelFootprintRow) =>
+    r.codigo_ibge_cidade
+      ? `ibge:${r.codigo_ibge_cidade}`
+      : `nm:${(r.cidade || "").toLowerCase()}|${r.estado}`;
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, {

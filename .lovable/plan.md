@@ -1,56 +1,35 @@
-## Mapa Anatel — Limpeza + Painel de Sinergia M&A
+## Fixes — Mapa Anatel
 
-### Mudanças solicitadas
+### 1. Bolinhas vermelhas em cidades com overlap de rede
 
-1. **Remover KPIs quebrados** do topo (`UF com mais oportunidades`, `Setor mais quente`, `Concentração top 5 cidades`).
-2. **Esconder a sidebar de filtros** (Score M&A, UFs, Mostrar buyers, Vincular a tabela) **quando o modo for `anatel`** — ela só faz sentido no Heatmap. Manter quando `mode === "heat"`.
-3. **Novo `ProviderSynergyPanel`** que aparece sempre que houver **2+ provedores** selecionados na aba Anatel.
+No `AnatelProviderMap.tsx`, pré-computar (memo) o set de chaves de cidade (`ibge:<codigo>` ou `nm:<cidade>|<uf>`) que aparecem em **2+ camadas** de provedores. Ao desenhar cada `circleMarker`, se a cidade pertence a esse set:
+- `fillColor = "#EF4444"` (vermelho)
+- `color = "#EF4444"` com `weight: 2`
+- mantém o `radius` calculado por acessos
+- popup ganha linha extra: `⚠ Sobreposição: cidade atendida por N provedores selecionados`.
 
-### Painel de Sinergia (novo componente)
+Hub continua com borda branca, mas pintado de vermelho quando overlapado.
 
-Layout side-by-side comparando todos os provedores ativos (2 ou 3), abaixo dos KPI cards e acima do mapa.
+### 2. "Buscar empresas no raio" não funciona
 
-**Por provedor (coluna)**:
-- Nome + cor do slot.
-- Total acessos (soma de `acessos_empresa`).
-- Cidades atendidas, UFs.
-- Centroide (lat/lng médio ponderado por acessos).
+Causas reais:
+- Botão fica `disabled` quando nenhum slot está marcado como 🎯 comprador → usuário clica e nada acontece.
+- `handleSearchMarket` retorna em silêncio se `seeds` for vazio — sem feedback.
 
-**Bloco central de cruzamento (par a par; com 3 provedores → 3 pares colapsáveis)**:
-- **Overlap de cidades**: `|A ∩ B|` por código IBGE, `% sobre menor`, lista top 5 cidades em comum (com acessos_A vs acessos_B).
-- **Distância entre centroides** em km (haversine).
-- **Sinergia geográfica** (0–100): `complementaridade × proximidade`, onde:
-  - `complementaridade = 1 - jaccard(cidades_A, cidades_B)` (quanto menos overlap, mais espaço pra somar territórios).
-  - `proximidade = clamp(1 - dist_km / 1500, 0, 1)`.
-  - score final = `round(100 * (0.6 * complementaridade + 0.4 * proximidade))`.
-- **Tendência M&A** baseada em razão de tamanho `r = menor / maior` (acessos):
-  - `r ≥ 0.7` → **Fusão entre iguais** (badge âmbar).
-  - `0.4 ≤ r < 0.7` → **M&A com co-gestão** (badge azul).
-  - `r < 0.4` → **Aquisição** — explicita "**{maior} compra {menor}**" (badge volt).
-- Frase humanizada estilo: *"ISP A (100k) e ISP B (90k) — tendência: fusão. Overlap baixo (8%), distância 320km → sinergia alta (78)."*
-- Se `buyerCnpjs` tiver alguém marcado, sobrepõe o sinal: o marcado é tratado como comprador independente do tamanho, e a frase vira *"A (comprador marcado) → B (alvo)"*.
+Correções:
+- **Fallback de sementes**: em `MapaPage.tsx`, se `buyerCnpjs.size === 0`, usar **todos os provedores selecionados** como sementes (UI mostra hint "usando todos os slots como semente — marque um como comprador para focar"). Botão deixa de ser `disabled` quando há ≥1 provedor selecionado.
+- **Toast de erro/sucesso** no `handleSearchMarket` usando `useToast` para mostrar quantas cidades/provedores voltaram, ou erro caso a edge function falhe.
+- **Console log** na chamada e na resposta para diagnóstico futuro.
+- `MarketRadiusPanel`: trocar a frase "Marque ao menos 1 slot como 🎯 comprador" por "Sem comprador marcado: usando todos os slots como semente" quando há provedores selecionados sem buyer; manter desabilitado apenas quando `selectedProviders.length === 0`.
 
-### Arquivos
+### Arquivos editados
 
-- **NOVO** `src/lib/anatelSynergy.ts`
-  - `computeProviderStats(rows)` → `{ totalAcessos, cities:Set<string>, ufs:Set<string>, centroid:{lat,lng} }`.
-  - `computePairSynergy(a, b, opts?: { buyerCnpj?, aCnpj?, bCnpj? })` → `{ overlapCount, overlapPct, jaccard, distanceKm, synergyScore, tendency: "fusao"|"co-gestao"|"aquisicao", buyerLabel, sellerLabel, headline, topOverlapCities: [{cidade, uf, acessosA, acessosB}] }`.
-  - Reusa haversine local; cidades-chave por `codigo_ibge_cidade` (fallback `cidade|uf`).
-
-- **NOVO** `src/components/equity-brain/ProviderSynergyPanel.tsx`
-  - Props: `providers: { cnpj, empresa, color, rows }[]`, `buyerCnpjs: Set<string>`.
-  - Renderiza grid de colunas (1 por provedor) + uma faixa abaixo com cards de pares (2 prov → 1 card; 3 prov → 3 cards).
-  - Estilo consistente com `bg-zinc-900 border-zinc-800` + bordas coloridas.
-
-- **EDITA** `src/pages/equity-brain/MapaPage.tsx`
-  - Apaga linhas 196–200 (grid de 3 KPIs) e o `useMemo kpis` + queries `ufStatsQ`/`muniStatsQ` que só serviam para esses KPIs.
-  - Envolve `<aside>` (linhas 426–500) em `{mode === "heat" && (...)}`.
-  - No bloco Anatel, quando `selectedProviders.length >= 2` e ao menos 2 footprints carregados, renderiza `<ProviderSynergyPanel />` dentro da coluna esquerda, acima dos KPI por provedor.
+- `src/components/equity-brain/AnatelProviderMap.tsx` — adiciona `overlapKeys` memo + pinta marcadores e popup.
+- `src/pages/equity-brain/MapaPage.tsx` — `buildSeeds` usa todos slots se nenhum buyer marcado; toast + log.
+- `src/components/equity-brain/MarketRadiusPanel.tsx` — `disabled` agora depende de `selectedProviders.length === 0` (nova prop `hasProviders`); muda hint.
 
 ### Critério de aceite
 
-- Topo da página `/equity-brain/pipeline?view=mapa` sem os 3 KPIs.
-- Sidebar direita some no modo Anatel (mapa ocupa largura toda) e continua no Heatmap.
-- Selecionar 2 provedores Anatel → aparece painel comparativo com overlap, distância, score de sinergia e tendência (fusão/aquisição) com nomes corretos de comprador/vendedor.
-- Marcar slot como comprador força o papel mesmo quando ele é menor.
-- Selecionar 3 provedores → 3 cards de par (A↔B, A↔C, B↔C).
+- Selecionar 2 provedores com cidades em comum → essas bolinhas viram vermelhas no mapa.
+- Sem marcar comprador, clicar em "Buscar empresas no raio" → busca roda usando todos slots, painel mostra resultados; toast confirma "X provedores em Y cidades" ou erro detalhado.
+- Marcar 1 slot como comprador → botão usa só esse slot como semente (comportamento atual mantido).
