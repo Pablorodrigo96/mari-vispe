@@ -29,6 +29,7 @@ function fmt(n: number): string {
 
 export function MarketRadiusPanel({
   buyerCount,
+  hasProviders,
   radiusKm,
   onRadiusChange,
   sameUfOnly,
@@ -43,7 +44,7 @@ export function MarketRadiusPanel({
   alreadySelected,
 }: Props) {
   const [showAll, setShowAll] = useState(false);
-  const disabled = buyerCount === 0;
+  const disabled = !hasProviders;
   const top = result?.providers ?? [];
   const visible = showAll ? top.slice(0, 50) : top.slice(0, 20);
 
@@ -53,10 +54,12 @@ export function MarketRadiusPanel({
         <div className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">
           Buscar empresas no raio
         </div>
-        <div className="text-[10px] text-zinc-500">
-          {buyerCount === 0
-            ? "Marque ao menos 1 slot como 🎯 comprador"
-            : `${buyerCount} comprador${buyerCount > 1 ? "es" : ""} ativo${buyerCount > 1 ? "s" : ""}`}
+        <div className="text-[10px] text-zinc-500 text-right max-w-[55%]">
+          {!hasProviders
+            ? "Selecione ao menos 1 provedor"
+            : buyerCount === 0
+              ? "Sem 🎯 marcado: usando todos os slots como semente"
+              : `${buyerCount} comprador${buyerCount > 1 ? "es" : ""} marcado${buyerCount > 1 ? "s" : ""}`}
         </div>
       </div>
 
