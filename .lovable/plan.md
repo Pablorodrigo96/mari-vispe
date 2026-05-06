@@ -1,30 +1,89 @@
-# Mapa ANATEL — malha por proximidade (k-NN) em vez de hub central
+# Comparar múltiplos provedores no mapa Anatel
 
-## Problema
-Hoje todas as cidades do provedor desenham uma linha até a cidade-sede (maior número de acessos). Resultado visual: leque de linhas convergindo em São Paulo, sem refletir a topologia real da rede.
+Hoje o `MapaPage` (modo "Provedor Anatel") só permite selecionar **um** CNPJ por vez. Vamos evoluir para **até 3 provedores simultâneos**, cada um com cor própria, mantendo a malha k-NN dentro de cada provedor (não cruza entre eles, para a leitura ficar limpa).
 
-## Solução
-Trocar o algoritmo de linhas por uma **malha de vizinhos mais próximos (k-NN)**: cada ponto se conecta aos `k` pontos geograficamente mais próximos, formando uma rede orgânica que segue a expansão regional do provedor.
+## UX
 
-## Mudanças
+- Em vez de `selectedProvider` (single), passa a ser `selectedProviders: AnatelProviderHit[]` (máx 3).
+- Ao clicar num resultado da busca: adiciona à lista (se ainda não estiver e tiver < 3 slots).
+- Acima do mapa, aparecem **chips** de cada provedor selecionado com:
+  - bolinha colorida (cor do slot)
+  - nome + nº cidades + nº acessos
+  - botão "×" para remover
+- KPIs (Cidades / UFs / Total acessos) viram um **mini-resumo por provedor** lado a lado (cards coloridos com a cor do slot).
+- Mensagem "selecione um provedor" só aparece quando `selectedProviders.length === 0`.
 
-**Único arquivo:** `src/components/equity-brain/AnatelProviderMap.tsx`
+## Cores dos slots
 
-1. Remover o bloco `hub` + loop que cria polylines `[hub → p]`.
-2. Adicionar função `haversineKm(a, b)` (distância esférica simples).
-3. Para cada ponto resolvido, calcular distância até todos os outros e pegar os `k=3` mais próximos.
-4. Deduplicar arestas com chave `min(i,j)|max(i,j)` para não desenhar a mesma linha duas vezes.
-5. (Opcional/limite) Ignorar arestas > 600 km para evitar conectar regiões isoladas com travessias enormes pelo oceano/Amazônia.
-6. Estilo das linhas: `weight: 0.8`, `opacity: 0.45`, `dashArray: "3 4"`, cor Volt `#D9F564`.
-7. Manter o destaque visual da cidade-sede (maior `acessos_empresa`) apenas no marcador (anel branco + raio fixo 12), **sem** linhas especiais saindo dela — ela passa a ser só mais um nó da malha.
-8. Cap de segurança: se `resolved.length > 400`, reduzir `k` para 2 para não poluir.
+Paleta fixa (3 slots), alto contraste sobre o basemap escuro:
 
-## Detalhes técnicos
-- Complexidade: O(n²) no cálculo de vizinhos. Para n≤500 (limite atual do footprint) roda em <30 ms — sem impacto perceptível.
-- Não exige mudanças no backend, hook, schema ou tipos.
-- Popups, badge "approx", contadores e fitBounds permanecem iguais.
+```text
+slot 0 → #D9F564 (Volt — mantém identidade)
+slot 1 → #60A5FA (azul)
+slot 2 → #F472B6 (rosa)
+```
+
+## Mapa (`AnatelProviderMap.tsx`)
+
+A API do componente muda para receber **N camadas**:
+
+```ts
+interface ProviderLayer {
+  id: string;            // cnpj
+  empresa: string;
+  color: string;         // cor do slot
+  rows: AnatelFootprintRow[];
+}
+interface Props {
+  layers: ProviderLayer[];
+  height?: string;
+}
+```
+
+Comportamento:
+- Para cada camada, roda o pipeline atual (resolve coords via IBGE → dict → capital UF, calcula hub, monta malha k-NN com `MAX_EDGE_KM=600`, k=3/2) **isoladamente**, usando a `color` da camada para markers + linhas.
+- Não conecta pontos entre provedores diferentes (cada cor é uma rede própria).
+- Markers ganham `fillColor` = cor do slot; linhas idem.
+- Em **cidades onde dois provedores coexistem**, desenhamos os markers com leve offset radial (~6px em pixels de tela convertidos para latLng) para não ficarem 100% sobrepostos — mesmo padrão usado em `BuyerMarketMap` (já tem precedente no projeto).
+- Popup mostra nome do provedor no topo (com cor do slot) além das infos atuais.
+- Legenda flutuante (canto sup. dir.) lista as camadas ativas com suas cores.
+- `fitBounds` usa a união de todos os pontos das camadas.
+
+## Página (`MapaPage.tsx`)
+
+Mudanças no bloco `mode === "anatel"`:
+
+1. Estado:
+   ```ts
+   const [selectedProviders, setSelectedProviders] = useState<AnatelProviderHit[]>([]);
+   ```
+2. Busca `useAnatelProviderFootprint` precisa rodar para cada CNPJ. Solução: criar hook fino `useAnatelProviderFootprints(cnpjs: string[])` que faz `useQueries` (TanStack) e devolve `{ cnpj, data, isLoading }[]`. Mantém cache por CNPJ — trocar a ordem/adicionar novo não refaz os já carregados.
+3. Render:
+   - Search continua igual; `onClick` do hit faz `addProvider(hit)` (no-op se já existe ou já tem 3).
+   - Chips dos selecionados acima do mapa, com remover.
+   - Cards mini-KPI: um por provedor, com a cor do slot.
+   - Passa `layers` para `AnatelProviderMap` montadas como `{ id, empresa, color: PALETTE[idx], rows: footprints[idx].data ?? [] }`.
+
+## Constantes / utils
+
+- Adicionar em `AnatelProviderMap.tsx` (ou novo `src/lib/anatelMapColors.ts`):
+  ```ts
+  export const ANATEL_SLOT_COLORS = ["#D9F564", "#60A5FA", "#F472B6"];
+  export const MAX_ANATEL_SLOTS = 3;
+  ```
+
+## Arquivos a tocar
+
+- `src/components/equity-brain/AnatelProviderMap.tsx` — refatorar para `layers[]`, loop por camada, offset em colisões, legenda.
+- `src/hooks/useAnatelProvider.ts` — exportar `useAnatelProviderFootprints(cnpjs)` baseado em `useQueries`.
+- `src/pages/equity-brain/MapaPage.tsx` — estado multi-select, chips, KPIs por slot, passar `layers`.
+
+Sem mudanças em edge function, schema, ou geocoding — toda a lógica é client-side em cima do que já existe.
 
 ## Critérios de aceite
-- Visualmente: ao abrir um provedor com várias cidades (ex.: VIVO), as linhas formam uma teia que acompanha a geografia (cidades vizinhas conectadas entre si), sem o leque convergente atual.
-- A cidade-sede continua visualmente distinta no marcador, mas não é mais o único ponto de convergência das linhas.
-- Performance idêntica ou melhor (menos linhas redundantes).
+
+- Posso adicionar até 3 provedores e ver suas malhas sobrepostas em cores distintas.
+- Posso remover qualquer um via chip "×".
+- Cidades em comum mostram dois markers levemente deslocados (sem virar um ponto só).
+- Popup deixa claro de qual provedor é o ponto.
+- Performance ok com 3 × ~500 cidades (markers em canvas, malha O(n²) por camada continua <30ms).

@@ -13,10 +13,10 @@ import { DealCard } from "@/components/equity-brain/DealCard";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { UFS, formatNumber } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
-import { AnatelProviderMap } from "@/components/equity-brain/AnatelProviderMap";
+import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
-  useAnatelProviderFootprint,
+  useAnatelProviderFootprints,
   useAnatelTable,
   type AnatelProviderHit,
 } from "@/hooks/useAnatelProvider";
@@ -28,12 +28,27 @@ export default function MapaPage() {
   const [mode, setMode] = useState<"heat" | "mandates" | "anatel">("heat");
   const mandatePinsQ = useMandatePins();
 
-  // Anatel provider state
+  // Anatel provider state (multi-select up to 3)
+  const [selectedProviders, setSelectedProviders] = useState<AnatelProviderHit[]>([]);
   const [providerQuery, setProviderQuery] = useState("");
-  const [selectedProvider, setSelectedProvider] = useState<AnatelProviderHit | null>(null);
   const { table: anatelTable } = useAnatelTable();
   const providerSearchQ = useAnatelProviderSearch(providerQuery, anatelTable);
-  const footprintQ = useAnatelProviderFootprint(selectedProvider?.cnpj ?? null, anatelTable);
+  const footprintQs = useAnatelProviderFootprints(
+    selectedProviders.map((p) => p.cnpj),
+    anatelTable,
+  );
+
+  const addProvider = (hit: AnatelProviderHit) => {
+    setSelectedProviders((prev) => {
+      if (prev.find((p) => p.cnpj === hit.cnpj)) return prev;
+      if (prev.length >= MAX_ANATEL_SLOTS) return prev;
+      return [...prev, hit];
+    });
+    setProviderQuery("");
+  };
+  const removeProvider = (cnpj: string) => {
+    setSelectedProviders((prev) => prev.filter((p) => p.cnpj !== cnpj));
+  };
   const [filters, setFilters] = useState<BrasilMapFilters>({
     ufs: [],
     setores: [],
@@ -152,82 +167,125 @@ export default function MapaPage() {
                 <Input
                   value={providerQuery}
                   onChange={(e) => setProviderQuery(e.target.value)}
-                  placeholder="Buscar provedor por nome ou CNPJ (Anatel)…"
+                  placeholder={
+                    selectedProviders.length >= MAX_ANATEL_SLOTS
+                      ? `Máximo de ${MAX_ANATEL_SLOTS} provedores. Remova um para adicionar outro.`
+                      : `Buscar provedor (${selectedProviders.length}/${MAX_ANATEL_SLOTS})…`
+                  }
+                  disabled={selectedProviders.length >= MAX_ANATEL_SLOTS}
                   className="pl-9 bg-zinc-900 border-zinc-700 text-zinc-100"
                 />
-                {providerQuery.length >= 2 && !selectedProvider && (
+                {providerQuery.length >= 2 && selectedProviders.length < MAX_ANATEL_SLOTS && (
                   <div className="absolute z-[600] mt-1 w-full bg-zinc-900 border border-zinc-700 rounded shadow-lg max-h-72 overflow-auto">
                     {providerSearchQ.isLoading ? (
                       <div className="px-3 py-2 text-xs text-zinc-500">Buscando…</div>
                     ) : (providerSearchQ.data?.length ?? 0) === 0 ? (
                       <div className="px-3 py-2 text-xs text-zinc-500">Nenhum provedor encontrado.</div>
                     ) : (
-                      providerSearchQ.data!.map((hit) => (
-                        <button
-                          key={hit.cnpj}
-                          onClick={() => { setSelectedProvider(hit); setProviderQuery(hit.empresa); }}
-                          className="w-full text-left px-3 py-2 hover:bg-zinc-800 border-b border-zinc-800/60 last:border-0"
-                        >
-                          <div className="text-sm text-zinc-100 font-medium truncate">{hit.empresa}</div>
-                          <div className="text-[11px] text-zinc-500 flex justify-between">
-                            <span>CNPJ {hit.cnpj}</span>
-                            <span className="text-[#D9F564]">{new Intl.NumberFormat("pt-BR").format(hit.acessos)} acessos</span>
-                          </div>
-                        </button>
-                      ))
+                      providerSearchQ.data!.map((hit) => {
+                        const already = selectedProviders.find((p) => p.cnpj === hit.cnpj);
+                        return (
+                          <button
+                            key={hit.cnpj}
+                            onClick={() => addProvider(hit)}
+                            disabled={!!already}
+                            className="w-full text-left px-3 py-2 hover:bg-zinc-800 border-b border-zinc-800/60 last:border-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <div className="text-sm text-zinc-100 font-medium truncate">
+                              {hit.empresa} {already && <span className="text-[10px] text-zinc-500">(já adicionado)</span>}
+                            </div>
+                            <div className="text-[11px] text-zinc-500 flex justify-between">
+                              <span>CNPJ {hit.cnpj}</span>
+                              <span className="text-[#D9F564]">{new Intl.NumberFormat("pt-BR").format(hit.acessos)} acessos</span>
+                            </div>
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 )}
-                {selectedProvider && (
-                  <button
-                    onClick={() => { setSelectedProvider(null); setProviderQuery(""); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-400 hover:text-zinc-200 px-2 py-1 rounded bg-zinc-800"
-                  >
-                    Limpar
-                  </button>
-                )}
               </div>
 
+              {/* Chips selecionados */}
+              {selectedProviders.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedProviders.map((p, idx) => {
+                    const color = ANATEL_SLOT_COLORS[idx];
+                    return (
+                      <div
+                        key={p.cnpj}
+                        className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-700 text-xs"
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
+                        <span className="text-zinc-100 font-medium truncate max-w-[200px]">{p.empresa}</span>
+                        <button
+                          onClick={() => removeProvider(p.cnpj)}
+                          className="text-zinc-500 hover:text-zinc-200 ml-1"
+                          aria-label="Remover"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {selectedProviders.length > 1 && (
+                    <button
+                      onClick={() => setSelectedProviders([])}
+                      className="text-[11px] text-zinc-500 hover:text-zinc-200 px-2"
+                    >
+                      Limpar todos
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Map / states */}
-              {!selectedProvider ? (
+              {selectedProviders.length === 0 ? (
                 <div className="text-zinc-400 text-sm border border-dashed border-zinc-800 rounded p-6 text-center">
                   <Radio className="h-6 w-6 mx-auto mb-2 text-[#D9F564]" />
-                  Selecione um provedor de telecom para ver sua presença geográfica.
-                  <div className="text-[11px] text-zinc-600 mt-1">Cada cidade vira um ponto; linhas conectam à cidade-sede.</div>
+                  Selecione até {MAX_ANATEL_SLOTS} provedores de telecom para sobrepor suas malhas geográficas.
+                  <div className="text-[11px] text-zinc-600 mt-1">Cada provedor recebe uma cor distinta; cidades em comum aparecem com pontos lado a lado.</div>
                 </div>
-              ) : footprintQ.isLoading ? (
-                <div className="text-zinc-400 text-sm">Carregando footprint…</div>
-              ) : footprintQ.error ? (
-                <div className="text-red-400 text-sm">Erro: {(footprintQ.error as any)?.message}</div>
-              ) : (footprintQ.data?.length ?? 0) === 0 ? (
-                <div className="text-zinc-400 text-sm">Sem cidades retornadas para esse CNPJ.</div>
               ) : (
                 <>
-                  {/* Mini KPI bar */}
-                  <div className="grid grid-cols-3 gap-3 max-w-2xl">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded p-3">
-                      <div className="text-[10px] text-zinc-500 uppercase">Cidades</div>
-                      <div className="text-xl font-bold text-[#D9F564]">{footprintQ.data!.length}</div>
-                    </div>
-                    <div className="bg-zinc-900 border border-zinc-800 rounded p-3">
-                      <div className="text-[10px] text-zinc-500 uppercase">UFs</div>
-                      <div className="text-xl font-bold text-zinc-100">
-                        {new Set(footprintQ.data!.map((r) => r.estado)).size}
-                      </div>
-                    </div>
-                    <div className="bg-zinc-900 border border-zinc-800 rounded p-3">
-                      <div className="text-[10px] text-zinc-500 uppercase">Total acessos</div>
-                      <div className="text-xl font-bold text-zinc-100">
-                        {new Intl.NumberFormat("pt-BR").format(
-                          footprintQ.data!.reduce((s, r) => s + r.acessos_empresa, 0)
-                        )}
-                      </div>
-                    </div>
+                  {/* KPI por provedor */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {selectedProviders.map((p, idx) => {
+                      const color = ANATEL_SLOT_COLORS[idx];
+                      const q = footprintQs[idx];
+                      const data = q?.data ?? [];
+                      return (
+                        <div
+                          key={p.cnpj}
+                          className="bg-zinc-900 border border-zinc-800 rounded p-3"
+                          style={{ borderLeft: `3px solid ${color}` }}
+                        >
+                          <div className="text-[11px] text-zinc-200 font-semibold truncate">{p.empresa}</div>
+                          {q?.isLoading ? (
+                            <div className="text-[11px] text-zinc-500 mt-1">Carregando…</div>
+                          ) : q?.error ? (
+                            <div className="text-[11px] text-red-400 mt-1">Erro ao carregar</div>
+                          ) : (
+                            <div className="flex gap-3 mt-1 text-[11px] text-zinc-400">
+                              <span><b className="text-zinc-100">{data.length}</b> cidades</span>
+                              <span><b className="text-zinc-100">{new Set(data.map((r) => r.estado)).size}</b> UFs</span>
+                              <span style={{ color }}>
+                                <b>{new Intl.NumberFormat("pt-BR").format(data.reduce((s, r) => s + r.acessos_empresa, 0))}</b>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   <AnatelProviderMap
-                    rows={footprintQ.data!}
-                    empresa={selectedProvider.empresa}
-                    height="calc(100vh - 340px)"
+                    layers={selectedProviders.map((p, idx) => ({
+                      id: p.cnpj,
+                      empresa: p.empresa,
+                      color: ANATEL_SLOT_COLORS[idx],
+                      rows: footprintQs[idx]?.data ?? [],
+                    }))}
+                    height="calc(100vh - 380px)"
                   />
                 </>
               )}
