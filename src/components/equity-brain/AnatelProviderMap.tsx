@@ -7,6 +7,7 @@ import type { AnatelFootprintRow } from "@/hooks/useAnatelProvider";
 
 export const ANATEL_SLOT_COLORS = ["#D9F564", "#60A5FA", "#F472B6"];
 export const MAX_ANATEL_SLOTS = 3;
+export const MARKET_COLOR = "#FB923C";
 
 export interface ProviderLayer {
   id: string;
@@ -15,8 +16,24 @@ export interface ProviderLayer {
   rows: AnatelFootprintRow[];
 }
 
+export interface MarketLayerCell {
+  cidade: string;
+  estado: string;
+  lat: number;
+  lng: number;
+  acessos_total: number;
+  n_provedores: number;
+  top_empresa: string;
+}
+export interface MarketLayer {
+  cells: MarketLayerCell[];
+  seeds: { lat: number; lng: number }[];
+  radiusKm: number;
+}
+
 interface Props {
   layers: ProviderLayer[];
+  marketLayer?: MarketLayer | null;
   height?: string;
 }
 
