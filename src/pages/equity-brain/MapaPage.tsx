@@ -456,6 +456,7 @@ export default function MapaPage() {
             Faça zoom para ver clusters por município e, em zoom 9+, pins individuais por CNPJ. Pulse esverdeado = oportunidade premium.
           </p>
         </aside>
+        )}
       </div>
 
       {/* Drawer empresa */}
