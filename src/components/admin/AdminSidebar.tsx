@@ -19,6 +19,7 @@ import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 
 const menuItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { name: 'Analytics', href: '/admin/analytics', icon: LineChart },
   { name: 'CRM', href: '/admin/crm', icon: Contact },
   { name: 'Aprovações', href: '/admin/aprovacoes', icon: ShieldCheck },
   { name: 'Usuários', href: '/admin/users', icon: Users },
