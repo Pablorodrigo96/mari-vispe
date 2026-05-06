@@ -4,12 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Building2, MapPin, Wifi, Gauge, Users, AlertTriangle, TrendingUp, Banknote,
+  Calculator, Receipt, ShieldAlert,
 } from "lucide-react";
 import {
   aggregateAnatel, classifyExpansion, classifyPorte, porteLimit,
   formatBRL, formatNum, formatCnpj, parseAcessos, DEFAULT_TICKET_BRL,
   type AnatelRow, type AnatelAggregate,
 } from "@/lib/anatelInsights";
+
+const DEFAULT_VALUATION_PER_SUB = 1500;
+const CAPITAL_GAINS_RATE = 0.225;
+const SIMPLES_LIMIT = 4_800_000;
 
 interface RfbData {
   razao_social?: string | null;
@@ -36,6 +41,7 @@ export function CompanyProfileCard({
   loading?: boolean;
 }) {
   const [ticket, setTicket] = useState<number>(DEFAULT_TICKET_BRL);
+  const [valuationPerSub, setValuationPerSub] = useState<number>(DEFAULT_VALUATION_PER_SUB);
 
   const sede = { uf: rfb?.uf, municipio: rfb?.municipio };
   const computed = useMemo(() => aggregateAnatel(anatelRows ?? [], sede), [anatelRows, rfb?.uf, rfb?.municipio]);
@@ -47,6 +53,13 @@ export function CompanyProfileCard({
   const capitalSocial = Number(rfb?.capital_social ?? 0) || 0;
   const receitaMensal = agg.totalAcessos * ticket;
   const receitaAnual = receitaMensal * 12;
+
+  const valuationEstimado = agg.totalAcessos * valuationPerSub;
+  const ganhoCapital = Math.max(0, valuationEstimado - capitalSocial);
+  const impostoEstimado = ganhoCapital * CAPITAL_GAINS_RATE;
+  const capitalGapPct = valuationEstimado > 0 ? (capitalSocial / valuationEstimado) : 0;
+  const alertaGapCapital = valuationEstimado > 0 && capitalSocial > 0 && capitalGapPct < 0.10;
+  const alertaDesenquadramento = (porte === "ME" || porte === "EPP") && receitaAnual > SIMPLES_LIMIT;
 
   const alertaSocietario = agg.totalAcessos > 5_000 && capitalSocial < 50_000 && capitalSocial > 0;
   const alertaPorte = limite != null && receitaAnual > limite;
@@ -257,6 +270,99 @@ export function CompanyProfileCard({
             )}
           </div>
         )}
+      </Card>
+
+      {/* Análise de M&A e Tributária */}
+      <Card className="p-4 bg-zinc-900/60 border-zinc-800">
+        <div className="flex items-start gap-2 mb-1">
+          <Calculator className="h-4 w-4 text-emerald-400 mt-0.5" />
+          <div>
+            <div className="text-sm font-semibold text-zinc-200">Análise de M&A e Tributária</div>
+            <div className="text-xs text-zinc-500">
+              Cruza Capital Social (RFB) com base de assinantes (Anatel) para projetar valuation, ganho de capital e riscos fiscais/societários.
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+          <div className="rounded-md border border-zinc-800 bg-zinc-950 p-3">
+            <div className="text-[10px] uppercase tracking-wide text-zinc-500">Valuation por assinante</div>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-zinc-400 text-sm">R$</span>
+              <Input
+                type="number"
+                value={valuationPerSub}
+                onChange={(e) => setValuationPerSub(Number(e.target.value) || 0)}
+                className="bg-zinc-900 border-zinc-800 text-zinc-100 h-8 w-28 text-sm"
+                min={0}
+              />
+            </div>
+            <div className="text-[10px] text-zinc-500 mt-1">Default mercado: R$ 1.500</div>
+          </div>
+          <Kpi label="Valuation Estimado" value={formatBRL(valuationEstimado)} accent
+            sub={`${formatNum(agg.totalAcessos)} acessos × ${formatBRL(valuationPerSub)}`} />
+          <Kpi label="Capital Social (RFB)" value={capitalSocial > 0 ? formatBRL(capitalSocial) : "—"}
+            sub={valuationEstimado > 0 && capitalSocial > 0
+              ? `${(capitalGapPct * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% do valuation`
+              : undefined} />
+          <Kpi label="Ganho de Capital Projetado" value={formatBRL(ganhoCapital)}
+            accent={ganhoCapital > 0}
+            sub="Valuation − Capital Social" />
+        </div>
+
+        <div className="mt-3 rounded-md border border-amber-900/60 bg-amber-950/30 p-4">
+          <div className="flex items-start gap-2">
+            <Receipt className="h-5 w-5 text-amber-300 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="text-[10px] uppercase tracking-wide text-amber-300">
+                Estimativa de Imposto (22,5%)
+              </div>
+              <div className="text-3xl font-bold tabular-nums text-amber-200 mt-1">
+                {formatBRL(impostoEstimado)}
+              </div>
+              <div className="text-xs text-amber-200/70 mt-1">
+                Imposto estimado sobre ganho de capital na venda · alíquota inicial 22,5%
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {(alertaGapCapital || alertaDesenquadramento) && (
+          <div className="mt-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300 mb-2">
+              <ShieldAlert className="h-4 w-4 text-red-400" />
+              Diagnóstico de Risco
+            </div>
+            <div className="space-y-2">
+              {alertaGapCapital && (
+                <div className="flex items-start gap-2 p-3 rounded-md border border-red-900/60 bg-red-950/30 text-red-200 text-xs">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <b>⚠️ Alto Risco Societário (Gap de Capital)</b> — Capital social de{" "}
+                    {formatBRL(capitalSocial)} representa apenas{" "}
+                    {(capitalGapPct * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% do
+                    valuation estimado ({formatBRL(valuationEstimado)}). Vendedor terá alto impacto de IR na venda.
+                  </div>
+                </div>
+              )}
+              {alertaDesenquadramento && (
+                <div className="flex items-start gap-2 p-3 rounded-md border border-red-900/60 bg-red-950/30 text-red-200 text-xs">
+                  <TrendingUp className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <b>🚨 Alerta de Desenquadramento</b> — Porte declarado <b>{porte}</b> mas receita
+                    anualizada estimada de {formatBRL(receitaAnual)} excede o teto do Simples Nacional
+                    ({formatBRL(SIMPLES_LIMIT)}). Possível subfaturamento ou desorganização tributária.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="text-[10px] text-zinc-500 mt-3 leading-relaxed">
+          Estimativas baseadas em cenário de venda de 100% das quotas com alíquota fixa de 22,5% sobre
+          o ganho de capital (Lei 13.259/2016 — faixa inicial). Não substitui análise tributária formal.
+        </div>
       </Card>
     </div>
   );
