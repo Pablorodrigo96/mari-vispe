@@ -52,7 +52,84 @@ export default function MapaPage() {
   };
   const removeProvider = (cnpj: string) => {
     setSelectedProviders((prev) => prev.filter((p) => p.cnpj !== cnpj));
+    setBuyerCnpjs((prev) => {
+      const next = new Set(prev);
+      next.delete(cnpj);
+      return next;
+    });
   };
+
+  // Buyer-mode + market radius
+  const [buyerCnpjs, setBuyerCnpjs] = useState<Set<string>>(new Set());
+  const [radiusKm, setRadiusKm] = useState(50);
+  const [sameUfOnly, setSameUfOnly] = useState(false);
+  const [marketLayer, setMarketLayer] = useState<MarketLayer | null>(null);
+  const marketSearch = useAnatelMarketRadius();
+
+  const toggleBuyer = (cnpj: string) => {
+    setBuyerCnpjs((prev) => {
+      const next = new Set(prev);
+      if (next.has(cnpj)) next.delete(cnpj);
+      else next.add(cnpj);
+      return next;
+    });
+  };
+
+  const buildSeeds = (): SeedCity[] => {
+    const seeds: SeedCity[] = [];
+    selectedProviders.forEach((p, idx) => {
+      if (!buyerCnpjs.has(p.cnpj)) return;
+      const rows = footprintQs[idx]?.data ?? [];
+      for (const r of rows) {
+        let coord = getCoordsByIbge(r.codigo_ibge_cidade);
+        if (!coord) coord = getCoordinates(r.cidade, r.estado) ?? null;
+        if (!coord) coord = stateCapitals[r.estado] ?? null;
+        if (!coord) continue;
+        seeds.push({
+          ibge: String(r.codigo_ibge_cidade ?? ""),
+          lat: coord.lat,
+          lng: coord.lng,
+          uf: r.estado,
+        });
+      }
+    });
+    return seeds;
+  };
+
+  const handleSearchMarket = async () => {
+    if (!anatelTable) return;
+    const seeds = buildSeeds();
+    if (!seeds.length) return;
+    try {
+      const res = await marketSearch.mutateAsync({
+        table: anatelTable,
+        seeds,
+        radiusKm,
+        sameUfOnly,
+      });
+      setMarketLayer({
+        cells: res.cells.map((c) => ({
+          cidade: c.cidade,
+          estado: c.estado,
+          lat: c.lat,
+          lng: c.lng,
+          acessos_total: c.acessos_total,
+          n_provedores: c.n_provedores,
+          top_empresa: c.top_empresa,
+        })),
+        seeds: seeds.map((s) => ({ lat: s.lat, lng: s.lng })),
+        radiusKm,
+      });
+    } catch (e) {
+      console.error("market search error", e);
+    }
+  };
+
+  const clearMarket = () => {
+    setMarketLayer(null);
+    marketSearch.reset();
+  };
+
   const [filters, setFilters] = useState<BrasilMapFilters>({
     ufs: [],
     setores: [],
