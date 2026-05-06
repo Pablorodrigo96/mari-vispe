@@ -17,6 +17,7 @@ import { AnatelProviderMap } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
   useAnatelProviderFootprint,
+  useAnatelTable,
   type AnatelProviderHit,
 } from "@/hooks/useAnatelProvider";
 import { Input } from "@/components/ui/input";
