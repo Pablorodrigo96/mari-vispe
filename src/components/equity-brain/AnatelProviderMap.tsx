@@ -286,7 +286,7 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
       const bounds = L.latLngBounds(allPoints);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
     }
-  }, [resolvedLayers, marketLayer]);
+  }, [resolvedLayers, marketLayer, overlapInfo]);
 
   const approxCount = resolvedLayers.reduce(
     (acc, l) => acc + l.resolved.filter((r) => r.approx).length, 0,
