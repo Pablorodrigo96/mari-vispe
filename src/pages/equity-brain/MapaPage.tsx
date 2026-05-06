@@ -1,18 +1,16 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Network } from "lucide-react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { BrasilMap, type BrasilMapFilters } from "@/components/equity-brain/BrasilMap";
 import { MandateMap } from "@/components/equity-brain/MandateMap";
 import { DealCard } from "@/components/equity-brain/DealCard";
-import { EBStatCard } from "@/components/equity-brain/EBStatCard";
-import { UFS, formatNumber } from "@/lib/equityBrain";
+import { UFS } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
+import { ProviderSynergyPanel } from "@/components/equity-brain/ProviderSynergyPanel";
 import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS, type MarketLayer } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
@@ -137,52 +135,6 @@ export default function MapaPage() {
     showBuyers: false,
   });
 
-  // KPIs
-  const ufStatsQ = useQuery({
-    queryKey: ["mapa", "kpi-uf"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("eb_v_opportunities_by_uf" as any)
-        .select("uf,total,premium_count,top_setor")
-        .order("premium_count", { ascending: false });
-      return (data ?? []) as any[];
-    },
-  });
-
-  const muniStatsQ = useQuery({
-    queryKey: ["mapa", "kpi-muni"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("eb_v_opportunities_by_municipio" as any)
-        .select("municipio,uf,premium_count,total")
-        .order("premium_count", { ascending: false })
-        .limit(50);
-      return (data ?? []) as any[];
-    },
-  });
-
-  const kpis = useMemo(() => {
-    const top = ufStatsQ.data?.[0];
-    // Setor mais quente: top_setor mais frequente entre UFs
-    const setorTally = new Map<string, number>();
-    (ufStatsQ.data ?? []).forEach((r) => {
-      if (r.top_setor) setorTally.set(r.top_setor, (setorTally.get(r.top_setor) ?? 0) + r.premium_count);
-    });
-    const topSetor = Array.from(setorTally.entries()).sort((a, b) => b[1] - a[1])[0];
-
-    // Concentração: % de premium em top 5 cidades
-    const muni = muniStatsQ.data ?? [];
-    const totalPremium = muni.reduce((s, m) => s + (m.premium_count ?? 0), 0);
-    const top5Premium = muni.slice(0, 5).reduce((s, m) => s + (m.premium_count ?? 0), 0);
-    const concentration = totalPremium > 0 ? Math.round((top5Premium / totalPremium) * 100) : 0;
-
-    return {
-      topUf: top ? `${top.uf} (${formatNumber(top.premium_count)})` : "—",
-      topSetor: topSetor ? `${topSetor[0]}` : "—",
-      concentration: `${concentration}%`,
-    };
-  }, [ufStatsQ.data, muniStatsQ.data]);
-
   const toggleUf = (uf: string) => {
     setFilters((f) => ({
       ...f,
@@ -192,12 +144,6 @@ export default function MapaPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-1px)] bg-zinc-950">
-      {/* KPIs topo */}
-      <div className="grid grid-cols-3 gap-3 p-4 border-b border-zinc-800">
-        <EBStatCard label="UF com mais oportunidades" value={kpis.topUf} accent="emerald" />
-        <EBStatCard label="Setor mais quente" value={kpis.topSetor} accent="amber" />
-        <EBStatCard label="Concentração top 5 cidades" value={kpis.concentration} accent="blue" />
-      </div>
 
       {/* Toggle modo */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800 bg-zinc-900/40">
@@ -342,6 +288,17 @@ export default function MapaPage() {
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
                   <div className="space-y-3 min-w-0">
+                    {selectedProviders.length >= 2 && (
+                      <ProviderSynergyPanel
+                        providers={selectedProviders.map((p, idx) => ({
+                          cnpj: p.cnpj,
+                          empresa: p.empresa,
+                          color: ANATEL_SLOT_COLORS[idx],
+                          rows: footprintQs[idx]?.data ?? [],
+                        }))}
+                        buyerCnpjs={buyerCnpjs}
+                      />
+                    )}
                     {/* KPI por provedor */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {selectedProviders.map((p, idx) => {
@@ -422,7 +379,8 @@ export default function MapaPage() {
           </Link>
         </div>
 
-        {/* Sidebar filtros */}
+        {/* Sidebar filtros — só no Heatmap */}
+        {mode === "heat" && (
         <aside className="w-72 shrink-0 bg-zinc-900 border-l border-zinc-800 overflow-y-auto p-4 space-y-5">
           <div>
             <h3 className="text-zinc-300 text-xs font-bold uppercase tracking-wider mb-2">
@@ -498,6 +456,7 @@ export default function MapaPage() {
             Faça zoom para ver clusters por município e, em zoom 9+, pins individuais por CNPJ. Pulse esverdeado = oportunidade premium.
           </p>
         </aside>
+        )}
       </div>
 
       {/* Drawer empresa */}

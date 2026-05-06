@@ -1,83 +1,56 @@
-# "Buscar empresas no raio" — descoberta de mercado a partir do comprador
+## Mapa Anatel — Limpeza + Painel de Sinergia M&A
 
-Acrescenta uma busca de mercado: dado um (ou mais) provedor marcado como **comprador**, varre todas as cidades que estão no **raio em km** das cidades dele e devolve **todos os provedores** que atuam nessa região, plotados como **camada agregada** no mapa (cor laranja Mari `#FB923C`).
+### Mudanças solicitadas
 
-## UX
+1. **Remover KPIs quebrados** do topo (`UF com mais oportunidades`, `Setor mais quente`, `Concentração top 5 cidades`).
+2. **Esconder a sidebar de filtros** (Score M&A, UFs, Mostrar buyers, Vincular a tabela) **quando o modo for `anatel`** — ela só faz sentido no Heatmap. Manter quando `mode === "heat"`.
+3. **Novo `ProviderSynergyPanel`** que aparece sempre que houver **2+ provedores** selecionados na aba Anatel.
 
-Na aba "Provedor Anatel" do `/equity-brain/pipeline?view=mapa`, dentro do bloco de chips dos provedores selecionados:
+### Painel de Sinergia (novo componente)
 
-1. Cada chip ganha um toggle "🎯 comprador" (clique alterna). Estado: `buyerCnpjs: Set<string>`.
-2. Abaixo dos chips, novo painel "Buscar mercado":
-   - Slider de raio: **10–500 km** (default 50). Label dinâmico.
-   - Toggle "Apenas mesma UF do comprador" (off por padrão).
-   - Botão **"Buscar empresas no raio"** (Volt). Disabled se nenhum slot estiver marcado como comprador.
-   - Botão "Limpar mercado" (aparece após resultado).
-3. Após resposta:
-   - KPI bar dedicado: `N provedores · N cidades · X mil acessos` na cor laranja.
-   - Lista colapsável "Top 20 provedores" (nome, n cidades atingidas, acessos, botão "+ Adicionar como camada" — respeita limite de 3 slots).
-4. No mapa:
-   - Cada cidade alvo vira marker laranja (raio = log10(acessos totais na cidade)).
-   - **Círculos pontilhados** ao redor de cada cidade-semente do comprador, com raio igual ao slider — feedback visual claro do alcance.
-   - Sem malha k-NN nessa camada (visual já é denso).
-   - Popup do marker laranja: "Cidade · UF · X provedores · Y mil acessos · Top: <empresa>".
+Layout side-by-side comparando todos os provedores ativos (2 ou 3), abaixo dos KPI cards e acima do mapa.
 
-## Algoritmo (client + edge)
+**Por provedor (coluna)**:
+- Nome + cor do slot.
+- Total acessos (soma de `acessos_empresa`).
+- Cidades atendidas, UFs.
+- Centroide (lat/lng médio ponderado por acessos).
 
-### Cliente (semente):
-1. Pega todas as cidades dos provedores marcados como comprador (já vêm do `useAnatelProviderFootprints`).
-2. Resolve coords via IBGE (já temos `getCoordsByIbge` + `ibgeMunicipios.json`).
-3. Filtra município candidatos: para todo município brasileiro do `ibgeMunicipios.json`, calcula haversine ao centro mais próximo da semente; mantém os com `d ≤ raio`.
-4. Manda para o backend a lista de **códigos IBGE** desses municípios (até ~2000) + flag opcional `uf`.
+**Bloco central de cruzamento (par a par; com 3 provedores → 3 pares colapsáveis)**:
+- **Overlap de cidades**: `|A ∩ B|` por código IBGE, `% sobre menor`, lista top 5 cidades em comum (com acessos_A vs acessos_B).
+- **Distância entre centroides** em km (haversine).
+- **Sinergia geográfica** (0–100): `complementaridade × proximidade`, onde:
+  - `complementaridade = 1 - jaccard(cidades_A, cidades_B)` (quanto menos overlap, mais espaço pra somar territórios).
+  - `proximidade = clamp(1 - dist_km / 1500, 0, 1)`.
+  - score final = `round(100 * (0.6 * complementaridade + 0.4 * proximidade))`.
+- **Tendência M&A** baseada em razão de tamanho `r = menor / maior` (acessos):
+  - `r ≥ 0.7` → **Fusão entre iguais** (badge âmbar).
+  - `0.4 ≤ r < 0.7` → **M&A com co-gestão** (badge azul).
+  - `r < 0.4` → **Aquisição** — explicita "**{maior} compra {menor}**" (badge volt).
+- Frase humanizada estilo: *"ISP A (100k) e ISP B (90k) — tendência: fusão. Overlap baixo (8%), distância 320km → sinergia alta (78)."*
+- Se `buyerCnpjs` tiver alguém marcado, sobrepõe o sinal: o marcado é tratado como comprador independente do tamanho, e a frase vira *"A (comprador marcado) → B (alvo)"*.
 
-### Edge function — nova action `companies_in_cities`:
-Em `supabase/functions/anatel-query/index.ts`:
-```sql
-WITH base AS (
-  SELECT empresa, cnpj, cidade, estado, codigo_ibge_cidade,
-         SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
-  FROM "<table>"
-  WHERE codigo_ibge_cidade = ANY($1::text[])
-  GROUP BY empresa, cnpj, cidade, estado, codigo_ibge_cidade
-)
-SELECT cidade, estado, codigo_ibge_cidade,
-       SUM(acessos)::bigint AS acessos_total,
-       COUNT(DISTINCT cnpj)::int AS n_provedores,
-       (ARRAY_AGG(empresa ORDER BY acessos DESC))[1] AS top_empresa,
-       (ARRAY_AGG(cnpj ORDER BY acessos DESC))[1] AS top_cnpj,
-       json_agg(json_build_object('empresa',empresa,'cnpj',cnpj,'acessos',acessos)
-                ORDER BY acessos DESC) FILTER (WHERE empresa IS NOT NULL) AS providers
-FROM base
-GROUP BY cidade, estado, codigo_ibge_cidade
-ORDER BY acessos_total DESC
-LIMIT 5000;
-```
-Auth/CORS já existentes (admin/advisor) são respeitados.
+### Arquivos
 
-Cliente também deriva o "Top 20 provedores" agregando o array `providers` por CNPJ.
+- **NOVO** `src/lib/anatelSynergy.ts`
+  - `computeProviderStats(rows)` → `{ totalAcessos, cities:Set<string>, ufs:Set<string>, centroid:{lat,lng} }`.
+  - `computePairSynergy(a, b, opts?: { buyerCnpj?, aCnpj?, bCnpj? })` → `{ overlapCount, overlapPct, jaccard, distanceKm, synergyScore, tendency: "fusao"|"co-gestao"|"aquisicao", buyerLabel, sellerLabel, headline, topOverlapCities: [{cidade, uf, acessosA, acessosB}] }`.
+  - Reusa haversine local; cidades-chave por `codigo_ibge_cidade` (fallback `cidade|uf`).
 
-## Arquivos
+- **NOVO** `src/components/equity-brain/ProviderSynergyPanel.tsx`
+  - Props: `providers: { cnpj, empresa, color, rows }[]`, `buyerCnpjs: Set<string>`.
+  - Renderiza grid de colunas (1 por provedor) + uma faixa abaixo com cards de pares (2 prov → 1 card; 3 prov → 3 cards).
+  - Estilo consistente com `bg-zinc-900 border-zinc-800` + bordas coloridas.
 
-**Novos**
-- `src/hooks/useAnatelMarketRadius.ts` — recebe `seedCities: {ibge, lat, lng}[]` + `radiusKm` + `sameUfOnly` + `triggerKey`; faz filtro de IBGE local, chama edge action `companies_in_cities` via `useMutation` e devolve `{ rows, providers }`.
-- `src/components/equity-brain/MarketRadiusPanel.tsx` — slider, toggles, botão, KPI e lista top 20.
+- **EDITA** `src/pages/equity-brain/MapaPage.tsx`
+  - Apaga linhas 196–200 (grid de 3 KPIs) e o `useMemo kpis` + queries `ufStatsQ`/`muniStatsQ` que só serviam para esses KPIs.
+  - Envolve `<aside>` (linhas 426–500) em `{mode === "heat" && (...)}`.
+  - No bloco Anatel, quando `selectedProviders.length >= 2` e ao menos 2 footprints carregados, renderiza `<ProviderSynergyPanel />` dentro da coluna esquerda, acima dos KPI por provedor.
 
-**Editados**
-- `supabase/functions/anatel-query/index.ts` — adiciona `case "companies_in_cities"` (auto-deploy).
-- `src/components/equity-brain/AnatelProviderMap.tsx` — nova prop opcional `marketLayer?: { color, cells: {ibge, cidade, estado, lat, lng, acessos_total, n_provedores, top_empresa}[]; seeds: {lat, lng}[]; radiusKm: number }`. Renderiza markers laranja + L.circle pontilhados nas seeds. Inclui na união do `fitBounds`.
-- `src/pages/equity-brain/MapaPage.tsx` — estado `buyerCnpjs`, `radiusKm`, `marketResult`; chips com toggle comprador; integra `<MarketRadiusPanel>`; passa `marketLayer` ao mapa.
+### Critério de aceite
 
-## Constantes
-- `MARKET_COLOR = "#FB923C"` em `AnatelProviderMap.tsx`.
-- Raio default 50, min 10, max 500.
-
-## Performance
-- Filtro de cidades client-side: 5570 municípios × ≤ N seeds (tipicamente <500) = <3M ops haversine, <80ms em V8.
-- Query SQL com `ANY(text[])` é eficiente; cap em 2000 IBGEs no payload (raio máximo ~500 km cobre ≈ região; suficiente para todo BR).
-- Resultado client cacheado por `(buyerCnpjsSorted|radius|sameUf)` no React Query.
-
-## Critérios de aceite
-- Marco 1 provedor como comprador, defino raio 80 km, clico "Buscar empresas no raio" → vejo círculos pontilhados ao redor das cidades dele + nuvem laranja de cidades vizinhas atendidas por outros provedores.
-- KPI mostra contagem real; Top 20 mostra ranking; consigo adicionar um deles como camada normal (slot 3) — vê interseção.
-- Aumentar/diminuir o slider e re-clicar atualiza o resultado.
-- "Limpar mercado" remove a camada laranja sem afetar os slots 0–2.
-- Sem comprador marcado, botão fica disabled com tooltip explicativo.
+- Topo da página `/equity-brain/pipeline?view=mapa` sem os 3 KPIs.
+- Sidebar direita some no modo Anatel (mapa ocupa largura toda) e continua no Heatmap.
+- Selecionar 2 provedores Anatel → aparece painel comparativo com overlap, distância, score de sinergia e tendência (fusão/aquisição) com nomes corretos de comprador/vendedor.
+- Marcar slot como comprador força o papel mesmo quando ele é menor.
+- Selecionar 3 provedores → 3 cards de par (A↔B, A↔C, B↔C).
