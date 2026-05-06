@@ -136,6 +136,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ViewAsBanner />
+          <PageTracker />
           <Routes>
             <Route path="/" element={<Index />} />
 
