@@ -28,12 +28,27 @@ export default function MapaPage() {
   const [mode, setMode] = useState<"heat" | "mandates" | "anatel">("heat");
   const mandatePinsQ = useMandatePins();
 
-  // Anatel provider state
+  // Anatel provider state (multi-select up to 3)
+  const [selectedProviders, setSelectedProviders] = useState<AnatelProviderHit[]>([]);
   const [providerQuery, setProviderQuery] = useState("");
-  const [selectedProvider, setSelectedProvider] = useState<AnatelProviderHit | null>(null);
   const { table: anatelTable } = useAnatelTable();
   const providerSearchQ = useAnatelProviderSearch(providerQuery, anatelTable);
-  const footprintQ = useAnatelProviderFootprint(selectedProvider?.cnpj ?? null, anatelTable);
+  const footprintQs = useAnatelProviderFootprints(
+    selectedProviders.map((p) => p.cnpj),
+    anatelTable,
+  );
+
+  const addProvider = (hit: AnatelProviderHit) => {
+    setSelectedProviders((prev) => {
+      if (prev.find((p) => p.cnpj === hit.cnpj)) return prev;
+      if (prev.length >= MAX_ANATEL_SLOTS) return prev;
+      return [...prev, hit];
+    });
+    setProviderQuery("");
+  };
+  const removeProvider = (cnpj: string) => {
+    setSelectedProviders((prev) => prev.filter((p) => p.cnpj !== cnpj));
+  };
   const [filters, setFilters] = useState<BrasilMapFilters>({
     ufs: [],
     setores: [],
