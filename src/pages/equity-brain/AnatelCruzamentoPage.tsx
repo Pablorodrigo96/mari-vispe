@@ -164,6 +164,7 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
     setCnpj(clean);
     setTab("cnpj");
     loadFootprint(clean);
+    loadCompanyProfile(clean);
   }
 
   const hasCompany = !!cnpj;
