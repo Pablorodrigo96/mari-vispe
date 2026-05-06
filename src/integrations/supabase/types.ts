@@ -4310,6 +4310,21 @@ export type Database = {
         }
         Relationships: []
       }
+      v_analytics_browsers: {
+        Row: {
+          browser: string | null
+          sessions: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_cta: {
+        Row: {
+          clicks: number | null
+          cta: string | null
+          unique_sessions: number | null
+        }
+        Relationships: []
+      }
       v_analytics_daily: {
         Row: {
           day: string | null
@@ -4318,6 +4333,46 @@ export type Database = {
           sessions: number | null
           signups: number | null
           unique_users: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_devices: {
+        Row: {
+          device: string | null
+          sessions: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_exit_pages: {
+        Row: {
+          exits: number | null
+          path: string | null
+        }
+        Relationships: []
+      }
+      v_analytics_funnel: {
+        Row: {
+          leads: number | null
+          sessions: number | null
+          sessions_over_30s: number | null
+          sessions_with_pv: number | null
+          signups: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_hourly_heatmap: {
+        Row: {
+          dow: number | null
+          events: number | null
+          hour: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_retention: {
+        Row: {
+          cohort: number | null
+          d1_pct: number | null
+          d7_pct: number | null
         }
         Relationships: []
       }

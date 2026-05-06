@@ -1,60 +1,89 @@
-# Analytics Admin – Navegação, Séries Temporais e Opt-out
+# Analytics — Saúde do tracking, legendas e métricas avançadas
 
-## 1. Item "Analytics" no sidebar admin
+Hoje o `/admin/analytics` mostra os 4 KPIs e os gráficos básicos, mas não explica **o que cada gráfico significa** nem por que **eventos podem sumir** (DNT, opt-out, sessão sem `page_leave`). Vamos resolver isso e adicionar métricas que importam de verdade para entender o uso real da plataforma.
 
-**Arquivo:** `src/components/admin/AdminSidebar.tsx`
+## 1. Card "Estado do tracking" (no topo da tela)
 
-- Importar ícone `LineChart` (já existe em outras telas).
-- Adicionar entrada no array `menuItems`, logo abaixo de **Dashboard**:
-  ```ts
-  { name: 'Analytics', href: '/admin/analytics', icon: LineChart },
-  ```
-- Nada mais muda — a rota `/admin/analytics` já existe e o highlight de ativo é por `location.pathname`.
+Bloco compacto, à direita dos KPIs, mostrando em tempo real o **seu próprio navegador** + um snapshot do banco:
 
-## 2. Séries temporais 7d/30d em `/admin/analytics`
+- **Seu navegador agora**
+  - DNT (Do Not Track): on/off
+  - Consentimento de analytics (`vispe_cookie_consent.analytics`): aceito / recusado / pendente
+  - `session_key` atual (8 chars) e `user_id` atual
+  - Status efetivo: "rastreando" (verde) / "bloqueado por DNT" / "bloqueado por opt-out" / "aguardando consentimento"
+  - Botão "enviar evento de teste" (dispara `cta_click` com metadata `{source:'admin-test'}`) → confirma roundtrip
+- **Plataforma (últimas 24h)**
+  - Eventos recebidos por tipo (page_view / page_leave / signup / lead / cta_click)
+  - % sessões com `page_leave` (saúde do beacon — se cair muito, tempo de permanência fica subestimado)
+  - % sessões anônimas vs logadas
+  - Último evento recebido (timestamp) — se >30min, alerta amarelo
 
-**Objetivo:** trocar os blocos hoje estáticos por gráficos com toggle de janela (7d / 30d / 90d) cobrindo:
+Componente novo: `src/components/admin/analytics/TrackingHealthCard.tsx`.
+Hook: `useTrackingHealth()` agregando 1 query em `analytics_events` (últimas 24h por `event_type`) e 1 em `analytics_sessions`.
 
-- **Crescimento de usuários** (cumulativo) — AreaChart, fonte `v_analytics_user_growth`.
-- **Atividade diária** — LineChart com 3 séries: page views, sessões únicas, usuários ativos. Fonte `v_analytics_daily`.
-- **Page views por dia** — BarChart simples (mesma fonte, série única) para destaque visual.
-- **Leads por dia** — BarChart, derivado de `analytics_events` filtrando `event_type = 'lead'` agrupado por `date_trunc('day', created_at)`.
+## 2. Legendas/explicação em cada gráfico
 
-**Implementação:**
+Cada Card de gráfico ganha um ícone `(i)` no canto direito do título com Tooltip (padrão `ebTooltips`) explicando:
 
-- `src/hooks/useAdminAnalytics.ts`: adicionar parâmetro `range: 7 | 30 | 90` (default 30) e nova query `useLeadsTimeseries(range)` que faz `select created_at from analytics_events where event_type='lead' and created_at >= now() - interval`.
-- `src/pages/admin/AdminAnalytics.tsx`:
-  - Header com `<ToggleGroup>` (shadcn) `7d | 30d | 90d` controlando estado local `range`.
-  - Cada gráfico passa a receber `range`. Layout: grid 2 colunas (lg) / 1 coluna (mobile) com os 4 gráficos descritos.
-  - Manter os 4 KPIs (já existentes) no topo, agora também respondendo ao `range` ativo.
-  - Recharts já está no projeto (usado nos dashboards EB). Estilo dark consistente: grid `#27272a`, eixos `#71717a`, séries em `#D9F564` (Volt), `#10b981` (emerald), `#3b82f6`.
+- **Crescimento de usuários**: "Soma cumulativa de signups (linha verde clara) e total acumulado de usuários (área verde escura). Mostra a curva de aquisição."
+- **Atividade diária**: "Volume diário de page views, sessões únicas e novos cadastros sobrepostos. Útil para detectar picos e correlacionar com campanhas."
+- **Page views por dia**: "Quantas páginas foram abertas por dia. Cada navegação conta uma — recargas e voltas no histórico inclusive."
+- **Leads por dia**: "Eventos `lead` registrados (formulários de interesse, captação, valuation). Mede conversão real, não tráfego."
+- **Páginas mais vistas**: "Top 20 caminhos por views (30d). 'Tempo médio' vem de `page_leave` — pode ser zero se o usuário fechou a aba sem disparar o beacon."
+- **Fontes de tráfego**: "Sessões agrupadas por `utm_source` ou `referrer`. 'direct' = sem referrer (digitou URL ou veio de app)."
+- **Permanências mais longas**: "Maiores `duration_ms` registrados em `page_leave`. Sessões anônimas aparecem como 'anon'."
 
-## 3. Opt-out LGPD para visitantes não logados
+Todos centralizados em `src/lib/analyticsTooltips.ts` para manutenção fácil.
 
-**Comportamento desejado:** respeitar o cookie consent atual e oferecer toggle explícito de "rastreamento analítico".
+## 3. Novas métricas de monitoramento
 
-**Plano:**
+Adicionar três blocos novos abaixo dos atuais:
 
-- Estender `useCookieConsent` (já existente) com categoria `analytics` (boolean, default `false` até consentimento explícito — LGPD opt-in).
-- `src/lib/analytics.ts`: no início de `trackEvent`/`startSession`, ler `localStorage` (`cookie_consent_v1`); se `analytics !== true`, retornar sem chamar a edge function.
-- `src/hooks/usePageTracking.tsx`: idem — antes de despachar `page_view`/`page_leave` checar consent.
-- `CookieConsentBanner` e `CookiePreferencesModal`: adicionar checkbox **"Análises de uso (anônimas)"** com texto curto explicando que ajuda a melhorar a plataforma e pode ser desativado a qualquer momento.
-- Navegador respeitando `navigator.doNotTrack === '1'`: forçar opt-out automático mesmo se o usuário não interagiu com o banner.
-- Usuários autenticados: mantemos rastreamento ligado por padrão (já cobertos pelos Termos), mas adicionar toggle em `/perfil` ("Privacidade · análises de uso") que grava em `profiles.analytics_opt_out` (nova coluna `boolean default false`) — checado pelo `analytics.ts`.
+### 3.1 Card "Funil de engajamento" (30d)
+Linha horizontal com 5 pílulas:
+`Sessões → Páginas/sessão → Sessões >30s → Signups → Leads`
+com valor absoluto e % de conversão entre etapas. Identifica gargalo: se "páginas/sessão" cai, o conteúdo não engaja; se "Sessões >30s" cai, o site está pesado/confuso.
 
-**Migração:** `alter table profiles add column analytics_opt_out boolean not null default false;`
+### 3.2 Card "Dispositivos & geolocalização"
+- **Dispositivo** (donut): mobile vs desktop (de `analytics_sessions.device`)
+- **Top 10 user_agent simplificado** (Chrome / Safari / Firefox / outros) — derivado regex do `user_agent`
+- **Top 10 cidades/países** se `country` estiver populado; senão placeholder com hint "Backfill via IP geolocation pendente"
 
-## Detalhes técnicos
+### 3.3 Card "Heatmap de horário"
+Grid 7×24 (dia da semana × hora) colorido por nº de eventos. Mostra quando os usuários realmente usam a plataforma — base para agendar manutenção, push, e campanhas.
 
-- Sem novas tabelas além da coluna em `profiles`.
-- Toggle de range mantido em `useState` (não persistir).
-- Queries continuam server-side com RLS admin (`has_role(auth.uid(),'admin')`) — performance aceitável até dezenas de milhares de eventos; se virar problema, criar índice `analytics_events(created_at, event_type)`.
-- Nada quebra o fluxo existente: tracker simplesmente vira no-op quando consent ausente.
+### 3.4 Card "Páginas de saída" (exit rate)
+Top 10 caminhos onde a sessão termina (último evento da sessão). Identifica "becos sem saída" no UX.
 
-## Entregáveis
+### 3.5 Card "Conversões CTA"
+Tabela de `cta_click` agrupados por `metadata->>'cta'` com count e CTR sobre page_views da página de origem. Hoje os CTAs são rastreados mas nunca exibidos.
 
-1. `AdminSidebar.tsx` com item Analytics.
-2. `AdminAnalytics.tsx` + `useAdminAnalytics.ts` com range toggle e 4 séries temporais.
-3. `analytics.ts` + `usePageTracking.tsx` com gate de consent + DNT.
-4. `CookieConsentBanner` / `CookiePreferencesModal` com categoria analytics.
-5. Migração `profiles.analytics_opt_out` + toggle em `/perfil`.
+### 3.6 Card "Retenção D1/D7"
+Para usuários autenticados: % que voltam em 1 dia e 7 dias após signup. Métrica chave de produto.
+
+### 3.7 KPIs extras na faixa do topo
+Adicionar 2 KPIs ao lado dos 4 atuais (linha vira grid de 6):
+- **Páginas / sessão** (engajamento)
+- **Tempo médio de sessão** (duração)
+
+## 4. Mudanças técnicas resumidas
+
+- **Novas views SQL** (migração read-only):
+  - `v_analytics_funnel` — agregação 30d com sessões, sessões>30s, signups, leads
+  - `v_analytics_devices` — group by device + family de user_agent
+  - `v_analytics_hourly_heatmap` — `(dow, hour, count)` 30d
+  - `v_analytics_exit_pages` — último path por sessão, group by path, 30d
+  - `v_analytics_cta` — `cta_click` agrupado por `metadata->>'cta'`
+  - `v_analytics_retention` — % usuários ativos D1/D7 após signup
+- **Hook `useAdminAnalytics`** ganha 6 queries novas (mesmo padrão das atuais).
+- **`AdminAnalytics.tsx`** organizado em seções com `<h2>` separadoras: "Visão geral" → "Tendências" → "Engajamento" → "Tráfego" → "Comportamento".
+- **`useTrackingHealth.ts`** novo hook independente, atualiza a cada 30s via `refetchInterval`.
+- **`src/lib/analytics.ts`** ganha helper `getTrackingState()` retornando `{dnt, consent, status, sessionKey, userId}` para o card de saúde reusar a mesma lógica de `isAnalyticsOptedOut`.
+
+## 5. Não vamos fazer agora
+
+- Backfill de `country` via IP (precisa serviço externo ou edge function nova) — fica como hint visível.
+- Replay de sessão (rrweb-style) — fora de escopo.
+- Export CSV dos relatórios — pode entrar numa próxima.
+
+Confirmando este plano, implemento na sequência: migração das views → hook → card de saúde → tooltips → seções novas no dashboard.
