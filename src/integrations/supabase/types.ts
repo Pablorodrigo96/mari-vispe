@@ -140,6 +140,90 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_events: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          path: string | null
+          referrer: string | null
+          session_key: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          path?: string | null
+          referrer?: string | null
+          session_key?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          path?: string | null
+          referrer?: string | null
+          session_key?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      analytics_sessions: {
+        Row: {
+          country: string | null
+          device: string | null
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          referrer: string | null
+          session_key: string
+          user_agent: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          country?: string | null
+          device?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          referrer?: string | null
+          session_key: string
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          country?: string | null
+          device?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          referrer?: string | null
+          session_key?: string
+          user_agent?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       api_pricing: {
         Row: {
           category: string
@@ -4223,6 +4307,43 @@ export type Database = {
           ticker?: string | null
           title?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      v_analytics_daily: {
+        Row: {
+          day: string | null
+          leads: number | null
+          page_views: number | null
+          sessions: number | null
+          signups: number | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_top_pages: {
+        Row: {
+          avg_duration_ms: number | null
+          path: string | null
+          total_duration_ms: number | null
+          unique_sessions: number | null
+          views: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_traffic_sources: {
+        Row: {
+          authenticated_sessions: number | null
+          sessions: number | null
+          source: string | null
+        }
+        Relationships: []
+      }
+      v_analytics_user_growth: {
+        Row: {
+          cumulative_users: number | null
+          day: string | null
+          new_users: number | null
         }
         Relationships: []
       }
