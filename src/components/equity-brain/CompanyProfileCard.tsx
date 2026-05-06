@@ -8,7 +8,7 @@ import {
 import {
   aggregateAnatel, classifyExpansion, classifyPorte, porteLimit,
   formatBRL, formatNum, formatCnpj, parseAcessos, DEFAULT_TICKET_BRL,
-  type AnatelRow,
+  type AnatelRow, type AnatelAggregate,
 } from "@/lib/anatelInsights";
 
 interface RfbData {
