@@ -13,11 +13,25 @@ import { DealCard } from "@/components/equity-brain/DealCard";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { UFS, formatNumber } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
+import { AnatelProviderMap } from "@/components/equity-brain/AnatelProviderMap";
+import {
+  useAnatelProviderSearch,
+  useAnatelProviderFootprint,
+  type AnatelProviderHit,
+} from "@/hooks/useAnatelProvider";
+import { Input } from "@/components/ui/input";
+import { Search, Radio } from "lucide-react";
 
 export default function MapaPage() {
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
-  const [mode, setMode] = useState<"heat" | "mandates">("heat");
+  const [mode, setMode] = useState<"heat" | "mandates" | "anatel">("heat");
   const mandatePinsQ = useMandatePins();
+
+  // Anatel provider state
+  const [providerQuery, setProviderQuery] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState<AnatelProviderHit | null>(null);
+  const providerSearchQ = useAnatelProviderSearch(providerQuery);
+  const footprintQ = useAnatelProviderFootprint(selectedProvider?.cnpj ?? null);
   const [filters, setFilters] = useState<BrasilMapFilters>({
     ufs: [],
     setores: [],
@@ -102,6 +116,12 @@ export default function MapaPage() {
         >
           Mandatos ({mandatePinsQ.data?.length ?? 0})
         </button>
+        <button
+          onClick={() => setMode("anatel")}
+          className={`px-3 py-1 rounded text-xs font-semibold transition-colors flex items-center gap-1.5 ${mode === "anatel" ? "bg-[#D9F564] text-zinc-950" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
+        >
+          <Radio className="h-3 w-3" /> Provedor Anatel
+        </button>
       </div>
 
       {/* Mapa + sidebar filtros */}
@@ -109,7 +129,7 @@ export default function MapaPage() {
         <div className="flex-1 relative">
           {mode === "heat" ? (
             <BrasilMap filters={filters} onSelectCompany={setDrawerCnpj} />
-          ) : (
+          ) : mode === "mandates" ? (
             <div className="p-4 h-full overflow-auto">
               {mandatePinsQ.isLoading ? (
                 <div className="text-zinc-400 text-sm">Carregando mandatos…</div>
@@ -120,6 +140,94 @@ export default function MapaPage() {
                 </div>
               ) : (
                 <MandateMap mandates={mandatePinsQ.data ?? []} height="calc(100vh - 220px)" />
+              )}
+            </div>
+          ) : (
+            <div className="p-4 h-full overflow-auto space-y-3">
+              {/* Search bar */}
+              <div className="relative max-w-xl">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                <Input
+                  value={providerQuery}
+                  onChange={(e) => setProviderQuery(e.target.value)}
+                  placeholder="Buscar provedor por nome ou CNPJ (Anatel)…"
+                  className="pl-9 bg-zinc-900 border-zinc-700 text-zinc-100"
+                />
+                {providerQuery.length >= 2 && !selectedProvider && (
+                  <div className="absolute z-[600] mt-1 w-full bg-zinc-900 border border-zinc-700 rounded shadow-lg max-h-72 overflow-auto">
+                    {providerSearchQ.isLoading ? (
+                      <div className="px-3 py-2 text-xs text-zinc-500">Buscando…</div>
+                    ) : (providerSearchQ.data?.length ?? 0) === 0 ? (
+                      <div className="px-3 py-2 text-xs text-zinc-500">Nenhum provedor encontrado.</div>
+                    ) : (
+                      providerSearchQ.data!.map((hit) => (
+                        <button
+                          key={hit.cnpj}
+                          onClick={() => { setSelectedProvider(hit); setProviderQuery(hit.empresa); }}
+                          className="w-full text-left px-3 py-2 hover:bg-zinc-800 border-b border-zinc-800/60 last:border-0"
+                        >
+                          <div className="text-sm text-zinc-100 font-medium truncate">{hit.empresa}</div>
+                          <div className="text-[11px] text-zinc-500 flex justify-between">
+                            <span>CNPJ {hit.cnpj}</span>
+                            <span className="text-[#D9F564]">{new Intl.NumberFormat("pt-BR").format(hit.acessos)} acessos</span>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+                {selectedProvider && (
+                  <button
+                    onClick={() => { setSelectedProvider(null); setProviderQuery(""); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-400 hover:text-zinc-200 px-2 py-1 rounded bg-zinc-800"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+
+              {/* Map / states */}
+              {!selectedProvider ? (
+                <div className="text-zinc-400 text-sm border border-dashed border-zinc-800 rounded p-6 text-center">
+                  <Radio className="h-6 w-6 mx-auto mb-2 text-[#D9F564]" />
+                  Selecione um provedor de telecom para ver sua presença geográfica.
+                  <div className="text-[11px] text-zinc-600 mt-1">Cada cidade vira um ponto; linhas conectam à cidade-sede.</div>
+                </div>
+              ) : footprintQ.isLoading ? (
+                <div className="text-zinc-400 text-sm">Carregando footprint…</div>
+              ) : footprintQ.error ? (
+                <div className="text-red-400 text-sm">Erro: {(footprintQ.error as any)?.message}</div>
+              ) : (footprintQ.data?.length ?? 0) === 0 ? (
+                <div className="text-zinc-400 text-sm">Sem cidades retornadas para esse CNPJ.</div>
+              ) : (
+                <>
+                  {/* Mini KPI bar */}
+                  <div className="grid grid-cols-3 gap-3 max-w-2xl">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded p-3">
+                      <div className="text-[10px] text-zinc-500 uppercase">Cidades</div>
+                      <div className="text-xl font-bold text-[#D9F564]">{footprintQ.data!.length}</div>
+                    </div>
+                    <div className="bg-zinc-900 border border-zinc-800 rounded p-3">
+                      <div className="text-[10px] text-zinc-500 uppercase">UFs</div>
+                      <div className="text-xl font-bold text-zinc-100">
+                        {new Set(footprintQ.data!.map((r) => r.estado)).size}
+                      </div>
+                    </div>
+                    <div className="bg-zinc-900 border border-zinc-800 rounded p-3">
+                      <div className="text-[10px] text-zinc-500 uppercase">Total acessos</div>
+                      <div className="text-xl font-bold text-zinc-100">
+                        {new Intl.NumberFormat("pt-BR").format(
+                          footprintQ.data!.reduce((s, r) => s + r.acessos_empresa, 0)
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <AnatelProviderMap
+                    rows={footprintQ.data!}
+                    empresa={selectedProvider.empresa}
+                    height="calc(100vh - 340px)"
+                  />
+                </>
               )}
             </div>
           )}
