@@ -114,7 +114,7 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
       map.removeLayer(layerGroupRef.current);
       layerGroupRef.current = null;
     }
-    if (!resolvedLayers.length) return;
+    if (!resolvedLayers.length && !marketLayer?.cells.length) return;
 
     const group = L.layerGroup();
     const allPoints: [number, number][] = [];
