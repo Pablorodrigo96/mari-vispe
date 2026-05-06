@@ -11,6 +11,7 @@ import { DealCard } from "@/components/equity-brain/DealCard";
 import { UFS } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
 import { ProviderSynergyPanel } from "@/components/equity-brain/ProviderSynergyPanel";
+import { toast } from "@/hooks/use-toast";
 import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS, type MarketLayer } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
