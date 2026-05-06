@@ -1,59 +1,78 @@
 ## Objetivo
-Adicionar uma barra de filtros global no topo do "Cruzamento RFB × Anatel" que permite:
-- **Cenário A**: buscar por **empresa** (razão social/fantasia) ou **CNPJ** → exibir o `CompanyProfileCard` consolidado + tabela de cidades onde a empresa atua, com o market share dela em cada município.
-- **Cenário B**: filtrar **UF** (e opcionalmente **cidade**) sem empresa → restringir a tabela atual de "Market share por município" à região selecionada.
 
-## Mudanças no Edge Function `anatel-query`
+Transformar a aba "Market share" em um ranking de empresas que se ajusta ao nível geográfico filtrado (Brasil → UF → Cidade) e tornar todo nome de empresa clicável, redirecionando para a aba "Perfil da empresa" já carregada.
 
-Estender o `case "stats"` e adicionar 2 novos kinds + 1 nova action:
+## 1. Edge function `anatel-query` — novo `kind: "share_by_company"`
 
-1. **`stats / share_by_municipio`** — aceitar params opcionais `uf` e `cidade` para filtrar a CTE base (`WHERE upper(estado)=$1` e `unaccent(lower(cidade))=unaccent(lower($2))`). Mantém o resto.
+Adicionar dentro de `case "stats"` em `supabase/functions/anatel-query/index.ts`:
 
-2. **`stats / company_footprint`** (novo) — recebe `cnpj`, retorna por município onde a empresa atua: `cidade, estado, acessos_empresa, total_municipio, n_provedores, share_pct, rank_no_municipio`. Reusa a janela do snapshot.
+- Aceita `uf?` e `cidade?` opcionais.
+- Se nenhum filtro → agrupa por `(empresa, cnpj)` em todo o snapshot (Brasil).
+- Se `uf` apenas → filtra `upper(estado)=uf`, soma acessos por empresa.
+- Se `uf+cidade` → filtra também `lower(cidade)=lower(...)`.
+- Calcula `total_geo = SUM(acessos)` via window function e devolve `share_pct = acessos / total_geo * 100`.
+- Retorna colunas: `empresa, cnpj, acessos, share_pct, rank, total_geo, n_empresas`.
+- Ordena `acessos DESC`, `LIMIT` (default 200, max 500).
 
-3. **`search_companies`** (nova action) — recebe `q` (string), faz `SELECT DISTINCT empresa, cnpj, SUM(acessos) FROM base_anatel WHERE unaccent(empresa) ILIKE unaccent($1) OR cnpj ILIKE $2 GROUP BY 1,2 ORDER BY 3 DESC LIMIT 20`. Para autocomplete/seleção quando o usuário digita nome da empresa.
+A query existente `share_by_municipio` permanece intacta (continua alimentando a sub-aba "Visão por Cidades").
 
-Validação de identifiers permanece via `IDENT_RE`. Todos os params via `$1/$2`.
+## 2. Frontend — `AnatelCruzamentoPage.tsx`
 
-## Mudanças no front-end
+### 2.1 Estado e carregamento
 
-### `src/components/equity-brain/AnatelFilterBar.tsx` (novo)
-Componente compacto, dark, em uma linha (`flex flex-wrap gap-2`):
-- Input "Empresa" (com debounce + dropdown de sugestões via `search_companies`).
-- Input "CNPJ" com máscara (reusar lógica do `mariWindowHeuristic`).
-- `Select` UF (lista fixa de 27 UFs + "Todos").
-- Input "Cidade" (texto livre; opcionalmente filtrado pela UF).
-- Botão **Buscar** (`bg-[#D9F564] text-[#0A0A0A]`) e botão **Limpar** (outline).
-- Estado do filtro elevado para o pai via callback `onSearch(filters)`.
+- Novo state: `companyRanking: any[]`, `companyRankingLoading: boolean`, `shareView: "companies" | "cities"` (default `"companies"`).
+- Novo loader `loadCompanyRanking({ uf, cidade })` invocando `kind: "share_by_company"`.
+- `handleSearch` (cenário B — sem CNPJ) e mount inicial: dispara **ambos** `loadCompanyRanking` e `loadShare` (cidades) com os mesmos filtros, para que o toggle alterne sem novo round-trip.
+- Quando filtros mudam, recarrega os dois.
 
-### `src/hooks/useAnatelData.ts`
-Adicionar:
-- `useAnatelCompanySearch(q)` → action `search_companies`.
-- `useAnatelCompanyFootprint(cnpj, table)` → `stats / company_footprint`.
-- Estender `useAnatelShareByMunicipio({uf, cidade, table})`.
+### 2.2 Aba "Market share" — novo layout
 
-### `src/pages/equity-brain/AnatelCruzamentoPage.tsx`
-- Substituir o `<form>` de CNPJ atual pela `<AnatelFilterBar />` no topo (acima das tabs ou substituindo o "Buscar").
-- Manter as 2 tabs ("Perfil por CNPJ" e "Market share por município"), mas a barra de filtros controla **ambas**:
-  - Se o usuário busca empresa/CNPJ → seleciona automaticamente a tab **Perfil**, mostra `CompanyProfileCard` + nova `<CompanyFootprintTable />` abaixo (tabela com cidade, UF, acessos da empresa, total município, share %, rank). Esconde/desativa a tabela geral.
-  - Se só UF/cidade → seleciona tab **Market Share** e passa filtros para `loadShare`.
-- Botão "Limpar" reseta `cnpj`, `companyQuery`, `uf`, `cidade` e volta ao estado inicial.
+Header dinâmico:
+- Título: `Market share — ${cidade ? cidade+'/'+uf : uf || 'Brasil'}`.
+- Subtítulo: total de acessos do recorte + nº de empresas.
+- Toggle pill no canto direito: **Empresas** (default) | **Visão por Cidades**.
 
-### `src/components/equity-brain/CompanyFootprintTable.tsx` (novo)
-Tabela enxuta (mesmo estilo da de market share atual): colunas `Cidade`, `UF`, `Acessos da empresa`, `Total município`, `Share %` (com barra), `Rank`. Usa `formatNum`.
+**View "Empresas"** (nova, principal):
+Tabela com colunas:
+| # | Empresa | CNPJ | Acessos | Share % (barra+valor) |
 
-## Detalhes de UX
-- Barra de filtros usa Volt (`#D9F564`) só no botão primário; resto neutro escuro.
-- Quando empresa selecionada: a aba "Market Share por município" fica colapsada/oculta para evitar poluição (apenas o footprint da empresa fica visível).
-- Sugestões de empresa: dropdown ancorado no input, max 8 itens (`empresa — CNPJ — N acessos`).
-- Máscara CNPJ reaproveita helper existente em `mariWindowHeuristic`.
-- Reset preserva o `mainTable` carregado (não recarrega schema).
+- Linha clicável: hover `bg-zinc-800/40`, nome em `text-zinc-100 hover:text-emerald-400 cursor-pointer underline-offset-2 hover:underline`.
+- Click → `handleCompanyClick({ empresa, cnpj })`.
 
-## Arquivos
-- **Editar**: `supabase/functions/anatel-query/index.ts`, `src/pages/equity-brain/AnatelCruzamentoPage.tsx`, `src/hooks/useAnatelData.ts`.
-- **Criar**: `src/components/equity-brain/AnatelFilterBar.tsx`, `src/components/equity-brain/CompanyFootprintTable.tsx`.
-- **Redeploy**: `anatel-query`.
+**View "Visão por Cidades"** (atual `shareByCity`, preservada):
+Tabela atual onde a coluna "Líder" também vira clicável (mesmo handler).
 
-## Fora do escopo
-- Não altera o `CompanyProfileCard` (já consolidado).
-- Não toca em outras páginas do `/equity-brain/mercado`.
+### 2.3 Deep linking — `handleCompanyClick`
+
+```ts
+function handleCompanyClick({ empresa, cnpj }: { empresa: string; cnpj: string }) {
+  const clean = cnpj.replace(/\D/g, "");
+  if (clean.length !== 14) return;
+  setCnpj(clean);
+  setTab("cnpj");
+  loadFootprint(clean);
+  // opcional: refletir na barra de filtros via prop controlada (ver 2.4)
+}
+```
+
+`useAnatelByCnpj` e `useCrossRefRfbAnatel` já reagem ao novo `cnpj` e populam `CompanyProfileCard` + `CompanyFootprintTable` automaticamente — comportamento idêntico ao da pesquisa manual.
+
+### 2.4 Sincronização da barra de filtros (opcional, leve)
+
+Tornar `AnatelFilterBar` parcialmente controlado: aceitar prop opcional `value?: { empresa; cnpj }` e expor `useEffect` que atualiza inputs internos quando muda. Permite que ao clicar numa empresa a barra superior reflita a seleção. Fallback simples: deixar incontrolado e apenas exibir badge "empresa selecionada" acima do perfil.
+
+## 3. Componentes
+
+- **Novo:** `src/components/equity-brain/CompanyShareTable.tsx` — recebe `rows`, `scopeLabel`, `loading`, `onCompanyClick`. Renderiza ranking com barra de share verde-neon (`bg-emerald-500`).
+- Reuso: `formatNum`, `formatCnpj` de `@/lib/anatelInsights`.
+
+## 4. Resumo de arquivos editados
+
+```text
+supabase/functions/anatel-query/index.ts        (+ kind: share_by_company)
+src/components/equity-brain/CompanyShareTable.tsx   (novo)
+src/components/equity-brain/CompanyFootprintTable.tsx (linhas/líderes não se aplica; nada muda)
+src/pages/equity-brain/AnatelCruzamentoPage.tsx (toggle, header dinâmico, click handler, dual-load)
+```
+
+Sem mudança em DB, RLS, ou em outras rotas. Padrão dark mode (zinc/emerald) preservado.

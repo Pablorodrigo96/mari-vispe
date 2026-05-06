@@ -217,6 +217,45 @@ serve(async (req) => {
             return ok({ table, kind, rows: r.rows });
           }
 
+          if (kind === "share_by_company") {
+            const uf = params.uf ? String(params.uf).toUpperCase() : null;
+            const cidade = params.cidade ? String(params.cidade).trim() : null;
+            if (uf && !/^[A-Z]{2}$/.test(uf)) throw new Error("UF inválida");
+            const where: string[] = ["empresa IS NOT NULL"];
+            const args: any[] = [];
+            if (uf) { args.push(uf); where.push(`upper(estado) = $${args.length}`); }
+            if (cidade) { args.push(cidade); where.push(`lower(cidade) = lower($${args.length})`); }
+            const r = await client.queryObject({
+              text: `
+                WITH base AS (
+                  SELECT empresa, cnpj,
+                         SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
+                  FROM "${table}"
+                  WHERE ${where.join(" AND ")}
+                  GROUP BY empresa, cnpj
+                ),
+                ranked AS (
+                  SELECT empresa, cnpj, acessos,
+                         SUM(acessos) OVER () AS total_geo,
+                         COUNT(*) OVER () AS n_empresas,
+                         ROW_NUMBER() OVER (ORDER BY acessos DESC NULLS LAST) AS rk
+                  FROM base
+                )
+                SELECT empresa, cnpj,
+                       acessos::bigint AS acessos,
+                       total_geo::bigint AS total_geo,
+                       n_empresas::int AS n_empresas,
+                       rk::int AS rank,
+                       round((acessos::numeric / NULLIF(total_geo,0)::numeric) * 100, 2) AS share_pct
+                FROM ranked
+                ORDER BY acessos DESC NULLS LAST
+                LIMIT ${limit}
+              `,
+              args,
+            });
+            return ok({ table, kind, rows: r.rows });
+          }
+
           if (kind === "company_footprint") {
             const cnpj = String(params.cnpj ?? "").replace(/\D/g, "");
             if (cnpj.length !== 14) throw new Error("CNPJ inválido");
