@@ -375,7 +375,23 @@ export default function MapaPage() {
                         color: ANATEL_SLOT_COLORS[idx],
                         rows: footprintQs[idx]?.data ?? [],
                       }))}
-                      marketLayer={marketLayer}
+                      marketCandidates={
+                        hasMarketResult
+                          ? (marketSearch.data?.providers ?? [])
+                              .slice(0, 20)
+                              .map<MarketCandidate>((p) => ({
+                                cnpj: p.cnpj,
+                                empresa: p.empresa,
+                                lat: p.lat,
+                                lng: p.lng,
+                                score: p.score,
+                                overlapCidades: p.overlapCidades,
+                                cidades: p.cidades,
+                                acessos: p.acessos,
+                                distMinKm: p.distMinKm,
+                              }))
+                          : null
+                      }
                       height="calc(100vh - 380px)"
                     />
                   </div>
@@ -390,14 +406,14 @@ export default function MapaPage() {
                     onClear={clearMarket}
                     isLoading={marketSearch.isPending}
                     result={
-                      marketLayer
+                      hasMarketResult
                         ? {
-                            cells: marketLayer.cells.length,
+                            cells: marketSearch.data?.cells.length ?? 0,
                             providers: marketSearch.data?.providers ?? [],
                           }
                         : null
                     }
-                    totalAcessos={marketLayer?.cells.reduce((s, c) => s + c.acessos_total, 0) ?? 0}
+                    totalAcessos={marketSearch.data?.cells.reduce((s, c) => s + c.acessos_total, 0) ?? 0}
                     onAddProvider={(cnpj, empresa) =>
                       addProvider({ cnpj, empresa, acessos: 0 })
                     }
