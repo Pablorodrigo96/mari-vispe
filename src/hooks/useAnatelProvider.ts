@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-const DEFAULT_TABLE = "acessos_banda_larga";
+import { useAnatelSchema } from "@/hooks/useAnatelData";
 
 export interface AnatelProviderHit {
   empresa: string;
@@ -19,10 +18,25 @@ export interface AnatelFootprintRow {
   share_pct: number | null;
 }
 
-export function useAnatelProviderSearch(q: string, table = DEFAULT_TABLE) {
+function pickTable(schema: any): string | null {
+  const tables: any[] = schema?.tables ?? [];
+  return (
+    tables.find((t) => /anatel|acessos|stel|provedor|broadband/i.test(t.table_name || ""))
+      ?.table_name ??
+    tables[0]?.table_name ??
+    null
+  );
+}
+
+export function useAnatelTable() {
+  const schema = useAnatelSchema(true);
+  return { table: pickTable(schema.data), isLoading: schema.isLoading, error: schema.error };
+}
+
+export function useAnatelProviderSearch(q: string, table: string | null) {
   return useQuery({
     queryKey: ["anatel", "search", table, q],
-    enabled: q.trim().length >= 2,
+    enabled: !!table && q.trim().length >= 2,
     staleTime: 60_000,
     queryFn: async (): Promise<AnatelProviderHit[]> => {
       const { data, error } = await supabase.functions.invoke("anatel-query", {
@@ -38,11 +52,11 @@ export function useAnatelProviderSearch(q: string, table = DEFAULT_TABLE) {
   });
 }
 
-export function useAnatelProviderFootprint(cnpj: string | null, table = DEFAULT_TABLE) {
+export function useAnatelProviderFootprint(cnpj: string | null, table: string | null) {
   const clean = (cnpj ?? "").replace(/\D/g, "");
   return useQuery({
     queryKey: ["anatel", "footprint", table, clean],
-    enabled: clean.length === 14,
+    enabled: !!table && clean.length === 14,
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<AnatelFootprintRow[]> => {
       const { data, error } = await supabase.functions.invoke("anatel-query", {
