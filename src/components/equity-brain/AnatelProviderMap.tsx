@@ -7,7 +7,7 @@ import type { AnatelFootprintRow } from "@/hooks/useAnatelProvider";
 
 export const ANATEL_SLOT_COLORS = ["#D9F564", "#60A5FA", "#F472B6"];
 export const MAX_ANATEL_SLOTS = 3;
-export const MARKET_COLOR = "#FB923C";
+export const MARKET_CANDIDATE_COLOR = "#A78BFA";
 
 export interface ProviderLayer {
   id: string;
@@ -16,24 +16,21 @@ export interface ProviderLayer {
   rows: AnatelFootprintRow[];
 }
 
-export interface MarketLayerCell {
-  cidade: string;
-  estado: string;
+export interface MarketCandidate {
+  cnpj: string;
+  empresa: string;
   lat: number;
   lng: number;
-  acessos_total: number;
-  n_provedores: number;
-  top_empresa: string;
-}
-export interface MarketLayer {
-  cells: MarketLayerCell[];
-  seeds: { lat: number; lng: number }[];
-  radiusKm: number;
+  score: number;
+  overlapCidades: number;
+  cidades: number;
+  acessos: number;
+  distMinKm: number;
 }
 
 interface Props {
   layers: ProviderLayer[];
-  marketLayer?: MarketLayer | null;
+  marketCandidates?: MarketCandidate[] | null;
   height?: string;
 }
 
@@ -68,7 +65,7 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Props) {
+export function AnatelProviderMap({ layers, marketCandidates, height = "70vh" }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
@@ -136,7 +133,7 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
       map.removeLayer(layerGroupRef.current);
       layerGroupRef.current = null;
     }
-    if (!resolvedLayers.length && !marketLayer?.cells.length) return;
+    if (!resolvedLayers.length && !marketCandidates?.length) return;
 
     const group = L.layerGroup();
     const allPoints: [number, number][] = [];
@@ -234,44 +231,33 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
       });
     });
 
-    // ---- Camada de mercado (raio a partir do comprador) ----
-    if (marketLayer && (marketLayer.cells.length || marketLayer.seeds.length)) {
-      // Círculos pontilhados de alcance ao redor de cada semente
-      for (const s of marketLayer.seeds) {
-        L.circle([s.lat, s.lng], {
-          radius: marketLayer.radiusKm * 1000,
-          color: MARKET_COLOR,
-          weight: 1,
-          opacity: 0.55,
-          fillColor: MARKET_COLOR,
-          fillOpacity: 0.04,
-          dashArray: "4 6",
-        }).addTo(group);
-        allPoints.push([s.lat, s.lng]);
-      }
-      const maxAcc = Math.max(...marketLayer.cells.map((c) => c.acessos_total), 1);
-      for (const c of marketLayer.cells) {
-        const r = Math.max(3, Math.min(11, Math.log10(c.acessos_total + 10) * 3));
+    // ---- Candidatos complementares (cor distinta, sem círculo de raio) ----
+    if (marketCandidates && marketCandidates.length) {
+      for (const c of marketCandidates) {
+        if (!isFinite(c.lat) || !isFinite(c.lng) || (c.lat === 0 && c.lng === 0)) continue;
+        const r = Math.max(5, Math.min(14, 5 + (c.score / 100) * 9));
         const m = L.circleMarker([c.lat, c.lng], {
           radius: r,
-          color: MARKET_COLOR,
-          weight: 1,
-          fillColor: MARKET_COLOR,
-          fillOpacity: 0.55,
+          color: MARKET_CANDIDATE_COLOR,
+          weight: 2,
+          fillColor: MARKET_CANDIDATE_COLOR,
+          fillOpacity: 0.7,
         });
         m.bindPopup(`
-          <div style="min-width:200px;font-family:inherit">
+          <div style="min-width:220px;font-family:inherit">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${MARKET_COLOR}"></span>
-              <strong style="color:#0a0a0a;font-size:12px">Mercado no raio</strong>
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${MARKET_CANDIDATE_COLOR}"></span>
+              <strong style="color:#0a0a0a;font-size:12px">Candidato complementar</strong>
             </div>
-            <div style="color:#0a0a0a;font-size:13px;font-weight:600">${c.cidade}/${c.estado}</div>
+            <div style="color:#0a0a0a;font-size:13px;font-weight:600">${c.empresa}</div>
             <div style="font-size:11px;color:#52525b;margin-top:4px">
-              <b style="color:#0a0a0a">${c.n_provedores}</b> provedor${c.n_provedores === 1 ? "" : "es"} ·
-              <b style="color:#0a0a0a">${fmt(c.acessos_total)}</b> acessos
-              ${maxAcc ? ` (${Math.round((c.acessos_total / maxAcc) * 100)}%)` : ""}
+              Score: <b style="color:#0a0a0a">${c.score.toFixed(0)}</b> ·
+              Overlap: <b style="color:#0a0a0a">${c.overlapCidades}/${c.cidades}</b> cid.
             </div>
-            <div style="font-size:11px;color:#52525b;margin-top:2px">Top: <b style="color:#0a0a0a">${c.top_empresa}</b></div>
+            <div style="font-size:11px;color:#52525b;margin-top:2px">
+              Distância: <b style="color:#0a0a0a">~${c.distMinKm.toFixed(0)} km</b> ·
+              <b style="color:#0a0a0a">${fmt(c.acessos)}</b> acessos
+            </div>
           </div>
         `);
         m.addTo(group);
@@ -286,7 +272,7 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
       const bounds = L.latLngBounds(allPoints);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
     }
-  }, [resolvedLayers, marketLayer, overlapInfo]);
+  }, [resolvedLayers, marketCandidates, overlapInfo]);
 
   const approxCount = resolvedLayers.reduce(
     (acc, l) => acc + l.resolved.filter((r) => r.approx).length, 0,
@@ -295,7 +281,7 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
   return (
     <div className="relative">
       <div ref={containerRef} style={{ height, width: "100%", borderRadius: 8 }} />
-      {(resolvedLayers.length > 0 || marketLayer?.cells.length) && (
+      {(resolvedLayers.length > 0 || (marketCandidates?.length ?? 0) > 0) && (
         <div className="absolute top-3 right-3 z-[500] bg-zinc-900/90 border border-zinc-700 rounded p-2 space-y-1 max-w-[280px]">
           {resolvedLayers.map((l) => (
             <div key={l.id} className="flex items-center gap-2 text-[11px] text-zinc-200">
@@ -307,14 +293,14 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
               <span className="text-zinc-500 shrink-0 ml-auto">{l.resolved.length} cid.</span>
             </div>
           ))}
-          {marketLayer && marketLayer.cells.length > 0 && (
+          {marketCandidates && marketCandidates.length > 0 && (
             <div className="flex items-center gap-2 text-[11px] text-zinc-200 border-t border-zinc-700/60 pt-1 mt-1">
               <span
                 className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                style={{ background: MARKET_COLOR }}
+                style={{ background: MARKET_CANDIDATE_COLOR }}
               />
-              <span className="font-semibold truncate">Mercado · raio {marketLayer.radiusKm}km</span>
-              <span className="text-zinc-500 shrink-0 ml-auto">{marketLayer.cells.length} cid.</span>
+              <span className="font-semibold truncate">Candidatos complementares</span>
+              <span className="text-zinc-500 shrink-0 ml-auto">{marketCandidates.length}</span>
             </div>
           )}
         </div>

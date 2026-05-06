@@ -11,6 +11,12 @@ export interface SeedCity {
   uf?: string;
 }
 
+export interface SelectedFootprint {
+  cnpj: string;
+  cities: Set<string>; // chave ibge:<code> ou nm:<cidade.lower()>|<uf>
+  centroid: { lat: number; lng: number };
+}
+
 export interface MarketCell {
   cidade: string;
   estado: string;
@@ -29,6 +35,12 @@ export interface MarketProvider {
   empresa: string;
   acessos: number;
   cidades: number;
+  overlapCidades: number;
+  overlapPct: number;
+  distMinKm: number;
+  score: number;
+  lat: number;
+  lng: number;
 }
 
 function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number) {
@@ -42,11 +54,12 @@ function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number) {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
 /** Resolve, no cliente, todos os códigos IBGE cuja cidade está dentro do raio
  *  de qualquer cidade-semente. Inclui as próprias sementes. */
 export function citiesWithinRadius(seeds: SeedCity[], radiusKm: number): string[] {
   if (!seeds.length || radiusKm <= 0) return [];
-  // Bounding box rápido para evitar haversine em todos os 5570 sempre
   const out = new Set<string>();
   const padDeg = radiusKm / 111 + 0.1;
   for (const [code, [lat, lng]] of Object.entries(ibgeMap)) {
@@ -69,6 +82,8 @@ export interface MarketSearchInput {
   seeds: SeedCity[];
   radiusKm: number;
   sameUfOnly?: boolean;
+  selectedFootprints?: SelectedFootprint[];
+  excludeCnpjs?: string[];
 }
 
 export function useAnatelMarketRadius() {
@@ -107,24 +122,89 @@ export function useAnatelMarketRadius() {
         })
         .filter(Boolean) as MarketCell[];
 
-      // Agrega top providers
-      const provMap = new Map<string, MarketProvider>();
+      // Agrega por provedor: acessos, cidades atendidas (com chave + lat/lng/acessos para centroide)
+      type Acc = {
+        cnpj: string;
+        empresa: string;
+        acessos: number;
+        cityKeys: Set<string>;
+        sumLatW: number;
+        sumLngW: number;
+        sumW: number;
+      };
+      const provMap = new Map<string, Acc>();
+      const excludeSet = new Set((input.excludeCnpjs ?? []).map((c) => c.replace(/\D/g, "")));
+
       for (const c of cells) {
+        const cityKey = c.codigo_ibge_cidade
+          ? `ibge:${c.codigo_ibge_cidade}`
+          : `nm:${(c.cidade || "").toLowerCase()}|${c.estado}`;
         for (const p of c.providers) {
           const key = String(p.cnpj ?? "").replace(/\D/g, "");
-          if (!key) continue;
+          if (!key || excludeSet.has(key)) continue;
+          const acessos = Number(p.acessos ?? 0);
           const cur = provMap.get(key) ?? {
             cnpj: key,
             empresa: p.empresa,
             acessos: 0,
-            cidades: 0,
+            cityKeys: new Set<string>(),
+            sumLatW: 0,
+            sumLngW: 0,
+            sumW: 0,
           };
-          cur.acessos += Number(p.acessos ?? 0);
-          cur.cidades += 1;
+          cur.acessos += acessos;
+          cur.cityKeys.add(cityKey);
+          const w = Math.max(acessos, 1);
+          cur.sumLatW += c.lat * w;
+          cur.sumLngW += c.lng * w;
+          cur.sumW += w;
           provMap.set(key, cur);
         }
       }
-      const providers = Array.from(provMap.values()).sort((a, b) => b.acessos - a.acessos);
+
+      const footprints = input.selectedFootprints ?? [];
+      const providers: MarketProvider[] = Array.from(provMap.values()).map((a) => {
+        const lat = a.sumW ? a.sumLatW / a.sumW : 0;
+        const lng = a.sumW ? a.sumLngW / a.sumW : 0;
+        // overlap = união das cidades dos slots ∩ cidades do candidato
+        let overlap = 0;
+        for (const k of a.cityKeys) {
+          for (const fp of footprints) {
+            if (fp.cities.has(k)) { overlap++; break; }
+          }
+        }
+        const cidades = a.cityKeys.size;
+        const overlapPct = cidades ? overlap / cidades : 0;
+        // distância ao slot mais próximo
+        let distMin = Infinity;
+        for (const fp of footprints) {
+          const d = haversineKm(lat, lng, fp.centroid.lat, fp.centroid.lng);
+          if (d < distMin) distMin = d;
+        }
+        if (!isFinite(distMin)) distMin = 0;
+        const proximityScore = 1 - clamp01(distMin / Math.max(input.radiusKm, 1));
+        const compScore = 1 - overlapPct;
+        const score = Math.round((60 * compScore + 40 * proximityScore) * 100) / 100;
+        return {
+          cnpj: a.cnpj,
+          empresa: a.empresa,
+          acessos: a.acessos,
+          cidades,
+          overlapCidades: overlap,
+          overlapPct,
+          distMinKm: Math.round(distMin * 10) / 10,
+          score,
+          lat,
+          lng,
+        };
+      });
+
+      // Ordena por score desc; quando não há footprints, cai para acessos como antes
+      if (footprints.length) {
+        providers.sort((a, b) => b.score - a.score);
+      } else {
+        providers.sort((a, b) => b.acessos - a.acessos);
+      }
 
       return { cells, providers, ibgesQueried: ibges.length };
     },
