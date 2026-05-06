@@ -11,6 +11,7 @@ import { DealCard } from "@/components/equity-brain/DealCard";
 import { UFS } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
 import { ProviderSynergyPanel } from "@/components/equity-brain/ProviderSynergyPanel";
+import { toast } from "@/hooks/use-toast";
 import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS, type MarketLayer } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
@@ -75,8 +76,9 @@ export default function MapaPage() {
 
   const buildSeeds = (): SeedCity[] => {
     const seeds: SeedCity[] = [];
+    const useAll = buyerCnpjs.size === 0; // fallback: usar todos slots
     selectedProviders.forEach((p, idx) => {
-      if (!buyerCnpjs.has(p.cnpj)) return;
+      if (!useAll && !buyerCnpjs.has(p.cnpj)) return;
       const rows = footprintQs[idx]?.data ?? [];
       for (const r of rows) {
         let coord = getCoordsByIbge(r.codigo_ibge_cidade);
@@ -95,9 +97,20 @@ export default function MapaPage() {
   };
 
   const handleSearchMarket = async () => {
-    if (!anatelTable) return;
+    if (!anatelTable) {
+      toast({ title: "Base Anatel indisponível", variant: "destructive" });
+      return;
+    }
+    if (selectedProviders.length === 0) {
+      toast({ title: "Selecione ao menos 1 provedor antes de buscar." });
+      return;
+    }
     const seeds = buildSeeds();
-    if (!seeds.length) return;
+    console.log("[market] seeds:", seeds.length, "radius:", radiusKm, "buyers:", buyerCnpjs.size);
+    if (!seeds.length) {
+      toast({ title: "Sem cidades semente", description: "Aguarde os footprints carregarem.", variant: "destructive" });
+      return;
+    }
     try {
       const res = await marketSearch.mutateAsync({
         table: anatelTable,
@@ -105,6 +118,7 @@ export default function MapaPage() {
         radiusKm,
         sameUfOnly,
       });
+      console.log("[market] result:", res.cells.length, "cells", res.providers.length, "providers");
       setMarketLayer({
         cells: res.cells.map((c) => ({
           cidade: c.cidade,
@@ -118,8 +132,17 @@ export default function MapaPage() {
         seeds: seeds.map((s) => ({ lat: s.lat, lng: s.lng })),
         radiusKm,
       });
-    } catch (e) {
+      toast({
+        title: `Mercado encontrado`,
+        description: `${res.providers.length} provedores em ${res.cells.length} cidades (raio ${radiusKm}km).`,
+      });
+    } catch (e: any) {
       console.error("market search error", e);
+      toast({
+        title: "Erro ao buscar mercado",
+        description: e?.message ?? String(e),
+        variant: "destructive",
+      });
     }
   };
 
@@ -342,6 +365,7 @@ export default function MapaPage() {
                   </div>
                   <MarketRadiusPanel
                     buyerCount={buyerCnpjs.size}
+                    hasProviders={selectedProviders.length > 0}
                     radiusKm={radiusKm}
                     onRadiusChange={setRadiusKm}
                     sameUfOnly={sameUfOnly}

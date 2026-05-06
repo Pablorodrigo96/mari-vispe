@@ -84,6 +84,28 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
     });
   }, [layers]);
 
+  // Cidades com sobreposição de rede (atendidas por 2+ provedores selecionados)
+  const overlapInfo = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const layer of resolvedLayers) {
+      const seenLayer = new Set<string>();
+      for (const r of layer.resolved) {
+        const k = r.codigo_ibge_cidade
+          ? `ibge:${r.codigo_ibge_cidade}`
+          : `nm:${(r.cidade || "").toLowerCase()}|${r.estado}`;
+        if (seenLayer.has(k)) continue;
+        seenLayer.add(k);
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [resolvedLayers]);
+  const OVERLAP_COLOR = "#EF4444";
+  const cityKeyOf = (r: AnatelFootprintRow) =>
+    r.codigo_ibge_cidade
+      ? `ibge:${r.codigo_ibge_cidade}`
+      : `nm:${(r.cidade || "").toLowerCase()}|${r.estado}`;
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, {
@@ -167,15 +189,19 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
         const olng = p.lng + (collisionIdx > 0 ? offsetDeg * Math.cos(angle) : 0);
 
         const isHub = p === hub;
+        const overlapN = overlapInfo.get(cityKeyOf(p)) ?? 0;
+        const isOverlap = overlapN >= 2;
         const radius = isHub
           ? 12
           : Math.max(4, Math.min(13, Math.log10(p.acessos_empresa + 10) * 3.5));
+        const strokeColor = isOverlap ? OVERLAP_COLOR : isHub ? "#fafaf7" : color;
+        const fillCol = isOverlap ? OVERLAP_COLOR : color;
         const marker = L.circleMarker([olat, olng], {
           radius,
-          color: isHub ? "#fafaf7" : color,
-          weight: isHub ? 2 : 1,
-          fillColor: color,
-          fillOpacity: p.approx ? 0.35 : (isHub ? 0.95 : 0.7),
+          color: strokeColor,
+          weight: isOverlap ? 2 : isHub ? 2 : 1,
+          fillColor: fillCol,
+          fillOpacity: p.approx ? 0.35 : isOverlap ? 0.85 : (isHub ? 0.95 : 0.7),
           dashArray: p.approx ? "2 3" : undefined,
         });
         const sharePart = p.share_pct != null
@@ -183,6 +209,9 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
           : "";
         const approxPart = p.approx
           ? `<div style="font-size:10px;color:#b45309;margin-top:4px">⚠ localização aproximada (capital UF)</div>`
+          : "";
+        const overlapPart = isOverlap
+          ? `<div style="font-size:11px;color:#b91c1c;margin-top:4px;font-weight:600">⚠ Sobreposição: cidade atendida por ${overlapN} provedores selecionados</div>`
           : "";
         marker.bindPopup(`
           <div style="min-width:220px;font-family:inherit">
@@ -196,6 +225,7 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
               ${maxA ? ` (${Math.round((p.acessos_empresa / maxA) * 100)}% do pico)` : ""}
             </div>
             ${sharePart}
+            ${overlapPart}
             ${approxPart}
           </div>
         `);
@@ -256,7 +286,7 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
       const bounds = L.latLngBounds(allPoints);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
     }
-  }, [resolvedLayers, marketLayer]);
+  }, [resolvedLayers, marketLayer, overlapInfo]);
 
   const approxCount = resolvedLayers.reduce(
     (acc, l) => acc + l.resolved.filter((r) => r.approx).length, 0,
