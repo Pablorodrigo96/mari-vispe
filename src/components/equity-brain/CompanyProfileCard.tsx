@@ -4,12 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Building2, MapPin, Wifi, Gauge, Users, AlertTriangle, TrendingUp, Banknote,
+  Calculator, Receipt, ShieldAlert,
 } from "lucide-react";
 import {
   aggregateAnatel, classifyExpansion, classifyPorte, porteLimit,
   formatBRL, formatNum, formatCnpj, parseAcessos, DEFAULT_TICKET_BRL,
   type AnatelRow, type AnatelAggregate,
 } from "@/lib/anatelInsights";
+
+const DEFAULT_VALUATION_PER_SUB = 1500;
+const CAPITAL_GAINS_RATE = 0.225;
+const SIMPLES_LIMIT = 4_800_000;
 
 interface RfbData {
   razao_social?: string | null;
