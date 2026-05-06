@@ -13,15 +13,19 @@ import { DealCard } from "@/components/equity-brain/DealCard";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { UFS, formatNumber } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
-import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS } from "@/components/equity-brain/AnatelProviderMap";
+import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS, type MarketLayer } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
   useAnatelProviderFootprints,
   useAnatelTable,
   type AnatelProviderHit,
 } from "@/hooks/useAnatelProvider";
+import { useAnatelMarketRadius, type SeedCity } from "@/hooks/useAnatelMarketRadius";
+import { MarketRadiusPanel } from "@/components/equity-brain/MarketRadiusPanel";
+import { getCoordsByIbge } from "@/lib/ibgeCoordinates";
+import { getCoordinates, stateCapitals } from "@/lib/brazilCoordinates";
 import { Input } from "@/components/ui/input";
-import { Search, Radio } from "lucide-react";
+import { Search, Radio, Target } from "lucide-react";
 
 export default function MapaPage() {
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
@@ -48,7 +52,84 @@ export default function MapaPage() {
   };
   const removeProvider = (cnpj: string) => {
     setSelectedProviders((prev) => prev.filter((p) => p.cnpj !== cnpj));
+    setBuyerCnpjs((prev) => {
+      const next = new Set(prev);
+      next.delete(cnpj);
+      return next;
+    });
   };
+
+  // Buyer-mode + market radius
+  const [buyerCnpjs, setBuyerCnpjs] = useState<Set<string>>(new Set());
+  const [radiusKm, setRadiusKm] = useState(50);
+  const [sameUfOnly, setSameUfOnly] = useState(false);
+  const [marketLayer, setMarketLayer] = useState<MarketLayer | null>(null);
+  const marketSearch = useAnatelMarketRadius();
+
+  const toggleBuyer = (cnpj: string) => {
+    setBuyerCnpjs((prev) => {
+      const next = new Set(prev);
+      if (next.has(cnpj)) next.delete(cnpj);
+      else next.add(cnpj);
+      return next;
+    });
+  };
+
+  const buildSeeds = (): SeedCity[] => {
+    const seeds: SeedCity[] = [];
+    selectedProviders.forEach((p, idx) => {
+      if (!buyerCnpjs.has(p.cnpj)) return;
+      const rows = footprintQs[idx]?.data ?? [];
+      for (const r of rows) {
+        let coord = getCoordsByIbge(r.codigo_ibge_cidade);
+        if (!coord) coord = getCoordinates(r.cidade, r.estado) ?? null;
+        if (!coord) coord = stateCapitals[r.estado] ?? null;
+        if (!coord) continue;
+        seeds.push({
+          ibge: String(r.codigo_ibge_cidade ?? ""),
+          lat: coord.lat,
+          lng: coord.lng,
+          uf: r.estado,
+        });
+      }
+    });
+    return seeds;
+  };
+
+  const handleSearchMarket = async () => {
+    if (!anatelTable) return;
+    const seeds = buildSeeds();
+    if (!seeds.length) return;
+    try {
+      const res = await marketSearch.mutateAsync({
+        table: anatelTable,
+        seeds,
+        radiusKm,
+        sameUfOnly,
+      });
+      setMarketLayer({
+        cells: res.cells.map((c) => ({
+          cidade: c.cidade,
+          estado: c.estado,
+          lat: c.lat,
+          lng: c.lng,
+          acessos_total: c.acessos_total,
+          n_provedores: c.n_provedores,
+          top_empresa: c.top_empresa,
+        })),
+        seeds: seeds.map((s) => ({ lat: s.lat, lng: s.lng })),
+        radiusKm,
+      });
+    } catch (e) {
+      console.error("market search error", e);
+    }
+  };
+
+  const clearMarket = () => {
+    setMarketLayer(null);
+    marketSearch.reset();
+  };
+
   const [filters, setFilters] = useState<BrasilMapFilters>({
     ufs: [],
     setores: [],
@@ -206,11 +287,12 @@ export default function MapaPage() {
                 )}
               </div>
 
-              {/* Chips selecionados */}
+              {/* Chips selecionados (com toggle comprador) */}
               {selectedProviders.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {selectedProviders.map((p, idx) => {
                     const color = ANATEL_SLOT_COLORS[idx];
+                    const isBuyer = buyerCnpjs.has(p.cnpj);
                     return (
                       <div
                         key={p.cnpj}
@@ -218,6 +300,17 @@ export default function MapaPage() {
                       >
                         <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
                         <span className="text-zinc-100 font-medium truncate max-w-[200px]">{p.empresa}</span>
+                        <button
+                          onClick={() => toggleBuyer(p.cnpj)}
+                          title={isBuyer ? "Remover marca de comprador" : "Marcar como comprador"}
+                          className={`flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded text-[10px] transition-colors ${
+                            isBuyer
+                              ? "bg-[#FB923C]/20 text-[#FB923C] border border-[#FB923C]/40"
+                              : "bg-zinc-800 text-zinc-500 hover:text-zinc-200"
+                          }`}
+                        >
+                          <Target className="h-2.5 w-2.5" /> comprador
+                        </button>
                         <button
                           onClick={() => removeProvider(p.cnpj)}
                           className="text-zinc-500 hover:text-zinc-200 ml-1"
@@ -230,7 +323,7 @@ export default function MapaPage() {
                   })}
                   {selectedProviders.length > 1 && (
                     <button
-                      onClick={() => setSelectedProviders([])}
+                      onClick={() => { setSelectedProviders([]); setBuyerCnpjs(new Set()); }}
                       className="text-[11px] text-zinc-500 hover:text-zinc-200 px-2"
                     >
                       Limpar todos
@@ -247,47 +340,74 @@ export default function MapaPage() {
                   <div className="text-[11px] text-zinc-600 mt-1">Cada provedor recebe uma cor distinta; cidades em comum aparecem com pontos lado a lado.</div>
                 </div>
               ) : (
-                <>
-                  {/* KPI por provedor */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {selectedProviders.map((p, idx) => {
-                      const color = ANATEL_SLOT_COLORS[idx];
-                      const q = footprintQs[idx];
-                      const data = q?.data ?? [];
-                      return (
-                        <div
-                          key={p.cnpj}
-                          className="bg-zinc-900 border border-zinc-800 rounded p-3"
-                          style={{ borderLeft: `3px solid ${color}` }}
-                        >
-                          <div className="text-[11px] text-zinc-200 font-semibold truncate">{p.empresa}</div>
-                          {q?.isLoading ? (
-                            <div className="text-[11px] text-zinc-500 mt-1">Carregando…</div>
-                          ) : q?.error ? (
-                            <div className="text-[11px] text-red-400 mt-1">Erro ao carregar</div>
-                          ) : (
-                            <div className="flex gap-3 mt-1 text-[11px] text-zinc-400">
-                              <span><b className="text-zinc-100">{data.length}</b> cidades</span>
-                              <span><b className="text-zinc-100">{new Set(data.map((r) => r.estado)).size}</b> UFs</span>
-                              <span style={{ color }}>
-                                <b>{new Intl.NumberFormat("pt-BR").format(data.reduce((s, r) => s + r.acessos_empresa, 0))}</b>
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
+                  <div className="space-y-3 min-w-0">
+                    {/* KPI por provedor */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {selectedProviders.map((p, idx) => {
+                        const color = ANATEL_SLOT_COLORS[idx];
+                        const q = footprintQs[idx];
+                        const data = q?.data ?? [];
+                        return (
+                          <div
+                            key={p.cnpj}
+                            className="bg-zinc-900 border border-zinc-800 rounded p-3"
+                            style={{ borderLeft: `3px solid ${color}` }}
+                          >
+                            <div className="text-[11px] text-zinc-200 font-semibold truncate">{p.empresa}</div>
+                            {q?.isLoading ? (
+                              <div className="text-[11px] text-zinc-500 mt-1">Carregando…</div>
+                            ) : q?.error ? (
+                              <div className="text-[11px] text-red-400 mt-1">Erro ao carregar</div>
+                            ) : (
+                              <div className="flex gap-3 mt-1 text-[11px] text-zinc-400">
+                                <span><b className="text-zinc-100">{data.length}</b> cidades</span>
+                                <span><b className="text-zinc-100">{new Set(data.map((r) => r.estado)).size}</b> UFs</span>
+                                <span style={{ color }}>
+                                  <b>{new Intl.NumberFormat("pt-BR").format(data.reduce((s, r) => s + r.acessos_empresa, 0))}</b>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <AnatelProviderMap
+                      layers={selectedProviders.map((p, idx) => ({
+                        id: p.cnpj,
+                        empresa: p.empresa,
+                        color: ANATEL_SLOT_COLORS[idx],
+                        rows: footprintQs[idx]?.data ?? [],
+                      }))}
+                      marketLayer={marketLayer}
+                      height="calc(100vh - 380px)"
+                    />
                   </div>
-                  <AnatelProviderMap
-                    layers={selectedProviders.map((p, idx) => ({
-                      id: p.cnpj,
-                      empresa: p.empresa,
-                      color: ANATEL_SLOT_COLORS[idx],
-                      rows: footprintQs[idx]?.data ?? [],
-                    }))}
-                    height="calc(100vh - 380px)"
+                  <MarketRadiusPanel
+                    buyerCount={buyerCnpjs.size}
+                    radiusKm={radiusKm}
+                    onRadiusChange={setRadiusKm}
+                    sameUfOnly={sameUfOnly}
+                    onSameUfOnlyChange={setSameUfOnly}
+                    onSearch={handleSearchMarket}
+                    onClear={clearMarket}
+                    isLoading={marketSearch.isPending}
+                    result={
+                      marketLayer
+                        ? {
+                            cells: marketLayer.cells.length,
+                            providers: marketSearch.data?.providers ?? [],
+                          }
+                        : null
+                    }
+                    totalAcessos={marketLayer?.cells.reduce((s, c) => s + c.acessos_total, 0) ?? 0}
+                    onAddProvider={(cnpj, empresa) =>
+                      addProvider({ cnpj, empresa, acessos: 0 })
+                    }
+                    canAddMore={selectedProviders.length < MAX_ANATEL_SLOTS}
+                    alreadySelected={new Set(selectedProviders.map((p) => p.cnpj))}
                   />
-                </>
+                </div>
               )}
             </div>
           )}

@@ -1,89 +1,83 @@
-# Comparar múltiplos provedores no mapa Anatel
+# "Buscar empresas no raio" — descoberta de mercado a partir do comprador
 
-Hoje o `MapaPage` (modo "Provedor Anatel") só permite selecionar **um** CNPJ por vez. Vamos evoluir para **até 3 provedores simultâneos**, cada um com cor própria, mantendo a malha k-NN dentro de cada provedor (não cruza entre eles, para a leitura ficar limpa).
+Acrescenta uma busca de mercado: dado um (ou mais) provedor marcado como **comprador**, varre todas as cidades que estão no **raio em km** das cidades dele e devolve **todos os provedores** que atuam nessa região, plotados como **camada agregada** no mapa (cor laranja Mari `#FB923C`).
 
 ## UX
 
-- Em vez de `selectedProvider` (single), passa a ser `selectedProviders: AnatelProviderHit[]` (máx 3).
-- Ao clicar num resultado da busca: adiciona à lista (se ainda não estiver e tiver < 3 slots).
-- Acima do mapa, aparecem **chips** de cada provedor selecionado com:
-  - bolinha colorida (cor do slot)
-  - nome + nº cidades + nº acessos
-  - botão "×" para remover
-- KPIs (Cidades / UFs / Total acessos) viram um **mini-resumo por provedor** lado a lado (cards coloridos com a cor do slot).
-- Mensagem "selecione um provedor" só aparece quando `selectedProviders.length === 0`.
+Na aba "Provedor Anatel" do `/equity-brain/pipeline?view=mapa`, dentro do bloco de chips dos provedores selecionados:
 
-## Cores dos slots
+1. Cada chip ganha um toggle "🎯 comprador" (clique alterna). Estado: `buyerCnpjs: Set<string>`.
+2. Abaixo dos chips, novo painel "Buscar mercado":
+   - Slider de raio: **10–500 km** (default 50). Label dinâmico.
+   - Toggle "Apenas mesma UF do comprador" (off por padrão).
+   - Botão **"Buscar empresas no raio"** (Volt). Disabled se nenhum slot estiver marcado como comprador.
+   - Botão "Limpar mercado" (aparece após resultado).
+3. Após resposta:
+   - KPI bar dedicado: `N provedores · N cidades · X mil acessos` na cor laranja.
+   - Lista colapsável "Top 20 provedores" (nome, n cidades atingidas, acessos, botão "+ Adicionar como camada" — respeita limite de 3 slots).
+4. No mapa:
+   - Cada cidade alvo vira marker laranja (raio = log10(acessos totais na cidade)).
+   - **Círculos pontilhados** ao redor de cada cidade-semente do comprador, com raio igual ao slider — feedback visual claro do alcance.
+   - Sem malha k-NN nessa camada (visual já é denso).
+   - Popup do marker laranja: "Cidade · UF · X provedores · Y mil acessos · Top: <empresa>".
 
-Paleta fixa (3 slots), alto contraste sobre o basemap escuro:
+## Algoritmo (client + edge)
 
-```text
-slot 0 → #D9F564 (Volt — mantém identidade)
-slot 1 → #60A5FA (azul)
-slot 2 → #F472B6 (rosa)
+### Cliente (semente):
+1. Pega todas as cidades dos provedores marcados como comprador (já vêm do `useAnatelProviderFootprints`).
+2. Resolve coords via IBGE (já temos `getCoordsByIbge` + `ibgeMunicipios.json`).
+3. Filtra município candidatos: para todo município brasileiro do `ibgeMunicipios.json`, calcula haversine ao centro mais próximo da semente; mantém os com `d ≤ raio`.
+4. Manda para o backend a lista de **códigos IBGE** desses municípios (até ~2000) + flag opcional `uf`.
+
+### Edge function — nova action `companies_in_cities`:
+Em `supabase/functions/anatel-query/index.ts`:
+```sql
+WITH base AS (
+  SELECT empresa, cnpj, cidade, estado, codigo_ibge_cidade,
+         SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
+  FROM "<table>"
+  WHERE codigo_ibge_cidade = ANY($1::text[])
+  GROUP BY empresa, cnpj, cidade, estado, codigo_ibge_cidade
+)
+SELECT cidade, estado, codigo_ibge_cidade,
+       SUM(acessos)::bigint AS acessos_total,
+       COUNT(DISTINCT cnpj)::int AS n_provedores,
+       (ARRAY_AGG(empresa ORDER BY acessos DESC))[1] AS top_empresa,
+       (ARRAY_AGG(cnpj ORDER BY acessos DESC))[1] AS top_cnpj,
+       json_agg(json_build_object('empresa',empresa,'cnpj',cnpj,'acessos',acessos)
+                ORDER BY acessos DESC) FILTER (WHERE empresa IS NOT NULL) AS providers
+FROM base
+GROUP BY cidade, estado, codigo_ibge_cidade
+ORDER BY acessos_total DESC
+LIMIT 5000;
 ```
+Auth/CORS já existentes (admin/advisor) são respeitados.
 
-## Mapa (`AnatelProviderMap.tsx`)
+Cliente também deriva o "Top 20 provedores" agregando o array `providers` por CNPJ.
 
-A API do componente muda para receber **N camadas**:
+## Arquivos
 
-```ts
-interface ProviderLayer {
-  id: string;            // cnpj
-  empresa: string;
-  color: string;         // cor do slot
-  rows: AnatelFootprintRow[];
-}
-interface Props {
-  layers: ProviderLayer[];
-  height?: string;
-}
-```
+**Novos**
+- `src/hooks/useAnatelMarketRadius.ts` — recebe `seedCities: {ibge, lat, lng}[]` + `radiusKm` + `sameUfOnly` + `triggerKey`; faz filtro de IBGE local, chama edge action `companies_in_cities` via `useMutation` e devolve `{ rows, providers }`.
+- `src/components/equity-brain/MarketRadiusPanel.tsx` — slider, toggles, botão, KPI e lista top 20.
 
-Comportamento:
-- Para cada camada, roda o pipeline atual (resolve coords via IBGE → dict → capital UF, calcula hub, monta malha k-NN com `MAX_EDGE_KM=600`, k=3/2) **isoladamente**, usando a `color` da camada para markers + linhas.
-- Não conecta pontos entre provedores diferentes (cada cor é uma rede própria).
-- Markers ganham `fillColor` = cor do slot; linhas idem.
-- Em **cidades onde dois provedores coexistem**, desenhamos os markers com leve offset radial (~6px em pixels de tela convertidos para latLng) para não ficarem 100% sobrepostos — mesmo padrão usado em `BuyerMarketMap` (já tem precedente no projeto).
-- Popup mostra nome do provedor no topo (com cor do slot) além das infos atuais.
-- Legenda flutuante (canto sup. dir.) lista as camadas ativas com suas cores.
-- `fitBounds` usa a união de todos os pontos das camadas.
+**Editados**
+- `supabase/functions/anatel-query/index.ts` — adiciona `case "companies_in_cities"` (auto-deploy).
+- `src/components/equity-brain/AnatelProviderMap.tsx` — nova prop opcional `marketLayer?: { color, cells: {ibge, cidade, estado, lat, lng, acessos_total, n_provedores, top_empresa}[]; seeds: {lat, lng}[]; radiusKm: number }`. Renderiza markers laranja + L.circle pontilhados nas seeds. Inclui na união do `fitBounds`.
+- `src/pages/equity-brain/MapaPage.tsx` — estado `buyerCnpjs`, `radiusKm`, `marketResult`; chips com toggle comprador; integra `<MarketRadiusPanel>`; passa `marketLayer` ao mapa.
 
-## Página (`MapaPage.tsx`)
+## Constantes
+- `MARKET_COLOR = "#FB923C"` em `AnatelProviderMap.tsx`.
+- Raio default 50, min 10, max 500.
 
-Mudanças no bloco `mode === "anatel"`:
-
-1. Estado:
-   ```ts
-   const [selectedProviders, setSelectedProviders] = useState<AnatelProviderHit[]>([]);
-   ```
-2. Busca `useAnatelProviderFootprint` precisa rodar para cada CNPJ. Solução: criar hook fino `useAnatelProviderFootprints(cnpjs: string[])` que faz `useQueries` (TanStack) e devolve `{ cnpj, data, isLoading }[]`. Mantém cache por CNPJ — trocar a ordem/adicionar novo não refaz os já carregados.
-3. Render:
-   - Search continua igual; `onClick` do hit faz `addProvider(hit)` (no-op se já existe ou já tem 3).
-   - Chips dos selecionados acima do mapa, com remover.
-   - Cards mini-KPI: um por provedor, com a cor do slot.
-   - Passa `layers` para `AnatelProviderMap` montadas como `{ id, empresa, color: PALETTE[idx], rows: footprints[idx].data ?? [] }`.
-
-## Constantes / utils
-
-- Adicionar em `AnatelProviderMap.tsx` (ou novo `src/lib/anatelMapColors.ts`):
-  ```ts
-  export const ANATEL_SLOT_COLORS = ["#D9F564", "#60A5FA", "#F472B6"];
-  export const MAX_ANATEL_SLOTS = 3;
-  ```
-
-## Arquivos a tocar
-
-- `src/components/equity-brain/AnatelProviderMap.tsx` — refatorar para `layers[]`, loop por camada, offset em colisões, legenda.
-- `src/hooks/useAnatelProvider.ts` — exportar `useAnatelProviderFootprints(cnpjs)` baseado em `useQueries`.
-- `src/pages/equity-brain/MapaPage.tsx` — estado multi-select, chips, KPIs por slot, passar `layers`.
-
-Sem mudanças em edge function, schema, ou geocoding — toda a lógica é client-side em cima do que já existe.
+## Performance
+- Filtro de cidades client-side: 5570 municípios × ≤ N seeds (tipicamente <500) = <3M ops haversine, <80ms em V8.
+- Query SQL com `ANY(text[])` é eficiente; cap em 2000 IBGEs no payload (raio máximo ~500 km cobre ≈ região; suficiente para todo BR).
+- Resultado client cacheado por `(buyerCnpjsSorted|radius|sameUf)` no React Query.
 
 ## Critérios de aceite
-
-- Posso adicionar até 3 provedores e ver suas malhas sobrepostas em cores distintas.
-- Posso remover qualquer um via chip "×".
-- Cidades em comum mostram dois markers levemente deslocados (sem virar um ponto só).
-- Popup deixa claro de qual provedor é o ponto.
-- Performance ok com 3 × ~500 cidades (markers em canvas, malha O(n²) por camada continua <30ms).
+- Marco 1 provedor como comprador, defino raio 80 km, clico "Buscar empresas no raio" → vejo círculos pontilhados ao redor das cidades dele + nuvem laranja de cidades vizinhas atendidas por outros provedores.
+- KPI mostra contagem real; Top 20 mostra ranking; consigo adicionar um deles como camada normal (slot 3) — vê interseção.
+- Aumentar/diminuir o slider e re-clicar atualiza o resultado.
+- "Limpar mercado" remove a camada laranja sem afetar os slots 0–2.
+- Sem comprador marcado, botão fica disabled com tooltip explicativo.
