@@ -13,10 +13,10 @@ import { DealCard } from "@/components/equity-brain/DealCard";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { UFS, formatNumber } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
-import { AnatelProviderMap } from "@/components/equity-brain/AnatelProviderMap";
+import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
-  useAnatelProviderFootprint,
+  useAnatelProviderFootprints,
   useAnatelTable,
   type AnatelProviderHit,
 } from "@/hooks/useAnatelProvider";
