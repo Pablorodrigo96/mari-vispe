@@ -69,6 +69,7 @@ export async function trackEvent(
   payload: { path?: string; title?: string; duration_ms?: number; metadata?: Record<string, any> } = {},
 ) {
   if (typeof window === "undefined") return;
+  if (isAnalyticsOptedOut()) return;
   try {
     const session_key = getSessionKey();
     const utm = captureUtm();
