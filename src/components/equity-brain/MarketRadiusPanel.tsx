@@ -52,7 +52,7 @@ export function MarketRadiusPanel({
     <div className="bg-zinc-900 border border-zinc-800 rounded p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">
-          Buscar empresas no raio
+          Buscar candidatos complementares
         </div>
         <div className="text-[10px] text-zinc-500 text-right max-w-[55%]">
           {!hasProviders
@@ -130,7 +130,7 @@ export function MarketRadiusPanel({
           {top.length > 0 && (
             <div>
               <div className="text-[11px] text-zinc-400 font-semibold mb-1.5">
-                Top {visible.length} provedores na região
+                Top {visible.length} complementares <span className="text-zinc-600 font-normal">(menor overlap + proximidade)</span>
               </div>
               <div className="max-h-72 overflow-auto space-y-1 pr-1">
                 {visible.map((p, i) => {
@@ -143,8 +143,11 @@ export function MarketRadiusPanel({
                       <span className="text-zinc-500 w-5 shrink-0">{i + 1}.</span>
                       <div className="flex-1 min-w-0">
                         <div className="text-zinc-100 font-medium truncate">{p.empresa}</div>
-                        <div className="text-[10px] text-zinc-500">
-                          {p.cidades} cid. · {fmt(p.acessos)} acessos
+                        <div className="text-[10px] text-zinc-500 flex flex-wrap gap-x-2">
+                          <span className="text-[#A78BFA] font-semibold">score {Math.round(p.score)}</span>
+                          <span>overlap {p.overlapCidades}/{p.cidades}</span>
+                          <span>~{Math.round(p.distMinKm)}km</span>
+                          <span>{fmt(p.acessos)} ac.</span>
                         </div>
                       </div>
                       <Button

@@ -1,35 +1,67 @@
-## Fixes — Mapa Anatel
+## Objetivo
+Limpar a poluição visual da busca "empresas no raio" e re-priorizar resultados por **complementaridade territorial** (menos overlap + cidades próximas), destacando essas empresas no mapa com cor própria.
 
-### 1. Bolinhas vermelhas em cidades com overlap de rede
+## 1. Remover poluição visual do raio (`AnatelProviderMap.tsx`)
 
-No `AnatelProviderMap.tsx`, pré-computar (memo) o set de chaves de cidade (`ibge:<codigo>` ou `nm:<cidade>|<uf>`) que aparecem em **2+ camadas** de provedores. Ao desenhar cada `circleMarker`, se a cidade pertence a esse set:
-- `fillColor = "#EF4444"` (vermelho)
-- `color = "#EF4444"` com `weight: 2`
-- mantém o `radius` calculado por acessos
-- popup ganha linha extra: `⚠ Sobreposição: cidade atendida por N provedores selecionados`.
+- Remover os círculos pontilhados grandes (`L.circle` por seed) que desenham o alcance do raio.
+- Remover as bolinhas laranja agregadas de "mercado por cidade" (`marketLayer.cells` em laranja).
+- Em vez disso, NÃO desenhar nada do `marketLayer` no mapa por padrão. O raio fica implícito no painel lateral (lista) e nos novos pontos das empresas candidatas (item 3).
+- Manter só a entrada de legenda quando houver `marketCandidates` (renomeada).
 
-Hub continua com borda branca, mas pintado de vermelho quando overlapado.
+## 2. Ranking por complementaridade (`useAnatelMarketRadius.ts`)
 
-### 2. "Buscar empresas no raio" não funciona
+Calcular, para cada provedor candidato retornado:
+- `overlapCidades` = nº de cidades em comum com qualquer provedor já selecionado (slots).
+- `overlapPct` = `overlapCidades / cidadesProvedor`.
+- `distMinKm` = menor distância haversine entre centroide ponderado do candidato e centroides dos slots.
+- `distMaxRaio` = `radiusKm` (referência).
+- **Score complementaridade** (0–100):
+  `score = 60 * (1 - overlapPct) + 40 * (1 - clamp(distMinKm / radiusKm, 0, 1))`
+  → favorece quem tem MENOS overlap e está PRÓXIMO (mas não em cima).
+- Penalizar fortemente quem é o próprio slot (excluir da lista).
+- Ordenar `providers` desc por `score`.
 
-Causas reais:
-- Botão fica `disabled` quando nenhum slot está marcado como 🎯 comprador → usuário clica e nada acontece.
-- `handleSearchMarket` retorna em silêncio se `seeds` for vazio — sem feedback.
+Para isso o hook precisa receber as cidades dos slots já selecionados e os centroides:
+- Novo input opcional `selectedFootprints: { cnpj, cities: Set<string>, centroid: {lat,lng} }[]`.
+- Calcular centroide do candidato a partir das próprias cells onde ele aparece (média ponderada por acessos), agregando `cidadesAtendidas: Set<string>` por candidato.
 
-Correções:
-- **Fallback de sementes**: em `MapaPage.tsx`, se `buyerCnpjs.size === 0`, usar **todos os provedores selecionados** como sementes (UI mostra hint "usando todos os slots como semente — marque um como comprador para focar"). Botão deixa de ser `disabled` quando há ≥1 provedor selecionado.
-- **Toast de erro/sucesso** no `handleSearchMarket` usando `useToast` para mostrar quantas cidades/provedores voltaram, ou erro caso a edge function falhe.
-- **Console log** na chamada e na resposta para diagnóstico futuro.
-- `MarketRadiusPanel`: trocar a frase "Marque ao menos 1 slot como 🎯 comprador" por "Sem comprador marcado: usando todos os slots como semente" quando há provedores selecionados sem buyer; manter desabilitado apenas quando `selectedProviders.length === 0`.
+Exportar campos extras em `MarketProvider`:
+```ts
+{ cnpj, empresa, acessos, cidades, overlapCidades, overlapPct, distMinKm, score, lat, lng }
+```
 
-### Arquivos editados
+## 3. Cor distinta para candidatos no mapa
 
-- `src/components/equity-brain/AnatelProviderMap.tsx` — adiciona `overlapKeys` memo + pinta marcadores e popup.
-- `src/pages/equity-brain/MapaPage.tsx` — `buildSeeds` usa todos slots se nenhum buyer marcado; toast + log.
-- `src/components/equity-brain/MarketRadiusPanel.tsx` — `disabled` agora depende de `selectedProviders.length === 0` (nova prop `hasProviders`); muda hint.
+- Nova constante `MARKET_CANDIDATE_COLOR = "#A78BFA"` (violeta) — distinta dos slots (Volt/Azul/Rosa) e do vermelho de overlap.
+- `AnatelProviderMap` recebe `marketCandidates?: { cnpj, empresa, lat, lng, score, overlapCidades, cidades, acessos }[]`.
+- Renderiza `circleMarker` violeta por candidato (top N, default 20), raio proporcional ao score (não a acessos), com popup: empresa, score, overlap, distância, acessos.
+- Sem polilinhas, sem círculos de raio.
 
-### Critério de aceite
+## 4. Painel lateral (`MarketRadiusPanel.tsx`)
 
-- Selecionar 2 provedores com cidades em comum → essas bolinhas viram vermelhas no mapa.
-- Sem marcar comprador, clicar em "Buscar empresas no raio" → busca roda usando todos slots, painel mostra resultados; toast confirma "X provedores em Y cidades" ou erro detalhado.
-- Marcar 1 slot como comprador → botão usa só esse slot como semente (comportamento atual mantido).
+- Cabeçalho do ranking muda de "Top N na região" → "Top N complementares (menor overlap + proximidade)".
+- Cada linha mostra: `score` (badge violeta), `overlap X cid.`, `~Y km`, e os atuais acessos/cidades como secundário.
+- Botão "+" continua adicionando aos slots.
+- Stat "Provedores" passa a refletir candidatos pós-filtro (ex.: top 50 considerados).
+
+## 5. Wiring (`MapaPage.tsx`)
+
+- Passar `selectedFootprints` para `marketSearch.mutateAsync` montando `{cnpj, cities, centroid}` a partir de `footprintQs[idx].data`.
+- Passar `marketCandidates` (top 20 do `marketSearch.data.providers`) para `AnatelProviderMap`.
+- Manter `marketLayer` apenas para o cálculo de `cells`/totais do painel — não enviar mais ao mapa (ou enviar `null`).
+- Manter o fallback "sem comprador marcado → todos slots como semente".
+
+## Detalhes técnicos
+
+- Centroide ponderado: `Σ(lat·acessos)/Σacessos`, `Σ(lng·acessos)/Σacessos`.
+- Comparação de cidades para overlap: chave `ibge:<code>` se houver, senão `nm:<cidade.lower()>|<uf>` — mesma convenção já usada em `overlapInfo`.
+- Excluir da lista qualquer `cnpj` presente em `selectedProviders`.
+- `clamp(x,0,1)` inline.
+- Performance: top 50 candidatos máx (já é o teto do painel).
+
+## Aceitação
+
+- Buscar no raio NÃO desenha mais círculos pontilhados nem bolinhas laranja.
+- Os pontos das empresas candidatas aparecem em violeta, distintos dos slots.
+- Painel lateral lista candidatos ordenados por score complementar (menor overlap + cidades próximas), com badges de overlap e distância.
+- Slots já selecionados não aparecem como candidatos.

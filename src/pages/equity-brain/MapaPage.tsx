@@ -12,14 +12,14 @@ import { UFS } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
 import { ProviderSynergyPanel } from "@/components/equity-brain/ProviderSynergyPanel";
 import { toast } from "@/hooks/use-toast";
-import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS, type MarketLayer } from "@/components/equity-brain/AnatelProviderMap";
+import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS, type MarketCandidate } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
   useAnatelProviderFootprints,
   useAnatelTable,
   type AnatelProviderHit,
 } from "@/hooks/useAnatelProvider";
-import { useAnatelMarketRadius, type SeedCity } from "@/hooks/useAnatelMarketRadius";
+import { useAnatelMarketRadius, type SeedCity, type SelectedFootprint } from "@/hooks/useAnatelMarketRadius";
 import { MarketRadiusPanel } from "@/components/equity-brain/MarketRadiusPanel";
 import { getCoordsByIbge } from "@/lib/ibgeCoordinates";
 import { getCoordinates, stateCapitals } from "@/lib/brazilCoordinates";
@@ -62,7 +62,7 @@ export default function MapaPage() {
   const [buyerCnpjs, setBuyerCnpjs] = useState<Set<string>>(new Set());
   const [radiusKm, setRadiusKm] = useState(50);
   const [sameUfOnly, setSameUfOnly] = useState(false);
-  const [marketLayer, setMarketLayer] = useState<MarketLayer | null>(null);
+  const [hasMarketResult, setHasMarketResult] = useState(false);
   const marketSearch = useAnatelMarketRadius();
 
   const toggleBuyer = (cnpj: string) => {
@@ -112,29 +112,45 @@ export default function MapaPage() {
       return;
     }
     try {
+      // Monta footprints dos slots p/ cálculo de overlap + centroide
+      const selectedFootprints: SelectedFootprint[] = selectedProviders.map((p, idx) => {
+        const rows = footprintQs[idx]?.data ?? [];
+        const cities = new Set<string>();
+        let sumLatW = 0, sumLngW = 0, sumW = 0;
+        for (const r of rows) {
+          const k = r.codigo_ibge_cidade
+            ? `ibge:${r.codigo_ibge_cidade}`
+            : `nm:${(r.cidade || "").toLowerCase()}|${r.estado}`;
+          cities.add(k);
+          let coord = getCoordsByIbge(r.codigo_ibge_cidade);
+          if (!coord) coord = getCoordinates(r.cidade, r.estado) ?? null;
+          if (!coord) coord = stateCapitals[r.estado] ?? null;
+          if (!coord) continue;
+          const w = Math.max(r.acessos_empresa ?? 0, 1);
+          sumLatW += coord.lat * w;
+          sumLngW += coord.lng * w;
+          sumW += w;
+        }
+        return {
+          cnpj: p.cnpj,
+          cities,
+          centroid: { lat: sumW ? sumLatW / sumW : 0, lng: sumW ? sumLngW / sumW : 0 },
+        };
+      });
+
       const res = await marketSearch.mutateAsync({
         table: anatelTable,
         seeds,
         radiusKm,
         sameUfOnly,
+        selectedFootprints,
+        excludeCnpjs: selectedProviders.map((p) => p.cnpj),
       });
       console.log("[market] result:", res.cells.length, "cells", res.providers.length, "providers");
-      setMarketLayer({
-        cells: res.cells.map((c) => ({
-          cidade: c.cidade,
-          estado: c.estado,
-          lat: c.lat,
-          lng: c.lng,
-          acessos_total: c.acessos_total,
-          n_provedores: c.n_provedores,
-          top_empresa: c.top_empresa,
-        })),
-        seeds: seeds.map((s) => ({ lat: s.lat, lng: s.lng })),
-        radiusKm,
-      });
+      setHasMarketResult(true);
       toast({
         title: `Mercado encontrado`,
-        description: `${res.providers.length} provedores em ${res.cells.length} cidades (raio ${radiusKm}km).`,
+        description: `${res.providers.length} candidatos complementares em ${res.cells.length} cidades (raio ${radiusKm}km).`,
       });
     } catch (e: any) {
       console.error("market search error", e);
@@ -147,7 +163,7 @@ export default function MapaPage() {
   };
 
   const clearMarket = () => {
-    setMarketLayer(null);
+    setHasMarketResult(false);
     marketSearch.reset();
   };
 
@@ -359,7 +375,23 @@ export default function MapaPage() {
                         color: ANATEL_SLOT_COLORS[idx],
                         rows: footprintQs[idx]?.data ?? [],
                       }))}
-                      marketLayer={marketLayer}
+                      marketCandidates={
+                        hasMarketResult
+                          ? (marketSearch.data?.providers ?? [])
+                              .slice(0, 20)
+                              .map<MarketCandidate>((p) => ({
+                                cnpj: p.cnpj,
+                                empresa: p.empresa,
+                                lat: p.lat,
+                                lng: p.lng,
+                                score: p.score,
+                                overlapCidades: p.overlapCidades,
+                                cidades: p.cidades,
+                                acessos: p.acessos,
+                                distMinKm: p.distMinKm,
+                              }))
+                          : null
+                      }
                       height="calc(100vh - 380px)"
                     />
                   </div>
@@ -374,14 +406,14 @@ export default function MapaPage() {
                     onClear={clearMarket}
                     isLoading={marketSearch.isPending}
                     result={
-                      marketLayer
+                      hasMarketResult
                         ? {
-                            cells: marketLayer.cells.length,
+                            cells: marketSearch.data?.cells.length ?? 0,
                             providers: marketSearch.data?.providers ?? [],
                           }
                         : null
                     }
-                    totalAcessos={marketLayer?.cells.reduce((s, c) => s + c.acessos_total, 0) ?? 0}
+                    totalAcessos={marketSearch.data?.cells.reduce((s, c) => s + c.acessos_total, 0) ?? 0}
                     onAddProvider={(cnpj, empresa) =>
                       addProvider({ cnpj, empresa, acessos: 0 })
                     }
