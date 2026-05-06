@@ -135,52 +135,6 @@ export default function MapaPage() {
     showBuyers: false,
   });
 
-  // KPIs
-  const ufStatsQ = useQuery({
-    queryKey: ["mapa", "kpi-uf"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("eb_v_opportunities_by_uf" as any)
-        .select("uf,total,premium_count,top_setor")
-        .order("premium_count", { ascending: false });
-      return (data ?? []) as any[];
-    },
-  });
-
-  const muniStatsQ = useQuery({
-    queryKey: ["mapa", "kpi-muni"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("eb_v_opportunities_by_municipio" as any)
-        .select("municipio,uf,premium_count,total")
-        .order("premium_count", { ascending: false })
-        .limit(50);
-      return (data ?? []) as any[];
-    },
-  });
-
-  const kpis = useMemo(() => {
-    const top = ufStatsQ.data?.[0];
-    // Setor mais quente: top_setor mais frequente entre UFs
-    const setorTally = new Map<string, number>();
-    (ufStatsQ.data ?? []).forEach((r) => {
-      if (r.top_setor) setorTally.set(r.top_setor, (setorTally.get(r.top_setor) ?? 0) + r.premium_count);
-    });
-    const topSetor = Array.from(setorTally.entries()).sort((a, b) => b[1] - a[1])[0];
-
-    // Concentração: % de premium em top 5 cidades
-    const muni = muniStatsQ.data ?? [];
-    const totalPremium = muni.reduce((s, m) => s + (m.premium_count ?? 0), 0);
-    const top5Premium = muni.slice(0, 5).reduce((s, m) => s + (m.premium_count ?? 0), 0);
-    const concentration = totalPremium > 0 ? Math.round((top5Premium / totalPremium) * 100) : 0;
-
-    return {
-      topUf: top ? `${top.uf} (${formatNumber(top.premium_count)})` : "—",
-      topSetor: topSetor ? `${topSetor[0]}` : "—",
-      concentration: `${concentration}%`,
-    };
-  }, [ufStatsQ.data, muniStatsQ.data]);
-
   const toggleUf = (uf: string) => {
     setFilters((f) => ({
       ...f,
@@ -190,12 +144,6 @@ export default function MapaPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-1px)] bg-zinc-950">
-      {/* KPIs topo */}
-      <div className="grid grid-cols-3 gap-3 p-4 border-b border-zinc-800">
-        <EBStatCard label="UF com mais oportunidades" value={kpis.topUf} accent="emerald" />
-        <EBStatCard label="Setor mais quente" value={kpis.topSetor} accent="amber" />
-        <EBStatCard label="Concentração top 5 cidades" value={kpis.concentration} accent="blue" />
-      </div>
 
       {/* Toggle modo */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800 bg-zinc-900/40">
