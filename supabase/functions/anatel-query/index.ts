@@ -178,14 +178,20 @@ serve(async (req) => {
           }
 
           if (kind === "share_by_municipio") {
-            // Snapshot estático: agrega TODA a base, sem filtro temporal.
+            const uf = params.uf ? String(params.uf).toUpperCase() : null;
+            const cidade = params.cidade ? String(params.cidade).trim() : null;
+            if (uf && !/^[A-Z]{2}$/.test(uf)) throw new Error("UF inválida");
+            const where: string[] = ["cidade IS NOT NULL"];
+            const args: any[] = [];
+            if (uf) { args.push(uf); where.push(`upper(estado) = $${args.length}`); }
+            if (cidade) { args.push(cidade); where.push(`lower(cidade) = lower($${args.length})`); }
             const r = await client.queryObject({
               text: `
                 WITH base AS (
                   SELECT cidade, estado, empresa, cnpj,
                          SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
                   FROM "${table}"
-                  WHERE cidade IS NOT NULL
+                  WHERE ${where.join(" AND ")}
                   GROUP BY cidade, estado, empresa, cnpj
                 ),
                 ranked AS (
@@ -206,11 +212,71 @@ serve(async (req) => {
                 ORDER BY total_municipio DESC
                 LIMIT ${limit}
               `,
+              args,
+            });
+            return ok({ table, kind, rows: r.rows });
+          }
+
+          if (kind === "company_footprint") {
+            const cnpj = String(params.cnpj ?? "").replace(/\D/g, "");
+            if (cnpj.length !== 14) throw new Error("CNPJ inválido");
+            const r = await client.queryObject({
+              text: `
+                WITH base AS (
+                  SELECT cidade, estado, empresa, cnpj,
+                         SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
+                  FROM "${table}"
+                  WHERE cidade IS NOT NULL
+                  GROUP BY cidade, estado, empresa, cnpj
+                ),
+                ranked AS (
+                  SELECT cidade, estado, empresa, cnpj, acessos,
+                         SUM(acessos) OVER (PARTITION BY cidade, estado) AS total_municipio,
+                         COUNT(*) OVER (PARTITION BY cidade, estado) AS n_provedores,
+                         ROW_NUMBER() OVER (PARTITION BY cidade, estado ORDER BY acessos DESC) AS rank_municipio
+                  FROM base
+                )
+                SELECT cidade, estado,
+                       acessos::bigint AS acessos_empresa,
+                       total_municipio::bigint AS total_municipio,
+                       n_provedores::int AS n_provedores,
+                       rank_municipio::int AS rank_municipio,
+                       round((acessos::numeric / NULLIF(total_municipio,0)::numeric) * 100, 2) AS share_pct
+                FROM ranked
+                WHERE regexp_replace(cnpj::text,'\\D','','g') = $1
+                ORDER BY acessos DESC
+                LIMIT ${limit}
+              `,
+              args: [cnpj],
             });
             return ok({ table, kind, rows: r.rows });
           }
 
           throw new Error(`unknown stats kind: ${kind}`);
+        }
+
+        case "search_companies": {
+          const table = String(params.table ?? "");
+          const q = String(params.q ?? "").trim();
+          if (!IDENT_RE.test(table)) throw new Error("invalid table name");
+          if (q.length < 2) return ok({ rows: [] });
+          const limit = Math.min(Number(params.limit ?? 20), 50);
+          const isDigits = /^\d+$/.test(q.replace(/\D/g, "")) && q.replace(/\D/g, "").length >= 4;
+          const digits = q.replace(/\D/g, "");
+          const r = await client.queryObject({
+            text: `
+              SELECT empresa, cnpj,
+                     SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
+              FROM "${table}"
+              WHERE empresa ILIKE $1
+                 ${isDigits ? `OR regexp_replace(cnpj::text,'\\D','','g') LIKE $2` : ""}
+              GROUP BY empresa, cnpj
+              ORDER BY acessos DESC NULLS LAST
+              LIMIT ${limit}
+            `,
+            args: isDigits ? [`%${q}%`, `${digits}%`] : [`%${q}%`],
+          });
+          return ok({ rows: r.rows });
         }
 
         default:
