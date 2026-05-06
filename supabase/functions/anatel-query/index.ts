@@ -353,6 +353,44 @@ serve(async (req) => {
           return ok({ rows: r.rows });
         }
 
+        case "companies_in_cities": {
+          const table = String(params.table ?? "");
+          if (!IDENT_RE.test(table)) throw new Error("invalid table name");
+          const ibgesRaw = Array.isArray(params.ibge_codes) ? params.ibge_codes : [];
+          const ibges = ibgesRaw
+            .map((x: any) => String(x).replace(/\D/g, ""))
+            .filter((x: string) => x.length >= 6 && x.length <= 7)
+            .slice(0, 3000);
+          const ufFilter = params.uf ? String(params.uf).toUpperCase().slice(0, 2) : null;
+          if (!ibges.length) return ok({ rows: [] });
+          const r = await client.queryObject({
+            text: `
+              WITH base AS (
+                SELECT empresa, cnpj, cidade, estado, codigo_ibge_cidade,
+                       SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
+                FROM "${table}"
+                WHERE codigo_ibge_cidade::text = ANY($1::text[])
+                  ${ufFilter ? "AND upper(estado) = $2" : ""}
+                GROUP BY empresa, cnpj, cidade, estado, codigo_ibge_cidade
+              )
+              SELECT cidade, estado, codigo_ibge_cidade,
+                     SUM(acessos)::bigint AS acessos_total,
+                     COUNT(DISTINCT cnpj)::int AS n_provedores,
+                     (ARRAY_AGG(empresa ORDER BY acessos DESC NULLS LAST))[1] AS top_empresa,
+                     (ARRAY_AGG(cnpj ORDER BY acessos DESC NULLS LAST))[1] AS top_cnpj,
+                     COALESCE(json_agg(json_build_object(
+                       'empresa', empresa, 'cnpj', cnpj, 'acessos', acessos
+                     ) ORDER BY acessos DESC NULLS LAST) FILTER (WHERE empresa IS NOT NULL), '[]'::json) AS providers
+              FROM base
+              GROUP BY cidade, estado, codigo_ibge_cidade
+              ORDER BY acessos_total DESC NULLS LAST
+              LIMIT 5000
+            `,
+            args: ufFilter ? [ibges, ufFilter] : [ibges],
+          });
+          return ok({ table, rows: r.rows });
+        }
+
         default:
           throw new Error(`unknown action: ${action}`);
       }
