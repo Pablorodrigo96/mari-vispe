@@ -38,6 +38,25 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
   const [companyLoading, setCompanyLoading] = useState(false);
   const [footprint, setFootprint] = useState<any[]>([]);
   const [footprintLoading, setFootprintLoading] = useState(false);
+  const [companyProfile, setCompanyProfile] = useState<any | null>(null);
+  const [companyProfileLoading, setCompanyProfileLoading] = useState(false);
+
+  async function loadCompanyProfile(c: string) {
+    if (!mainTable) return;
+    setCompanyProfileLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("anatel-query", {
+        body: { action: "stats", params: { table: mainTable, kind: "company_profile", cnpj: c } },
+      });
+      if (error) throw error;
+      setCompanyProfile(data?.profile ?? null);
+    } catch (e: any) {
+      toast.error("Falha ao carregar perfil consolidado: " + (e?.message ?? "erro"));
+      setCompanyProfile(null);
+    } finally {
+      setCompanyProfileLoading(false);
+    }
+  }
 
   async function loadCompanyRanking(filters?: { uf?: string; cidade?: string }) {
     if (!mainTable) return;
