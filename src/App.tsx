@@ -8,6 +8,9 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ViewAsProvider } from "@/contexts/ViewAsContext";
 import { ViewAsBanner } from "@/components/layout/ViewAsSwitcher";
 import { CookieConsentBanner } from "@/components/cookies/CookieConsentBanner";
+import { usePageTracking } from "@/hooks/usePageTracking";
+
+const PageTracker = () => { usePageTracking(); return null; };
 import Painel from "./pages/Painel";
 import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
@@ -56,6 +59,7 @@ import MondayImport from "./pages/admin/MondayImport";
 import MondayParity from "./pages/admin/MondayParity";
 import AdvisorsMapping from "./pages/admin/AdvisorsMapping";
 import AdminApiMonitor from "./pages/admin/AdminApiMonitor";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminApprovals from "./pages/admin/AdminApprovals";
 import MatchingBuyers from "./pages/MatchingBuyers";
 import CapitalCase from "./pages/CapitalCase";
@@ -136,6 +140,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ViewAsBanner />
+          <PageTracker />
           <Routes>
             <Route path="/" element={<Index />} />
 
@@ -201,6 +206,7 @@ const App = () => (
               <Route path="/admin/capital/providers" element={<RequireRole roles={["admin"]}><AdminCapitalProviders /></RequireRole>} />
               <Route path="/admin/monday-import" element={<RequireRole roles={["admin"]}><MondayImport /></RequireRole>} />
               <Route path="/admin/api-monitor" element={<RequireRole roles={["admin"]}><AdminApiMonitor /></RequireRole>} />
+              <Route path="/admin/analytics" element={<RequireRole roles={["admin"]}><AdminAnalytics /></RequireRole>} />
               {/* legados — agora rodam dentro do shell EB */}
               <Route path="/admin/monday-parity" element={<Navigate to="/equity-brain/admin/monday-parity" replace />} />
               <Route path="/admin/advisors-mapping" element={<Navigate to="/equity-brain/admin/advisors-mapping" replace />} />

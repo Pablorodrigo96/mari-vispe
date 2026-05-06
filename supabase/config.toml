@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.crossref-rfb-anatel]
 verify_jwt = false
+
+[functions.track-event]
+verify_jwt = false

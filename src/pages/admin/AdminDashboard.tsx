@@ -185,6 +185,11 @@ export default function AdminDashboard() {
                       <LineChart className="h-4 w-4 mr-2" />Board
                     </Link>
                   </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/admin/analytics">
+                      <ChartBar className="h-4 w-4 mr-2" />Analytics
+                    </Link>
+                  </Button>
                   <Button size="sm" asChild className="bg-emerald-600 hover:bg-emerald-700 text-white">
                     <Link to="/equity-brain">
                       Abrir Cockpit <ArrowRight className="h-4 w-4 ml-2" />
