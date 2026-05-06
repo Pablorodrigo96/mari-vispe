@@ -30,8 +30,9 @@ export default function MapaPage() {
   // Anatel provider state
   const [providerQuery, setProviderQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<AnatelProviderHit | null>(null);
-  const providerSearchQ = useAnatelProviderSearch(providerQuery);
-  const footprintQ = useAnatelProviderFootprint(selectedProvider?.cnpj ?? null);
+  const { table: anatelTable } = useAnatelTable();
+  const providerSearchQ = useAnatelProviderSearch(providerQuery, anatelTable);
+  const footprintQ = useAnatelProviderFootprint(selectedProvider?.cnpj ?? null, anatelTable);
   const [filters, setFilters] = useState<BrasilMapFilters>({
     ufs: [],
     setores: [],
