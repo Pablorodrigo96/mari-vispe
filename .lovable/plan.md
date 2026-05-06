@@ -1,74 +1,104 @@
-# Inteligência de M&A e Risco Fiscal no Perfil da Empresa
+## Objetivo
 
-Adicionar uma nova seção **"Análise de M&A e Tributária"** dentro do `CompanyProfileCard` (rota `/equity-brain/mercado?tab=anatel` → "Perfil da empresa"), separada visualmente do bloco técnico de fibra/rádio e do bloco financeiro existente.
+Dentro de `/equity-brain/pipeline?view=mapa` (componente `MapaPage`), adicionar um modo extra "Provedor Anatel" que:
 
-## Onde entra
+1. Permite escolher 1 provedor da base Anatel (busca por CNPJ/Razão Social)
+2. Plota um marker em cada cidade onde o provedor tem acessos
+3. Liga as cidades com linhas (rede de presença) — formando uma estrela a partir da sede ou um grafo entre todas as cidades
+4. Mostra popup com nome da cidade, UF e nº de acessos
 
-Arquivo: `src/components/equity-brain/CompanyProfileCard.tsx`. Inserir um novo `<Card>` **logo após** o card "Inteligência financeira & alertas M&A" atual, mantendo os blocos anteriores intactos (apenas removendo dali os alertas duplicados que serão substituídos pelos novos badges, ou mantendo ambos lado a lado — vou manter os existentes pra não quebrar nada e o novo card é aditivo).
+Começamos com 1 provedor de teste e, validado o visual, expandimos para múltiplos provedores.
 
-## Lógica de cálculo (memoizada)
+## Arquivos afetados
 
-```ts
-const [valuationPerSub, setValuationPerSub] = useState(1500);   // R$/assinante
-const valuationEstimado = agg.totalAcessos * valuationPerSub;
-const capitalSocial      = Number(rfb?.capital_social ?? 0) || 0;
-const ganhoCapital       = Math.max(0, valuationEstimado - capitalSocial);
-const impostoEstimado    = ganhoCapital * 0.225;
-
-// risco
-const gapCapital = valuationEstimado > 0 && capitalSocial > 0
-  && capitalSocial < valuationEstimado * 0.10;
-
-const porte = classifyPorte(rfb?.porte_empresa);            // "ME"|"EPP"|"DEMAIS"
-const receitaAnualEst = agg.totalAcessos * ticket * 12;
-const desenquadramento = (porte === "ME" || porte === "EPP")
-  && receitaAnualEst > 4_800_000;
+```text
+src/pages/equity-brain/MapaPage.tsx        (novo modo "Provedor Anatel")
+src/components/equity-brain/AnatelProviderMap.tsx   (NOVO — mapa Leaflet com pins+polylines)
+src/hooks/useAnatelProviderFootprint.ts             (NOVO — busca cidades+acessos por CNPJ)
+supabase/functions/anatel-query/index.ts            (NOVA action footprint_by_cnpj)
 ```
 
-Reutiliza o `ticket` que já existe no card financeiro (mesma referência `useState`) e cria **um novo state separado** `valuationPerSub` (R$ 1.500 default, input editável).
+## Implementação
 
-## UI — novo bloco "Análise de M&A e Tributária"
+### 1. Edge function — nova action `footprint_by_cnpj`
 
-Estrutura dentro de `<Card className="p-4 bg-zinc-900/60 border-zinc-800">`:
+Em `anatel-query/index.ts`, adicionar:
 
-1. **Cabeçalho**: ícone `Calculator` + título "Análise de M&A e Tributária" + subtítulo cinza explicando que cruza Capital Social (RFB) com base de assinantes (Anatel).
+```ts
+case "footprint_by_cnpj": {
+  const cnpj = String(params.cnpj ?? "").replace(/\D/g, "");
+  const table = String(params.table ?? "acessos_banda_larga");
+  // valida tabela + colunas
+  // Detecta cnpj_column, cidade, estado, acessos
+  const r = await client.queryObject({
+    text: `
+      SELECT cidade, estado, sum(acessos::numeric)::bigint AS acessos
+      FROM "${table}"
+      WHERE regexp_replace("${cnpjCol}"::text,'\\D','','g') = $1
+      GROUP BY cidade, estado
+      ORDER BY acessos DESC
+      LIMIT 500
+    `,
+    args: [cnpj],
+  });
+  return ok({ cnpj, rows: r.rows });
+}
+```
 
-2. **Linha de inputs e KPIs (grid 4 colunas no desktop)**:
-   - Input editável "Valuation por assinante" (R$, default 1500) — visual igual ao do "Ticket médio".
-   - KPI **"Valuation Estimado"** → `formatBRL(valuationEstimado)` — emerald.
-   - KPI **"Capital Social (RFB)"** → `formatBRL(capitalSocial)` — neutro.
-   - KPI **"Ganho de Capital Projetado"** → `formatBRL(ganhoCapital)` — emerald (ou cinza se 0).
+Também aceitar action `search_provider` (LIKE em razao_social/nome_fantasia) para o autocomplete.
 
-3. **Card destaque "Estimativa de Imposto (22,5%)"** — full-width, borda/fundo âmbar:
-   - Valor grande: `formatBRL(impostoEstimado)`
-   - Subtítulo: "Imposto estimado sobre ganho de capital na venda · alíquota 22,5%".
-   - Ícone `Receipt`. Cor âmbar (não vermelha, pois não é alerta) — `border-amber-900/60 bg-amber-950/30 text-amber-200`.
+### 2. Hook `useAnatelProviderFootprint`
 
-4. **Painel "Diagnóstico de Risco" (só renderiza se houver pelo menos 1 alerta)**:
-   - Título pequeno com ícone `ShieldAlert`.
-   - Badges/cards verticais empilhados:
-     - **Gap de Capital** (se `gapCapital`): card vermelho `border-red-900/60 bg-red-950/30 text-red-200` — texto: "⚠️ **Alto Risco Societário (Gap de Capital)** — Capital social de {formatBRL(capitalSocial)} representa {pct}% do valuation estimado ({formatBRL(valuationEstimado)}). Vendedor terá alto impacto de IR na venda."
-     - **Desenquadramento** (se `desenquadramento`): card vermelho — texto: "🚨 **Alerta de Desenquadramento** — Porte declarado **{porte}** mas receita anualizada estimada de {formatBRL(receitaAnualEst)} excede o teto do Simples ({formatBRL(4_800_000)}). Possível subfaturamento ou desorganização tributária."
+```ts
+export function useAnatelProviderFootprint(cnpj: string | null) {
+  return useQuery({
+    queryKey: ["anatel","footprint", cnpj],
+    enabled: !!cnpj && cnpj.replace(/\D/g,"").length === 14,
+    queryFn: async () => {
+      const { data } = await supabase.functions.invoke("anatel-query", {
+        body: { action: "footprint_by_cnpj", params: { cnpj } },
+      });
+      return data.rows as { cidade:string; estado:string; acessos:number }[];
+    },
+  });
+}
+```
 
-5. **Disclaimer** em fonte 10px cinza ao final: "Estimativas baseadas em cenário de venda 100% das quotas, alíquota fixa de 22,5% sobre ganho de capital (Lei 13.259/2016 — faixa inicial). Não substitui análise tributária formal."
+Geocodificação client-side via `getCoordinatesAsync` (de `brazilCoordinates.ts`) com cache em memória + localStorage.
 
-## Paleta (dark mode)
+### 3. Componente `AnatelProviderMap.tsx`
 
-- Cards normais: `bg-zinc-900/60 border-zinc-800`.
-- KPI principal (Valuation/Ganho): emerald (`border-emerald-900/60 bg-emerald-950/20 text-emerald-300`).
-- Imposto: âmbar (`border-amber-900/60 bg-amber-950/30 text-amber-200`).
-- Alertas críticos: vermelho (`border-red-900/60 bg-red-950/30 text-red-200`).
-- Capital social neutro: `border-zinc-800 bg-zinc-950 text-zinc-100`.
+Vanilla Leaflet (mesmo padrão de `MandateMap`):
+- Tile dark CARTO
+- Para cada cidade com coords resolvidas → `L.circleMarker` raio proporcional a `log(acessos)`, cor Volt `#D9F564`
+- Popup: `<b>{cidade}/{estado}</b><br/>{acessos} acessos`
+- **Linhas**: `L.polyline` ligando a cidade-sede (maior nº de acessos ou da RFB) a cada outra cidade — visual "estrela/hub & spoke", cor `#D9F564` 40% opacity, `weight: 1.5`, `dashArray: "4 4"`
+- `fitBounds` em todas as cidades
+- Loading state enquanto resolve coordenadas
 
-## Formatação
+### 4. UI no `MapaPage`
 
-- Monetário: `formatBRL()` já existente em `@/lib/anatelInsights`.
-- Percentuais: `(x).toLocaleString("pt-BR", { style:"percent", maximumFractionDigits:1 })` ou string fixa "22,5%" para a alíquota.
+No toggle de modo (hoje "Heatmap empresas" / "Mandatos"), adicionar terceiro botão **"Provedor Anatel"**.
 
-## Não fazer
+Quando ativo:
+- Aparece um campo de busca no topo (`Input` + lista) — busca por CNPJ ou Razão Social via `anatel-query` (limite 10 resultados)
+- Ao selecionar, dispara `useAnatelProviderFootprint` e renderiza `AnatelProviderMap`
+- Card lateral fixo mostra: nome do provedor, total de acessos, nº de cidades, nº de UFs, top 5 cidades
 
-- Não mover/remover o card "Inteligência financeira & alertas M&A" existente (alertas atuais permanecem; os novos badges são complementares, mais explícitos sobre IR).
-- Não criar nova rota nem migração — tudo client-side com dados já carregados pela página.
-- Não persistir `valuationPerSub` (é apenas simulação local).
+Para o teste inicial, deixar pré-preenchido um CNPJ de exemplo (configurável via input). Após validação, será só replicar/abrir múltiplos provedores.
 
-Confirme que posso aplicar.
+### 5. Cores e estilo
+
+- Marker sede: `#D9F564` (Volt) com borda branca
+- Markers cidades: `#D9F564` 70% opacity, raio 6–14px conforme acessos
+- Linhas: dashed Volt 40% — sugerem rede sem poluir
+- Dark mode mantido (CARTO dark tiles)
+
+## Critério de aceite (teste 1 provedor)
+
+- Selecionar 1 CNPJ Anatel mostra todos os pontos no mapa
+- Cidades sem coords caem no centróide do estado (fallback existente)
+- Linhas conectam sede → demais cidades
+- Total de acessos e contagem de cidades batem com `aggregateAnatel`
+
+Depois disso aprovado, fase 2 = permitir múltiplos provedores simultâneos com cor por provedor.
