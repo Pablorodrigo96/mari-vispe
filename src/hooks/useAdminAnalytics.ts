@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useAdminAnalytics() {
+export type AnalyticsRange = 7 | 30 | 90;
+
+export function useAdminAnalytics(range: AnalyticsRange = 30) {
   const daily = useQuery({
     queryKey: ["admin-analytics", "daily"],
     staleTime: 60_000,
@@ -57,5 +59,32 @@ export function useAdminAnalytics() {
     },
   });
 
-  return { daily, topPages, sources, growth, longSessions };
+  const leadsSeries = useQuery({
+    queryKey: ["admin-analytics", "leads-series", range],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const since = new Date(Date.now() - range * 86400 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("analytics_events")
+        .select("created_at")
+        .eq("event_type", "lead")
+        .gte("created_at", since)
+        .limit(10000);
+      if (error) throw error;
+      const buckets = new Map<string, number>();
+      for (const r of data ?? []) {
+        const day = String(r.created_at).slice(0, 10);
+        buckets.set(day, (buckets.get(day) ?? 0) + 1);
+      }
+      // Fill empty days
+      const out: { day: string; leads: number }[] = [];
+      for (let i = range - 1; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 86400 * 1000).toISOString().slice(0, 10);
+        out.push({ day: d, leads: buckets.get(d) ?? 0 });
+      }
+      return out;
+    },
+  });
+
+  return { daily, topPages, sources, growth, longSessions, leadsSeries };
 }
