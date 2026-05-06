@@ -11,7 +11,7 @@ import { CompanyProfileCard } from "@/components/equity-brain/CompanyProfileCard
 import { CompanyFootprintTable } from "@/components/equity-brain/CompanyFootprintTable";
 import { CompanyShareTable } from "@/components/equity-brain/CompanyShareTable";
 import { AnatelFilterBar, type AnatelFilters } from "@/components/equity-brain/AnatelFilterBar";
-import { formatNum } from "@/lib/anatelInsights";
+import { formatNum, aggregateFromServer, type AnatelAggregate } from "@/lib/anatelInsights";
 
 export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [cnpj, setCnpj] = useState<string | null>(null);
