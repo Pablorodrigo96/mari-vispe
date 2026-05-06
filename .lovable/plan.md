@@ -1,104 +1,61 @@
-## Objetivo
+## Problema
 
-Dentro de `/equity-brain/pipeline?view=mapa` (componente `MapaPage`), adicionar um modo extra "Provedor Anatel" que:
+O backend ANATEL já funciona (testado com VIVO/02.558.157, retorna 500 cidades com share, rank, total). O mapa não fica 100% porque o `AnatelProviderMap` resolve cidade→coordenadas via Nominatim (rate-limit 1 req/s, sequencial). Para um provedor com 200–500 cidades:
 
-1. Permite escolher 1 provedor da base Anatel (busca por CNPJ/Razão Social)
-2. Plota um marker em cada cidade onde o provedor tem acessos
-3. Liga as cidades com linhas (rede de presença) — formando uma estrela a partir da sede ou um grafo entre todas as cidades
-4. Mostra popup com nome da cidade, UF e nº de acessos
+- Demora 5–8 minutos.
+- Cidades pequenas que falham na API caem no centroide da UF → vários pontos empilhados no meio do estado.
+- Linhas hub→spoke ficam desalinhadas porque a "sede" geocodificada via Nominatim pode mapear para outra cidade homônima.
 
-Começamos com 1 provedor de teste e, validado o visual, expandimos para múltiplos provedores.
+## Solução: usar o `codigo_ibge_cidade` (IBGE 7 dígitos)
 
-## Arquivos afetados
+A tabela `base_anatel` já tem a coluna `codigo_ibge_cidade`. Esse código identifica unicamente os 5.570 municípios. Vamos cruzar com um dataset oficial IBGE de coordenadas e dispensar Nominatim.
 
-```text
-src/pages/equity-brain/MapaPage.tsx        (novo modo "Provedor Anatel")
-src/components/equity-brain/AnatelProviderMap.tsx   (NOVO — mapa Leaflet com pins+polylines)
-src/hooks/useAnatelProviderFootprint.ts             (NOVO — busca cidades+acessos por CNPJ)
-supabase/functions/anatel-query/index.ts            (NOVA action footprint_by_cnpj)
-```
+### Passos
 
-## Implementação
+1. **Edge function `anatel-query` (`stats / company_footprint`)**
+   - Incluir `codigo_ibge_cidade` no `SELECT` (group by + agg `MIN(codigo_ibge_cidade)` para evitar duplicação).
+   - Mesmo para `search_companies`: opcional, sem mudança.
 
-### 1. Edge function — nova action `footprint_by_cnpj`
+2. **Novo módulo `src/lib/ibgeCoordinates.ts`**
+   - Função `getCoordsByIbge(code: string): {lat,lng} | null`.
+   - Fonte de dados: arquivo JSON estático embutido (`src/data/ibgeMunicipios.json`) — ~5.570 entradas `{ id, lat, lng }` (~150KB gzipped) gerado a partir do dataset público `kelvins/Municipios-Brasileiros` (ou IBGE Localidades + centroides). Carregamos por `import()` dinâmico para não inflar o bundle inicial.
+   - Cache em memória após primeiro uso.
 
-Em `anatel-query/index.ts`, adicionar:
+3. **`useAnatelProvider.ts`**
+   - Tipar `AnatelFootprintRow` com `codigo_ibge_cidade?: string`.
+   - Mapear o campo no `queryFn`.
 
-```ts
-case "footprint_by_cnpj": {
-  const cnpj = String(params.cnpj ?? "").replace(/\D/g, "");
-  const table = String(params.table ?? "acessos_banda_larga");
-  // valida tabela + colunas
-  // Detecta cnpj_column, cidade, estado, acessos
-  const r = await client.queryObject({
-    text: `
-      SELECT cidade, estado, sum(acessos::numeric)::bigint AS acessos
-      FROM "${table}"
-      WHERE regexp_replace("${cnpjCol}"::text,'\\D','','g') = $1
-      GROUP BY cidade, estado
-      ORDER BY acessos DESC
-      LIMIT 500
-    `,
-    args: [cnpj],
-  });
-  return ok({ cnpj, rows: r.rows });
-}
-```
+4. **`AnatelProviderMap.tsx` (refatorar resolução de coordenadas)**
+   - Resolver coords nesta ordem (sem await sequencial):
+     1. `getCoordsByIbge(row.codigo_ibge_cidade)` — instantâneo, cobre 100%.
+     2. fallback `getCoordinates(cidade, uf)` síncrono (memory + dict estático).
+     3. último fallback `stateCapitals[uf]` (com flag `_fallback=true` no popup).
+   - **Eliminar** o loop com `getCoordinatesAsync` + Nominatim para esse mapa (continua disponível para outros usos do projeto).
+   - Renderizar imediatamente ao receber `rows`.
+   - Hub = cidade com maior `acessos_empresa` (mantém).
+   - Linhas hub→spoke: já corretas; agora vão para coordenadas reais de cada município.
+   - Marker para fallback (sem IBGE e sem dict): contorno tracejado e tooltip "localização aproximada (capital UF)".
 
-Também aceitar action `search_provider` (LIKE em razao_social/nome_fantasia) para o autocomplete.
+5. **`MapaPage.tsx`**
+   - Sem mudança estrutural; apenas mostrar contagem `{cidades_com_coord}/{total}` na mini-KPI bar para transparência.
 
-### 2. Hook `useAnatelProviderFootprint`
+### Aceitação (teste com VIVO 02.558.157)
 
-```ts
-export function useAnatelProviderFootprint(cnpj: string | null) {
-  return useQuery({
-    queryKey: ["anatel","footprint", cnpj],
-    enabled: !!cnpj && cnpj.replace(/\D/g,"").length === 14,
-    queryFn: async () => {
-      const { data } = await supabase.functions.invoke("anatel-query", {
-        body: { action: "footprint_by_cnpj", params: { cnpj } },
-      });
-      return data.rows as { cidade:string; estado:string; acessos:number }[];
-    },
-  });
-}
-```
+- Mapa carrega em <2s após selecionar provedor (sem chamadas externas de geocoding).
+- 500 pontos plotados, cada um na cidade correta (São Paulo, Rio, Curitiba, Campinas, Brasília aparecem nas coords reais).
+- Linhas conectam São Paulo (hub) às demais cidades.
+- Zero pontos empilhados no centroide de UF para cidades que existem no IBGE.
+- Popup mostra cidade/UF, acessos, share %, rank, e — quando aplicável — "(localização aproximada)".
 
-Geocodificação client-side via `getCoordinatesAsync` (de `brazilCoordinates.ts`) com cache em memória + localStorage.
+### Arquivos
 
-### 3. Componente `AnatelProviderMap.tsx`
+- editar `supabase/functions/anatel-query/index.ts`
+- criar `src/data/ibgeMunicipios.json`
+- criar `src/lib/ibgeCoordinates.ts`
+- editar `src/hooks/useAnatelProvider.ts`
+- editar `src/components/equity-brain/AnatelProviderMap.tsx`
+- editar `src/pages/equity-brain/MapaPage.tsx` (mini-KPI extra)
 
-Vanilla Leaflet (mesmo padrão de `MandateMap`):
-- Tile dark CARTO
-- Para cada cidade com coords resolvidas → `L.circleMarker` raio proporcional a `log(acessos)`, cor Volt `#D9F564`
-- Popup: `<b>{cidade}/{estado}</b><br/>{acessos} acessos`
-- **Linhas**: `L.polyline` ligando a cidade-sede (maior nº de acessos ou da RFB) a cada outra cidade — visual "estrela/hub & spoke", cor `#D9F564` 40% opacity, `weight: 1.5`, `dashArray: "4 4"`
-- `fitBounds` em todas as cidades
-- Loading state enquanto resolve coordenadas
+### Observação sobre o dataset IBGE
 
-### 4. UI no `MapaPage`
-
-No toggle de modo (hoje "Heatmap empresas" / "Mandatos"), adicionar terceiro botão **"Provedor Anatel"**.
-
-Quando ativo:
-- Aparece um campo de busca no topo (`Input` + lista) — busca por CNPJ ou Razão Social via `anatel-query` (limite 10 resultados)
-- Ao selecionar, dispara `useAnatelProviderFootprint` e renderiza `AnatelProviderMap`
-- Card lateral fixo mostra: nome do provedor, total de acessos, nº de cidades, nº de UFs, top 5 cidades
-
-Para o teste inicial, deixar pré-preenchido um CNPJ de exemplo (configurável via input). Após validação, será só replicar/abrir múltiplos provedores.
-
-### 5. Cores e estilo
-
-- Marker sede: `#D9F564` (Volt) com borda branca
-- Markers cidades: `#D9F564` 70% opacity, raio 6–14px conforme acessos
-- Linhas: dashed Volt 40% — sugerem rede sem poluir
-- Dark mode mantido (CARTO dark tiles)
-
-## Critério de aceite (teste 1 provedor)
-
-- Selecionar 1 CNPJ Anatel mostra todos os pontos no mapa
-- Cidades sem coords caem no centróide do estado (fallback existente)
-- Linhas conectam sede → demais cidades
-- Total de acessos e contagem de cidades batem com `aggregateAnatel`
-
-Depois disso aprovado, fase 2 = permitir múltiplos provedores simultâneos com cor por provedor.
+Vou gerar `ibgeMunicipios.json` em build a partir da fonte pública (`https://raw.githubusercontent.com/kelvins/Municipios-Brasileiros/main/json/municipios.json`) reduzido para apenas `{ id, lat, lng }` para minimizar bundle. Se o download falhar no ambiente de build, faço fallback para um seed das ~600 maiores cidades (coobre >85% dos acessos ANATEL) e mantenho Nominatim como último recurso assíncrono.
