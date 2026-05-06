@@ -379,7 +379,8 @@ export default function MapaPage() {
           </Link>
         </div>
 
-        {/* Sidebar filtros */}
+        {/* Sidebar filtros — só no Heatmap */}
+        {mode === "heat" && (
         <aside className="w-72 shrink-0 bg-zinc-900 border-l border-zinc-800 overflow-y-auto p-4 space-y-5">
           <div>
             <h3 className="text-zinc-300 text-xs font-bold uppercase tracking-wider mb-2">
