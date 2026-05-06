@@ -365,6 +365,7 @@ export default function MapaPage() {
                   </div>
                   <MarketRadiusPanel
                     buyerCount={buyerCnpjs.size}
+                    hasProviders={selectedProviders.length > 0}
                     radiusKm={radiusKm}
                     onRadiusChange={setRadiusKm}
                     sameUfOnly={sameUfOnly}
