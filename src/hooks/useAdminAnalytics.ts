@@ -122,7 +122,7 @@ export function useAdminAnalytics(range: AnalyticsRange = 30) {
     queryFn: async () => {
       const { data, error } = await supabase.from("v_analytics_hourly_heatmap" as any).select("*");
       if (error) throw error;
-      return (data ?? []) as { dow: number; hour: number; events: number }[];
+      return (data ?? []) as unknown as { dow: number; hour: number; events: number }[];
     },
   });
 
