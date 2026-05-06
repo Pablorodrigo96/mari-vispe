@@ -103,6 +103,12 @@ export function aggregateAnatel(
 }
 
 function normalize(s: string): string {
+  return String(s)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
 
 export interface CompanyProfileServer {
   total_acessos: number | string;
@@ -137,14 +143,6 @@ export function aggregateFromServer(
     nCidades: p.n_cidades ?? cidades.length,
     nUfs: p.n_ufs ?? ufs.length,
   };
-}
-
-function _normalize_unused(s: string): string {
-  return String(s)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
 }
 
 export type ExpansionStatus = "Local" | "Regional" | "Interestadual" | "Indefinido";
