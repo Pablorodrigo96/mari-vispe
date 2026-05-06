@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SESSION_KEY = "analytics_session_key";
 const UTM_KEY = "analytics_utm_v1";
+const CONSENT_KEY = "vispe_cookie_consent";
 
 export type AnalyticsEventType =
   | "page_view"
@@ -9,6 +10,24 @@ export type AnalyticsEventType =
   | "signup"
   | "lead"
   | "cta_click";
+
+/** Returns true when the visitor explicitly opted-out (DNT or analytics consent off). */
+export function isAnalyticsOptedOut(): boolean {
+  if (typeof window === "undefined") return true;
+  // Browser Do Not Track
+  const dnt = (navigator as any).doNotTrack ?? (window as any).doNotTrack ?? (navigator as any).msDoNotTrack;
+  if (dnt === "1" || dnt === "yes" || dnt === 1) return true;
+  // Cookie consent: only opt-in once analytics === true AND consentGiven
+  try {
+    const raw = localStorage.getItem(CONSENT_KEY);
+    if (!raw) return false; // banner ainda pendente — não bloqueia rastreamento básico inicial
+    const p = JSON.parse(raw);
+    if (p && p.consentGiven && p.analytics === false) return true;
+  } catch {
+    // ignore
+  }
+  return false;
+}
 
 export function getSessionKey(): string {
   if (typeof window === "undefined") return "";
