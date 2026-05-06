@@ -41,6 +41,7 @@ export function CompanyProfileCard({
   loading?: boolean;
 }) {
   const [ticket, setTicket] = useState<number>(DEFAULT_TICKET_BRL);
+  const [valuationPerSub, setValuationPerSub] = useState<number>(DEFAULT_VALUATION_PER_SUB);
 
   const sede = { uf: rfb?.uf, municipio: rfb?.municipio };
   const computed = useMemo(() => aggregateAnatel(anatelRows ?? [], sede), [anatelRows, rfb?.uf, rfb?.municipio]);
@@ -52,6 +53,13 @@ export function CompanyProfileCard({
   const capitalSocial = Number(rfb?.capital_social ?? 0) || 0;
   const receitaMensal = agg.totalAcessos * ticket;
   const receitaAnual = receitaMensal * 12;
+
+  const valuationEstimado = agg.totalAcessos * valuationPerSub;
+  const ganhoCapital = Math.max(0, valuationEstimado - capitalSocial);
+  const impostoEstimado = ganhoCapital * CAPITAL_GAINS_RATE;
+  const capitalGapPct = valuationEstimado > 0 ? (capitalSocial / valuationEstimado) : 0;
+  const alertaGapCapital = valuationEstimado > 0 && capitalSocial > 0 && capitalGapPct < 0.10;
+  const alertaDesenquadramento = (porte === "ME" || porte === "EPP") && receitaAnual > SIMPLES_LIMIT;
 
   const alertaSocietario = agg.totalAcessos > 5_000 && capitalSocial < 50_000 && capitalSocial > 0;
   const alertaPorte = limite != null && receitaAnual > limite;
