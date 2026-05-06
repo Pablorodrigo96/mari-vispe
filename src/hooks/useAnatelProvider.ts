@@ -80,3 +80,35 @@ export function useAnatelProviderFootprint(cnpj: string | null, table: string | 
     },
   });
 }
+
+export function useAnatelProviderFootprints(cnpjs: string[], table: string | null) {
+  return useQueries({
+    queries: cnpjs.map((cnpj) => {
+      const clean = (cnpj ?? "").replace(/\D/g, "");
+      return {
+        queryKey: ["anatel", "footprint", table, clean],
+        enabled: !!table && clean.length === 14,
+        staleTime: 5 * 60_000,
+        queryFn: async (): Promise<AnatelFootprintRow[]> => {
+          const { data, error } = await supabase.functions.invoke("anatel-query", {
+            body: {
+              action: "stats",
+              params: { table, kind: "company_footprint", cnpj: clean, limit: 500 },
+            },
+          });
+          if (error) throw error;
+          return ((data as any)?.rows ?? []).map((r: any) => ({
+            cidade: r.cidade,
+            estado: String(r.estado ?? "").toUpperCase(),
+            codigo_ibge_cidade: r.codigo_ibge_cidade == null ? null : String(r.codigo_ibge_cidade),
+            acessos_empresa: Number(r.acessos_empresa ?? 0),
+            total_municipio: Number(r.total_municipio ?? 0),
+            n_provedores: Number(r.n_provedores ?? 0),
+            rank_municipio: Number(r.rank_municipio ?? 0),
+            share_pct: r.share_pct == null ? null : Number(r.share_pct),
+          }));
+        },
+      };
+    }),
+  });
+}
