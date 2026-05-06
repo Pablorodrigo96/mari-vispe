@@ -13,15 +13,19 @@ import { DealCard } from "@/components/equity-brain/DealCard";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { UFS, formatNumber } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
-import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS } from "@/components/equity-brain/AnatelProviderMap";
+import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS, type MarketLayer } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
   useAnatelProviderFootprints,
   useAnatelTable,
   type AnatelProviderHit,
 } from "@/hooks/useAnatelProvider";
+import { useAnatelMarketRadius, type SeedCity } from "@/hooks/useAnatelMarketRadius";
+import { MarketRadiusPanel } from "@/components/equity-brain/MarketRadiusPanel";
+import { getCoordsByIbge } from "@/lib/ibgeCoordinates";
+import { getCoordinates, stateCapitals } from "@/lib/brazilCoordinates";
 import { Input } from "@/components/ui/input";
-import { Search, Radio } from "lucide-react";
+import { Search, Radio, Target } from "lucide-react";
 
 export default function MapaPage() {
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
