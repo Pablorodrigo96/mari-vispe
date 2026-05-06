@@ -13,11 +13,25 @@ import { DealCard } from "@/components/equity-brain/DealCard";
 import { EBStatCard } from "@/components/equity-brain/EBStatCard";
 import { UFS, formatNumber } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
+import { AnatelProviderMap } from "@/components/equity-brain/AnatelProviderMap";
+import {
+  useAnatelProviderSearch,
+  useAnatelProviderFootprint,
+  type AnatelProviderHit,
+} from "@/hooks/useAnatelProvider";
+import { Input } from "@/components/ui/input";
+import { Search, Radio } from "lucide-react";
 
 export default function MapaPage() {
   const [drawerCnpj, setDrawerCnpj] = useState<string | null>(null);
-  const [mode, setMode] = useState<"heat" | "mandates">("heat");
+  const [mode, setMode] = useState<"heat" | "mandates" | "anatel">("heat");
   const mandatePinsQ = useMandatePins();
+
+  // Anatel provider state
+  const [providerQuery, setProviderQuery] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState<AnatelProviderHit | null>(null);
+  const providerSearchQ = useAnatelProviderSearch(providerQuery);
+  const footprintQ = useAnatelProviderFootprint(selectedProvider?.cnpj ?? null);
   const [filters, setFilters] = useState<BrasilMapFilters>({
     ufs: [],
     setores: [],
