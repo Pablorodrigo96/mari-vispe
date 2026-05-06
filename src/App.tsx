@@ -8,6 +8,9 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ViewAsProvider } from "@/contexts/ViewAsContext";
 import { ViewAsBanner } from "@/components/layout/ViewAsSwitcher";
 import { CookieConsentBanner } from "@/components/cookies/CookieConsentBanner";
+import { usePageTracking } from "@/hooks/usePageTracking";
+
+const PageTracker = () => { usePageTracking(); return null; };
 import Painel from "./pages/Painel";
 import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
