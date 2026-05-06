@@ -11,6 +11,7 @@ export interface AnatelProviderHit {
 export interface AnatelFootprintRow {
   cidade: string;
   estado: string;
+  codigo_ibge_cidade: string | null;
   acessos_empresa: number;
   total_municipio: number;
   n_provedores: number;
