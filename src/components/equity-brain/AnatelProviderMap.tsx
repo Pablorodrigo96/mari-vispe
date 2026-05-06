@@ -265,7 +265,7 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
   return (
     <div className="relative">
       <div ref={containerRef} style={{ height, width: "100%", borderRadius: 8 }} />
-      {resolvedLayers.length > 0 && (
+      {(resolvedLayers.length > 0 || marketLayer?.cells.length) && (
         <div className="absolute top-3 right-3 z-[500] bg-zinc-900/90 border border-zinc-700 rounded p-2 space-y-1 max-w-[280px]">
           {resolvedLayers.map((l) => (
             <div key={l.id} className="flex items-center gap-2 text-[11px] text-zinc-200">
@@ -277,6 +277,16 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
               <span className="text-zinc-500 shrink-0 ml-auto">{l.resolved.length} cid.</span>
             </div>
           ))}
+          {marketLayer && marketLayer.cells.length > 0 && (
+            <div className="flex items-center gap-2 text-[11px] text-zinc-200 border-t border-zinc-700/60 pt-1 mt-1">
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ background: MARKET_COLOR }}
+              />
+              <span className="font-semibold truncate">Mercado · raio {marketLayer.radiusKm}km</span>
+              <span className="text-zinc-500 shrink-0 ml-auto">{marketLayer.cells.length} cid.</span>
+            </div>
+          )}
         </div>
       )}
       {approxCount > 0 && (
