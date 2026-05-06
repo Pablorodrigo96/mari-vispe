@@ -87,13 +87,40 @@ export function AnatelProviderMap({ rows, height = "70vh", empresa }: Props) {
     const hub = resolved.reduce((acc, cur) =>
       cur.acessos_empresa > acc.acessos_empresa ? cur : acc, resolved[0]);
 
-    resolved.forEach((p) => {
-      if (p === hub) return;
-      L.polyline(
-        [[hub.lat, hub.lng], [p.lat, p.lng]],
-        { color: VOLT, weight: 1.1, opacity: 0.4, dashArray: "4 5" },
-      ).addTo(group);
-    });
+    // Malha k-NN: cada ponto conecta nos k vizinhos mais próximos (haversine).
+    const haversineKm = (a: Resolved, b: Resolved) => {
+      const R = 6371;
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const dLat = toRad(b.lat - a.lat);
+      const dLng = toRad(b.lng - a.lng);
+      const s =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(s));
+    };
+    const k = resolved.length > 400 ? 2 : 3;
+    const MAX_EDGE_KM = 600;
+    const seen = new Set<string>();
+    for (let i = 0; i < resolved.length; i++) {
+      const a = resolved[i];
+      const dists: { j: number; d: number }[] = [];
+      for (let j = 0; j < resolved.length; j++) {
+        if (i === j) continue;
+        dists.push({ j, d: haversineKm(a, resolved[j]) });
+      }
+      dists.sort((x, y) => x.d - y.d);
+      for (const { j, d } of dists.slice(0, k)) {
+        if (d > MAX_EDGE_KM) continue;
+        const key = i < j ? `${i}|${j}` : `${j}|${i}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const b = resolved[j];
+        L.polyline(
+          [[a.lat, a.lng], [b.lat, b.lng]],
+          { color: VOLT, weight: 0.8, opacity: 0.45, dashArray: "3 4" },
+        ).addTo(group);
+      }
+    }
 
     const maxA = Math.max(...resolved.map((r) => r.acessos_empresa), 1);
 
