@@ -225,7 +225,19 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
                 cnpj={cnpj}
                 rfb={cross.data?.rfb ?? null}
                 anatelRows={byCnpj.data?.rows ?? []}
-                loading={cross.isLoading || byCnpj.isLoading}
+                aggregate={
+                  companyProfile
+                    ? aggregateFromServer(
+                        companyProfile,
+                        (footprint ?? []).map((r: any) => ({
+                          cidade: String(r.cidade ?? ""),
+                          estado: String(r.estado ?? ""),
+                          acessos: Number(r.acessos_empresa ?? 0),
+                        })),
+                      )
+                    : undefined
+                }
+                loading={cross.isLoading || companyProfileLoading}
               />
               <CompanyFootprintTable rows={footprint} loading={footprintLoading} />
             </>
