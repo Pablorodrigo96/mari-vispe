@@ -297,19 +297,20 @@ serve(async (req) => {
               text: `
                 WITH base AS (
                   SELECT cidade, estado, empresa, cnpj,
+                         MIN(codigo_ibge_cidade) AS codigo_ibge_cidade,
                          SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
                   FROM "${table}"
                   WHERE cidade IS NOT NULL
                   GROUP BY cidade, estado, empresa, cnpj
                 ),
                 ranked AS (
-                  SELECT cidade, estado, empresa, cnpj, acessos,
+                  SELECT cidade, estado, empresa, cnpj, codigo_ibge_cidade, acessos,
                          SUM(acessos) OVER (PARTITION BY cidade, estado) AS total_municipio,
                          COUNT(*) OVER (PARTITION BY cidade, estado) AS n_provedores,
                          ROW_NUMBER() OVER (PARTITION BY cidade, estado ORDER BY acessos DESC) AS rank_municipio
                   FROM base
                 )
-                SELECT cidade, estado,
+                SELECT cidade, estado, codigo_ibge_cidade,
                        acessos::bigint AS acessos_empresa,
                        total_municipio::bigint AS total_municipio,
                        n_provedores::int AS n_provedores,
