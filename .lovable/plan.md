@@ -1,115 +1,59 @@
-## Refatoração — Cruzamento RFB × Anatel (snapshot estático)
+## Objetivo
+Adicionar uma barra de filtros global no topo do "Cruzamento RFB × Anatel" que permite:
+- **Cenário A**: buscar por **empresa** (razão social/fantasia) ou **CNPJ** → exibir o `CompanyProfileCard` consolidado + tabela de cidades onde a empresa atua, com o market share dela em cada município.
+- **Cenário B**: filtrar **UF** (e opcionalmente **cidade**) sem empresa → restringir a tabela atual de "Market share por município" à região selecionada.
 
-Reconhecemos que a base é um snapshot de **um único mês**, então toda lógica temporal (Δ%, "12m atrás") será removida. O foco passa a ser **inteligência de M&A** sobre o estado atual.
+## Mudanças no Edge Function `anatel-query`
 
----
+Estender o `case "stats"` e adicionar 2 novos kinds + 1 nova action:
 
-### 1. Remover aba "Top Crescimento"
+1. **`stats / share_by_municipio`** — aceitar params opcionais `uf` e `cidade` para filtrar a CTE base (`WHERE upper(estado)=$1` e `unaccent(lower(cidade))=unaccent(lower($2))`). Mantém o resto.
 
-Arquivo: `src/pages/equity-brain/AnatelCruzamentoPage.tsx`
-- Remover `TabsTrigger value="growth"` e o `TabsContent` correspondente.
-- Remover state `topGrowth` e a chamada `kind: "top_growth"` em `loadStats`.
+2. **`stats / company_footprint`** (novo) — recebe `cnpj`, retorna por município onde a empresa atua: `cidade, estado, acessos_empresa, total_municipio, n_provedores, share_pct, rank_no_municipio`. Reusa a janela do snapshot.
 
-Arquivo: `supabase/functions/anatel-query/index.ts`
-- Remover bloco `if (kind === "top_growth")` e a descoberta de `prev12` (período anterior).
-- Manter apenas o `latest` para alimentar `share_by_municipio`.
+3. **`search_companies`** (nova action) — recebe `q` (string), faz `SELECT DISTINCT empresa, cnpj, SUM(acessos) FROM base_anatel WHERE unaccent(empresa) ILIKE unaccent($1) OR cnpj ILIKE $2 GROUP BY 1,2 ORDER BY 3 DESC LIMIT 20`. Para autocomplete/seleção quando o usuário digita nome da empresa.
 
----
+Validação de identifiers permanece via `IDENT_RE`. Todos os params via `$1/$2`.
 
-### 2. Aba "Por CNPJ" — Visão Consolidada (sem JSON cru)
+## Mudanças no front-end
 
-Substituir os dois cards de `<pre>{JSON.stringify(...)}</pre>` por um **Card de Perfil da Empresa** estruturado.
+### `src/components/equity-brain/AnatelFilterBar.tsx` (novo)
+Componente compacto, dark, em uma linha (`flex flex-wrap gap-2`):
+- Input "Empresa" (com debounce + dropdown de sugestões via `search_companies`).
+- Input "CNPJ" com máscara (reusar lógica do `mariWindowHeuristic`).
+- `Select` UF (lista fixa de 27 UFs + "Todos").
+- Input "Cidade" (texto livre; opcionalmente filtrado pela UF).
+- Botão **Buscar** (`bg-[#D9F564] text-[#0A0A0A]`) e botão **Limpar** (outline).
+- Estado do filtro elevado para o pai via callback `onSearch(filters)`.
 
-**a) Header do perfil (vindo da RFB)**
-- Razão Social · Nome Fantasia · CNPJ formatado
-- Badges: Situação Cadastral (verde/vermelho), Porte (ME/EPP/Demais), UF/Município (sede)
-- Capital Social formatado em BRL · Data de início · CNAE principal
+### `src/hooks/useAnatelData.ts`
+Adicionar:
+- `useAnatelCompanySearch(q)` → action `search_companies`.
+- `useAnatelCompanyFootprint(cnpj, table)` → `stats / company_footprint`.
+- Estender `useAnatelShareByMunicipio({uf, cidade, table})`.
 
-**b) KPIs consolidados (vindo da Anatel — agregando todas as linhas do CNPJ no snapshot)**
-Calculados no client a partir de `byCnpj.data.rows`:
-- **Total de Acessos** = soma de `acessos` (limpando texto via regex no client).
-- **Tecnologias** = lista única de `tecnologia` (com contagem por tech).
-- **Velocidade predominante** = faixa de `velocidade` mais frequente (mode).
-- **Nº de municípios atendidos** e **Nº de UFs atendidas**.
+### `src/pages/equity-brain/AnatelCruzamentoPage.tsx`
+- Substituir o `<form>` de CNPJ atual pela `<AnatelFilterBar />` no topo (acima das tabs ou substituindo o "Buscar").
+- Manter as 2 tabs ("Perfil por CNPJ" e "Market share por município"), mas a barra de filtros controla **ambas**:
+  - Se o usuário busca empresa/CNPJ → seleciona automaticamente a tab **Perfil**, mostra `CompanyProfileCard` + nova `<CompanyFootprintTable />` abaixo (tabela com cidade, UF, acessos da empresa, total município, share %, rank). Esconde/desativa a tabela geral.
+  - Se só UF/cidade → seleciona tab **Market Share** e passa filtros para `loadShare`.
+- Botão "Limpar" reseta `cnpj`, `companyQuery`, `uf`, `cidade` e volta ao estado inicial.
 
-Layout: 4 cards verde-neon/cinza com ícones (Users, Wifi, Gauge, MapPin).
+### `src/components/equity-brain/CompanyFootprintTable.tsx` (novo)
+Tabela enxuta (mesmo estilo da de market share atual): colunas `Cidade`, `UF`, `Acessos da empresa`, `Total município`, `Share %` (com barra), `Rank`. Usa `formatNum`.
 
-**c) Seção "Expansão Geográfica"**
-- Comparar `rfb.uf`/`rfb.municipio` com o conjunto distinto de `(estado, cidade)` da Anatel.
-- Calcular `status`:
-  - `Local` — todas linhas Anatel na mesma cidade+UF da sede RFB.
-  - `Regional` — múltiplas cidades, mas todas na UF da sede.
-  - `Interestadual` — pelo menos uma UF diferente da sede.
-- Renderizar tag colorida (zinc/azul/violeta) + tabela compacta "Top 10 cidades por acessos" com coluna "é sede?".
+## Detalhes de UX
+- Barra de filtros usa Volt (`#D9F564`) só no botão primário; resto neutro escuro.
+- Quando empresa selecionada: a aba "Market Share por município" fica colapsada/oculta para evitar poluição (apenas o footprint da empresa fica visível).
+- Sugestões de empresa: dropdown ancorado no input, max 8 itens (`empresa — CNPJ — N acessos`).
+- Máscara CNPJ reaproveita helper existente em `mariWindowHeuristic`.
+- Reset preserva o `mainTable` carregado (não recarrega schema).
 
-**d) Seção "Inteligência Financeira & Alertas M&A"**
-- Card lado-a-lado: **Capital Social (RFB)** × **Total de Acessos (Anatel)**.
-- Regra de alerta inconsistência societária:
-  ```
-  if (acessos > 5000 && capitalSocial < 50000) → badge âmbar
-     "⚠️ Alerta de M&A — Inconsistência Societária"
-  ```
-- **Receita Estimada**: input numérico controlado `ticketMedio` (default `90`), persistido em `useState`.
-  - Receita mensal = `acessos × ticketMedio`
-  - Receita anualizada = `× 12`
-  - Exibir os dois valores formatados em BRL.
-- **Alerta de Porte** (limites SIMPLES/Lei Complementar):
-  ```
-  ME    : até R$ 360 mil/ano
-  EPP   : até R$ 4,8 mi/ano
-  Demais: acima
-  ```
-  Se `receitaAnualizada > limite(porte)` → badge vermelho "⚠️ Possível Desenquadramento Fiscal" com texto explicando porte declarado vs. receita estimada.
+## Arquivos
+- **Editar**: `supabase/functions/anatel-query/index.ts`, `src/pages/equity-brain/AnatelCruzamentoPage.tsx`, `src/hooks/useAnatelData.ts`.
+- **Criar**: `src/components/equity-brain/AnatelFilterBar.tsx`, `src/components/equity-brain/CompanyFootprintTable.tsx`.
+- **Redeploy**: `anatel-query`.
 
-Sem nenhum `<pre>`/JSON visível.
-
----
-
-### 3. Aba "Market Share por Município" — Índice de Regionalização
-
-Edge function (`anatel-query`, kind `share_by_municipio`):
-- Estender query para também retornar, por município no top N, a lista dos provedores com seus acessos e CNPJ. Hoje só retorna o líder; precisamos do detalhe.
-- Nova kind alternativa **`share_with_origin`** que faz JOIN com `estabelecimentos` da RFB (via `EXTERNAL_DB_URL`) para descobrir UF/município da **sede** de cada CNPJ provedor. Como o edge atual só conecta ao `ANATEL_DB_URL`, vamos:
-  - Adicionar segunda conexão opcional ao `EXTERNAL_DB_URL` dentro de `share_by_municipio`.
-  - Para cada CNPJ no top N, buscar `e.uf`, `e.municipio` em batch (`WHERE cnpj_basico = ANY($1)`).
-  - Classificar provedor como **Local** (sede.cidade == cidade analisada) ou **Externo**.
-  - Agregar: `share_local_pct`, `share_externo_pct`, `n_local`, `n_externo`.
-
-UI (`AnatelCruzamentoPage.tsx` — TabsContent share):
-- Manter tabela atual (município, UF, acessos, nº provedores, líder, share líder).
-- Adicionar coluna **"Força Local"** = `share_local_pct` com mini-bar verde.
-- Ao clicar numa linha, abrir um drawer/expand com gráfico **donut 100%** (recharts `PieChart`) "Local vs. Externo" + lista dos provedores classificados.
-
----
-
-### 4. Estilo & UI
-
-- Manter dark (`zinc-950`/`zinc-900`) + acento verde-neon (`emerald-400`).
-- Substituir `<pre>` por componentes `<Card>` shadcn já existentes.
-- Tabelas mantêm o estilo atual (`text-xs`, sticky header, hover `zinc-800/40`).
-- Badges via `Badge` de shadcn com variants (custom classes para âmbar/vermelho).
-- Tipografia: títulos `text-sm font-semibold text-zinc-200`, valores `text-2xl font-bold tabular-nums`.
-
----
-
-### Arquivos afetados
-
-```text
-src/pages/equity-brain/AnatelCruzamentoPage.tsx   (refatoração grande)
-src/components/equity-brain/CompanyProfileCard.tsx (NOVO — perfil consolidado)
-src/components/equity-brain/MarketShareDrawer.tsx  (NOVO — donut Local vs Externo)
-src/lib/anatelInsights.ts                          (NOVO — agregadores client-side)
-supabase/functions/anatel-query/index.ts           (remover top_growth, estender share)
-```
-
-### Detalhes técnicos
-
-- Limites de porte (constante em `anatelInsights.ts`):
-  ```ts
-  export const PORTE_LIMITS = { ME: 360_000, EPP: 4_800_000 } as const;
-  ```
-- Helpers: `parseAcessos(s: string): number` (regex), `aggregateAnatel(rows)` retornando `{totalAcessos, tecnologias, velocidadePredominante, cidades, ufs}`.
-- Edge function continua sob auth admin/advisor.
-- Sem migrations — tudo client-side e edge function.
-
-Após aprovação, aplico a refatoração e re-deploy do edge function.
+## Fora do escopo
+- Não altera o `CompanyProfileCard` (já consolidado).
+- Não toca em outras páginas do `/equity-brain/mercado`.

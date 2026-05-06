@@ -1,19 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Search, Loader2, Database, Building2, BarChart3 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ArrowLeft, Loader2, Database, Building2, BarChart3 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { useAnatelSchema, useAnatelByCnpj, useCrossRefRfbAnatel } from "@/hooks/useAnatelData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CompanyProfileCard } from "@/components/equity-brain/CompanyProfileCard";
+import { CompanyFootprintTable } from "@/components/equity-brain/CompanyFootprintTable";
+import { AnatelFilterBar, type AnatelFilters } from "@/components/equity-brain/AnatelFilterBar";
 import { formatNum } from "@/lib/anatelInsights";
 
 export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: boolean } = {}) {
-  const [cnpjInput, setCnpjInput] = useState("");
   const [cnpj, setCnpj] = useState<string | null>(null);
+  const [uf, setUf] = useState<string>("");
+  const [cidade, setCidade] = useState<string>("");
+  const [tab, setTab] = useState<"cnpj" | "share">("share");
   const schema = useAnatelSchema();
 
   const mainTable = schema.data?.tables?.find((t: any) =>
@@ -27,37 +29,85 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
   const byCnpj = useAnatelByCnpj(cnpj, mainTable, { cnpj_column: cnpjCol });
   const cross = useCrossRefRfbAnatel(cnpj, mainTable, cnpjCol);
 
-  const [statsLoading, setStatsLoading] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
   const [shareByCity, setShareByCity] = useState<any[]>([]);
+  const [footprint, setFootprint] = useState<any[]>([]);
+  const [footprintLoading, setFootprintLoading] = useState(false);
 
-  async function loadShare() {
+  async function loadShare(filters?: { uf?: string; cidade?: string }) {
     if (!mainTable) return;
-    setStatsLoading(true);
+    setShareLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("anatel-query", {
-        body: { action: "stats", params: { table: mainTable, kind: "share_by_municipio", limit: 100 } },
+        body: {
+          action: "stats",
+          params: {
+            table: mainTable,
+            kind: "share_by_municipio",
+            limit: 200,
+            uf: filters?.uf || undefined,
+            cidade: filters?.cidade || undefined,
+          },
+        },
       });
       if (error) throw error;
       setShareByCity(data?.rows ?? []);
     } catch (e: any) {
       toast.error("Falha ao carregar market share: " + (e?.message ?? "erro"));
     } finally {
-      setStatsLoading(false);
+      setShareLoading(false);
     }
   }
 
-  function submitCnpj(e: React.FormEvent) {
-    e.preventDefault();
-    const clean = cnpjInput.replace(/\D/g, "");
-    if (clean.length !== 14) {
-      toast.error("CNPJ inválido");
-      return;
+  async function loadFootprint(c: string) {
+    if (!mainTable) return;
+    setFootprintLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("anatel-query", {
+        body: {
+          action: "stats",
+          params: { table: mainTable, kind: "company_footprint", cnpj: c, limit: 500 },
+        },
+      });
+      if (error) throw error;
+      setFootprint(data?.rows ?? []);
+    } catch (e: any) {
+      toast.error("Falha ao carregar cidades da empresa: " + (e?.message ?? "erro"));
+    } finally {
+      setFootprintLoading(false);
     }
-    setCnpj(clean);
   }
+
+  function handleSearch(f: AnatelFilters) {
+    const c = f.selectedCnpj ?? (f.cnpj.length === 14 ? f.cnpj : null);
+    setUf(f.uf);
+    setCidade(f.cidade);
+    if (c) {
+      setCnpj(c);
+      setTab("cnpj");
+      loadFootprint(c);
+    } else {
+      setCnpj(null);
+      setFootprint([]);
+      setTab("share");
+      loadShare({ uf: f.uf, cidade: f.cidade });
+    }
+  }
+
+  function handleClear() {
+    setCnpj(null);
+    setUf("");
+    setCidade("");
+    setFootprint([]);
+    setShareByCity([]);
+    setTab("share");
+  }
+
+  const hasCompany = !!cnpj;
+  const hasGeoFilter = !!(uf || cidade);
 
   const content = (
-    <div className={embedded ? "space-y-6" : "mx-auto max-w-7xl px-6 py-8 space-y-6"}>
+    <div className={embedded ? "space-y-4" : "mx-auto max-w-7xl px-6 py-8 space-y-4"}>
       {!embedded && (
         <div>
           <Link to="/equity-brain/hoje" className="text-zinc-500 hover:text-zinc-200 inline-flex items-center gap-1 text-xs">
@@ -84,45 +134,53 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
         </Card>
       )}
 
-      <Tabs defaultValue="cnpj" className="w-full">
+      <AnatelFilterBar
+        table={mainTable}
+        onSearch={handleSearch}
+        onClear={handleClear}
+        loading={shareLoading || footprintLoading || cross.isLoading || byCnpj.isLoading}
+      />
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
         <TabsList className="bg-zinc-900 border border-zinc-800">
-          <TabsTrigger value="cnpj"><Building2 className="h-4 w-4 mr-1" /> Perfil por CNPJ</TabsTrigger>
-          <TabsTrigger value="share"><BarChart3 className="h-4 w-4 mr-1" /> Market share por município</TabsTrigger>
+          <TabsTrigger value="cnpj" disabled={!hasCompany}>
+            <Building2 className="h-4 w-4 mr-1" /> Perfil da empresa
+          </TabsTrigger>
+          <TabsTrigger value="share">
+            <BarChart3 className="h-4 w-4 mr-1" /> Market share por município
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="cnpj" className="space-y-4 mt-4">
-          <form onSubmit={submitCnpj} className="flex gap-2">
-            <Input
-              value={cnpjInput}
-              onChange={(e) => setCnpjInput(e.target.value)}
-              placeholder="Digite o CNPJ (14 dígitos)"
-              className="bg-zinc-900 border-zinc-800 text-zinc-100 max-w-xs"
-            />
-            <Button type="submit" disabled={!mainTable}>
-              <Search className="h-4 w-4 mr-1" /> Buscar
-            </Button>
-          </form>
-
-          {cnpj && (
-            <CompanyProfileCard
-              cnpj={cnpj}
-              rfb={cross.data?.rfb ?? null}
-              anatelRows={byCnpj.data?.rows ?? []}
-              loading={cross.isLoading || byCnpj.isLoading}
-            />
+          {cnpj ? (
+            <>
+              <CompanyProfileCard
+                cnpj={cnpj}
+                rfb={cross.data?.rfb ?? null}
+                anatelRows={byCnpj.data?.rows ?? []}
+                loading={cross.isLoading || byCnpj.isLoading}
+              />
+              <CompanyFootprintTable rows={footprint} loading={footprintLoading} />
+            </>
+          ) : (
+            <Card className="p-6 bg-zinc-900/60 border-zinc-800 text-sm text-zinc-500">
+              Pesquise uma empresa pelo nome ou CNPJ acima para ver o perfil consolidado.
+            </Card>
           )}
         </TabsContent>
 
         <TabsContent value="share" className="space-y-4 mt-4">
-          <div>
-            <Button onClick={loadShare} disabled={statsLoading || !mainTable}>
-              {statsLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <BarChart3 className="h-4 w-4 mr-1" />}
-              Carregar market share
-            </Button>
-          </div>
           <Card className="p-0 bg-zinc-900/60 border-zinc-800 overflow-hidden">
-            <div className="text-xs text-zinc-400 px-4 py-2 border-b border-zinc-800">
-              Líder e concentração de mercado por município (snapshot atual)
+            <div className="text-xs text-zinc-400 px-4 py-2 border-b border-zinc-800 flex items-center justify-between">
+              <span>
+                Líder e concentração de mercado por município (snapshot atual)
+                {hasGeoFilter && (
+                  <span className="ml-2 text-emerald-400">
+                    · filtros: {uf || "todas UFs"}{cidade ? ` / ${cidade}` : ""}
+                  </span>
+                )}
+              </span>
+              <span className="text-zinc-500">{shareByCity.length} municípios</span>
             </div>
             <div className="overflow-auto max-h-[60vh]">
               <table className="w-full text-xs">
@@ -145,25 +203,23 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
                         <td className="px-3 py-2 text-zinc-400">{r.estado ?? "—"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{formatNum(Number(r.acessos))}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{formatNum(Number(r.n_provedores))}</td>
-                        <td className="px-3 py-2 text-zinc-200 truncate max-w-[200px]">{r.lider ?? "—"}</td>
+                        <td className="px-3 py-2 text-zinc-200 truncate max-w-[200px] break-words">{r.lider ?? "—"}</td>
                         <td className="px-3 py-2 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <div className="w-16 h-1.5 bg-zinc-800 rounded overflow-hidden">
-                              <div
-                                className="h-full bg-emerald-500"
-                                style={{ width: `${Math.min(100, share)}%` }}
-                              />
+                              <div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, share)}%` }} />
                             </div>
-                            <span className="tabular-nums text-emerald-300 w-12 text-right">
-                              {share.toFixed(1)}%
-                            </span>
+                            <span className="tabular-nums text-emerald-300 w-12 text-right">{share.toFixed(1)}%</span>
                           </div>
                         </td>
                       </tr>
                     );
                   })}
-                  {!shareByCity.length && !statsLoading && (
-                    <tr><td colSpan={6} className="px-3 py-6 text-center text-zinc-500">Clique em "Carregar market share"</td></tr>
+                  {!shareByCity.length && !shareLoading && (
+                    <tr><td colSpan={6} className="px-3 py-6 text-center text-zinc-500">Use a barra de filtros para carregar o market share</td></tr>
+                  )}
+                  {shareLoading && (
+                    <tr><td colSpan={6} className="px-3 py-6 text-center text-zinc-500"><Loader2 className="inline h-4 w-4 animate-spin mr-2" />Carregando…</td></tr>
                   )}
                 </tbody>
               </table>
