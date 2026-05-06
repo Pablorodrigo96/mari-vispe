@@ -204,6 +204,51 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
       });
     });
 
+    // ---- Camada de mercado (raio a partir do comprador) ----
+    if (marketLayer && (marketLayer.cells.length || marketLayer.seeds.length)) {
+      // Círculos pontilhados de alcance ao redor de cada semente
+      for (const s of marketLayer.seeds) {
+        L.circle([s.lat, s.lng], {
+          radius: marketLayer.radiusKm * 1000,
+          color: MARKET_COLOR,
+          weight: 1,
+          opacity: 0.55,
+          fillColor: MARKET_COLOR,
+          fillOpacity: 0.04,
+          dashArray: "4 6",
+        }).addTo(group);
+        allPoints.push([s.lat, s.lng]);
+      }
+      const maxAcc = Math.max(...marketLayer.cells.map((c) => c.acessos_total), 1);
+      for (const c of marketLayer.cells) {
+        const r = Math.max(3, Math.min(11, Math.log10(c.acessos_total + 10) * 3));
+        const m = L.circleMarker([c.lat, c.lng], {
+          radius: r,
+          color: MARKET_COLOR,
+          weight: 1,
+          fillColor: MARKET_COLOR,
+          fillOpacity: 0.55,
+        });
+        m.bindPopup(`
+          <div style="min-width:200px;font-family:inherit">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${MARKET_COLOR}"></span>
+              <strong style="color:#0a0a0a;font-size:12px">Mercado no raio</strong>
+            </div>
+            <div style="color:#0a0a0a;font-size:13px;font-weight:600">${c.cidade}/${c.estado}</div>
+            <div style="font-size:11px;color:#52525b;margin-top:4px">
+              <b style="color:#0a0a0a">${c.n_provedores}</b> provedor${c.n_provedores === 1 ? "" : "es"} ·
+              <b style="color:#0a0a0a">${fmt(c.acessos_total)}</b> acessos
+              ${maxAcc ? ` (${Math.round((c.acessos_total / maxAcc) * 100)}%)` : ""}
+            </div>
+            <div style="font-size:11px;color:#52525b;margin-top:2px">Top: <b style="color:#0a0a0a">${c.top_empresa}</b></div>
+          </div>
+        `);
+        m.addTo(group);
+        allPoints.push([c.lat, c.lng]);
+      }
+    }
+
     group.addTo(map);
     layerGroupRef.current = group;
 
@@ -211,7 +256,7 @@ export function AnatelProviderMap({ layers, marketLayer, height = "70vh" }: Prop
       const bounds = L.latLngBounds(allPoints);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
     }
-  }, [resolvedLayers]);
+  }, [resolvedLayers, marketLayer]);
 
   const approxCount = resolvedLayers.reduce(
     (acc, l) => acc + l.resolved.filter((r) => r.approx).length, 0,
