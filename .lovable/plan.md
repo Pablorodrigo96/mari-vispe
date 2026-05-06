@@ -1,78 +1,66 @@
-## Objetivo
+## Bug
 
-Transformar a aba "Market share" em um ranking de empresas que se ajusta ao nível geográfico filtrado (Brasil → UF → Cidade) e tornar todo nome de empresa clicável, redirecionando para a aba "Perfil da empresa" já carregada.
+`AnatelCruzamentoPage` → "Perfil da empresa" usa `by_cnpj` (action que retorna linhas brutas com `LIMIT ≤ 500`). Empresas grandes (DESKTOP, Vivo, Claro) têm milhares de linhas no snapshot Anatel (uma por cidade × tecnologia × faixa de velocidade). O LIMIT corta a maior parte e o `aggregateAnatel` no cliente soma só a fatia → "Total de Acessos" mostra 654 em vez de 1.200.000+.
 
-## 1. Edge function `anatel-query` — novo `kind: "share_by_company"`
+A tabela "Cidades onde a empresa atua" funciona porque usa `kind: "company_footprint"`, que já roda `SUM(acessos)` agregado no Postgres.
 
-Adicionar dentro de `case "stats"` em `supabase/functions/anatel-query/index.ts`:
+## Correção — agregação no banco, não no cliente
 
-- Aceita `uf?` e `cidade?` opcionais.
-- Se nenhum filtro → agrupa por `(empresa, cnpj)` em todo o snapshot (Brasil).
-- Se `uf` apenas → filtra `upper(estado)=uf`, soma acessos por empresa.
-- Se `uf+cidade` → filtra também `lower(cidade)=lower(...)`.
-- Calcula `total_geo = SUM(acessos)` via window function e devolve `share_pct = acessos / total_geo * 100`.
-- Retorna colunas: `empresa, cnpj, acessos, share_pct, rank, total_geo, n_empresas`.
-- Ordena `acessos DESC`, `LIMIT` (default 200, max 500).
+### 1. Edge function `supabase/functions/anatel-query/index.ts`
 
-A query existente `share_by_municipio` permanece intacta (continua alimentando a sub-aba "Visão por Cidades").
+Adicionar novo `kind` em `stats`: **`company_profile`**. Em uma única chamada, retorna tudo já agregado por CNPJ:
 
-## 2. Frontend — `AnatelCruzamentoPage.tsx`
-
-### 2.1 Estado e carregamento
-
-- Novo state: `companyRanking: any[]`, `companyRankingLoading: boolean`, `shareView: "companies" | "cities"` (default `"companies"`).
-- Novo loader `loadCompanyRanking({ uf, cidade })` invocando `kind: "share_by_company"`.
-- `handleSearch` (cenário B — sem CNPJ) e mount inicial: dispara **ambos** `loadCompanyRanking` e `loadShare` (cidades) com os mesmos filtros, para que o toggle alterne sem novo round-trip.
-- Quando filtros mudam, recarrega os dois.
-
-### 2.2 Aba "Market share" — novo layout
-
-Header dinâmico:
-- Título: `Market share — ${cidade ? cidade+'/'+uf : uf || 'Brasil'}`.
-- Subtítulo: total de acessos do recorte + nº de empresas.
-- Toggle pill no canto direito: **Empresas** (default) | **Visão por Cidades**.
-
-**View "Empresas"** (nova, principal):
-Tabela com colunas:
-| # | Empresa | CNPJ | Acessos | Share % (barra+valor) |
-
-- Linha clicável: hover `bg-zinc-800/40`, nome em `text-zinc-100 hover:text-emerald-400 cursor-pointer underline-offset-2 hover:underline`.
-- Click → `handleCompanyClick({ empresa, cnpj })`.
-
-**View "Visão por Cidades"** (atual `shareByCity`, preservada):
-Tabela atual onde a coluna "Líder" também vira clicável (mesmo handler).
-
-### 2.3 Deep linking — `handleCompanyClick`
-
-```ts
-function handleCompanyClick({ empresa, cnpj }: { empresa: string; cnpj: string }) {
-  const clean = cnpj.replace(/\D/g, "");
-  if (clean.length !== 14) return;
-  setCnpj(clean);
-  setTab("cnpj");
-  loadFootprint(clean);
-  // opcional: refletir na barra de filtros via prop controlada (ver 2.4)
-}
+```sql
+WITH base AS (
+  SELECT cidade, estado, tecnologia, meio_acesso, faixa_velocidade,
+         SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
+  FROM "<table>"
+  WHERE regexp_replace(cnpj::text,'\D','','g') = $1
+  GROUP BY cidade, estado, tecnologia, meio_acesso, faixa_velocidade
+)
+SELECT
+  (SELECT SUM(acessos) FROM base)                        AS total_acessos,
+  (SELECT COUNT(DISTINCT (cidade,estado)) FROM base)     AS n_cidades,
+  (SELECT COUNT(DISTINCT estado) FROM base)              AS n_ufs,
+  (SELECT json_agg(t) FROM (
+     SELECT tecnologia AS name, SUM(acessos)::bigint AS acessos
+     FROM base GROUP BY tecnologia ORDER BY 2 DESC) t)   AS tecnologias,
+  (SELECT json_agg(t) FROM (
+     SELECT meio_acesso AS name, SUM(acessos)::bigint AS acessos
+     FROM base GROUP BY meio_acesso ORDER BY 2 DESC) t)  AS meios_acesso,
+  (SELECT json_agg(t) FROM (
+     SELECT faixa_velocidade AS name, SUM(acessos)::bigint AS acessos
+     FROM base GROUP BY faixa_velocidade ORDER BY 2 DESC) t) AS faixas
 ```
 
-`useAnatelByCnpj` e `useCrossRefRfbAnatel` já reagem ao novo `cnpj` e populam `CompanyProfileCard` + `CompanyFootprintTable` automaticamente — comportamento idêntico ao da pesquisa manual.
+Retorna `{ total_acessos, n_cidades, n_ufs, tecnologias[], meios_acesso[], faixas[] }`.
 
-### 2.4 Sincronização da barra de filtros (opcional, leve)
+### 2. Hook `src/hooks/useAnatelData.ts`
 
-Tornar `AnatelFilterBar` parcialmente controlado: aceitar prop opcional `value?: { empresa; cnpj }` e expor `useEffect` que atualiza inputs internos quando muda. Permite que ao clicar numa empresa a barra superior reflita a seleção. Fallback simples: deixar incontrolado e apenas exibir badge "empresa selecionada" acima do perfil.
+Adicionar `useAnatelCompanyProfile(cnpj, table)` que invoca o novo kind. Usa o mesmo cache key.
 
-## 3. Componentes
+### 3. Página `AnatelCruzamentoPage.tsx`
 
-- **Novo:** `src/components/equity-brain/CompanyShareTable.tsx` — recebe `rows`, `scopeLabel`, `loading`, `onCompanyClick`. Renderiza ranking com barra de share verde-neon (`bg-emerald-500`).
-- Reuso: `formatNum`, `formatCnpj` de `@/lib/anatelInsights`.
+- Trocar dependência de `byCnpj.data?.rows` (limitado) por `companyProfile.data` (agregado completo) na hora de alimentar o `CompanyProfileCard`.
+- Manter `byCnpj` apenas como fallback (ou remover — a tabela de cidades já é coberta por footprint).
 
-## 4. Resumo de arquivos editados
+### 4. `src/components/equity-brain/CompanyProfileCard.tsx`
 
-```text
-supabase/functions/anatel-query/index.ts        (+ kind: share_by_company)
-src/components/equity-brain/CompanyShareTable.tsx   (novo)
-src/components/equity-brain/CompanyFootprintTable.tsx (linhas/líderes não se aplica; nada muda)
-src/pages/equity-brain/AnatelCruzamentoPage.tsx (toggle, header dinâmico, click handler, dual-load)
-```
+Aceitar prop opcional `aggregate?: AnatelAggregate` que, quando presente, sobrepõe o `aggregateAnatel(rows)`. Quando vier do banco, todos os KPIs (Total de Acessos, Tecnologia Principal, Distribuição, Velocidade Predominante, Cobertura) consomem números agregados globais.
 
-Sem mudança em DB, RLS, ou em outras rotas. Padrão dark mode (zinc/emerald) preservado.
+### 5. `src/lib/anatelInsights.ts`
+
+Adicionar helper `aggregateFromServer(payload)` que monta o objeto `AnatelAggregate` a partir da resposta do `company_profile` (sem `cidades[]` — essa parte continua via `footprint`, que já é agregado por cidade).
+
+### 6. Sanity check
+
+Após carregar, validar no console (dev): `total_acessos === sum(footprint.acessos_empresa)`. Se divergir, log warning. Garante consistência entre o card de topo e a tabela "Cidades onde a empresa atua".
+
+## Resumo do efeito
+
+- Card "Total de Acessos" passa a refletir SOMA real do CNPJ no snapshot inteiro.
+- Receita Mensal/Anualizada (ticket × total) ficam corretas automaticamente.
+- "Tecnologia Principal" e "Distribuição por tecnologia" passam a usar SUM agregado por tecnologia (não count parcial).
+- "Velocidade predominante" idem.
+- Cobertura (n_cidades, n_ufs) idem.
+- Soma da coluna "Acessos da empresa" da tabela Cidades = "Total de Acessos" do card (mesma fonte SQL agregada).
