@@ -110,6 +110,41 @@ function normalize(s: string): string {
     .toLowerCase();
 }
 
+export interface CompanyProfileServer {
+  total_acessos: number | string;
+  n_cidades: number;
+  n_ufs: number;
+  tecnologias: { name: string; acessos: number | string }[];
+  meios_acesso: { name: string; acessos: number | string }[];
+  faixas: { name: string; acessos: number | string }[];
+}
+
+export function aggregateFromServer(
+  p: CompanyProfileServer,
+  cidadesAgg?: { cidade: string; estado: string; acessos: number; isSede?: boolean }[],
+): AnatelAggregate {
+  const num = (v: any) => Number(v ?? 0) || 0;
+  const tecnologias = (p.tecnologias ?? []).map((t) => ({
+    name: t.name, count: 0, acessos: num(t.acessos),
+  }));
+  const meiosAcesso = (p.meios_acesso ?? []).map((m) => ({
+    name: m.name, acessos: num(m.acessos),
+  }));
+  const faixas = (p.faixas ?? []).slice().sort((a, b) => num(b.acessos) - num(a.acessos));
+  const cidades = (cidadesAgg ?? []).map((c) => ({ ...c, isSede: !!c.isSede }));
+  const ufs = Array.from(new Set(cidades.map((c) => c.estado))).sort();
+  return {
+    totalAcessos: num(p.total_acessos),
+    tecnologias,
+    meiosAcesso,
+    faixaVelocidadePredominante: faixas[0]?.name ?? null,
+    cidades,
+    ufs,
+    nCidades: p.n_cidades ?? cidades.length,
+    nUfs: p.n_ufs ?? ufs.length,
+  };
+}
+
 export type ExpansionStatus = "Local" | "Regional" | "Interestadual" | "Indefinido";
 
 export function classifyExpansion(

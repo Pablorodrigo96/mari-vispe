@@ -11,7 +11,7 @@ import { CompanyProfileCard } from "@/components/equity-brain/CompanyProfileCard
 import { CompanyFootprintTable } from "@/components/equity-brain/CompanyFootprintTable";
 import { CompanyShareTable } from "@/components/equity-brain/CompanyShareTable";
 import { AnatelFilterBar, type AnatelFilters } from "@/components/equity-brain/AnatelFilterBar";
-import { formatNum } from "@/lib/anatelInsights";
+import { formatNum, aggregateFromServer, type AnatelAggregate } from "@/lib/anatelInsights";
 
 export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [cnpj, setCnpj] = useState<string | null>(null);
@@ -38,6 +38,25 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
   const [companyLoading, setCompanyLoading] = useState(false);
   const [footprint, setFootprint] = useState<any[]>([]);
   const [footprintLoading, setFootprintLoading] = useState(false);
+  const [companyProfile, setCompanyProfile] = useState<any | null>(null);
+  const [companyProfileLoading, setCompanyProfileLoading] = useState(false);
+
+  async function loadCompanyProfile(c: string) {
+    if (!mainTable) return;
+    setCompanyProfileLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("anatel-query", {
+        body: { action: "stats", params: { table: mainTable, kind: "company_profile", cnpj: c } },
+      });
+      if (error) throw error;
+      setCompanyProfile(data?.profile ?? null);
+    } catch (e: any) {
+      toast.error("Falha ao carregar perfil consolidado: " + (e?.message ?? "erro"));
+      setCompanyProfile(null);
+    } finally {
+      setCompanyProfileLoading(false);
+    }
+  }
 
   async function loadCompanyRanking(filters?: { uf?: string; cidade?: string }) {
     if (!mainTable) return;
@@ -116,6 +135,7 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
       setCnpj(c);
       setTab("cnpj");
       loadFootprint(c);
+      loadCompanyProfile(c);
     } else {
       setCnpj(null);
       setFootprint([]);
@@ -144,6 +164,7 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
     setCnpj(clean);
     setTab("cnpj");
     loadFootprint(clean);
+    loadCompanyProfile(clean);
   }
 
   const hasCompany = !!cnpj;
@@ -204,7 +225,19 @@ export default function AnatelCruzamentoPage({ embedded = false }: { embedded?: 
                 cnpj={cnpj}
                 rfb={cross.data?.rfb ?? null}
                 anatelRows={byCnpj.data?.rows ?? []}
-                loading={cross.isLoading || byCnpj.isLoading}
+                aggregate={
+                  companyProfile
+                    ? aggregateFromServer(
+                        companyProfile,
+                        (footprint ?? []).map((r: any) => ({
+                          cidade: String(r.cidade ?? ""),
+                          estado: String(r.estado ?? ""),
+                          acessos: Number(r.acessos_empresa ?? 0),
+                        })),
+                      )
+                    : undefined
+                }
+                loading={cross.isLoading || companyProfileLoading}
               />
               <CompanyFootprintTable rows={footprint} loading={footprintLoading} />
             </>

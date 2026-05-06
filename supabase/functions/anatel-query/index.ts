@@ -256,6 +256,40 @@ serve(async (req) => {
             return ok({ table, kind, rows: r.rows });
           }
 
+          if (kind === "company_profile") {
+            const cnpj = String(params.cnpj ?? "").replace(/\D/g, "");
+            if (cnpj.length !== 14) throw new Error("CNPJ inválido");
+            const r = await client.queryObject({
+              text: `
+                WITH base AS (
+                  SELECT cidade, estado, tecnologia, meio_acesso, faixa_velocidade,
+                         SUM(NULLIF(regexp_replace(acessos,'[^0-9-]','','g'),'')::bigint) AS acessos
+                  FROM "${table}"
+                  WHERE regexp_replace(cnpj::text,'\\D','','g') = $1
+                  GROUP BY cidade, estado, tecnologia, meio_acesso, faixa_velocidade
+                )
+                SELECT
+                  COALESCE((SELECT SUM(acessos) FROM base),0)::bigint AS total_acessos,
+                  COALESCE((SELECT COUNT(*) FROM (SELECT DISTINCT cidade, estado FROM base) c),0)::int AS n_cidades,
+                  COALESCE((SELECT COUNT(DISTINCT estado) FROM base),0)::int AS n_ufs,
+                  COALESCE((SELECT json_agg(t) FROM (
+                    SELECT COALESCE(NULLIF(trim(tecnologia),''),'—') AS name,
+                           SUM(acessos)::bigint AS acessos
+                    FROM base GROUP BY 1 ORDER BY 2 DESC NULLS LAST) t), '[]'::json) AS tecnologias,
+                  COALESCE((SELECT json_agg(t) FROM (
+                    SELECT COALESCE(NULLIF(trim(meio_acesso),''),'—') AS name,
+                           SUM(acessos)::bigint AS acessos
+                    FROM base GROUP BY 1 ORDER BY 2 DESC NULLS LAST) t), '[]'::json) AS meios_acesso,
+                  COALESCE((SELECT json_agg(t) FROM (
+                    SELECT COALESCE(NULLIF(trim(faixa_velocidade),''),'—') AS name,
+                           SUM(acessos)::bigint AS acessos
+                    FROM base GROUP BY 1 ORDER BY 2 DESC NULLS LAST) t), '[]'::json) AS faixas
+              `,
+              args: [cnpj],
+            });
+            return ok({ table, kind, profile: r.rows[0] ?? null });
+          }
+
           if (kind === "company_footprint") {
             const cnpj = String(params.cnpj ?? "").replace(/\D/g, "");
             if (cnpj.length !== 14) throw new Error("CNPJ inválido");

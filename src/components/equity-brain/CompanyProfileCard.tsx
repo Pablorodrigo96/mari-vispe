@@ -8,7 +8,7 @@ import {
 import {
   aggregateAnatel, classifyExpansion, classifyPorte, porteLimit,
   formatBRL, formatNum, formatCnpj, parseAcessos, DEFAULT_TICKET_BRL,
-  type AnatelRow,
+  type AnatelRow, type AnatelAggregate,
 } from "@/lib/anatelInsights";
 
 interface RfbData {
@@ -27,17 +27,19 @@ interface RfbData {
 }
 
 export function CompanyProfileCard({
-  cnpj, rfb, anatelRows, loading,
+  cnpj, rfb, anatelRows, aggregate, loading,
 }: {
   cnpj: string;
   rfb: RfbData | null;
   anatelRows: AnatelRow[];
+  aggregate?: AnatelAggregate;
   loading?: boolean;
 }) {
   const [ticket, setTicket] = useState<number>(DEFAULT_TICKET_BRL);
 
   const sede = { uf: rfb?.uf, municipio: rfb?.municipio };
-  const agg = useMemo(() => aggregateAnatel(anatelRows ?? [], sede), [anatelRows, rfb?.uf, rfb?.municipio]);
+  const computed = useMemo(() => aggregateAnatel(anatelRows ?? [], sede), [anatelRows, rfb?.uf, rfb?.municipio]);
+  const agg = aggregate ?? computed;
   const expansion = useMemo(() => classifyExpansion(agg, sede), [agg, rfb?.uf, rfb?.municipio]);
   const porte = classifyPorte(rfb?.porte_empresa);
   const limite = porteLimit(porte);
