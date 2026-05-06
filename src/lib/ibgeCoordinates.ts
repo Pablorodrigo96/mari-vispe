@@ -3,7 +3,7 @@
 
 import data from "@/data/ibgeMunicipios.json";
 
-const map = data as Record<string, [number, number]>;
+const map = data as unknown as Record<string, [number, number]>;
 
 export function getCoordsByIbge(code: string | null | undefined): { lat: number; lng: number } | null {
   if (!code) return null;
