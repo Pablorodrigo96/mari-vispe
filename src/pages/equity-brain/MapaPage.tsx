@@ -288,6 +288,17 @@ export default function MapaPage() {
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
                   <div className="space-y-3 min-w-0">
+                    {selectedProviders.length >= 2 && (
+                      <ProviderSynergyPanel
+                        providers={selectedProviders.map((p, idx) => ({
+                          cnpj: p.cnpj,
+                          empresa: p.empresa,
+                          color: ANATEL_SLOT_COLORS[idx],
+                          rows: footprintQs[idx]?.data ?? [],
+                        }))}
+                        buyerCnpjs={buyerCnpjs}
+                      />
+                    )}
                     {/* KPI por provedor */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {selectedProviders.map((p, idx) => {
