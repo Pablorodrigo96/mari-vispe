@@ -70,6 +70,7 @@ export function useAnatelProviderFootprint(cnpj: string | null, table: string | 
       return ((data as any)?.rows ?? []).map((r: any) => ({
         cidade: r.cidade,
         estado: String(r.estado ?? "").toUpperCase(),
+        codigo_ibge_cidade: r.codigo_ibge_cidade == null ? null : String(r.codigo_ibge_cidade),
         acessos_empresa: Number(r.acessos_empresa ?? 0),
         total_municipio: Number(r.total_municipio ?? 0),
         n_provedores: Number(r.n_provedores ?? 0),
