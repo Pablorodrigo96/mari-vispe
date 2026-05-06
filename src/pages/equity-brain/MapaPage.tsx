@@ -1,18 +1,16 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Network } from "lucide-react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { BrasilMap, type BrasilMapFilters } from "@/components/equity-brain/BrasilMap";
 import { MandateMap } from "@/components/equity-brain/MandateMap";
 import { DealCard } from "@/components/equity-brain/DealCard";
-import { EBStatCard } from "@/components/equity-brain/EBStatCard";
-import { UFS, formatNumber } from "@/lib/equityBrain";
+import { UFS } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
+import { ProviderSynergyPanel } from "@/components/equity-brain/ProviderSynergyPanel";
 import { AnatelProviderMap, ANATEL_SLOT_COLORS, MAX_ANATEL_SLOTS, type MarketLayer } from "@/components/equity-brain/AnatelProviderMap";
 import {
   useAnatelProviderSearch,
