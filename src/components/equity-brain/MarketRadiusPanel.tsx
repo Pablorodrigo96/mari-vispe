@@ -8,6 +8,7 @@ import type { MarketProvider } from "@/hooks/useAnatelMarketRadius";
 
 interface Props {
   buyerCount: number;
+  hasProviders: boolean;
   radiusKm: number;
   onRadiusChange: (km: number) => void;
   sameUfOnly: boolean;
