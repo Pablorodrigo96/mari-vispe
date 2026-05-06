@@ -59,6 +59,7 @@ import MondayImport from "./pages/admin/MondayImport";
 import MondayParity from "./pages/admin/MondayParity";
 import AdvisorsMapping from "./pages/admin/AdvisorsMapping";
 import AdminApiMonitor from "./pages/admin/AdminApiMonitor";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminApprovals from "./pages/admin/AdminApprovals";
 import MatchingBuyers from "./pages/MatchingBuyers";
 import CapitalCase from "./pages/CapitalCase";
