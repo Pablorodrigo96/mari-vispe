@@ -28,9 +28,17 @@ export interface MarketCandidate {
   distMinKm: number;
 }
 
+export interface BuyerSeedPoint {
+  lat: number;
+  lng: number;
+  cidade: string;
+  estado: string;
+}
+
 interface Props {
   layers: ProviderLayer[];
   marketCandidates?: MarketCandidate[] | null;
+  buyerSeedPoints?: BuyerSeedPoint[] | null;
   height?: string;
 }
 
