@@ -73,7 +73,7 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-export function AnatelProviderMap({ layers, marketCandidates, height = "70vh" }: Props) {
+export function AnatelProviderMap({ layers, marketCandidates, buyerSeedPoints, height = "70vh" }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
