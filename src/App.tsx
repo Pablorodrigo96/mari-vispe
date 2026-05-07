@@ -160,6 +160,8 @@ const App = () => (
               <Route path="/mapa" element={<MapView />} />
               <Route path="/sell" element={<Sell />} />
               <Route path="/vender" element={<Vender />} />
+              <Route path="/vender/simulador-investidor" element={<InvestorSimulator />} />
+              <Route path="/vender/due-diligence" element={<DueDiligenceSimulator />} />
               <Route path="/anuncio/:id" element={<ListingDetail />} />
               <Route path="/valuation" element={<Valuation />} />
               <Route path="/mari" element={<MariCalculator />} />
