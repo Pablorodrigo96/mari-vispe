@@ -16,6 +16,8 @@ import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import Sell from "./pages/Sell";
 import Vender from "./pages/Vender";
+import InvestorSimulator from "./pages/sell/InvestorSimulator";
+import DueDiligenceSimulator from "./pages/sell/DueDiligenceSimulator";
 import ListingDetail from "./pages/ListingDetail";
 import MyListings from "./pages/MyListings";
 import ListingCockpit from "./pages/ListingCockpit";
