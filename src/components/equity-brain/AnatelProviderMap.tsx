@@ -302,7 +302,7 @@ export function AnatelProviderMap({ layers, marketCandidates, buyerSeedPoints, h
       const bounds = L.latLngBounds(allPoints);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
     }
-  }, [resolvedLayers, marketCandidates, overlapInfo]);
+  }, [resolvedLayers, marketCandidates, buyerSeedPoints, overlapInfo]);
 
   const approxCount = resolvedLayers.reduce(
     (acc, l) => acc + l.resolved.filter((r) => r.approx).length, 0,
