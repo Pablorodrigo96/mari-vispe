@@ -76,6 +76,9 @@ export function MarketRadiusPanel({
           onValueChange={(v) => onRadiusChange(v[0])}
           disabled={disabled}
         />
+        <div className="text-[10px] text-zinc-500 mt-1 leading-snug">
+          Aplicado a <b className="text-zinc-400">cada cidade</b> do comprador (A, B, C…). Sobreposição entre raios é permitida.
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
