@@ -98,33 +98,6 @@ Deno.serve(async (req) => {
       metadata,
     });
 
-    // upsert session
-    await sb.from("analytics_sessions").upsert(
-      {
-        session_key,
-        user_id,
-        last_seen_at: new Date().toISOString(),
-        referrer,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        device,
-        user_agent,
-      },
-      { onConflict: "session_key" },
-    );
-
-    // insert event (page_leave/cta_click sempre; page_view também)
-    await sb.from("analytics_events").insert({
-      session_key,
-      user_id,
-      event_type,
-      path,
-      title,
-      referrer,
-      duration_ms,
-      metadata,
-    });
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
