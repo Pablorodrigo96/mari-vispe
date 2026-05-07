@@ -89,9 +89,11 @@ export async function trackEvent(
   if (isAnalyticsOptedOut()) return;
   try {
     const session_key = getSessionKey();
+    const visitor_id = getVisitorId();
     const utm = captureUtm();
     const body = {
       session_key,
+      visitor_id,
       user_id: lastUserId,
       event_type: type,
       path: payload.path ?? window.location.pathname,
