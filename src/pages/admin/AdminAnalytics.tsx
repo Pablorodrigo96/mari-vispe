@@ -46,7 +46,7 @@ function CardTitle({ icon, label, hint }: { icon: React.ReactNode; label: string
 export default function AdminAnalytics() {
   const [range, setRange] = useState<AnalyticsRange>(30);
   const a = useAdminAnalytics(range);
-  const { daily, topPages, sources, growth, longSessions, leadsSeries, funnel, devices, browsers, heatmap, exitPages, cta, retention } = a;
+  const { daily, topPages, sources, growth, longSessions, leadsSeries, funnel, devices, browsers, heatmap, exitPages, cta, retention, visitorsDaily, sourcesSplit, newVsReturning, newVisitorConversion } = a;
 
   const dailyWindow = useMemo(() => sliceLast(daily.data ?? [], range), [daily.data, range]);
   const growthWindow = useMemo(() => sliceLast(growth.data ?? [], range), [growth.data, range]);
