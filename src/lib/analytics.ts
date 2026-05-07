@@ -40,6 +40,22 @@ export function getSessionKey(): string {
   return k;
 }
 
+/** Persistent visitor id (localStorage) — diferencia visitante novo vs recorrente. */
+export function getVisitorId(): string {
+  if (typeof window === "undefined") return "";
+  if (isAnalyticsOptedOut()) return "";
+  try {
+    let v = localStorage.getItem(VISITOR_KEY);
+    if (!v) {
+      v = (crypto?.randomUUID?.() ?? `v-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      localStorage.setItem(VISITOR_KEY, v);
+    }
+    return v;
+  } catch {
+    return "";
+  }
+}
+
 function captureUtm(): Record<string, string | null> {
   if (typeof window === "undefined") return {};
   const cached = sessionStorage.getItem(UTM_KEY);
