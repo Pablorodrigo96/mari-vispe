@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const SESSION_KEY = "analytics_session_key";
+const VISITOR_KEY = "analytics_visitor_id";
 const UTM_KEY = "analytics_utm_v1";
 const CONSENT_KEY = "vispe_cookie_consent";
 
@@ -39,6 +40,22 @@ export function getSessionKey(): string {
   return k;
 }
 
+/** Persistent visitor id (localStorage) — diferencia visitante novo vs recorrente. */
+export function getVisitorId(): string {
+  if (typeof window === "undefined") return "";
+  if (isAnalyticsOptedOut()) return "";
+  try {
+    let v = localStorage.getItem(VISITOR_KEY);
+    if (!v) {
+      v = (crypto?.randomUUID?.() ?? `v-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      localStorage.setItem(VISITOR_KEY, v);
+    }
+    return v;
+  } catch {
+    return "";
+  }
+}
+
 function captureUtm(): Record<string, string | null> {
   if (typeof window === "undefined") return {};
   const cached = sessionStorage.getItem(UTM_KEY);
@@ -72,9 +89,11 @@ export async function trackEvent(
   if (isAnalyticsOptedOut()) return;
   try {
     const session_key = getSessionKey();
+    const visitor_id = getVisitorId();
     const utm = captureUtm();
     const body = {
       session_key,
+      visitor_id,
       user_id: lastUserId,
       event_type: type,
       path: payload.path ?? window.location.pathname,

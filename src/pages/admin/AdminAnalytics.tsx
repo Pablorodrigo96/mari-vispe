@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { Users, Eye, UserPlus, Target, Loader2, TrendingUp, Globe, Clock, Activity, MousePointerClick, LogOut, Smartphone, Repeat, Layers } from "lucide-react";
 import { TrackingHealthCard } from "@/components/admin/analytics/TrackingHealthCard";
+import { VisitorsSection } from "@/components/admin/analytics/VisitorsSection";
 import { InfoHint } from "@/components/admin/analytics/InfoHint";
 import { analyticsTooltips as T } from "@/lib/analyticsTooltips";
 
@@ -46,7 +47,7 @@ function CardTitle({ icon, label, hint }: { icon: React.ReactNode; label: string
 export default function AdminAnalytics() {
   const [range, setRange] = useState<AnalyticsRange>(30);
   const a = useAdminAnalytics(range);
-  const { daily, topPages, sources, growth, longSessions, leadsSeries, funnel, devices, browsers, heatmap, exitPages, cta, retention } = a;
+  const { daily, topPages, sources, growth, longSessions, leadsSeries, funnel, devices, browsers, heatmap, exitPages, cta, retention, visitorsDaily, sourcesSplit, newVsReturning, newVisitorConversion } = a;
 
   const dailyWindow = useMemo(() => sliceLast(daily.data ?? [], range), [daily.data, range]);
   const growthWindow = useMemo(() => sliceLast(growth.data ?? [], range), [growth.data, range]);
@@ -110,6 +111,15 @@ export default function AdminAnalytics() {
 
         {/* Saúde do tracking */}
         <TrackingHealthCard />
+
+        {/* Visitantes — Novos vs Recorrentes */}
+        <VisitorsSection
+          range={range}
+          visitorsDaily={visitorsDaily.data ?? []}
+          newVsReturning={newVsReturning.data ?? []}
+          sourcesSplit={sourcesSplit.data ?? []}
+          conversion={newVisitorConversion.data}
+        />
 
         {/* Visão geral — KPIs */}
         <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-semibold pt-2">Visão geral</h2>

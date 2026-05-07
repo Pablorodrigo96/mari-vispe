@@ -156,6 +156,47 @@ export function useAdminAnalytics(range: AnalyticsRange = 30) {
     },
   });
 
+  const visitorsDaily = useQuery({
+    queryKey: ["admin-analytics", "visitors-daily"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("v_analytics_visitors_daily" as any).select("*");
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  const sourcesSplit = useQuery({
+    queryKey: ["admin-analytics", "sources-split"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("v_analytics_sources_split" as any).select("*").limit(20);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  const newVsReturning = useQuery({
+    queryKey: ["admin-analytics", "new-vs-returning"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("v_analytics_new_vs_returning" as any).select("*");
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  const newVisitorConversion = useQuery({
+    queryKey: ["admin-analytics", "new-visitor-conversion"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("v_analytics_new_visitor_conversion" as any).select("*").maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+  });
+
   return { daily, topPages, sources, growth, longSessions, leadsSeries,
-    funnel, devices, browsers, heatmap, exitPages, cta, retention };
+    funnel, devices, browsers, heatmap, exitPages, cta, retention,
+    visitorsDaily, sourcesSplit, newVsReturning, newVisitorConversion };
 }
