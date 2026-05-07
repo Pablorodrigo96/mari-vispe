@@ -18,6 +18,7 @@ export type BenchmarkKey =
   | 'Indústria'
   | 'Varejo'
   | 'Serviços'
+  | 'Telecom'
   | 'Outros';
 
 export interface SectorOption {
@@ -33,9 +34,9 @@ export interface SectorOption {
  */
 export const SECTOR_OPTIONS: SectorOption[] = [
   // === Foco mari ===
-  { label: 'Tecnologia & Telecom (ISP / Provedores de Internet)', benchmarkKey: 'SaaS' },
+  { label: 'Tecnologia & Telecom (ISP / Provedores de Internet)', benchmarkKey: 'Telecom' },
   { label: 'Tecnologia (Software / SaaS)', benchmarkKey: 'SaaS' },
-  { label: 'Telecom (Operadoras / Infraestrutura)', benchmarkKey: 'SaaS' },
+  { label: 'Telecom (Operadoras / Infraestrutura)', benchmarkKey: 'Telecom' },
   { label: 'TI / Outsourcing / Data Center', benchmarkKey: 'Serviços' },
 
   // === Financeiro ===
