@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const SESSION_KEY = "analytics_session_key";
+const VISITOR_KEY = "analytics_visitor_id";
 const UTM_KEY = "analytics_utm_v1";
 const CONSENT_KEY = "vispe_cookie_consent";
 
