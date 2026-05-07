@@ -111,6 +111,15 @@ export default function AdminAnalytics() {
         {/* Saúde do tracking */}
         <TrackingHealthCard />
 
+        {/* Visitantes — Novos vs Recorrentes */}
+        <VisitorsSection
+          range={range}
+          visitorsDaily={visitorsDaily.data ?? []}
+          newVsReturning={newVsReturning.data ?? []}
+          sourcesSplit={sourcesSplit.data ?? []}
+          conversion={newVisitorConversion.data}
+        />
+
         {/* Visão geral — KPIs */}
         <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-semibold pt-2">Visão geral</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
