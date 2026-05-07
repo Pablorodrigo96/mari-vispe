@@ -208,7 +208,9 @@ export function useAnatelMarketRadius() {
         for (const cp of fp.cityPoints) seedPoints.push({ lat: cp.lat, lng: cp.lng });
       }
 
-      const providers: MarketProvider[] = Array.from(provMap.values()).map((a) => {
+      const providers: MarketProvider[] = Array.from(provMap.values())
+        .filter((a) => a.acessos >= MIN_ACESSOS_CANDIDATE && !isBigTelco(a.empresa, a.cnpj))
+        .map((a) => {
         // Âncora do pino: cidade do candidato com mais acessos dentro da área
         const anchor = a.cityCells.reduce(
           (best, cur) => (cur.acessos > best.acessos ? cur : best),
