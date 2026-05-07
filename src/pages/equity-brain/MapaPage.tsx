@@ -386,6 +386,32 @@ export default function MapaPage() {
                               }))
                           : null
                       }
+                      buyerSeedPoints={
+                        hasMarketResult
+                          ? (() => {
+                              const useAll = buyerCnpjs.size === 0;
+                              const out: { lat: number; lng: number; cidade: string; estado: string }[] = [];
+                              const seen = new Set<string>();
+                              selectedProviders.forEach((p, idx) => {
+                                if (!useAll && !buyerCnpjs.has(p.cnpj)) return;
+                                const rows = footprintQs[idx]?.data ?? [];
+                                for (const r of rows) {
+                                  const k = r.codigo_ibge_cidade
+                                    ? `ibge:${r.codigo_ibge_cidade}`
+                                    : `nm:${(r.cidade || "").toLowerCase()}|${r.estado}`;
+                                  if (seen.has(k)) continue;
+                                  seen.add(k);
+                                  let coord = getCoordsByIbge(r.codigo_ibge_cidade);
+                                  if (!coord) coord = getCoordinates(r.cidade, r.estado) ?? null;
+                                  if (!coord) coord = stateCapitals[r.estado] ?? null;
+                                  if (!coord) continue;
+                                  out.push({ lat: coord.lat, lng: coord.lng, cidade: r.cidade, estado: r.estado });
+                                }
+                              });
+                              return out;
+                            })()
+                          : null
+                      }
                       height="calc(100vh - 380px)"
                     />
                   </div>
