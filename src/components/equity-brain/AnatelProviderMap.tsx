@@ -239,6 +239,28 @@ export function AnatelProviderMap({ layers, marketCandidates, buyerSeedPoints, h
       });
     });
 
+    // ---- Cidades-semente do comprador (anéis laranja pontilhados) ----
+    if (buyerSeedPoints && buyerSeedPoints.length && marketCandidates && marketCandidates.length) {
+      const SEED_COLOR = "#FB923C";
+      for (const s of buyerSeedPoints) {
+        if (!isFinite(s.lat) || !isFinite(s.lng)) continue;
+        const ring = L.circleMarker([s.lat, s.lng], {
+          radius: 7,
+          color: SEED_COLOR,
+          weight: 2,
+          fillColor: SEED_COLOR,
+          fillOpacity: 0,
+          dashArray: "3 3",
+        });
+        ring.bindTooltip(
+          `<div style="font-size:11px"><b>${s.cidade}/${s.estado}</b><br/>Cidade-semente — comprador atende aqui</div>`,
+          { direction: "top" },
+        );
+        ring.addTo(group);
+        allPoints.push([s.lat, s.lng]);
+      }
+    }
+
     // ---- Candidatos complementares (cor distinta, sem círculo de raio) ----
     if (marketCandidates && marketCandidates.length) {
       for (const c of marketCandidates) {
