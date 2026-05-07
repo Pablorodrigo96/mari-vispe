@@ -333,6 +333,16 @@ export function AnatelProviderMap({ layers, marketCandidates, buyerSeedPoints, h
               <span className="text-zinc-500 shrink-0 ml-auto">{marketCandidates.length}</span>
             </div>
           )}
+          {buyerSeedPoints && buyerSeedPoints.length > 0 && marketCandidates && marketCandidates.length > 0 && (
+            <div className="flex items-center gap-2 text-[11px] text-zinc-200 border-t border-zinc-700/60 pt-1 mt-1">
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full shrink-0 border-2"
+                style={{ borderColor: "#FB923C", background: "transparent" }}
+              />
+              <span className="font-semibold truncate">Cidades-semente do comprador</span>
+              <span className="text-zinc-500 shrink-0 ml-auto">{buyerSeedPoints.length}</span>
+            </div>
+          )}
         </div>
       )}
       {approxCount > 0 && (
