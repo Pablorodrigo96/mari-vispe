@@ -152,6 +152,7 @@ export type Database = {
           session_key: string | null
           title: string | null
           user_id: string | null
+          visitor_id: string | null
         }
         Insert: {
           created_at?: string
@@ -164,6 +165,7 @@ export type Database = {
           session_key?: string | null
           title?: string | null
           user_id?: string | null
+          visitor_id?: string | null
         }
         Update: {
           created_at?: string
@@ -176,6 +178,7 @@ export type Database = {
           session_key?: string | null
           title?: string | null
           user_id?: string | null
+          visitor_id?: string | null
         }
         Relationships: []
       }
@@ -185,6 +188,7 @@ export type Database = {
           device: string | null
           first_seen_at: string
           id: string
+          is_new_visitor: boolean | null
           last_seen_at: string
           referrer: string | null
           session_key: string
@@ -193,12 +197,14 @@ export type Database = {
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
+          visitor_id: string | null
         }
         Insert: {
           country?: string | null
           device?: string | null
           first_seen_at?: string
           id?: string
+          is_new_visitor?: boolean | null
           last_seen_at?: string
           referrer?: string | null
           session_key: string
@@ -207,12 +213,14 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          visitor_id?: string | null
         }
         Update: {
           country?: string | null
           device?: string | null
           first_seen_at?: string
           id?: string
+          is_new_visitor?: boolean | null
           last_seen_at?: string
           referrer?: string | null
           session_key?: string
@@ -221,6 +229,7 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          visitor_id?: string | null
         }
         Relationships: []
       }
@@ -4368,11 +4377,42 @@ export type Database = {
         }
         Relationships: []
       }
+      v_analytics_new_visitor_conversion: {
+        Row: {
+          became_authenticated: number | null
+          leads: number | null
+          new_visitors: number | null
+          signups: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_new_vs_returning: {
+        Row: {
+          new_visitors: number | null
+          returning_visitors: number | null
+          total_visitors: number | null
+          window_days: number | null
+        }
+        Relationships: []
+      }
       v_analytics_retention: {
         Row: {
           cohort: number | null
           d1_pct: number | null
           d7_pct: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_sources_split: {
+        Row: {
+          authenticated_visitors: number | null
+          leads_new: number | null
+          new_visitors: number | null
+          returning_visitors: number | null
+          sessions_new: number | null
+          sessions_returning: number | null
+          signups_new: number | null
+          source: string | null
         }
         Relationships: []
       }
@@ -4399,6 +4439,17 @@ export type Database = {
           cumulative_users: number | null
           day: string | null
           new_users: number | null
+        }
+        Relationships: []
+      }
+      v_analytics_visitors_daily: {
+        Row: {
+          authenticated_visitors: number | null
+          day: string | null
+          new_visitors: number | null
+          returning_visitors: number | null
+          sessions: number | null
+          total_visitors: number | null
         }
         Relationships: []
       }
