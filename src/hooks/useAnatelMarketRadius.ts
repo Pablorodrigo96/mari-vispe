@@ -14,7 +14,8 @@ export interface SeedCity {
 export interface SelectedFootprint {
   cnpj: string;
   cities: Set<string>; // chave ibge:<code> ou nm:<cidade.lower()>|<uf>
-  centroid: { lat: number; lng: number };
+  /** Pontos das cidades atendidas pelo comprador — usados como sementes individuais para distância. */
+  cityPoints: { key: string; lat: number; lng: number; cidade?: string; estado?: string }[];
 }
 
 export interface MarketCell {
