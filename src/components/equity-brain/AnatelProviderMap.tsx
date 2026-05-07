@@ -28,9 +28,17 @@ export interface MarketCandidate {
   distMinKm: number;
 }
 
+export interface BuyerSeedPoint {
+  lat: number;
+  lng: number;
+  cidade: string;
+  estado: string;
+}
+
 interface Props {
   layers: ProviderLayer[];
   marketCandidates?: MarketCandidate[] | null;
+  buyerSeedPoints?: BuyerSeedPoint[] | null;
   height?: string;
 }
 
@@ -65,7 +73,7 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-export function AnatelProviderMap({ layers, marketCandidates, height = "70vh" }: Props) {
+export function AnatelProviderMap({ layers, marketCandidates, buyerSeedPoints, height = "70vh" }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
@@ -231,6 +239,28 @@ export function AnatelProviderMap({ layers, marketCandidates, height = "70vh" }:
       });
     });
 
+    // ---- Cidades-semente do comprador (anéis laranja pontilhados) ----
+    if (buyerSeedPoints && buyerSeedPoints.length && marketCandidates && marketCandidates.length) {
+      const SEED_COLOR = "#FB923C";
+      for (const s of buyerSeedPoints) {
+        if (!isFinite(s.lat) || !isFinite(s.lng)) continue;
+        const ring = L.circleMarker([s.lat, s.lng], {
+          radius: 7,
+          color: SEED_COLOR,
+          weight: 2,
+          fillColor: SEED_COLOR,
+          fillOpacity: 0,
+          dashArray: "3 3",
+        });
+        ring.bindTooltip(
+          `<div style="font-size:11px"><b>${s.cidade}/${s.estado}</b><br/>Cidade-semente — comprador atende aqui</div>`,
+          { direction: "top" },
+        );
+        ring.addTo(group);
+        allPoints.push([s.lat, s.lng]);
+      }
+    }
+
     // ---- Candidatos complementares (cor distinta, sem círculo de raio) ----
     if (marketCandidates && marketCandidates.length) {
       for (const c of marketCandidates) {
@@ -272,7 +302,7 @@ export function AnatelProviderMap({ layers, marketCandidates, height = "70vh" }:
       const bounds = L.latLngBounds(allPoints);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
     }
-  }, [resolvedLayers, marketCandidates, overlapInfo]);
+  }, [resolvedLayers, marketCandidates, buyerSeedPoints, overlapInfo]);
 
   const approxCount = resolvedLayers.reduce(
     (acc, l) => acc + l.resolved.filter((r) => r.approx).length, 0,
@@ -301,6 +331,16 @@ export function AnatelProviderMap({ layers, marketCandidates, height = "70vh" }:
               />
               <span className="font-semibold truncate">Candidatos complementares</span>
               <span className="text-zinc-500 shrink-0 ml-auto">{marketCandidates.length}</span>
+            </div>
+          )}
+          {buyerSeedPoints && buyerSeedPoints.length > 0 && marketCandidates && marketCandidates.length > 0 && (
+            <div className="flex items-center gap-2 text-[11px] text-zinc-200 border-t border-zinc-700/60 pt-1 mt-1">
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full shrink-0 border-2"
+                style={{ borderColor: "#FB923C", background: "transparent" }}
+              />
+              <span className="font-semibold truncate">Cidades-semente do comprador</span>
+              <span className="text-zinc-500 shrink-0 ml-auto">{buyerSeedPoints.length}</span>
             </div>
           )}
         </div>

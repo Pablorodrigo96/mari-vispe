@@ -116,26 +116,20 @@ export default function MapaPage() {
       const selectedFootprints: SelectedFootprint[] = selectedProviders.map((p, idx) => {
         const rows = footprintQs[idx]?.data ?? [];
         const cities = new Set<string>();
-        let sumLatW = 0, sumLngW = 0, sumW = 0;
+        const cityPoints: SelectedFootprint["cityPoints"] = [];
         for (const r of rows) {
           const k = r.codigo_ibge_cidade
             ? `ibge:${r.codigo_ibge_cidade}`
             : `nm:${(r.cidade || "").toLowerCase()}|${r.estado}`;
+          if (cities.has(k)) continue;
           cities.add(k);
           let coord = getCoordsByIbge(r.codigo_ibge_cidade);
           if (!coord) coord = getCoordinates(r.cidade, r.estado) ?? null;
           if (!coord) coord = stateCapitals[r.estado] ?? null;
           if (!coord) continue;
-          const w = Math.max(r.acessos_empresa ?? 0, 1);
-          sumLatW += coord.lat * w;
-          sumLngW += coord.lng * w;
-          sumW += w;
+          cityPoints.push({ key: k, lat: coord.lat, lng: coord.lng, cidade: r.cidade, estado: r.estado });
         }
-        return {
-          cnpj: p.cnpj,
-          cities,
-          centroid: { lat: sumW ? sumLatW / sumW : 0, lng: sumW ? sumLngW / sumW : 0 },
-        };
+        return { cnpj: p.cnpj, cities, cityPoints };
       });
 
       const res = await marketSearch.mutateAsync({
@@ -390,6 +384,32 @@ export default function MapaPage() {
                                 acessos: p.acessos,
                                 distMinKm: p.distMinKm,
                               }))
+                          : null
+                      }
+                      buyerSeedPoints={
+                        hasMarketResult
+                          ? (() => {
+                              const useAll = buyerCnpjs.size === 0;
+                              const out: { lat: number; lng: number; cidade: string; estado: string }[] = [];
+                              const seen = new Set<string>();
+                              selectedProviders.forEach((p, idx) => {
+                                if (!useAll && !buyerCnpjs.has(p.cnpj)) return;
+                                const rows = footprintQs[idx]?.data ?? [];
+                                for (const r of rows) {
+                                  const k = r.codigo_ibge_cidade
+                                    ? `ibge:${r.codigo_ibge_cidade}`
+                                    : `nm:${(r.cidade || "").toLowerCase()}|${r.estado}`;
+                                  if (seen.has(k)) continue;
+                                  seen.add(k);
+                                  let coord = getCoordsByIbge(r.codigo_ibge_cidade);
+                                  if (!coord) coord = getCoordinates(r.cidade, r.estado) ?? null;
+                                  if (!coord) coord = stateCapitals[r.estado] ?? null;
+                                  if (!coord) continue;
+                                  out.push({ lat: coord.lat, lng: coord.lng, cidade: r.cidade, estado: r.estado });
+                                }
+                              });
+                              return out;
+                            })()
                           : null
                       }
                       height="calc(100vh - 380px)"

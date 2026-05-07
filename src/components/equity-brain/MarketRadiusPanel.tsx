@@ -76,6 +76,9 @@ export function MarketRadiusPanel({
           onValueChange={(v) => onRadiusChange(v[0])}
           disabled={disabled}
         />
+        <div className="text-[10px] text-zinc-500 mt-1 leading-snug">
+          Aplicado a <b className="text-zinc-400">cada cidade</b> do comprador (A, B, C…). Sobreposição entre raios é permitida.
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -130,7 +133,7 @@ export function MarketRadiusPanel({
           {top.length > 0 && (
             <div>
               <div className="text-[11px] text-zinc-400 font-semibold mb-1.5">
-                Top {visible.length} complementares <span className="text-zinc-600 font-normal">(menor overlap + proximidade)</span>
+                Top {visible.length} complementares <span className="text-zinc-600 font-normal">(multi-seed: cada cidade do comprador conta)</span>
               </div>
               <div className="max-h-72 overflow-auto space-y-1 pr-1">
                 {visible.map((p, i) => {
