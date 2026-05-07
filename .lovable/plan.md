@@ -1,49 +1,77 @@
 ## Objetivo
 
-Garantir que a busca de "candidatos complementares" no mapa Anatel:
-- use **todas as cidades atendidas pelo comprador** como sementes (já ok no filtro, mas reforçar no score),
-- meça proximidade **cidade-mais-próxima ↔ cidade-mais-próxima** (e não centroide-a-centroide),
-- mostre visualmente as cidades-semente do comprador para o usuário enxergar o que originou cada candidato.
+Filtrar do ranking e do mapa de "candidatos complementares" (Anatel) os provedores que não fazem sentido para M&A:
+- **Big Telcos**: Vivo, Claro, Tim, Oi (e variações de razão social).
+- **Muito pequenos**: provedores com `acessos` totais (somados nas cidades dentro da área) **< 1.000**.
 
 ## Mudanças
 
-### 1. `src/hooks/useAnatelMarketRadius.ts` — distância e overlap por cidade
+### 1. `src/hooks/useAnatelMarketRadius.ts`
 
-- Trocar `selectedFootprints[].centroid` por **`selectedFootprints[].cityPoints: {key, lat, lng}[]`** (lista de pontos das cidades do comprador, com chave `ibge:` ou `nm:`).
-- Em `MarketProvider`, manter `cnpj/empresa/acessos/cidades/overlapCidades/score`, mas:
-  - `distMinKm` passa a ser **min distância** entre **qualquer cidade do candidato** (`MarketCell` agregada) e **qualquer cidade do comprador** (`cityPoints`). Bem menor que centroide-a-centroide e fiel ao "está a 50km de A".
-  - Calcular também `nearestSeedKm` (igual `distMinKm`, exposto para tooltip).
-- O ponto `(lat, lng)` retornado para o pino do candidato passa a ser **a cidade do candidato com maior nº de acessos dentro da área de busca** (não o centroide ponderado). Isso ancora o pino numa localidade real.
-- `score` mantém a fórmula `60·(1-overlapPct) + 40·proximityScore`, mas `proximityScore = 1 - clamp01(distMinKm / radiusKm)` agora reflete distância real.
+Adicionar uma camada de filtro logo após a agregação por provedor (`provMap`) e antes do cálculo de score/ordenação.
 
-### 2. `src/pages/equity-brain/MapaPage.tsx` — montar `cityPoints` ao invés de centroide
+a) **Constantes no topo do arquivo** (acima do `useAnatelMarketRadius`):
 
-- Em `handleSearchMarket`, substituir o cálculo `sumLatW/sumW` por uma lista `cityPoints[]` resolvida via `getCoordsByIbge → getCoordinates → stateCapitals`.
-- Manter `excludeCnpjs` e `seeds` como hoje (`buildSeeds()` já está correto e cobre A, B, C, …).
+```ts
+const BIG_TELCO_CNPJ_ROOTS = new Set<string>([
+  "40432544", // Vivo / Telefônica Brasil
+  "02558157", // Vivo (legado)
+  "76535764", // Claro / Embratel
+  "40432544", // (placeholder caso já exista)
+  "02421421", // Tim
+  "76535764",
+  "33000118", // Oi (Telemar)
+  "76535764",
+  "05423963", // Oi Móvel
+  "33530486", // Oi (legado)
+]);
 
-### 3. `src/components/equity-brain/AnatelProviderMap.tsx` — feedback visual das sementes
+const BIG_TELCO_NAME_PATTERNS = [
+  /\bvivo\b/i,
+  /telef[oô]nica\b/i,
+  /\bclaro\b/i,
+  /embratel/i,
+  /\btim\b/i,
+  /\boi\b\s*(s\.?a|m[oó]vel|fixa)?/i,
+  /telemar/i,
+  /algar\s*tele/i,
+  /sercomtel/i,
+];
 
-- Adicionar prop opcional **`buyerSeedPoints?: { lat:number; lng:number; cidade:string; estado:string }[]`**.
-- Quando presente e `marketCandidates` também presente, desenhar essas cidades como **anel pontilhado laranja `#FB923C` raio 6, fillOpacity 0**, sem texto, apenas tooltip "Cidade-semente — comprador atende aqui". Não interferir com os markers existentes.
-- Atualizar a legenda do canto superior direito com a linha "Cidades-semente do comprador" quando aplicável.
-- Continuar **sem círculo de raio** (decisão anterior mantida).
+const MIN_ACESSOS_CANDIDATE = 1000;
 
-### 4. `src/components/equity-brain/MarketRadiusPanel.tsx` — copy
+function isBigTelco(empresa: string, cnpj: string): boolean {
+  const root = (cnpj || "").replace(/\D/g, "").slice(0, 8);
+  if (BIG_TELCO_CNPJ_ROOTS.has(root)) return true;
+  const name = String(empresa || "");
+  return BIG_TELCO_NAME_PATTERNS.some((re) => re.test(name));
+}
+```
 
-- Trocar a label do top-N para `"Top N complementares (multi-seed: cada cidade do comprador conta)"`.
-- No tooltip do botão "Buscar empresas no raio", deixar explícito que o raio é aplicado a **cada cidade do comprador**, não a um centro único.
-- Mostrar um sub-título acima do slider: `"Raio aplicado a cada cidade do comprador (A, B, C…). Sobreposição entre raios é permitida."`.
+b) **Aplicar filtro** no `Array.from(provMap.values()).map(...)`:
 
-### 5. Tooltip do candidato no `AnatelProviderMap`
+- Antes do `.map`, fazer `.filter((a) => a.acessos >= MIN_ACESSOS_CANDIDATE && !isBigTelco(a.empresa, a.cnpj))`.
+- Garante que big telcos e provedores < 1.000 acessos **não aparecem nem no ranking nem no mapa** (já que `MarketCandidate` é montado a partir do mesmo array no `MapaPage.tsx`).
 
-- Adicionar linha `Mais próximo de: {cidadeSemente}/{UF} (~{distMinKm} km)` quando os `cityPoints` chegam por `marketCandidates`. Calcular no momento de plotar.
+c) **Retorno**: incluir contagem opcional `excludedBigTelcos` e `excludedSmall` no resultado para debug futuro (sem usar agora). Fora do escopo se atrapalhar — deixar comentado.
 
-## Não muda
+### 2. `src/components/equity-brain/MarketRadiusPanel.tsx`
 
-- O conjunto de cidades elegíveis (`citiesWithinRadius`) já é multi-semente — não mexer nessa parte.
-- Cores: candidato segue violeta `MARKET_CANDIDATE_COLOR`, slots seguem `ANATEL_SLOT_COLORS`, overlap segue vermelho.
-- Edge function `anatel-query` não muda (continua recebendo lista de IBGEs e UF opcional).
+Atualizar o subtítulo/tooltip para deixar explícito o filtro:
+
+- Adicionar microcopy abaixo do título "Buscar empresas no raio":
+  `"Excluindo grandes operadoras (Vivo, Claro, Tim, Oi) e provedores com menos de 1.000 acessos."`
+
+### 3. Não muda
+
+- `MapaPage.tsx` não precisa de mudança: ele consome `result.providers` como `marketCandidates`, então o filtro no hook já retira os pinos do mapa.
+- `AnatelProviderMap.tsx` não muda.
+- Edge function `anatel-query` não muda.
 
 ## Resultado esperado
 
-Após aprovação: ao marcar um comprador com cidades A/B/C e raio 50 km, o mapa mostra (i) anéis laranja pontilhados em A/B/C, (ii) candidatos plotados na cidade real mais relevante deles dentro da área, (iii) ranking ordenado por menor overlap + menor distância **à semente mais próxima**, e (iv) tooltip explicitando de qual cidade-semente o candidato está perto.
+Após aprovação: ao buscar candidatos no raio, big telcos (Vivo/Claro/Tim/Oi/Embratel/Telemar) e provedores < 1.000 acessos são removidos antes do ranking. O mapa só mostra ISPs relevantes para M&A, e o painel exibe a regra ativa.
+
+## Pergunta opcional
+
+Se quiser, posso transformar o threshold de 1.000 acessos em um **slider configurável** no `MarketRadiusPanel` (range 0–10.000, padrão 1.000), para você ajustar caso a caso. Hoje fica fixo em 1.000.
