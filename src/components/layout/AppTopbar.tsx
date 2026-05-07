@@ -11,6 +11,8 @@ const ROUTE_LABELS: Record<string, string> = {
   '/marketplace': 'Marketplace',
   '/mapa': 'Mapa de oportunidades',
   '/vender': 'Anunciar empresa',
+  '/vender/simulador-investidor': 'Simulador Investidor',
+  '/vender/due-diligence': 'Simulador Due Diligence',
   '/sell': 'Anunciar empresa',
   '/meus-anuncios': 'Meus anúncios',
   '/meu-perfil': 'Meu perfil',

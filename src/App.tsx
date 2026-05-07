@@ -16,6 +16,8 @@ import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import Sell from "./pages/Sell";
 import Vender from "./pages/Vender";
+import InvestorSimulator from "./pages/sell/InvestorSimulator";
+import DueDiligenceSimulator from "./pages/sell/DueDiligenceSimulator";
 import ListingDetail from "./pages/ListingDetail";
 import MyListings from "./pages/MyListings";
 import ListingCockpit from "./pages/ListingCockpit";
@@ -160,6 +162,8 @@ const App = () => (
               <Route path="/mapa" element={<MapView />} />
               <Route path="/sell" element={<Sell />} />
               <Route path="/vender" element={<Vender />} />
+              <Route path="/vender/simulador-investidor" element={<InvestorSimulator />} />
+              <Route path="/vender/due-diligence" element={<DueDiligenceSimulator />} />
               <Route path="/anuncio/:id" element={<ListingDetail />} />
               <Route path="/valuation" element={<Valuation />} />
               <Route path="/mari" element={<MariCalculator />} />

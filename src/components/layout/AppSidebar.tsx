@@ -5,6 +5,7 @@ import {
   UserSearch, Target, ChartBar, FileText, Award, Calculator, DollarSign,
   Briefcase, Sparkles, Shield, Brain, ChevronDown, LogOut, User, ChevronLeft,
   ChevronRight, BarChart3, FileSignature, Handshake, FileBarChart,
+  TrendingUp, CheckSquare,
 } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,8 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
   const sellChildren: NavChild[] = [
     { name: 'Meus anúncios', href: '/meus-anuncios', icon: ClipboardList },
     { name: 'Anunciar empresa', href: '/vender', icon: Plus },
+    { name: 'Simulador Investidor', href: '/vender/simulador-investidor', icon: TrendingUp },
+    { name: 'Simulador Due Diligence', href: '/vender/due-diligence', icon: CheckSquare },
   ];
   if (isSellerOnly) {
     sellChildren.push({ name: 'Compradores compatíveis', href: '/matching', icon: Target });

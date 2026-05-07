@@ -771,6 +771,45 @@ export type Database = {
         }
         Relationships: []
       }
+      due_diligence_audits: {
+        Row: {
+          answers: Json
+          classification: string | null
+          completed: boolean
+          created_at: string
+          id: string
+          score_pct: number
+          total_items: number
+          updated_at: string
+          user_id: string
+          yes_count: number
+        }
+        Insert: {
+          answers?: Json
+          classification?: string | null
+          completed?: boolean
+          created_at?: string
+          id?: string
+          score_pct?: number
+          total_items?: number
+          updated_at?: string
+          user_id: string
+          yes_count?: number
+        }
+        Update: {
+          answers?: Json
+          classification?: string | null
+          completed?: boolean
+          created_at?: string
+          id?: string
+          score_pct?: number
+          total_items?: number
+          updated_at?: string
+          user_id?: string
+          yes_count?: number
+        }
+        Relationships: []
+      }
       eb_pipeline_stages: {
         Row: {
           archived_at: string | null
@@ -962,6 +1001,54 @@ export type Database = {
           investor_whatsapp?: string | null
           listing_id?: string
           ticker?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      investor_sim_attempts: {
+        Row: {
+          abandoned: boolean
+          answers: Json
+          classification: string | null
+          complete_count: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          noinfo_count: number
+          partial_count: number
+          score: number
+          score_final: number
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          abandoned?: boolean
+          answers?: Json
+          classification?: string | null
+          complete_count?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          noinfo_count?: number
+          partial_count?: number
+          score?: number
+          score_final?: number
+          total_questions?: number
+          user_id: string
+        }
+        Update: {
+          abandoned?: boolean
+          answers?: Json
+          classification?: string | null
+          complete_count?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          noinfo_count?: number
+          partial_count?: number
+          score?: number
+          score_final?: number
+          total_questions?: number
           user_id?: string
         }
         Relationships: []
