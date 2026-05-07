@@ -129,9 +129,8 @@ export function useAnatelMarketRadius() {
         empresa: string;
         acessos: number;
         cityKeys: Set<string>;
-        sumLatW: number;
-        sumLngW: number;
-        sumW: number;
+        // cidades do candidato dentro da área de busca, com lat/lng e acessos por cidade
+        cityCells: { key: string; lat: number; lng: number; acessos: number; cidade: string; estado: string }[];
       };
       const provMap = new Map<string, Acc>();
       const excludeSet = new Set((input.excludeCnpjs ?? []).map((c) => c.replace(/\D/g, "")));
@@ -149,25 +148,45 @@ export function useAnatelMarketRadius() {
             empresa: p.empresa,
             acessos: 0,
             cityKeys: new Set<string>(),
-            sumLatW: 0,
-            sumLngW: 0,
-            sumW: 0,
+            cityCells: [],
           };
           cur.acessos += acessos;
-          cur.cityKeys.add(cityKey);
-          const w = Math.max(acessos, 1);
-          cur.sumLatW += c.lat * w;
-          cur.sumLngW += c.lng * w;
-          cur.sumW += w;
+          if (!cur.cityKeys.has(cityKey)) {
+            cur.cityKeys.add(cityKey);
+            cur.cityCells.push({
+              key: cityKey,
+              lat: c.lat,
+              lng: c.lng,
+              acessos,
+              cidade: c.cidade,
+              estado: c.estado,
+            });
+          } else {
+            // soma acessos na cidade existente
+            const existing = cur.cityCells.find((cc) => cc.key === cityKey);
+            if (existing) existing.acessos += acessos;
+          }
           provMap.set(key, cur);
         }
       }
 
       const footprints = input.selectedFootprints ?? [];
+      // União dos pontos-semente (cidades do comprador)
+      const seedPoints: { lat: number; lng: number }[] = [];
+      for (const fp of footprints) {
+        for (const cp of fp.cityPoints) seedPoints.push({ lat: cp.lat, lng: cp.lng });
+      }
+
       const providers: MarketProvider[] = Array.from(provMap.values()).map((a) => {
-        const lat = a.sumW ? a.sumLatW / a.sumW : 0;
-        const lng = a.sumW ? a.sumLngW / a.sumW : 0;
-        // overlap = união das cidades dos slots ∩ cidades do candidato
+        // Âncora do pino: cidade do candidato com mais acessos dentro da área
+        const anchor = a.cityCells.reduce(
+          (best, cur) => (cur.acessos > best.acessos ? cur : best),
+          a.cityCells[0],
+        );
+        const lat = anchor?.lat ?? 0;
+        const lng = anchor?.lng ?? 0;
+
+        // overlap = nº de cidades do candidato que também são cidades de algum slot
         let overlap = 0;
         for (const k of a.cityKeys) {
           for (const fp of footprints) {
@@ -176,13 +195,21 @@ export function useAnatelMarketRadius() {
         }
         const cidades = a.cityKeys.size;
         const overlapPct = cidades ? overlap / cidades : 0;
-        // distância ao slot mais próximo
+
+        // distância: min entre QUALQUER cidade do candidato e QUALQUER cidade-semente
         let distMin = Infinity;
-        for (const fp of footprints) {
-          const d = haversineKm(lat, lng, fp.centroid.lat, fp.centroid.lng);
-          if (d < distMin) distMin = d;
+        if (seedPoints.length && a.cityCells.length) {
+          for (const cc of a.cityCells) {
+            for (const sp of seedPoints) {
+              const d = haversineKm(cc.lat, cc.lng, sp.lat, sp.lng);
+              if (d < distMin) distMin = d;
+              if (distMin === 0) break;
+            }
+            if (distMin === 0) break;
+          }
         }
         if (!isFinite(distMin)) distMin = 0;
+
         const proximityScore = 1 - clamp01(distMin / Math.max(input.radiusKm, 1));
         const compScore = 1 - overlapPct;
         const score = Math.round((60 * compScore + 40 * proximityScore) * 100) / 100;
