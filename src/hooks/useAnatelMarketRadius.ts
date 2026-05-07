@@ -57,6 +57,37 @@ function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number) {
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
+// Big telcos a serem excluídas dos candidatos M&A (raiz CNPJ — 8 primeiros dígitos)
+const BIG_TELCO_CNPJ_ROOTS = new Set<string>([
+  "02558157", // Telefônica Brasil (Vivo)
+  "76535764", // Claro
+  "33530486", // Embratel
+  "02421421", // TIM
+  "33000118", // Oi (Telemar)
+  "05423963", // Oi Móvel
+  "40432544", // Telemar Norte Leste
+]);
+
+const BIG_TELCO_NAME_PATTERNS: RegExp[] = [
+  /\bvivo\b/i,
+  /telef[oô]nica/i,
+  /\bclaro\b\s*s\.?\s*a/i,
+  /^\s*claro\s/i,
+  /embratel/i,
+  /\btim\s*(s\.?a|brasil|celular)?/i,
+  /\boi\s+(s\.?a|m[oó]vel|fixa)/i,
+  /telemar/i,
+];
+
+const MIN_ACESSOS_CANDIDATE = 1000;
+
+function isBigTelco(empresa: string, cnpj: string): boolean {
+  const root = (cnpj || "").replace(/\D/g, "").slice(0, 8);
+  if (root && BIG_TELCO_CNPJ_ROOTS.has(root)) return true;
+  const name = String(empresa || "");
+  return BIG_TELCO_NAME_PATTERNS.some((re) => re.test(name));
+}
+
 /** Resolve, no cliente, todos os códigos IBGE cuja cidade está dentro do raio
  *  de qualquer cidade-semente. Inclui as próprias sementes. */
 export function citiesWithinRadius(seeds: SeedCity[], radiusKm: number): string[] {
@@ -177,7 +208,9 @@ export function useAnatelMarketRadius() {
         for (const cp of fp.cityPoints) seedPoints.push({ lat: cp.lat, lng: cp.lng });
       }
 
-      const providers: MarketProvider[] = Array.from(provMap.values()).map((a) => {
+      const providers: MarketProvider[] = Array.from(provMap.values())
+        .filter((a) => a.acessos >= MIN_ACESSOS_CANDIDATE && !isBigTelco(a.empresa, a.cnpj))
+        .map((a) => {
         // Âncora do pino: cidade do candidato com mais acessos dentro da área
         const anchor = a.cityCells.reduce(
           (best, cur) => (cur.acessos > best.acessos ? cur : best),

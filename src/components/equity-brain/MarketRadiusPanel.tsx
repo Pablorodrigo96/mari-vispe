@@ -113,6 +113,10 @@ export function MarketRadiusPanel({
         )}
       </div>
 
+      <p className="text-[10px] text-zinc-500 leading-snug">
+        Excluindo grandes operadoras (Vivo, Claro, TIM, Oi, Embratel) e provedores com menos de 1.000 acessos.
+      </p>
+
       {result && (
         <>
           <div className="grid grid-cols-3 gap-2">
