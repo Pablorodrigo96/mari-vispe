@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Brain, Target, ShieldAlert } from 'lucide-react';
+import { Brain, Target, EyeOff } from 'lucide-react';
 
 const items = [
   {
@@ -13,9 +13,9 @@ const items = [
     body: 'Você vê quais variáveis pesaram (SHAP): receita, margem, idade, setor, momento. Sem caixa-preta.',
   },
   {
-    Icon: ShieldAlert,
-    title: 'Abstenção quando não sabe',
-    body: 'Quando os dados não são suficientes, a mari avisa e se cala — em vez de inventar um número que parece bom.',
+    Icon: EyeOff,
+    title: 'Sigilo total',
+    body: 'Sua empresa nunca aparece publicamente com nome real. Codinome, NDA obrigatório e controle total de quem vê seus dados — sempre.',
   },
 ];
 
