@@ -98,7 +98,7 @@ const Sell = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mt-10 max-w-4xl mx-auto">
             {stats.map((stat, index) => (
               <motion.div 
                 key={index} 
