@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowRight, Clock, Wallet, Users } from 'lucide-react';
+import { ArrowRight, Clock, Wallet, Users, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
@@ -73,7 +73,7 @@ const Index = () => {
           <HeroCarousel />
 
           <motion.div
-            className="mt-20 lg:mt-24 grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5"
+            className="mt-20 lg:mt-24 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -83,6 +83,7 @@ const Index = () => {
               { icon: Clock, label: 'Janela', text: 'Se sua empresa está em janela de venda nos próximos 12 meses.' },
               { icon: Wallet, label: 'Valor', text: 'Quanto ela pode valer no mercado de M&A hoje.' },
               { icon: Users, label: 'Comprador', text: 'Quem são os compradores prováveis olhando para o seu setor.' },
+              { icon: EyeOff, label: 'Sigilo', text: 'Sócios, concorrentes e funcionários nunca saberão que você está aqui. Tudo anônimo.' },
             ].map((item, i) => (
               <motion.div
                 key={i}
