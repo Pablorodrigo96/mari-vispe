@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Linkedin, Instagram, Youtube } from 'lucide-react';
+import { Linkedin, Instagram, Youtube, ShieldCheck, EyeOff, FileSignature } from 'lucide-react';
 import vispeLogo from '@/assets/vispe-logo-branco.png';
 import { MariLogo, MariWatermark } from '@/components/brand/MariLogo';
 
@@ -35,6 +35,29 @@ export function Footer() {
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="h-px w-full bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+
+      {/* Confidentiality seal banner */}
+      <div className="border-b border-primary-foreground/10 bg-primary-foreground/[0.02]">
+        <div className="container mx-auto px-4 lg:px-8 py-4">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 text-center">
+            <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-primary-foreground/80">
+              <ShieldCheck className="h-4 w-4 text-accent shrink-0" />
+              <span className="font-semibold">Plataforma 100% sigilosa</span>
+            </div>
+            <span className="hidden md:inline text-primary-foreground/20">·</span>
+            <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-primary-foreground/70">
+              <EyeOff className="h-4 w-4 text-accent shrink-0" />
+              <span>Codinome anônimo</span>
+            </div>
+            <span className="hidden md:inline text-primary-foreground/20">·</span>
+            <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-primary-foreground/70">
+              <FileSignature className="h-4 w-4 text-accent shrink-0" />
+              <span>NDA obrigatório · Conformidade LGPD</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-4 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand */}

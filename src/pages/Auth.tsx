@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Mail, Lock, ArrowLeft, User, Phone, Check, Store } from 'lucide-react';
+import { Building2, Mail, Lock, ArrowLeft, User, Phone, Check, Store, ShieldCheck } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
 import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
@@ -473,6 +473,15 @@ export default function Auth() {
               </form>
             </TabsContent>
           </Tabs>
+        </div>
+
+        <div className="mt-4 flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs text-foreground/85">
+          <ShieldCheck className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+          <p className="break-words">
+            <span className="font-semibold">Plataforma 100% sigilosa.</span> Seus dados são anônimos por padrão.
+            Nenhum concorrente, sócio ou funcionário vai saber que você está aqui — sua identidade só é revelada
+            após NDA assinado e sua aprovação.
+          </p>
         </div>
 
         <div className="text-center mt-6">
