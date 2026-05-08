@@ -76,18 +76,18 @@ const Sell = () => {
               Nenhum concorrente, sócio ou funcionário vai saber que você está vendendo. Processo 100% anônimo, com codinome e NDA obrigatório.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-8">
               <Button
                 asChild
                 size="lg"
-                className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold text-lg px-8"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold text-base sm:text-lg px-6 sm:px-8 w-full sm:w-auto"
               >
                 <Link to="/auth?tab=signup&redirect=/vender&role=seller">
                   Criar Conta Grátis
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-5 h-5 ml-2 shrink-0" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 bg-transparent">
+              <Button asChild variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 bg-transparent w-full sm:w-auto">
                 <Link to="/auth?tab=login&redirect=/vender">Já tenho conta</Link>
               </Button>
             </div>
