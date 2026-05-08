@@ -15,7 +15,7 @@ export default function HomeBelowFold() {
       <FeaturedListingsSection />
 
       {/* CTA Section */}
-      <section className="relative py-24 md:py-32 gradient-navy-deep bg-grid-pattern overflow-hidden">
+      <section className="relative py-16 md:py-32 gradient-navy-deep bg-grid-pattern overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_hsla(38,92%,50%,0.08)_0%,_transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_hsla(222,47%,30%,0.12)_0%,_transparent_50%)]" />
         <ParticlesBackground variant="dark" />
@@ -35,7 +35,7 @@ export default function HomeBelowFold() {
           <p className="text-white/50 mb-10 max-w-2xl mx-auto leading-relaxed">
             Anuncie gratuitamente e alcance milhares de compradores e investidores qualificados.
           </p>
-          <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold px-12 h-14 text-lg rounded-xl">
+          <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold px-8 sm:px-12 h-12 sm:h-14 text-base sm:text-lg rounded-xl w-full sm:w-auto max-w-xs sm:max-w-none">
             <Link to="/vender">Anunciar Grátis</Link>
           </Button>
         </motion.div>
