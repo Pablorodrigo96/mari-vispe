@@ -11,127 +11,142 @@ import { CookieConsentBanner } from "@/components/cookies/CookieConsentBanner";
 import { usePageTracking } from "@/hooks/usePageTracking";
 
 const PageTracker = () => { usePageTracking(); return null; };
-import Painel from "./pages/Painel";
+
+// Eager: home + framework essentials. Everything else is code-split on demand.
 import Index from "./pages/Index";
-import Marketplace from "./pages/Marketplace";
-import Sell from "./pages/Sell";
-import Vender from "./pages/Vender";
-import InvestorSimulator from "./pages/sell/InvestorSimulator";
-import DueDiligenceSimulator from "./pages/sell/DueDiligenceSimulator";
-import ListingDetail from "./pages/ListingDetail";
-import MyListings from "./pages/MyListings";
-import ListingCockpit from "./pages/ListingCockpit";
-import MyProfile from "./pages/MyProfile";
-import MyValuations from "./pages/MyValuations";
-import Valuation from "./pages/Valuation";
-import ValuationMultiplos from "./pages/ValuationMultiplos";
-import ValuationDCF from "./pages/ValuationDCF";
-import ValuationCertifier from "./pages/ValuationCertifier";
-import Investors from "./pages/Investors";
-import Capital from "./pages/Capital";
-import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import Terms from "./pages/Terms";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import MapView from "./pages/MapView";
 import NotFound from "./pages/NotFound";
-import Matching from "./pages/Matching";
-import MatchingResults from "./pages/MatchingResults";
-import EditListing from "./pages/EditListing";
-import BlindTeaser from "./pages/BlindTeaser";
-import RegisterBuyer from "./pages/RegisterBuyer";
-import MyCapitalRequests from "./pages/MyCapitalRequests";
-import CapitalRequestDetail from "./pages/CapitalRequestDetail";
-import MariCalculator from "./pages/MariCalculator";
-import AwaitingApproval from "./pages/AwaitingApproval";
-
-// Admin pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdvisorWhatsAppSetup from "./pages/admin/AdvisorWhatsAppSetup";
-import AdminWhatsAppMonitor from "./pages/admin/AdminWhatsAppMonitor";
-import AdminListings from "./pages/admin/AdminListings";
-import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
-import AdminValuations from "./pages/admin/AdminValuations";
-import AdminPartnerships from "./pages/admin/AdminPartnerships";
-import AdminCapital from "./pages/admin/AdminCapital";
-import AdminCapitalProviders from "./pages/admin/AdminCapitalProviders";
-import AdminCRM from "./pages/admin/AdminCRM";
-import MondayImport from "./pages/admin/MondayImport";
-import MondayParity from "./pages/admin/MondayParity";
-import AdvisorsMapping from "./pages/admin/AdvisorsMapping";
-import AdminApiMonitor from "./pages/admin/AdminApiMonitor";
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
-import AdminApprovals from "./pages/admin/AdminApprovals";
-import MatchingBuyers from "./pages/MatchingBuyers";
-import CapitalCase from "./pages/CapitalCase";
-import CapitalBySegment from "./pages/CapitalBySegment";
-import CapitalByCity from "./pages/CapitalByCity";
-import PortfolioPotential from "./pages/PortfolioPotential";
-import PartnerDashboard from "./pages/PartnerDashboard";
-
-// Equity Brain (cockpit interno)
+import { AppShell } from "@/components/layout/AppShell";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { EquityBrainLayout } from "@/components/equity-brain/EquityBrainLayout";
-import EBDashboardPage from "./pages/equity-brain/DashboardPage";
-import EBOportunidadesPage from "./pages/equity-brain/OportunidadesPage";
-import EBBuyersPage from "./pages/equity-brain/BuyersPage";
-import EBTesesPage from "./pages/equity-brain/TesesPage";
-import EBCallsPage from "./pages/equity-brain/CallsPage";
-import EBDealDetailPage from "./pages/equity-brain/DealDetailPage";
-import EBMapaPage from "./pages/equity-brain/MapaPage";
-import EBGrafoPage from "./pages/equity-brain/GrafoPage";
-// Lazy: 3D graph carrega three/react-force-graph-3d só quando a rota é aberta.
+import { RedirectWithParams } from "./components/equity-brain/RedirectWithParams";
+
+// Public / hybrid pages
+const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Terms = lazy(() => import("./pages/Terms"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const AwaitingApproval = lazy(() => import("./pages/AwaitingApproval"));
+const Investors = lazy(() => import("./pages/Investors"));
+const Marketplace = lazy(() => import("./pages/Marketplace"));
+const MapView = lazy(() => import("./pages/MapView"));
+const Sell = lazy(() => import("./pages/Sell"));
+const Vender = lazy(() => import("./pages/Vender"));
+const InvestorSimulator = lazy(() => import("./pages/sell/InvestorSimulator"));
+const DueDiligenceSimulator = lazy(() => import("./pages/sell/DueDiligenceSimulator"));
+const ListingDetail = lazy(() => import("./pages/ListingDetail"));
+const Valuation = lazy(() => import("./pages/Valuation"));
+const MariCalculator = lazy(() => import("./pages/MariCalculator"));
+const ValuationMultiplos = lazy(() => import("./pages/ValuationMultiplos"));
+const ValuationDCF = lazy(() => import("./pages/ValuationDCF"));
+const ValuationCertifier = lazy(() => import("./pages/ValuationCertifier"));
+const Capital = lazy(() => import("./pages/Capital"));
+const Matching = lazy(() => import("./pages/Matching"));
+const BlindTeaser = lazy(() => import("./pages/BlindTeaser"));
+
+// Authenticated user pages
+const Painel = lazy(() => import("./pages/Painel"));
+const MyListings = lazy(() => import("./pages/MyListings"));
+const ListingCockpit = lazy(() => import("./pages/ListingCockpit"));
+const EditListing = lazy(() => import("./pages/EditListing"));
+const MyProfile = lazy(() => import("./pages/MyProfile"));
+const MyValuations = lazy(() => import("./pages/MyValuations"));
+const RegisterBuyer = lazy(() => import("./pages/RegisterBuyer"));
+const MyCapitalRequests = lazy(() => import("./pages/MyCapitalRequests"));
+const CapitalRequestDetail = lazy(() => import("./pages/CapitalRequestDetail"));
+const MatchingResults = lazy(() => import("./pages/MatchingResults"));
+const MatchingBuyers = lazy(() => import("./pages/MatchingBuyers"));
+const PortfolioPotential = lazy(() => import("./pages/PortfolioPotential"));
+const PartnerDashboard = lazy(() => import("./pages/PartnerDashboard"));
+
+// Capital SEO
+const CapitalCase = lazy(() => import("./pages/CapitalCase"));
+const CapitalBySegment = lazy(() => import("./pages/CapitalBySegment"));
+const CapitalByCity = lazy(() => import("./pages/CapitalByCity"));
+
+// Top-level dashboards
+const DashboardExecutivoPage = lazy(() => import("./pages/dashboards/DashboardExecutivoPage"));
+const DashboardMandatoPage = lazy(() => import("./pages/dashboards/DashboardMandatoPage"));
+const DashboardMatchPage = lazy(() => import("./pages/dashboards/DashboardMatchPage"));
+const DashboardNboPage = lazy(() => import("./pages/dashboards/DashboardNboPage"));
+
+// Admin
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdvisorWhatsAppSetup = lazy(() => import("./pages/admin/AdvisorWhatsAppSetup"));
+const AdminWhatsAppMonitor = lazy(() => import("./pages/admin/AdminWhatsAppMonitor"));
+const AdminListings = lazy(() => import("./pages/admin/AdminListings"));
+const AdminSubscriptions = lazy(() => import("./pages/admin/AdminSubscriptions"));
+const AdminValuations = lazy(() => import("./pages/admin/AdminValuations"));
+const AdminPartnerships = lazy(() => import("./pages/admin/AdminPartnerships"));
+const AdminCapital = lazy(() => import("./pages/admin/AdminCapital"));
+const AdminCapitalProviders = lazy(() => import("./pages/admin/AdminCapitalProviders"));
+const AdminCRM = lazy(() => import("./pages/admin/AdminCRM"));
+const MondayImport = lazy(() => import("./pages/admin/MondayImport"));
+const MondayParity = lazy(() => import("./pages/admin/MondayParity"));
+const AdvisorsMapping = lazy(() => import("./pages/admin/AdvisorsMapping"));
+const AdminApiMonitor = lazy(() => import("./pages/admin/AdminApiMonitor"));
+const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
+const AdminApprovals = lazy(() => import("./pages/admin/AdminApprovals"));
+
+// Equity Brain
+const EBDashboardPage = lazy(() => import("./pages/equity-brain/DashboardPage"));
+const EBOportunidadesPage = lazy(() => import("./pages/equity-brain/OportunidadesPage"));
+const EBBuyersPage = lazy(() => import("./pages/equity-brain/BuyersPage"));
+const EBTesesPage = lazy(() => import("./pages/equity-brain/TesesPage"));
+const EBCallsPage = lazy(() => import("./pages/equity-brain/CallsPage"));
+const EBDealDetailPage = lazy(() => import("./pages/equity-brain/DealDetailPage"));
+const EBMapaPage = lazy(() => import("./pages/equity-brain/MapaPage"));
+const EBGrafoPage = lazy(() => import("./pages/equity-brain/GrafoPage"));
 const EBGrafoJarvisPage = lazy(() => import("./pages/equity-brain/GrafoJarvisPage"));
 const EBGrafoJarvisGuiaPage = lazy(() => import("./pages/equity-brain/GrafoJarvisGuiaPage"));
-import EBBoardPage from "./pages/equity-brain/BoardPage";
-import EBShadowPage from "./pages/equity-brain/ShadowPage";
-import CrmHubPage from "./pages/equity-brain/CrmHubPage";
-import PermissionsAdminPage from "./pages/equity-brain/PermissionsAdminPage";
-import MandateDetailPage from "./pages/equity-brain/MandateDetailPage";
-import BuyerDetailPage from "./pages/equity-brain/BuyerDetailPage";
-import AccessAuditPage from "./pages/equity-brain/AccessAuditPage";
-import CrmAuditPage from "./pages/equity-brain/CrmAuditPage";
-import MyCompaniesPage from "./pages/equity-brain/MyCompaniesPage";
-import CrmAssignmentsPage from "./pages/equity-brain/CrmAssignmentsPage";
-import HealthDashboardPage from "./pages/equity-brain/HealthDashboardPage";
-import TodayPage from "./pages/equity-brain/TodayPage";
-import NewsPage from "./pages/equity-brain/NewsPage";
-import ExecutiveDashboardPage from "./pages/equity-brain/ExecutiveDashboardPage";
-import MatchAnalyticsPage from "./pages/equity-brain/MatchAnalyticsPage";
-import MatchInboxPage from "./pages/equity-brain/MatchInboxPage";
-import MatchDetailPage from "./pages/equity-brain/MatchDetailPage";
-import PipelineKanbanPage from "./pages/equity-brain/PipelineKanbanPage";
-import PipelineHistoryPage from "./pages/equity-brain/PipelineHistoryPage";
-import MandateFormPage from "./pages/equity-brain/MandateFormPage";
-import ExportsPage from "./pages/equity-brain/ExportsPage";
-import ImportsPage from "./pages/equity-brain/ImportsPage";
-import IspImportPage from "./pages/equity-brain/IspImportPage";
-import IspSuggestionsPage from "./pages/equity-brain/IspSuggestionsPage";
-import IspMarketPage from "./pages/equity-brain/IspMarketPage";
-import AnatelCruzamentoPage from "./pages/equity-brain/AnatelCruzamentoPage";
-import DisclosuresPage from "./pages/equity-brain/DisclosuresPage";
-import UnifiedDealPage from "./pages/equity-brain/UnifiedDealPage";
-import DashboardExecutivoPage from "./pages/dashboards/DashboardExecutivoPage";
-import DashboardMandatoPage from "./pages/dashboards/DashboardMandatoPage";
-import DashboardMatchPage from "./pages/dashboards/DashboardMatchPage";
-import DashboardNboPage from "./pages/dashboards/DashboardNboPage";
-import QuickFillPage from "./pages/equity-brain/QuickFillPage";
-import PipelinePage from "./pages/equity-brain/PipelinePage";
-import CompradoresPage from "./pages/equity-brain/CompradoresPage";
-import MandatosTablePage from "./pages/equity-brain/MandatosTablePage";
-import { RedirectWithParams } from "./components/equity-brain/RedirectWithParams";
-import DashboardCoveragePage from "./pages/equity-brain/DashboardCoveragePage";
-import DedupeAdminPage from "./pages/equity-brain/DedupeAdminPage";
-import BenchmarkPage from "./pages/equity-brain/admin/BenchmarkPage";
-import BuyerClassificationPage from "./pages/equity-brain/admin/BuyerClassificationPage";
-import RfbHubPage from "./pages/equity-brain/admin/RfbHubPage";
-import PropostasPage from "./pages/equity-brain/PropostasPage";
+const EBBoardPage = lazy(() => import("./pages/equity-brain/BoardPage"));
+const EBShadowPage = lazy(() => import("./pages/equity-brain/ShadowPage"));
+const CrmHubPage = lazy(() => import("./pages/equity-brain/CrmHubPage"));
+const PermissionsAdminPage = lazy(() => import("./pages/equity-brain/PermissionsAdminPage"));
+const MandateDetailPage = lazy(() => import("./pages/equity-brain/MandateDetailPage"));
+const BuyerDetailPage = lazy(() => import("./pages/equity-brain/BuyerDetailPage"));
+const AccessAuditPage = lazy(() => import("./pages/equity-brain/AccessAuditPage"));
+const CrmAuditPage = lazy(() => import("./pages/equity-brain/CrmAuditPage"));
+const MyCompaniesPage = lazy(() => import("./pages/equity-brain/MyCompaniesPage"));
+const CrmAssignmentsPage = lazy(() => import("./pages/equity-brain/CrmAssignmentsPage"));
+const HealthDashboardPage = lazy(() => import("./pages/equity-brain/HealthDashboardPage"));
+const TodayPage = lazy(() => import("./pages/equity-brain/TodayPage"));
+const NewsPage = lazy(() => import("./pages/equity-brain/NewsPage"));
+const ExecutiveDashboardPage = lazy(() => import("./pages/equity-brain/ExecutiveDashboardPage"));
+const MatchAnalyticsPage = lazy(() => import("./pages/equity-brain/MatchAnalyticsPage"));
+const MatchInboxPage = lazy(() => import("./pages/equity-brain/MatchInboxPage"));
+const MatchDetailPage = lazy(() => import("./pages/equity-brain/MatchDetailPage"));
+const PipelineKanbanPage = lazy(() => import("./pages/equity-brain/PipelineKanbanPage"));
+const PipelineHistoryPage = lazy(() => import("./pages/equity-brain/PipelineHistoryPage"));
+const MandateFormPage = lazy(() => import("./pages/equity-brain/MandateFormPage"));
+const ExportsPage = lazy(() => import("./pages/equity-brain/ExportsPage"));
+const ImportsPage = lazy(() => import("./pages/equity-brain/ImportsPage"));
+const IspImportPage = lazy(() => import("./pages/equity-brain/IspImportPage"));
+const IspSuggestionsPage = lazy(() => import("./pages/equity-brain/IspSuggestionsPage"));
+const IspMarketPage = lazy(() => import("./pages/equity-brain/IspMarketPage"));
+const AnatelCruzamentoPage = lazy(() => import("./pages/equity-brain/AnatelCruzamentoPage"));
+const DisclosuresPage = lazy(() => import("./pages/equity-brain/DisclosuresPage"));
+const UnifiedDealPage = lazy(() => import("./pages/equity-brain/UnifiedDealPage"));
+const QuickFillPage = lazy(() => import("./pages/equity-brain/QuickFillPage"));
+const PipelinePage = lazy(() => import("./pages/equity-brain/PipelinePage"));
+const CompradoresPage = lazy(() => import("./pages/equity-brain/CompradoresPage"));
+const MandatosTablePage = lazy(() => import("./pages/equity-brain/MandatosTablePage"));
+const DashboardCoveragePage = lazy(() => import("./pages/equity-brain/DashboardCoveragePage"));
+const DedupeAdminPage = lazy(() => import("./pages/equity-brain/DedupeAdminPage"));
+const BenchmarkPage = lazy(() => import("./pages/equity-brain/admin/BenchmarkPage"));
+const BuyerClassificationPage = lazy(() => import("./pages/equity-brain/admin/BuyerClassificationPage"));
+const RfbHubPage = lazy(() => import("./pages/equity-brain/admin/RfbHubPage"));
+const PropostasPage = lazy(() => import("./pages/equity-brain/PropostasPage"));
 
-// App shell for authenticated end-users (sidebar + topbar)
-import { AppShell } from "@/components/layout/AppShell";
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
+});
 
-const queryClient = new QueryClient();
+const RouteFallback = () => (
+  <div className="min-h-[40vh] flex items-center justify-center text-sm text-muted-foreground">
+    Carregando…
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -143,6 +158,7 @@ const App = () => (
         <BrowserRouter>
           <ViewAsBanner />
           <PageTracker />
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Index />} />
 
@@ -250,14 +266,7 @@ const App = () => (
               <Route path="admin/imports"   element={<RequireRole roles={["admin", "advisor"]}><ImportsPage /></RequireRole>} />
               <Route path="admin/auditoria" element={<RequireRole roles={["admin"]}><CrmAuditPage /></RequireRole>} />
               <Route path="admin/shadow"    element={<EBShadowPage />} />
-              <Route
-                path="admin/jarvis"
-                element={
-                  <Suspense fallback={<div className="flex items-center justify-center h-[calc(100vh-1px)] bg-zinc-950 text-emerald-300 text-sm">Carregando cérebro 3D…</div>}>
-                    <EBGrafoJarvisPage />
-                  </Suspense>
-                }
-              />
+              <Route path="admin/jarvis"    element={<EBGrafoJarvisPage />} />
 
               {/* Redirects de rotas antigas */}
               <Route path="match-inbox"   element={<Navigate to="/equity-brain/oportunidades" replace />} />
@@ -287,14 +296,7 @@ const App = () => (
               <Route path="shadow"        element={<Navigate to="/equity-brain/admin/shadow" replace />} />
               <Route path="grafo-jarvis"  element={<Navigate to="/equity-brain/admin/jarvis" replace />} />
               <Route path="match/:matchId" element={<MatchDetailPage />} />
-              <Route
-                path="grafo-jarvis/guia"
-                element={
-                  <Suspense fallback={<div className="p-10 text-zinc-400 text-sm">Carregando guia…</div>}>
-                    <EBGrafoJarvisGuiaPage />
-                  </Suspense>
-                }
-              />
+              <Route path="grafo-jarvis/guia" element={<EBGrafoJarvisGuiaPage />} />
               <Route path="calls"         element={<EBCallsPage />} />
               <Route path="empresa/:cnpj" element={<EBDealDetailPage />} />
               <Route path="crm/mandate/:id"      element={<MandateDetailPage />} />
@@ -332,6 +334,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           <CookieConsentBanner />
         </BrowserRouter>
       </TooltipProvider>

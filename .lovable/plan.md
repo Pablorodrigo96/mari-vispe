@@ -1,27 +1,76 @@
-## Problema
+# Acelerar carregamento inicial — Home (`/`) e Valuation (`/valuation`)
 
-Os segmentos **Tecnologia & Telecom (ISP / Provedores de Internet)** e **Telecom (Operadoras / Infraestrutura)** estão mapeados para o benchmark `SaaS`, cujo múltiplo de receita é `6.0x`. Isso gera valuations irreais para ISPs.
+## Diagnóstico
 
-## O que o usuário pediu
+O `src/App.tsx` faz **import estático eager** de ~110 páginas (admin, equity-brain, dashboards, capital, etc.). Resultado: quem abre só a Home baixa um bundle gigantesco com código que ele nunca vai usar — só o Equity Brain sozinho traz dezenas de páginas pesadas. Isso aumenta o TTI (time-to-interactive), que é exatamente o sintoma que você descreveu (gente entrando e saindo antes da página carregar).
 
-> "ISP vale de R$ 1.300 a R$ 2.500 por assinante (de 13x receita mensal a 25x receita mensal se for muito bom)"
+Além disso:
+- `Index.tsx` puxa `framer-motion`, `ParticlesBackground`, `HeroCarousel`, `MariDifferentialCard`, e busca `featured-listings` no Supabase **em paralelo com o render inicial**.
+- `Valuation.tsx` monta 8 seções pesadas (`MethodologySection`, `ValuationBeforeAfter`, `TrustSection`, `ValuationTestimonials`, `ValuationPaymentModal`, etc.) já no primeiro paint, mesmo que o usuário só veja o hero.
 
-Considerando ARPU médio de ~R$ 100/mês (R$ 1.200/ano), o múltiplo de receita anual deveria ser ~**1.0x a 2.1x** (média ~1.6x), não 6.0x.
+## O que vamos fazer
 
-## Alterações propostas
+### 1. Code-splitting em `src/App.tsx` (maior ganho)
 
-### 1. `src/lib/valuationCalculator.ts`
-Adicionar novo benchmark `Telecom` ao `sectorMultiples` com múltiplos realistas para ISP/telecom:
-```text
-"Telecom": { rev: 1.6, ebitda: 6.5, profit: 10.0 }
+Converter quase todos os `import` de páginas para `React.lazy(() => import(...))`, mantendo eager **apenas**:
+- `Index` (rota `/` — já é a entrada principal)
+- `Auth`, `NotFound` (críticas/leves)
+- Providers e componentes de layout (`AppShell`, `AuthProvider`, `Header`, `Footer`)
+
+Envolver `<Routes>` em um único `<Suspense fallback={<RouteLoader />}>` com um spinner minimalista (já existe `Skeleton`).
+
+Resultado esperado: bundle inicial cai de ~vários MB para uma fatia pequena com Home + shared chunks. Equity Brain, Admin, Dashboards, Capital SEO, Valuation wizards, etc. viram chunks sob demanda.
+
+### 2. Otimizar `src/pages/Index.tsx`
+
+- Lazy-load **abaixo da dobra**: `MariDifferentialCard`, seção de Featured Listings (`ListingCard`/Supabase query) e `Footer` via `React.lazy` + `Suspense` com skeleton, ou carregar quando entrar no viewport (`IntersectionObserver`).
+- Manter eager: `Header`, `HeroCarousel`, `SearchBar`, stats (são o que aparece no first paint).
+- Usar `loading="eager"` + `fetchpriority="high"` na primeira imagem do carrossel; `loading="lazy"` no resto (já está parcialmente).
+- Adicionar `<link rel="preconnect">` para o domínio Supabase no `index.html` para acelerar a query de featured.
+- A query `featured-listings-master` deve rodar com `staleTime` longo (ex: 5min) para usuários voltando.
+
+### 3. Otimizar `src/pages/Valuation.tsx`
+
+- Manter eager apenas `Header` + `ValuationTypeSelector` (hero + planos = primeira tela).
+- Lazy-load: `ValuationWhySection`, `ValuationHowItWorks`, `MethodologySection`, `ValuationBeforeAfter`, `TrustSection`, `ValuationTestimonials`, `ValuationFooterCTA`, `ValuationPaymentModal`.
+- Modal de pagamento só importa quando `showPaymentModal` for true (lazy + Suspense).
+
+### 4. Ajustes globais leves
+
+- Em `vite.config.ts`, adicionar `manualChunks` simples para isolar `framer-motion`, `recharts`, `@radix-ui`, `react-router-dom` em vendor chunks compartilhados (melhora cache entre páginas).
+- Garantir `preconnect` e `dns-prefetch` em `index.html` para Supabase + CDNs de fontes.
+
+## Detalhes técnicos
+
+**Padrão de lazy em App.tsx:**
+```tsx
+const Marketplace = lazy(() => import("./pages/Marketplace"));
+// ...
+<Suspense fallback={<RouteLoader />}>
+  <Routes>...</Routes>
+</Suspense>
 ```
 
-### 2. `src/lib/sectorMapping.ts`
-- Incluir `'Telecom'` no `BenchmarkKey` type.
-- Alterar o `benchmarkKey` dos dois labels telecom/ISP de `'SaaS'` para `'Telecom'`:
-  - `Tecnologia & Telecom (ISP / Provedores de Internet)` → `Telecom`
-  - `Telecom (Operadoras / Infraestrutura)` → `Telecom`
+**Padrão em Index.tsx / Valuation.tsx:**
+```tsx
+const FeaturedListingsSection = lazy(() => import("@/components/home/FeaturedListingsSection"));
+// extrair a seção atual para um arquivo próprio
+<Suspense fallback={<SectionSkeleton />}>
+  <FeaturedListingsSection />
+</Suspense>
+```
 
-## Resultado esperado
+**Não vou tocar em:**
+- Lógica de negócio (auth, valuation calc, sectorMapping etc.).
+- Visual/conteúdo das páginas — só a forma como o JS é carregado.
+- Cliente Supabase, types, .env.
 
-Qualquer valuation feito para empresas dos segmentos telecom/ISP passará a usar múltiplos de ~1.6x receita (ao invés de 6.0x), alinhando o mashup value com a realidade de mercado de provedores de internet no Brasil.
+## Métrica de validação
+
+Após o deploy: abrir `/` em modo incógnito → Network tab deve mostrar bundle inicial bem menor (idealmente <500 KB gzipped vs. atual). Lighthouse mobile deve melhorar TTI/LCP. O conteúdo da Home aparece igual; o resto carrega sob demanda.
+
+## Fora do escopo (sugestões para depois)
+
+- Imagens das categorias/listings em formato AVIF/WebP responsivo (`<picture>`).
+- Mover `ParticlesBackground` para carregamento adiado via `requestIdleCallback`.
+- SSR/prerender da Home (exigiria mudar stack, fora de Vite SPA).
