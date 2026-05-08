@@ -53,7 +53,7 @@ const Index = () => {
       <Header />
 
       {/* Hero Section */}
-      <section className="relative pt-28 pb-24 md:pt-40 md:pb-36 gradient-navy-deep bg-grid-pattern overflow-hidden">
+      <section className="relative pt-24 pb-16 md:pt-40 md:pb-36 gradient-navy-deep bg-grid-pattern overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_30%,_hsla(38,92%,50%,0.08)_0%,_transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,_hsla(222,47%,30%,0.15)_0%,_transparent_50%)]" />
 
@@ -69,7 +69,7 @@ const Index = () => {
 
         <ParticlesBackground variant="dark" />
 
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-12 relative z-10">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 relative z-10">
           <HeroCarousel />
 
           <motion.div
@@ -114,7 +114,7 @@ const Index = () => {
             <Button
               asChild
               size="lg"
-              className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-14 px-10 text-base md:text-lg rounded-xl font-bold"
+              className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-12 sm:h-14 px-6 sm:px-10 text-sm sm:text-base md:text-lg rounded-xl font-bold w-full sm:w-auto max-w-full whitespace-normal text-center leading-tight"
             >
               <Link to="/mari">Analisar minha empresa AGORA →</Link>
             </Button>
@@ -149,7 +149,7 @@ const Index = () => {
                   <span className="w-1 h-1 rounded-full bg-volt animate-pulse" />
                   <p className="text-[9px] text-white/40 uppercase tracking-[0.25em] truncate">{stat.label}</p>
                 </div>
-                <p className="text-xl md:text-2xl font-bold text-white font-mono tracking-tight tabular-nums">{stat.value}</p>
+                <p className="text-base sm:text-xl md:text-2xl font-bold text-white font-mono tracking-tight tabular-nums break-words">{stat.value}</p>
               </motion.div>
             ))}
           </div>
