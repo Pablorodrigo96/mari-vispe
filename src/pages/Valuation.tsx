@@ -1,26 +1,43 @@
-import { useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { ValuationTypeSelector } from '@/components/valuation/ValuationTypeSelector';
-import { ValuationWhySection } from '@/components/valuation/ValuationWhySection';
-import { ValuationHowItWorks } from '@/components/valuation/ValuationHowItWorks';
-import { MethodologySection } from '@/components/valuation/MethodologySection';
-import { ValuationBeforeAfter } from '@/components/valuation/ValuationBeforeAfter';
-import { TrustSection } from '@/components/valuation/TrustSection';
-import { ValuationTestimonials } from '@/components/valuation/ValuationTestimonials';
-import { ValuationFooterCTA } from '@/components/valuation/ValuationFooterCTA';
-import { ValuationPaymentModal } from '@/components/valuation/ValuationPaymentModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useValuationAccess } from '@/hooks/useValuationAccess';
 import { toast } from 'sonner';
 
+// Heavy below-the-fold sections — lazy
+const ValuationWhySection = lazy(() => import('@/components/valuation/ValuationWhySection').then(m => ({ default: m.ValuationWhySection })));
+const ValuationHowItWorks = lazy(() => import('@/components/valuation/ValuationHowItWorks').then(m => ({ default: m.ValuationHowItWorks })));
+const MethodologySection = lazy(() => import('@/components/valuation/MethodologySection').then(m => ({ default: m.MethodologySection })));
+const ValuationBeforeAfter = lazy(() => import('@/components/valuation/ValuationBeforeAfter').then(m => ({ default: m.ValuationBeforeAfter })));
+const TrustSection = lazy(() => import('@/components/valuation/TrustSection').then(m => ({ default: m.TrustSection })));
+const ValuationTestimonials = lazy(() => import('@/components/valuation/ValuationTestimonials').then(m => ({ default: m.ValuationTestimonials })));
+const ValuationFooterCTA = lazy(() => import('@/components/valuation/ValuationFooterCTA').then(m => ({ default: m.ValuationFooterCTA })));
+const ValuationPaymentModal = lazy(() => import('@/components/valuation/ValuationPaymentModal').then(m => ({ default: m.ValuationPaymentModal })));
+
 const Valuation = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentType, setPaymentType] = useState<'multiples' | 'dcf'>('multiples');
-  
+  const [showBelowFold, setShowBelowFold] = useState(false);
+
   const navigate = useNavigate();
   const { user } = useAuth();
   const { canUseMultiples, canUseDCF } = useValuationAccess();
+
+  useEffect(() => {
+    let triggered = false;
+    const trigger = () => { if (triggered) return; triggered = true; setShowBelowFold(true); };
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout: number }) => number);
+    const handle = ric ? ric(trigger, { timeout: 1500 }) : window.setTimeout(trigger, 600);
+    const onScroll = () => trigger();
+    window.addEventListener('scroll', onScroll, { passive: true, once: true });
+    return () => {
+      if (ric && typeof handle === 'number') (window as any).cancelIdleCallback?.(handle);
+      else window.clearTimeout(handle as number);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
 
   const handleSelectFree = () => {
     if (!user) {
@@ -50,20 +67,9 @@ const Valuation = () => {
     navigate('/valuation/dcf');
   };
 
-  const handleBuyMultiples = () => {
-    setPaymentType('multiples');
-    setShowPaymentModal(true);
-  };
-
-  const handleBuyDCF = () => {
-    setPaymentType('dcf');
-    setShowPaymentModal(true);
-  };
-
-  const handleSubscribeMaster = () => {
-    setPaymentType('multiples');
-    setShowPaymentModal(true);
-  };
+  const handleBuyMultiples = () => { setPaymentType('multiples'); setShowPaymentModal(true); };
+  const handleBuyDCF = () => { setPaymentType('dcf'); setShowPaymentModal(true); };
+  const handleSubscribeMaster = () => { setPaymentType('multiples'); setShowPaymentModal(true); };
 
   const handleOpenCertifier = () => {
     if (!user) {
@@ -77,36 +83,37 @@ const Valuation = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      {/* 1. Hero + Plans */}
-      <ValuationTypeSelector 
-        onSelectFree={handleSelectFree} 
+      <ValuationTypeSelector
+        onSelectFree={handleSelectFree}
         onSelectDCF={handleSelectDCF}
         onBuyMultiples={handleBuyMultiples}
         onBuyDCF={handleBuyDCF}
         onSubscribeMaster={handleSubscribeMaster}
         onOpenCertifier={handleOpenCertifier}
       />
-      {/* 2. Why */}
-      <ValuationWhySection />
-      {/* 3. How it works */}
-      <ValuationHowItWorks />
-      {/* 4. Methodology */}
-      <MethodologySection />
-      {/* 5. Before vs After */}
-      <ValuationBeforeAfter />
-      {/* 6. Trust */}
-      <TrustSection />
-      {/* 7. Testimonials */}
-      <ValuationTestimonials />
-      {/* 8. Footer CTA */}
-      <ValuationFooterCTA onStartDiagnostic={handleSelectFree} />
 
-      <ValuationPaymentModal
-        open={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        type={paymentType}
-        onSubscribeMaster={handleSubscribeMaster}
-      />
+      {showBelowFold && (
+        <Suspense fallback={<div className="h-[40vh]" />}>
+          <ValuationWhySection />
+          <ValuationHowItWorks />
+          <MethodologySection />
+          <ValuationBeforeAfter />
+          <TrustSection />
+          <ValuationTestimonials />
+          <ValuationFooterCTA onStartDiagnostic={handleSelectFree} />
+        </Suspense>
+      )}
+
+      {showPaymentModal && (
+        <Suspense fallback={null}>
+          <ValuationPaymentModal
+            open={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            type={paymentType}
+            onSubscribeMaster={handleSubscribeMaster}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
