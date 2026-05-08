@@ -109,7 +109,7 @@ export function HeroCarousel() {
           </div>
 
           {/* Controls row */}
-          <div className="mt-10 flex items-center justify-between gap-6">
+          <div className="mt-8 sm:mt-10 flex items-center justify-between gap-3 sm:gap-6">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 {SLIDES.map((_, i) => (
@@ -181,7 +181,7 @@ export function HeroCarousel() {
 
 function SlideView({ slide, active }: { slide: Slide; active: boolean }) {
   return (
-    <div className="text-left min-h-[440px] md:min-h-[480px] flex flex-col justify-center">
+    <div className="text-left min-h-[380px] md:min-h-[480px] flex flex-col justify-center">
       <AnimatePresence mode="wait">
         {active && (
           <motion.div
@@ -198,36 +198,36 @@ function SlideView({ slide, active }: { slide: Slide; active: boolean }) {
               </span>
             </div>
 
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-5 leading-[0.98] tracking-[-0.03em] text-balance break-words">
+            <h1 className="font-display text-[2rem] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-5 leading-[1] sm:leading-[0.98] tracking-[-0.03em] text-balance break-words">
               {slide.headline}
             </h1>
 
-            <p className="mb-8">
-              <span className="inline-block text-2xl md:text-3xl lg:text-4xl xl:text-5xl bg-volt text-carbon font-extrabold px-2 py-0.5 leading-tight tracking-[-0.02em] break-words">
+            <p className="mb-6 sm:mb-8">
+              <span className="inline-block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl bg-volt text-carbon font-extrabold px-1.5 sm:px-2 py-0.5 leading-tight tracking-[-0.02em] break-words">
                 {slide.highlight}
               </span>
             </p>
 
-            <p className="text-base md:text-lg text-white/65 mb-9 max-w-[560px] leading-relaxed whitespace-pre-line break-words">
+            <p className="text-sm sm:text-base md:text-lg text-white/65 mb-7 sm:mb-9 max-w-[560px] leading-relaxed whitespace-pre-line break-words">
               {slide.body}
             </p>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
               <Button
                 asChild
                 size="lg"
-                className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-12 px-7 text-base rounded-xl font-semibold"
+                className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-12 px-5 sm:px-7 text-sm sm:text-base rounded-xl font-semibold w-full sm:w-auto whitespace-normal text-center leading-tight"
               >
                 <Link to={slide.ctaLink || '/mari'}>
                   {slide.cta}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
                 </Link>
               </Button>
               <Button
                 asChild
                 variant="ghost"
                 size="lg"
-                className="text-white/70 hover:text-white hover:bg-white/5 h-12 px-5 text-base"
+                className="text-white/70 hover:text-white hover:bg-white/5 h-12 px-5 text-sm sm:text-base w-full sm:w-auto"
               >
                 <Link to="/marketplace">Explorar empresas</Link>
               </Button>

@@ -25,7 +25,7 @@ const pillars = [
 
 export function ConfidentialitySection() {
   return (
-    <section className="relative py-24 gradient-navy-deep bg-grid-pattern overflow-hidden">
+    <section className="relative py-16 md:py-24 gradient-navy-deep bg-grid-pattern overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsla(74,85%,68%,0.06)_0%,_transparent_60%)]" />
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
         <motion.div
@@ -70,11 +70,11 @@ export function ConfidentialitySection() {
           ))}
         </div>
 
-        <div className="text-center">
+        <div className="text-center px-2">
           <Button
             asChild
             size="lg"
-            className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-12 px-8 text-base rounded-xl font-semibold"
+            className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-12 px-6 sm:px-8 text-sm sm:text-base rounded-xl font-semibold w-full sm:w-auto max-w-xs sm:max-w-none whitespace-normal text-center"
           >
             <Link to="/sell">Anunciar com sigilo total →</Link>
           </Button>
