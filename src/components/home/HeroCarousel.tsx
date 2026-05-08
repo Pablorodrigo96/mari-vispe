@@ -52,6 +52,14 @@ const SLIDES: Slide[] = [
     body: `Mari não espera você se cadastrar. Não espera proposta chegar.\n\nEla está aqui agora, analisando 21 milhões de CNPJs do Brasil, identificando quem está em janela. Se é você, descobre em 1 minuto.`,
     cta: 'Descobrir agora',
   },
+  {
+    badge: 'DIAGNÓSTICO GRATUITO',
+    headline: 'Descubra agora o que impede sua empresa de valer milhões.',
+    highlight: 'E como remover esses impedimentos.',
+    body: `A maioria das empresas brasileiras vale 30% a 50% menos do que poderia. Não é falta de talento — é falta de visão sobre o que o mercado realmente valoriza.\n\nNosso diagnóstico gratuit mostra em minutos onde sua empresa perde valor e o que fazer para recuperá-lo.`,
+    cta: 'Fazer diagnóstico gratuito',
+    ctaLink: '/valuation',
+  },
 ];
 
 const AUTOPLAY_DELAY = 8000;
