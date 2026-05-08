@@ -53,6 +53,14 @@ const SLIDES: Slide[] = [
     cta: 'Descobrir agora',
   },
   {
+    badge: 'SIGILO ABSOLUTO',
+    headline: 'Nenhum concorrente vai saber que você está aqui.',
+    highlight: '100% sigilosa. 100% anônima.',
+    body: `Sócios, funcionários, concorrentes e bancos não têm acesso à sua identidade. Sua empresa entra na vitrine apenas com codinome (ex: MARI-TECH-1234).\n\nRazão social, CNPJ e dados financeiros só são revelados após NDA assinado — e somente se VOCÊ aprovar caso a caso.`,
+    cta: 'Anunciar com sigilo total',
+    ctaLink: '/sell',
+  },
+  {
     badge: 'DIAGNÓSTICO GRATUITO',
     headline: 'Descubra agora o que impede sua empresa de valer milhões.',
     highlight: 'E como remover esses impedimentos.',
