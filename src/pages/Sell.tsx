@@ -12,14 +12,14 @@ import { motion } from 'framer-motion';
 
 const benefits = [
   {
+    icon: Shield,
+    title: 'Sigilo Absoluto',
+    description: 'Nenhum concorrente, sócio ou funcionário sabe que você está vendendo. Sua empresa aparece com codinome — identidade só revelada após NDA e sua aprovação.',
+  },
+  {
     icon: Users,
     title: 'Compradores Qualificados',
     description: 'Acesso a uma rede de investidores e empresários verificados',
-  },
-  {
-    icon: Shield,
-    title: 'Confidencialidade Total',
-    description: 'Seus dados só são compartilhados após assinatura de NDA',
   },
   {
     icon: TrendingUp,
@@ -60,17 +60,20 @@ const Sell = () => {
         >
           <div className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 text-accent text-sm font-medium mb-6">
-              <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              Venda com Segurança
+              <Shield className="w-4 h-4" />
+              100% Sigilosa · 100% Anônima
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
               Sua empresa pode valer{' '}
               <span className="text-gradient-gold">mais do que você imagina.</span>
             </h1>
-            <p className="text-lg text-white/60 mb-8">
+            <p className="text-lg text-white/60 mb-4">
               Anuncie gratuitamente, descubra o valor da sua empresa com IA e conecte-se
-              com compradores qualificados. Processo seguro e confidencial.
+              com compradores qualificados.
+            </p>
+            <p className="text-base text-accent/90 font-medium mb-8 max-w-2xl mx-auto">
+              Nenhum concorrente, sócio ou funcionário vai saber que você está vendendo. Processo 100% anônimo, com codinome e NDA obrigatório.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">

@@ -2,6 +2,7 @@ import { X, Check, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const comparisons = [
+  { without: 'Dados financeiros expostos a curiosos', with: 'Informações sigilosas, acesso controlado por você' },
   { without: 'Negocia no escuro, sem dados reais', with: 'Negocia com laudo e dados de mercado' },
   { without: 'Aceita a primeira oferta por insegurança', with: 'Argumenta com múltiplos comparáveis' },
   { without: 'Perde 30-50% do valor por falta de preparo', with: 'Valoriza até +78% com diagnóstico e consultoria' },

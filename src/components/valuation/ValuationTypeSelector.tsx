@@ -79,9 +79,14 @@ export const ValuationTypeSelector = ({
             <span className="text-gradient-gold">Descubra agora.</span>
           </h1>
           
-          <p className="text-lg sm:text-xl text-white/60 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-white/60 mb-4 max-w-2xl mx-auto">
             87% dos empresários não sabem o valor real do seu negócio — e perdem dinheiro por isso.
           </p>
+
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/30 text-accent/90 text-xs sm:text-sm font-medium mb-8">
+            <ShieldCheck className="w-4 h-4" />
+            Seus dados financeiros são sigilosos. Nenhum terceiro acessa sem sua autorização.
+          </div>
 
           <Button
             onClick={onSelectFree}

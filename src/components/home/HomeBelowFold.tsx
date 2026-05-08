@@ -5,6 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 import { MariDifferentialCard } from '@/components/home/MariDifferentialCard';
 import { ParticlesBackground } from '@/components/ui/particles-background';
 import FeaturedListingsSection from '@/components/home/FeaturedListingsSection';
+import { ConfidentialitySection } from '@/components/home/ConfidentialitySection';
 
 const ease = [0.25, 0.46, 0.45, 0.94] as const;
 
@@ -39,6 +40,8 @@ export default function HomeBelowFold() {
           </Button>
         </motion.div>
       </section>
+
+      <ConfidentialitySection />
 
       <MariDifferentialCard />
       <Footer />

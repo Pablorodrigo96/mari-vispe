@@ -1,6 +1,9 @@
 import { Check, FileText, Download, Shield } from 'lucide-react';
 
+import { Lock } from 'lucide-react';
+
 const benefits = [
+  { icon: Lock, text: 'Dados criptografados e sigilosos' },
   { icon: Shield, text: 'Aceito por fundos de VC' },
   { icon: Check, text: 'Metodologia auditável' },
   { icon: Download, text: 'Download imediato em PDF' },

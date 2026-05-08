@@ -1,7 +1,13 @@
-import { Shield, TrendingUp, Target, Search } from 'lucide-react';
+import { Shield, TrendingUp, Target, Search, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const reasons = [
+  {
+    icon: Lock,
+    title: 'Dados 100% sigilosos',
+    description: 'Seus números financeiros são privados. Nenhum concorrente, sócio, funcionário ou banco tem acesso sem o seu consentimento.',
+    highlight: 'Sigilo absoluto',
+  },
   {
     icon: Shield,
     title: 'Negocie com poder',
@@ -48,7 +54,7 @@ export const ValuationWhySection = () => {
           </p>
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
           {reasons.map((reason, index) => {
             const Icon = reason.icon;
             return (
