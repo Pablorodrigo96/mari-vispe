@@ -13,6 +13,7 @@ type Slide = {
   highlight: string;
   body: string;
   cta: string;
+  ctaLink?: string;
 };
 
 const SLIDES: Slide[] = [
