@@ -13,6 +13,7 @@ type Slide = {
   highlight: string;
   body: string;
   cta: string;
+  ctaLink?: string;
 };
 
 const SLIDES: Slide[] = [
@@ -50,6 +51,14 @@ const SLIDES: Slide[] = [
     highlight: 'Antes de você pedir.',
     body: `Mari não espera você se cadastrar. Não espera proposta chegar.\n\nEla está aqui agora, analisando 21 milhões de CNPJs do Brasil, identificando quem está em janela. Se é você, descobre em 1 minuto.`,
     cta: 'Descobrir agora',
+  },
+  {
+    badge: 'DIAGNÓSTICO GRATUITO',
+    headline: 'Descubra agora o que impede sua empresa de valer milhões.',
+    highlight: 'E como remover esses impedimentos.',
+    body: `A maioria das empresas brasileiras vale 30% a 50% menos do que poderia. Não é falta de talento — é falta de visão sobre o que o mercado realmente valoriza.\n\nNosso diagnóstico gratuito mostra em minutos onde sua empresa perde valor e o que fazer para recuperá-lo.`,
+    cta: 'Fazer diagnóstico gratuito',
+    ctaLink: '/valuation',
   },
 ];
 
@@ -201,7 +210,7 @@ function SlideView({ slide, active }: { slide: Slide; active: boolean }) {
                 size="lg"
                 className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-12 px-7 text-base rounded-xl font-semibold"
               >
-                <Link to="/mari">
+                <Link to={slide.ctaLink || '/mari'}>
                   {slide.cta}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
