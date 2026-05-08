@@ -1,78 +1,77 @@
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowRight, Building2, Clock, Wallet, Users } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { ArrowRight, Clock, Wallet, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { MariWatermark } from '@/components/brand/MariLogo';
 import { MariDivider } from '@/components/brand/MariDivider';
 import { SearchBar } from '@/components/home/SearchBar';
 import { HeroCarousel } from '@/components/home/HeroCarousel';
-import { MariDifferentialCard } from '@/components/home/MariDifferentialCard';
-import { ListingCard } from '@/components/marketplace/ListingCard';
-import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkeleton';
 import { ParticlesBackground } from '@/components/ui/particles-background';
 import { stats, categories } from '@/data/mockData';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useViewAs } from '@/contexts/ViewAsContext';
+
+const HomeBelowFold = lazy(() => import('@/components/home/HomeBelowFold'));
 
 const ease = [0.25, 0.46, 0.45, 0.94] as const;
 
 const Index = () => {
   const { user, loading } = useAuth();
   const { viewAs } = useViewAs();
+  const [showBelowFold, setShowBelowFold] = useState(false);
+
+  // Defer below-the-fold mount until idle/scroll, so hero paints fast.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let triggered = false;
+    const trigger = () => {
+      if (triggered) return;
+      triggered = true;
+      setShowBelowFold(true);
+    };
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout: number }) => number);
+    const handle = ric ? ric(trigger, { timeout: 1500 }) : window.setTimeout(trigger, 600);
+    const onScroll = () => trigger();
+    window.addEventListener('scroll', onScroll, { passive: true, once: true });
+    return () => {
+      if (ric && typeof handle === 'number') (window as any).cancelIdleCallback?.(handle);
+      else window.clearTimeout(handle as number);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
 
   // Logged-in users get their personal panel — unless admin is impersonating "visitante".
   if (!loading && user && viewAs !== 'visitante') {
     return <Navigate to="/painel" replace />;
   }
 
-  const { data: featuredListings, isLoading } = useQuery({
-    queryKey: ['featured-listings-master'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('public_listings')
-        .select('*')
-        .eq('plan', 'master')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(4);
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       {/* Hero Section */}
       <section className="relative pt-28 pb-24 md:pt-40 md:pb-36 gradient-navy-deep bg-grid-pattern overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_30%,_hsla(38,92%,50%,0.08)_0%,_transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,_hsla(222,47%,30%,0.15)_0%,_transparent_50%)]" />
 
-        {/* Magazine-cover style brand watermark — symbol bleeding off the right edge */}
         <MariWatermark
           color="volt"
           opacity={0.07}
           className="hidden md:block absolute -right-40 -top-20 w-[720px] h-[720px]"
         />
-        {/* Tagline as decorative typography */}
         <div className="hidden lg:block absolute right-8 bottom-8 text-right pointer-events-none select-none">
           <div className="text-volt/30 font-display text-[11px] uppercase tracking-[0.4em]">designed forward</div>
           <div className="text-bone/10 font-display font-bold text-[120px] leading-none -mt-2">mari.</div>
         </div>
 
         <ParticlesBackground variant="dark" />
-        
+
         <div className="max-w-[1440px] mx-auto px-6 lg:px-12 relative z-10">
           <HeroCarousel />
 
-          {/* Pós-hero: 3 outputs da Mari em cards */}
           <motion.div
             className="mt-20 lg:mt-24 grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5"
             initial={{ opacity: 0, y: 20 }}
@@ -121,7 +120,6 @@ const Index = () => {
             <p className="text-xs text-white/40 mt-4 tracking-wide">Sem cadastro obrigatório · Resultado em 60 segundos</p>
           </motion.div>
 
-          {/* Search Bar */}
           <motion.div
             className="mt-20"
             initial={{ opacity: 0, y: 24 }}
@@ -132,7 +130,6 @@ const Index = () => {
             <SearchBar />
           </motion.div>
 
-          {/* Stats — terminal-style */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-16">
             {[
               { label: 'Empresas em janela', value: formatNumber(stats.totalListings) },
@@ -158,7 +155,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Categories Section */}
+      {/* Categories Section (kept eager — visible content) */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 mb-12 max-w-6xl mx-auto items-end">
@@ -187,6 +184,7 @@ const Index = () => {
                   alt={cat.label}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   loading="lazy"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
@@ -201,87 +199,12 @@ const Index = () => {
 
       <MariDivider tone="carbon" spacing="sm" />
 
-      {/* Featured Listings */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex items-start justify-between mb-12">
-            <div className="flex gap-4">
-              <div className="w-1 h-16 bg-accent rounded-full hidden md:block" />
-              <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Oportunidades em Destaque</h2>
-                <p className="text-muted-foreground tracking-wide">Negócios verificados e com alto potencial</p>
-              </div>
-            </div>
-            <Button asChild variant="outline" className="hidden md:flex">
-              <Link to="/marketplace">
-                Ver Todos <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <BusinessCardSkeleton key={i} />
-              ))
-            ) : featuredListings && featuredListings.length > 0 ? (
-              featuredListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium text-foreground mb-2">
-                  Seja o primeiro destaque!
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Anuncie sua empresa com o plano Master e apareça aqui.
-                </p>
-                <Button asChild variant="default">
-                  <Link to="/vender">Anunciar Agora</Link>
-                </Button>
-              </div>
-            )}
-          </div>
-          <div className="mt-8 text-center md:hidden">
-            <Button asChild variant="outline">
-              <Link to="/marketplace">Ver Todos <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="relative py-24 md:py-32 gradient-navy-deep bg-grid-pattern overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_hsla(38,92%,50%,0.08)_0%,_transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_hsla(222,47%,30%,0.12)_0%,_transparent_50%)]" />
-        
-        <ParticlesBackground variant="dark" />
-
-        <motion.div
-          className="container mx-auto px-4 lg:px-8 text-center relative z-10"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, ease }}
-        >
-          <p className="text-white/40 text-sm italic mb-6 max-w-lg mx-auto">
-            "A mari nos conectou com o comprador ideal em menos de 60 dias. Processo transparente e profissional."
-          </p>
-          <p className="text-accent text-xs font-medium tracking-widest uppercase mb-8">— Carlos M., Empresário</p>
-          
-          <h2 className="text-2xl md:text-4xl font-bold text-white mb-4 text-balance">Pronto para vender sua empresa?</h2>
-          <p className="text-white/50 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Anuncie gratuitamente e alcance milhares de compradores e investidores qualificados.
-          </p>
-          <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gold px-12 h-14 text-lg rounded-xl">
-            <Link to="/vender">Anunciar Grátis</Link>
-          </Button>
-        </motion.div>
-      </section>
-
-      <MariDifferentialCard />
-
-      <Footer />
+      {/* Below the fold: featured listings + CTA + differential + footer — lazy */}
+      {showBelowFold && (
+        <Suspense fallback={<div className="h-[40vh]" />}>
+          <HomeBelowFold />
+        </Suspense>
+      )}
     </div>
   );
 };
