@@ -55,7 +55,7 @@ export const ValuationTypeSelector = ({
   ];
 
   return (
-    <section className="relative pt-24 pb-20 overflow-hidden">
+    <section className="relative pt-20 pb-16 md:pt-24 md:pb-20 overflow-hidden">
       {/* Dark Background */}
       <div className="absolute inset-0 gradient-navy-deep" />
       <div className="absolute inset-0 bg-grid-pattern" />
@@ -83,22 +83,22 @@ export const ValuationTypeSelector = ({
             87% dos empresários não sabem o valor real do seu negócio — e perdem dinheiro por isso.
           </p>
 
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/30 text-accent/90 text-xs sm:text-sm font-medium mb-8">
-            <ShieldCheck className="w-4 h-4" />
-            Seus dados financeiros são sigilosos. Nenhum terceiro acessa sem sua autorização.
+          <div className="flex flex-col sm:inline-flex sm:flex-row items-center gap-2 px-3 sm:px-4 py-2 rounded-2xl sm:rounded-full bg-accent/10 border border-accent/30 text-accent/90 text-xs sm:text-sm font-medium mb-8 mx-auto text-center max-w-full">
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <span className="break-words">Seus dados financeiros são sigilosos. Nenhum terceiro acessa sem sua autorização.</span>
           </div>
 
           <Button
             onClick={onSelectFree}
             size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-10 py-6 shadow-gold mb-8"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground text-base sm:text-lg px-6 sm:px-10 py-5 sm:py-6 shadow-gold mb-8 w-full sm:w-auto max-w-xs sm:max-w-none whitespace-normal text-center leading-tight"
           >
             Descobrir Meu Valor Grátis
-            <ArrowRight className="w-5 h-5 ml-2" />
+            <ArrowRight className="w-5 h-5 ml-2 shrink-0" />
           </Button>
 
           {/* Animated counters */}
-          <div className="flex flex-wrap justify-center gap-8 mt-4">
+          <div className="flex flex-wrap justify-center gap-5 sm:gap-8 mt-4">
             <div className="text-center">
               <p className="text-2xl sm:text-3xl font-bold text-white">+1.200</p>
               <p className="text-xs text-white/50">valuations realizados</p>
@@ -140,7 +140,7 @@ export const ValuationTypeSelector = ({
 
         {/* Plans Section */}
         <motion.div 
-          className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-16"
+          className="grid md:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto mb-16"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
@@ -328,7 +328,7 @@ export const ValuationTypeSelector = ({
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-4 md:gap-6">
             {/* Start Multiples */}
             <div className="glass-card rounded-xl p-6 border-emerald-500/20">
               <div className="flex items-center gap-3 mb-4">
