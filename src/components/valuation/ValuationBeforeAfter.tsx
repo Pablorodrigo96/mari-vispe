@@ -12,7 +12,7 @@ const comparisons = [
 
 export const ValuationBeforeAfter = () => {
   return (
-    <section className="py-20 bg-muted/30">
+    <section className="py-14 md:py-20 bg-muted/30">
       <div className="container mx-auto px-4">
         <motion.div
           className="text-center mb-14"
