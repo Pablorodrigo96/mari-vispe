@@ -210,7 +210,7 @@ function SlideView({ slide, active }: { slide: Slide; active: boolean }) {
                 size="lg"
                 className="bg-volt hover:bg-volt-light text-carbon shadow-volt h-12 px-7 text-base rounded-xl font-semibold"
               >
-                <Link to="/mari">
+                <Link to={slide.ctaLink || '/mari'}>
                   {slide.cta}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
