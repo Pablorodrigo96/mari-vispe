@@ -602,7 +602,7 @@ export function JarvisGraph3D() {
     const depthFade = 0.45 + 0.55 * zNorm;
 
     // Núcleo — opacidade modulada por Z
-    sphere.material.opacity = dimmed ? 0.18 : 0.35 + 0.6 * zNorm;
+    (sphere.material as MeshBasicMaterial).opacity = dimmed ? 0.18 : 0.35 + 0.6 * zNorm;
 
     // Glow aditivo
     const glow = new Mesh(
