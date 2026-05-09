@@ -1190,7 +1190,7 @@ export function JarvisGraph3D() {
       </div>
 
       {/* Overlay diagnóstico — FPS / nodes / links / flare ativo + copiar logs */}
-      <div className="absolute bottom-3 left-3 z-20 pointer-events-auto">
+      <div className="hidden sm:block absolute bottom-3 left-3 z-20 pointer-events-auto">
         <div className="relative bg-zinc-950/85 backdrop-blur-md border border-emerald-900/50 px-2.5 py-1.5 font-mono">
           <span className="absolute -top-px -left-px w-2 h-2 border-t border-l border-emerald-400" />
           <span className="absolute -top-px -right-px w-2 h-2 border-t border-r border-emerald-400" />
@@ -1225,7 +1225,7 @@ export function JarvisGraph3D() {
       </div>
 
       {/* Legenda inferior */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+      <div className="hidden sm:block absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
         <GraphLegend />
       </div>
 
