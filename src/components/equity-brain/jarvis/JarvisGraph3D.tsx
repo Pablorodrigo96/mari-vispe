@@ -838,6 +838,7 @@ export function JarvisGraph3D() {
           mixBlendMode: "luminosity",
         }}
       />
+      )}
       {/* Vinheta radial — escurece bordas, mantém centro respirando */}
       <div
         className="absolute inset-0 pointer-events-none z-[1]"
