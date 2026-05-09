@@ -1033,7 +1033,7 @@ export function JarvisGraph3D() {
           ref={fgRef as any}
           width={size.w}
           height={size.h}
-          graphData={graphData as any}
+          graphData={{ nodes: graphData.nodes, links: displayLinks } as any}
           backgroundColor="rgba(0,0,0,0)"
           showNavInfo={false}
           nodeRelSize={1}
