@@ -1120,9 +1120,10 @@ export function JarvisGraph3D() {
             );
           }}
           onBackgroundClick={() => setSelectedNode(null)}
-          cooldownTicks={220}
-          d3VelocityDecay={0.28}
-          warmupTicks={40}
+          cooldownTicks={Infinity}
+          d3VelocityDecay={0.55}
+          d3AlphaDecay={0.012}
+          warmupTicks={0}
         />
       </div>
 
