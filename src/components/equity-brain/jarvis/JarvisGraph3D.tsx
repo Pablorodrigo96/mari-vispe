@@ -414,103 +414,103 @@ export function JarvisGraph3D() {
     return Array.from(set).sort();
   }, [companiesQ.data]);
 
-  // ---------- Forces & freeze ----------
+  // ---------- Layout esférico (Fibonacci sphere) — substitui o force-directed ----------
+  // Em vez de deixar d3 simular forças, posicionamos os nós em uma casca esférica
+  // determinística e os "pinamos" com fx/fy/fz. Isso produz o look de globo girando
+  // (estilo Iron Man HUD) em vez de uma nuvem orgânica dispersa.
+  const sphereRadiusRef = useRef(900);
+
   useEffect(() => {
-    const fg = fgRef.current;
-    if (!fg || !graphData.nodes.length) return;
+    if (!graphData.nodes.length) return;
 
-    // Defer p/ próximo frame: garante que react-force-graph já inicializou
-    // state.layout (d3ForceLayout). Chamar d3Force/d3ReheatSimulation antes
-    // disso causa "Cannot read properties of undefined (reading 'tick')".
-    let raf1 = 0;
-    let raf2 = 0;
-    let cancelled = false;
+    const N = graphData.nodes.length;
+    const R = Math.max(700, Math.min(2200, 600 + N * 4));
+    sphereRadiusRef.current = R;
 
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        if (cancelled || !fgRef.current) return;
-        const fgNow = fgRef.current as any;
-        try {
-          const charge: any = fgNow.d3Force?.("charge");
-          if (charge) {
-            charge.strength(-2200);
-            if (typeof charge.distanceMin === "function") charge.distanceMin(80);
-            if (typeof charge.distanceMax === "function") charge.distanceMax(4500);
-          }
-
-          const linkForce: any = fgNow.d3Force?.("link");
-          if (linkForce) {
-            linkForce
-              .distance((l: any) => {
-                const sType = (l.source as any)?.type;
-                const tType = (l.target as any)?.type;
-                const base = 320 + (1 - (l.weight ?? 0.5)) * 420;
-                // seller↔seller fica 5x mais distante
-                if (sType === "seller" && tType === "seller") return base + 800;
-                return base;
-              })
-              .strength((l: any) => Math.max(0.02, (l.weight ?? 0.3) * 0.25));
-          }
-
-          fgNow.d3Force?.(
-            "collide",
-            forceCollide((n: any) => {
-              const r = n.visualRadius ?? 6;
-              // Sellers ganham raio de colisão 8x (vs 4.5x para os outros)
-              return r * (n.type === "seller" ? 8 : 4.5);
-            })
-              .strength(0.95)
-              .iterations(2),
-          );
-
-          // Repulsão extra entre sellers — só aplica se houver sellers no grafo
-          const hasSellers = graphData.nodes.some((nn: any) => nn.type === "seller");
-          if (hasSellers) {
-            const sellerSpread = forceManyBody()
-              .strength((n: any) => (n.type === "seller" ? -2200 : 0))
-              .distanceMax(1600);
-            fgNow.d3Force?.("seller-spread", sellerSpread);
-          } else {
-            fgNow.d3Force?.("seller-spread", null);
-          }
-
-          // Centering moderado: mantém o grafo visível e centralizado
-          const centerForce: any = fgNow.d3Force?.("center");
-          if (centerForce && typeof centerForce.strength === "function") {
-            centerForce.strength(0.08);
-          }
-
-          fgNow.cameraPosition?.({ x: 0, y: 0, z: 2800 }, undefined, 1200);
-          fgNow.d3ReheatSimulation?.();
-        } catch (e) {
-          console.error("[JarvisGraph3D] força não aplicada:", e);
-        }
-      });
+    // Ordena por heat decrescente: nós quentes ficam concentrados no equador/frente,
+    // nós frios distribuídos. Empate: por degree.
+    const ordered = [...graphData.nodes].sort((a: any, b: any) => {
+      const ha = a.heat ?? 0;
+      const hb = b.heat ?? 0;
+      if (hb !== ha) return hb - ha;
+      return (b.degree ?? 0) - (a.degree ?? 0);
     });
 
-    const safety = window.setTimeout(() => {
-      try {
-        // Enquadrar tudo no viewport antes de congelar
-        (fgRef.current as any)?.zoomToFit?.(900, 120);
-        const alpha = (fgRef.current as any)?.d3Alpha?.() ?? 0;
-        if (alpha > 0.05) return;
-        graphData.nodes.forEach((n: any) => {
-          if (Number.isFinite(n.x) && Number.isFinite(n.y) && Number.isFinite(n.z)) {
-            n.fx = n.x;
-            n.fy = n.y;
-            n.fz = n.z;
-          }
-        });
-      } catch {}
-    }, 16000);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    ordered.forEach((node: any, i: number) => {
+      const yNorm = N === 1 ? 0 : 1 - (i / (N - 1)) * 2; // 1 → -1
+      const rxy = Math.sqrt(Math.max(0, 1 - yNorm * yNorm));
+      const theta = golden * i;
+      // Sellers grandes saltam levemente da casca para ganhar destaque
+      const rScale = node.bigSellerRing ? 1.04 : 1.0;
+      const x = Math.cos(theta) * rxy * R * rScale;
+      const y = yNorm * R * rScale;
+      const z = Math.sin(theta) * rxy * R * rScale;
+      node.x = x;
+      node.y = y;
+      node.z = z;
+      node.fx = x;
+      node.fy = y;
+      node.fz = z;
+    });
 
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      window.clearTimeout(safety);
-    };
+    // Desliga todas as forças d3 — não queremos simulação física, só posições fixas.
+    const fg = fgRef.current as any;
+    if (!fg) return;
+    let raf = 0;
+    raf = requestAnimationFrame(() => {
+      try {
+        fg.d3Force?.("charge", null);
+        fg.d3Force?.("link", null);
+        fg.d3Force?.("collide", null);
+        fg.d3Force?.("center", null);
+        fg.d3Force?.("seller-spread", null);
+        fg.d3AlphaDecay?.(1);
+        fg.cooldownTicks?.(0);
+        fg.refresh?.();
+      } catch (e) {
+        console.error("[JarvisGraph3D] sphere layout falhou:", e);
+      }
+    });
+    return () => cancelAnimationFrame(raf);
   }, [graphData]);
+
+  // ---------- Auto-orbit da câmera (o globo "gira") ----------
+  // Em vez de rotacionar 350 nós a cada frame, orbitamos a câmera ao redor da
+  // origem. Pausa quando o usuário interage (clica nó, abre painel, foco deep-link).
+  const orbitPausedRef = useRef(false);
+  useEffect(() => {
+    orbitPausedRef.current = !!selectedNode || !!focusParam;
+  }, [selectedNode, focusParam]);
+
+  useEffect(() => {
+    if (!graphData.nodes.length) return;
+    let raf = 0;
+    const start = performance.now();
+    const speed = 0.00012; // ~52s por volta
+    const loop = () => {
+      const fg = fgRef.current as any;
+      if (fg && !orbitPausedRef.current) {
+        const R = sphereRadiusRef.current;
+        const camR = R * 2.6;
+        const a = (performance.now() - start) * speed;
+        try {
+          fg.cameraPosition?.(
+            {
+              x: Math.sin(a) * camR,
+              y: Math.cos(a * 0.3) * R * 0.18,
+              z: Math.cos(a) * camR,
+            },
+            { x: 0, y: 0, z: 0 },
+            0,
+          );
+        } catch {}
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [graphData.nodes.length]);
 
   // ---------- Sinapses fantasmas (10% dos nós marcados como neurônios) ----------
   useGhostSynapses(fgRef, graphData.nodes, !isLoading && graphData.nodes.length > 0);
