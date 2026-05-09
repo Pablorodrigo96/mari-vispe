@@ -942,7 +942,7 @@ export function JarvisGraph3D() {
             </span>
           </div>
         </div>
-        <div className="flex gap-1.5 text-[9px] font-mono uppercase tracking-wider">
+        <div className="hidden sm:flex gap-1.5 text-[9px] font-mono uppercase tracking-wider">
           <div className="px-2 py-0.5 bg-zinc-950/70 border border-emerald-900/40 backdrop-blur-sm text-emerald-300">
             <span className="text-zinc-500">N</span> {graphData.nodes.length}
           </div>
