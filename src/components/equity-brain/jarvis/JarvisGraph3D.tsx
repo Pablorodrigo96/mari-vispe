@@ -479,9 +479,27 @@ export function JarvisGraph3D() {
   // Em vez de rotacionar 350 nós a cada frame, orbitamos a câmera ao redor da
   // origem. Pausa quando o usuário interage (clica nó, abre painel, foco deep-link).
   const orbitPausedRef = useRef(false);
+  const orbitInteractUntilRef = useRef(0);
   useEffect(() => {
     orbitPausedRef.current = !!selectedNode || !!focusParam;
   }, [selectedNode, focusParam]);
+
+  // Pausa o orbit por 6s quando o usuário interage com o canvas (drag/wheel/touch)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const bump = () => {
+      orbitInteractUntilRef.current = performance.now() + 6000;
+    };
+    el.addEventListener("mousedown", bump);
+    el.addEventListener("wheel", bump, { passive: true });
+    el.addEventListener("touchstart", bump, { passive: true });
+    return () => {
+      el.removeEventListener("mousedown", bump);
+      el.removeEventListener("wheel", bump);
+      el.removeEventListener("touchstart", bump);
+    };
+  }, []);
 
   useEffect(() => {
     if (!graphData.nodes.length) return;
@@ -490,10 +508,12 @@ export function JarvisGraph3D() {
     const speed = 0.00012; // ~52s por volta
     const loop = () => {
       const fg = fgRef.current as any;
-      if (fg && !orbitPausedRef.current) {
+      const now = performance.now();
+      const interacting = now < orbitInteractUntilRef.current;
+      if (fg && !orbitPausedRef.current && !interacting) {
         const R = sphereRadiusRef.current;
         const camR = R * 2.6;
-        const a = (performance.now() - start) * speed;
+        const a = (now - start) * speed;
         try {
           fg.cameraPosition?.(
             {
