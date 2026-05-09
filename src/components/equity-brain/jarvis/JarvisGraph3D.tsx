@@ -597,7 +597,8 @@ export function JarvisGraph3D() {
 
     // Profundidade: nós no "fundo" da esfera ficam mais sutis (efeito globo 3D)
     const R = sphereRadiusRef.current || 900;
-    const zNorm = Math.max(0, Math.min(1, ((n.z ?? 0) + R) / (2 * R))); // 0=fundo, 1=frente
+    const nz = (node as any).z ?? 0;
+    const zNorm = Math.max(0, Math.min(1, (nz + R) / (2 * R))); // 0=fundo, 1=frente
     const depthFade = 0.45 + 0.55 * zNorm;
 
     // Núcleo — opacidade modulada por Z
