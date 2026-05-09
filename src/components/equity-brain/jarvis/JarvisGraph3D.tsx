@@ -595,13 +595,21 @@ export function JarvisGraph3D() {
     );
     group.add(sphere);
 
+    // Profundidade: nós no "fundo" da esfera ficam mais sutis (efeito globo 3D)
+    const R = sphereRadiusRef.current || 900;
+    const zNorm = Math.max(0, Math.min(1, ((n.z ?? 0) + R) / (2 * R))); // 0=fundo, 1=frente
+    const depthFade = 0.45 + 0.55 * zNorm;
+
+    // Núcleo — opacidade modulada por Z
+    sphere.material.opacity = dimmed ? 0.18 : 0.35 + 0.6 * zNorm;
+
     // Glow aditivo
     const glow = new Mesh(
       new SphereGeometry(radius * 1.55, 24, 24),
       new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
-        opacity: dimmed ? 0.02 : (0.05 + n.heat * 0.18) * glowFactor,
+        opacity: dimmed ? 0.02 : (0.05 + n.heat * 0.18) * glowFactor * depthFade,
         blending: AdditiveBlending,
         depthWrite: false,
       }),
