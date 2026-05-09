@@ -24,7 +24,7 @@ import {
   DoubleSide,
   type Object3D,
 } from "three";
-import { forceCollide, forceManyBody } from "d3-force-3d";
+import { forceCollide, forceManyBody, forceRadial, forceLink } from "d3-force-3d";
 import SpriteText from "three-spritetext";
 import { useGhostSynapses } from "./useGhostSynapses";
 import { useSolarFlares } from "./useSolarFlares";
@@ -416,66 +416,105 @@ export function JarvisGraph3D() {
     return Array.from(set).sort();
   }, [companiesQ.data]);
 
-  // ---------- Layout esférico (Fibonacci sphere) — substitui o force-directed ----------
-  // Em vez de deixar d3 simular forças, posicionamos os nós em uma casca esférica
-  // determinística e os "pinamos" com fx/fy/fz. Isso produz o look de globo girando
-  // (estilo Iron Man HUD) em vez de uma nuvem orgânica dispersa.
+  // ---------- Germinação progressiva ----------
+  // Em vez de pinar os nós em uma casca esférica determinística, deixamos a
+  // simulação de força do d3 montar o globo organicamente: nós nascem na origem
+  // (0,0,0) e os links entram aos poucos, expandindo a estrutura via forceManyBody
+  // (repulsão), forceLink (mola) e forceRadial (puxa todos para a casca esférica).
   const sphereRadiusRef = useRef(900);
+  const [visibleLinkCount, setVisibleLinkCount] = useState(0);
 
+  // 1. Posicionamento inicial: todos os nós em (0,0,0) com jitter mínimo
+  //    (jitter evita NaN do d3 quando vetores coincidem exatamente).
   useEffect(() => {
     if (!graphData.nodes.length) return;
+    graphData.nodes.forEach((n: any) => {
+      n.x = (Math.random() - 0.5) * 0.5;
+      n.y = (Math.random() - 0.5) * 0.5;
+      n.z = (Math.random() - 0.5) * 0.5;
+      delete n.fx; delete n.fy; delete n.fz;
+      n.vx = 0; n.vy = 0; n.vz = 0;
+    });
+  }, [graphData.nodes]);
+
+  // 2. Configura forças d3 (charge + link + collide + radial) e ativa a simulação.
+  useEffect(() => {
+    const fg = fgRef.current as any;
+    if (!fg || !graphData.nodes.length) return;
 
     const N = graphData.nodes.length;
-    const R = Math.max(700, Math.min(2200, 600 + N * 4));
+    const R = Math.max(600, Math.min(1800, 500 + N * 3.5));
     sphereRadiusRef.current = R;
 
-    // Ordena por heat decrescente: nós quentes ficam concentrados no equador/frente,
-    // nós frios distribuídos. Empate: por degree.
-    const ordered = [...graphData.nodes].sort((a: any, b: any) => {
-      const ha = a.heat ?? 0;
-      const hb = b.heat ?? 0;
-      if (hb !== ha) return hb - ha;
-      return (b.degree ?? 0) - (a.degree ?? 0);
-    });
-
-    const golden = Math.PI * (3 - Math.sqrt(5));
-    ordered.forEach((node: any, i: number) => {
-      const yNorm = N === 1 ? 0 : 1 - (i / (N - 1)) * 2; // 1 → -1
-      const rxy = Math.sqrt(Math.max(0, 1 - yNorm * yNorm));
-      const theta = golden * i;
-      // Sellers grandes saltam levemente da casca para ganhar destaque
-      const rScale = node.bigSellerRing ? 1.04 : 1.0;
-      const x = Math.cos(theta) * rxy * R * rScale;
-      const y = yNorm * R * rScale;
-      const z = Math.sin(theta) * rxy * R * rScale;
-      node.x = x;
-      node.y = y;
-      node.z = z;
-      node.fx = x;
-      node.fy = y;
-      node.fz = z;
-    });
-
-    // Desliga todas as forças d3 — não queremos simulação física, só posições fixas.
-    const fg = fgRef.current as any;
-    if (!fg) return;
     let raf = 0;
     raf = requestAnimationFrame(() => {
       try {
-        fg.d3Force?.("charge", null);
-        fg.d3Force?.("link", null);
-        fg.d3Force?.("collide", null);
+        fg.d3Force?.("charge", forceManyBody().strength(-180).distanceMax(R * 1.6));
+        fg.d3Force?.(
+          "link",
+          forceLink()
+            .id((d: any) => d.id)
+            .distance((l: any) => 60 + (1 - (l.weight ?? 0.5)) * 90)
+            .strength(0.35),
+        );
+        fg.d3Force?.(
+          "collide",
+          forceCollide((n: any) => (n.visualRadius ?? 6) + 4),
+        );
+        fg.d3Force?.("radial", forceRadial(R, 0, 0, 0).strength(0.18));
         fg.d3Force?.("center", null);
         fg.d3Force?.("seller-spread", null);
-        fg.d3AlphaDecay?.(1);
-        fg.cooldownTicks?.(0);
+
+        // Damping/viscosidade — crescimento controlado, sem explodir
+        fg.d3VelocityDecay?.(0.55);
+        fg.d3AlphaDecay?.(0.012);
+        fg.d3AlphaTarget?.(0.05); // mantém vivo durante a germinação
+        fg.cooldownTicks?.(Infinity);
         fg.refresh?.();
       } catch (e) {
-        console.error("[JarvisGraph3D] sphere layout falhou:", e);
+        console.error("[JarvisGraph3D] force config falhou:", e);
       }
     });
     return () => cancelAnimationFrame(raf);
-  }, [graphData]);
+  }, [graphData.nodes]);
+
+  // 3. Sequenciador: links entram em blocos de 3 a cada 70ms.
+  useEffect(() => {
+    setVisibleLinkCount(0);
+    if (!graphData.links.length) return;
+    const STEP = 3;
+    const INTERVAL_MS = 70;
+    const id = window.setInterval(() => {
+      setVisibleLinkCount((c) => {
+        const next = c + STEP;
+        if (next >= graphData.links.length) {
+          window.clearInterval(id);
+          return graphData.links.length;
+        }
+        return next;
+      });
+    }, INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [graphData.links]);
+
+  // 4. Congela a simulação ~2.5s após germinação completa (libera CPU).
+  useEffect(() => {
+    const fg = fgRef.current as any;
+    if (!fg) return;
+    if (visibleLinkCount && visibleLinkCount >= graphData.links.length && graphData.links.length > 0) {
+      try { fg.d3AlphaTarget?.(0); } catch {}
+      const t = window.setTimeout(() => {
+        try { fg.cooldownTicks?.(0); fg.refresh?.(); } catch {}
+      }, 2500);
+      return () => window.clearTimeout(t);
+    }
+  }, [visibleLinkCount, graphData.links.length]);
+
+  // displayLinks: subset dos links já germinados, passado ao ForceGraph3D
+  const displayLinks = useMemo(
+    () => graphData.links.slice(0, visibleLinkCount),
+    [graphData.links, visibleLinkCount],
+  );
 
   // ---------- Auto-orbit da câmera (o globo "gira") ----------
   // Em vez de rotacionar 350 nós a cada frame, orbitamos a câmera ao redor da
@@ -994,7 +1033,7 @@ export function JarvisGraph3D() {
           ref={fgRef as any}
           width={size.w}
           height={size.h}
-          graphData={graphData as any}
+          graphData={{ nodes: graphData.nodes, links: displayLinks } as any}
           backgroundColor="rgba(0,0,0,0)"
           showNavInfo={false}
           nodeRelSize={1}
@@ -1081,9 +1120,10 @@ export function JarvisGraph3D() {
             );
           }}
           onBackgroundClick={() => setSelectedNode(null)}
-          cooldownTicks={220}
-          d3VelocityDecay={0.28}
-          warmupTicks={40}
+          cooldownTicks={Infinity}
+          d3VelocityDecay={0.55}
+          d3AlphaDecay={0.012}
+          warmupTicks={0}
         />
       </div>
 
