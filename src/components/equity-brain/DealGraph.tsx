@@ -353,20 +353,6 @@ export function DealGraph({ filterThesisKey, filterBuyerId, filterUfs }: DealGra
     setHighlight((cur) => (cur === node.id ? null : node.id));
   }, []);
 
-  if (isMobile) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-zinc-950 p-8">
-        <div className="text-center max-w-sm">
-          <div className="text-emerald-400 text-4xl mb-3">🧠</div>
-          <h2 className="text-zinc-100 font-bold text-lg mb-2">Grafo disponível apenas no desktop</h2>
-          <p className="text-zinc-500 text-sm">
-            A visualização das conexões entre empresas, teses e buyers exige uma tela maior. Acesse de um computador.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (isError) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-zinc-950">
