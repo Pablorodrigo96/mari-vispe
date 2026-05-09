@@ -26,14 +26,14 @@ export default function GrafoJarvisPage() {
   }, [presentation]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-1px)] bg-zinc-950">
+    <div className="flex flex-col h-[100dvh] bg-zinc-950">
       {!presentation && (
-        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-zinc-800 bg-zinc-950">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold tracking-wider text-emerald-400 uppercase">
-              Equity Brain · Jarvis 3D
+        <div className="flex items-center gap-2 px-2 sm:px-4 py-2 sm:py-2.5 border-b border-zinc-800 bg-zinc-950">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-emerald-400 uppercase whitespace-nowrap">
+              Jarvis 3D
             </span>
-            <span className="text-[10px] text-zinc-500">
+            <span className="hidden md:inline text-[10px] text-zinc-500 truncate">
               · cérebro estratégico imersivo · sellers · buyers · teses · platforms
             </span>
           </div>
@@ -42,33 +42,36 @@ export default function GrafoJarvisPage() {
 
           <Link
             to="/equity-brain/grafo-jarvis/guia"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 hover:text-emerald-200 hover:bg-emerald-900/40 text-xs transition-colors"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 hover:text-emerald-200 hover:bg-emerald-900/40 text-xs transition-colors"
+            aria-label="Guia"
           >
             <BookOpen className="h-3.5 w-3.5" />
-            Guia
+            <span className="hidden sm:inline">Guia</span>
           </Link>
 
           <Link
             to="/equity-brain/grafo"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-emerald-300 hover:bg-zinc-800 text-xs transition-colors"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-emerald-300 hover:bg-zinc-800 text-xs transition-colors"
+            aria-label="Modo 2D"
           >
             <Network className="h-3.5 w-3.5" />
-            Modo 2D
+            <span className="hidden sm:inline">Modo 2D</span>
           </Link>
 
           <Link
             to="/equity-brain/mapa"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-emerald-300 hover:bg-zinc-800 text-xs transition-colors"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-emerald-300 hover:bg-zinc-800 text-xs transition-colors"
+            aria-label="Mapa"
           >
             <MapIcon className="h-3.5 w-3.5" />
-            Mapa
+            <span className="hidden sm:inline">Mapa</span>
           </Link>
 
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPresentation(true)}
-            className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-emerald-300 text-xs h-8"
+            className="hidden md:flex bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-emerald-300 text-xs h-8"
           >
             <Maximize2 className="h-3.5 w-3.5 mr-1.5" />
             Modo apresentação
