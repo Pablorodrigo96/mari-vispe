@@ -24,7 +24,7 @@ import {
   DoubleSide,
   type Object3D,
 } from "three";
-import { forceCollide, forceManyBody } from "d3-force-3d";
+import { forceCollide, forceManyBody, forceRadial, forceLink } from "d3-force-3d";
 import SpriteText from "three-spritetext";
 import { useGhostSynapses } from "./useGhostSynapses";
 import { useSolarFlares } from "./useSolarFlares";
