@@ -821,9 +821,9 @@ export function JarvisGraph3D() {
     <div
       ref={containerRef}
       className="w-full h-full relative overflow-hidden bg-zinc-950"
+      style={{ touchAction: "none" }}
     >
-      {/* Vídeo de fundo cinematográfico — atmosfera, não conteúdo.
-          Filtros agressivos + blend luminosity fazem ele assumir paleta verde/cyan do grafo. */}
+      {!isMobile && (
       <video
         className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
         src="/videos/jarvis-bg.mp4"
