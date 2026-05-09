@@ -774,22 +774,29 @@ export function JarvisGraph3D() {
     setVisualPrefs(VISUAL_FULL);
   };
 
-  // ---------- Mobile fallback ----------
-  if (isMobile) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-zinc-950 p-8">
-        <div className="text-center max-w-sm">
-          <div className="text-emerald-400 text-4xl mb-3">🧠</div>
-          <h2 className="text-zinc-100 font-bold text-lg mb-2">
-            Equity Brain Jarvis — apenas desktop
-          </h2>
-          <p className="text-zinc-500 text-sm">
-            A visualização 3D do cérebro estratégico exige uma tela maior. Acesse de um computador.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // ---------- Mobile auto-tune (não bloqueia mais — globo roda no celular) ----------
+  const mobileTunedRef = useRef(false);
+  useEffect(() => {
+    if (!isMobile || mobileTunedRef.current) return;
+    mobileTunedRef.current = true;
+    // Defaults leves para abrir já com algo visível mas barato.
+    setSelectedNodeTypes(new Set(["seller", "buyer_strategic", "platform"]));
+    setEnabledLayers(new Set(["ma_direct", "rollup"] as LayerKey[]));
+  }, [isMobile]);
+
+  // DPR cap no mobile — devicePixelRatio=3 em iPhone mata FPS.
+  useEffect(() => {
+    if (!isMobile) return;
+    const id = setTimeout(() => {
+      try {
+        const renderer = (fgRef.current as any)?.renderer?.();
+        if (renderer && typeof renderer.setPixelRatio === "function") {
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        }
+      } catch {}
+    }, 400);
+    return () => clearTimeout(id);
+  }, [isMobile, size.w, size.h]);
 
   if (isError) {
     return (
