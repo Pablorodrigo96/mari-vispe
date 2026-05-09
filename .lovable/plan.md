@@ -1,105 +1,85 @@
 ## Objetivo
 
-Trocar o visual "nuvem dispersa" do `/equity-brain/grafo-jarvis` pelo **globo 3D** (esfera densa girando), mantendo todos os filtros, dados e efeitos atuais (HUD, neon, sinapses, flares).
+Hoje `/equity-brain/grafo-jarvis` mostra um placeholder "apenas desktop" em telas <768px. A meta é fazer o globo girar no celular também, com performance aceitável e UI usável em ~390–440px.
 
-A causa do dispersão: hoje o grafo usa `react-force-graph-3d` com forças d3 (charge, link distance, collide, seller-spread). Mesmo após "freeze", os pontos formam uma nuvem orgânica, não uma esfera.
+A causa do bloqueio é só o `if (isMobile) return <fallback/>` em `JarvisGraph3D.tsx` (linha 778). O motor (`react-force-graph-3d` + Three.js) roda em WebGL no celular sem problema — o que precisa de cuidado é **carga visual** e **layout dos overlays**.
 
 ## Estratégia
 
-**Não trocamos a biblioteca**. Continuamos com `react-force-graph-3d` (e todo o resto do arquivo) — só **substituímos o layout** por uma distribuição esférica fixa (Fibonacci sphere) e **rotacionamos** a câmera.
+Arquivo principal: `src/components/equity-brain/jarvis/JarvisGraph3D.tsx`. Pequenos ajustes em `useGhostSynapses.ts` e `useSolarFlares.ts` se for necessário reduzir contagem.
 
-### Arquivo único alterado: `src/components/equity-brain/jarvis/JarvisGraph3D.tsx`
+### 1. Remover o gate do mobile
+Apagar o early-return em `isMobile`. Manter o `setIsMobile` para usar como flag de perfil.
 
-#### 1. Posicionamento esférico (Fibonacci sphere)
+### 2. Perfil "mobile-lite" automático
+Quando `isMobile === true`, aplicar defaults mais leves (mantendo possibilidade do usuário aumentar via painel de Visual):
 
-Em um `useEffect` que roda quando `graphData.nodes` muda, calcular para cada nó:
+- **Cap de nós/arestas**: já temos filtros — em mobile, abrir com `selectedNodeTypes = {seller, buyer_strategic, platform}` e `enabledLayers = {ma_direct, rollup}` para começar com ~80–120 nós em vez de 350.
+- **Raio da esfera**: `R = 500 + N * 3` clamp 550–1400 (mais compacto pra caber na viewport).
+- **DPR cap**: passar `pixelRatio={Math.min(window.devicePixelRatio, 1.5)}` ao `ForceGraph3D` (no celular `dpr=3` mata FPS).
+- **Glow / flares / synapses**: desligar `useSolarFlares` e `useGhostSynapses` por padrão no mobile (toggle continua disponível). MAX_GHOSTS de 30 → 8 quando ativado.
+- **Vídeo de fundo**: trocar por gradiente CSS estático no mobile (o `<video>` em `object-cover` consome decoder e bateria à toa).
+- **Partículas de aresta**: limitar `linkDirectionalParticles` a 0–1 no mobile.
+- **Cooldown**: `cooldownTicks={0}` já está; ok.
 
-```text
-golden = π · (3 − √5)
-y_norm = 1 − (i / (N−1)) · 2          // de 1 a -1
-r_xy   = √(1 − y_norm²)
-θ      = golden · i
-x = cos(θ) · r_xy · R
-y = y_norm · R
-z = sin(θ) · r_xy · R
-```
+### 3. UI / Overlays responsivos
 
-Depois fixar com `node.fx = x; node.fy = y; node.fz = z;`. Isso **trava** o nó na posição esférica e neutraliza qualquer força residual.
+- **GraphFilterSidebar**: hoje é um painel fixo `top-0 left-0 h-full`. No mobile virar `Sheet` (drawer) acionado por um botão flutuante `Settings2` no canto inferior esquerdo. Painel ocupa `w-[88vw] max-w-sm` quando aberto, escondido por padrão.
+- **HUD topo direito** (status SYNC + N/E/SIG + botão "Ativar tudo"): reduzir para uma única pílula compacta no mobile (`text-[9px]`, esconder SIG, mover "Ativar tudo" pra dentro do drawer de filtros).
+- **Painel de Visual (canto inferior direito)**: virar bottom-sheet expansível em vez de card 256px.
+- **NodeDetailPanel**: hoje aparece na lateral; no mobile virar bottom-sheet `max-h-[60vh]` com scroll.
+- **Cantos decorativos** (4 brackets emerald): manter, são só CSS.
+- **Botão "Modo apresentação"**: esconder no mobile (sem valor sem teclado/projetor).
 
-- `R` (raio da esfera) escalado por contagem de nós: `R = 600 + N * 4`, clamp 700–2200.
-- Ordem: ordenar nós por `heat` decrescente antes do Fibonacci → nós quentes (mais conectados) ficam concentrados perto dos polos visíveis, frios ficam atrás. Isso já dá hierarquia 3D natural sem precisar reordenar Z manualmente.
-- Sellers grandes (`bigSellerRing`) podem receber `R * 1.04` para "saltar" levemente da casca.
+### 4. Toque / interação
 
-#### 2. Desligar as forças
+`react-force-graph-3d` já trata touch via three-render-objects (pinch zoom + drag pan). Garantir que:
+- O container tenha `touch-action: none` (previne scroll do body durante drag).
+- `enableNodeDrag={false}` no mobile (evita confusão com pan).
+- Tap em nó abre o `NodeDetailPanel` em bottom-sheet em vez de centralizar a câmera (mais natural em telinha).
+- Pausar auto-orbit por 10s após qualquer touch (já tem 6s no listener — só estender).
 
-No `useEffect` de forças (linhas ~418-513), substituir o bloco atual por:
+### 5. Header da página
 
-```ts
-const fgNow = fgRef.current as any;
-fgNow.d3Force?.("charge", null);
-fgNow.d3Force?.("link", null);
-fgNow.d3Force?.("collide", null);
-fgNow.d3Force?.("center", null);
-fgNow.d3Force?.("seller-spread", null);
-fgNow.d3AlphaDecay?.(1);   // simulação para imediatamente
-fgNow.cooldownTicks?.(0);
-```
+`GrafoJarvisPage.tsx`: a barra superior tem 4 botões + label longo. No mobile colapsar em ícones-only (`Guia`, `Modo 2D`, `Mapa`) e esconder o label "cérebro estratégico imersivo · sellers …".
 
-E remover o `setTimeout(16000)` de freeze — não precisa mais, já está fixo.
+### 6. Altura
 
-#### 3. Rotação contínua (o "globo girando")
+`h-[calc(100vh-1px)]` quebra com a barra de URL do Safari iOS. Trocar por `h-[100dvh]` (já é padrão do projeto, conforme `mobile-layout-standards`).
 
-Em vez de rotacionar 350 nós a cada frame (custo alto), **rotacionamos a câmera** ao redor da origem:
+## Pontos técnicos
 
 ```ts
+// JarvisGraph3D — defaults condicionais
+const MOBILE_DEFAULT_NODES = new Set(["seller","buyer_strategic","platform"]);
+const MOBILE_DEFAULT_LAYERS = new Set<LayerKey>(["ma_direct","rollup"]);
+
 useEffect(() => {
-  const fg = fgRef.current as any;
-  if (!fg) return;
-  let raf = 0;
-  const R_cam = 2800;
-  const start = performance.now();
-  const speed = 0.00012; // rad/ms ≈ 1 volta a cada ~52s
-  const loop = () => {
-    const t = performance.now() - start;
-    const a = t * speed;
-    fg.cameraPosition?.(
-      { x: Math.sin(a) * R_cam, y: Math.cos(a * 0.3) * 200, z: Math.cos(a) * R_cam },
-      { x: 0, y: 0, z: 0 },
-      0
-    );
-    raf = requestAnimationFrame(loop);
-  };
-  raf = requestAnimationFrame(loop);
-  return () => cancelAnimationFrame(raf);
-}, [graphData.nodes.length]);
+  if (!isMobile) return;
+  setSelectedNodeTypes(new Set(MOBILE_DEFAULT_NODES));
+  setEnabledLayers(new Set(MOBILE_DEFAULT_LAYERS));
+  setVisualPrefs(prev => ({ ...prev, glow: 0.3, particles: 0, flares: 0 }));
+}, [isMobile]);
+
+<ForceGraph3D
+  width={size.w}
+  height={size.h}
+  rendererConfig={{ antialias: !isMobile, alpha: true, powerPreference: "low-power" }}
+  // pixelRatio é setado via rendererConfig após mount: renderer.setPixelRatio(...)
+  ...
+/>
 ```
 
-- Pausa a rotação enquanto o usuário arrasta: detectar via `onNodeDragStart` / `onNodeClick` → `pauseRef.current = true`. Retomar após 8s sem interação.
-- `?focus=` continua funcionando: ao focar, pausamos o auto-orbit (já estava em outro `useEffect`).
+DPR é aplicado num `useEffect` que pega `(fgRef.current as any).renderer()?.setPixelRatio(Math.min(devicePixelRatio, 1.5))`.
 
-#### 4. Profundidade visual (Z-sorting / opacidade)
+## Riscos / mitigação
 
-O `react-force-graph-3d` já faz depth sort automático via WebGL. Para reforçar a ilusão de esfera (pontos do "fundo" mais sutis), no `buildNodeObject` ler `node.z` e modular a opacidade do `glow`:
-
-```ts
-const zNorm = ((n.z ?? 0) + R) / (2 * R); // 0..1, 1 = frente
-glow.material.opacity *= 0.4 + 0.6 * zNorm;
-```
-
-Isso reproduz exatamente o efeito do vídeo (frente brilhante, fundo apagando).
-
-#### 5. Manter
-
-- Sidebar de filtros, HUD, scanlines, vinheta, flares, sinapses, painel de detalhe, deep-link `?focus=`.
-- Links/arestas continuam renderizando normalmente — vão atravessar a esfera, criando o look de "cérebro/teia interna".
-
-## Riscos
-
-- Com 350 nós sobre a esfera, links atravessando o centro podem virar ruído visual. Mitigação: o `linkOpacityFn` atual já joga links de baixo peso para `0.025` quando há foco; sem foco mantém `0.45`. Pode ser preciso baixar para `0.12` o default. Decidiremos visualmente após ver render.
-- `node.fx/fy/fz` precisam ser setados **antes** do primeiro tick. Vamos setar dentro do `useMemo` do `graphData` (logo após `adaptToJarvisGraph`) para garantir.
+- **WebGL context loss em iPhones antigos (≤A11)**: adicionar listener `webglcontextlost` que mostra fallback amigável "tente em outro aparelho" — só nesse caso.
+- **350 nós continuam pesados mesmo com filtro**: se em testes reais o FPS ficar <20, adicionar cap rígido `slice(0, 150)` apenas em mobile, ordenado por `heat desc` (já temos).
+- **Drawer cobrindo o globo**: ao abrir filtros, automaticamente pausar auto-orbit (sem cancelar — só `orbitPausedRef.current = true` enquanto aberto).
 
 ## Fora de escopo
 
-- Trocar para Three.js puro / `@react-three/fiber`.
-- Mexer no grafo 2D (`/equity-brain/grafo`).
-- Mudar lógica de scoring / dados.
+- Versão 2D simplificada do grafo no mobile (já existe `/equity-brain/grafo`).
+- Refatorar `GraphFilterSidebar` em si — só envolver num `Sheet` quando em mobile.
+- Mudar dados, scoring ou queries.
