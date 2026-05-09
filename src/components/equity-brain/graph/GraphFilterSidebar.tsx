@@ -66,7 +66,7 @@ export function GraphFilterSidebar(props: Props) {
     return (
       <button
         onClick={onToggleCollapse}
-        className="absolute top-3 left-3 z-20 h-9 w-9 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-300 backdrop-blur"
+        className="absolute top-3 left-3 z-20 h-10 w-10 md:h-9 md:w-9 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-300 backdrop-blur"
         title="Mostrar filtros"
       >
         <ChevronRight className="h-4 w-4" />
