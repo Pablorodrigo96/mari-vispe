@@ -1,109 +1,105 @@
 ## Objetivo
-Eliminar overflows, textos cortados e CTAs que vazam no mobile (≤440px) nas telas públicas, **sem mudar estrutura/layout** — apenas paddings, font-sizes responsivos e wrapping.
 
-## Auditoria — problemas encontrados
+Trocar o visual "nuvem dispersa" do `/equity-brain/grafo-jarvis` pelo **globo 3D** (esfera densa girando), mantendo todos os filtros, dados e efeitos atuais (HUD, neon, sinapses, flares).
 
-**1. Hero / `HeroCarousel.tsx`**
-- `text-4xl md:text-5xl …` no `<h1>` é OK no base, mas o **bloco amarelo** highlight (`text-2xl … bg-volt … px-2`) com tracking apertado pode estourar a largura em telas estreitas (frases longas tipo "É timing, preparação e comprador certo.").
-- `min-h-[440px]` força altura grande mesmo quando conteúdo é pequeno → muito espaço vazio no mobile.
-- CTAs com `h-12 px-7 text-base` lado a lado em `flex-wrap`: o secundário "Explorar empresas" empurra layout.
+A causa do dispersão: hoje o grafo usa `react-force-graph-3d` com forças d3 (charge, link distance, collide, seller-spread). Mesmo após "freeze", os pontos formam uma nuvem orgânica, não uma esfera.
 
-**2. `Index.tsx` (Home)**
-- `pt-28 pb-24` no hero é excessivo no mobile (gera muito scroll antes do CTA).
-- `px-6` lateral pode ser reduzido no mobile.
-- CTA "Analisar minha empresa AGORA →" usa `h-14 px-10 text-base md:text-lg` — extrapola 100% da largura disponível em 360–390px.
-- Stats grid `grid-cols-2` com `text-xl md:text-2xl font-mono` para valores tipo "R$ 4.000.000.000" → overflow.
-- Watermark `text-[120px]` está com `hidden lg:block` — OK.
+## Estratégia
 
-**3. `ConfidentialitySection.tsx`**
-- Botão `h-12 px-8 text-base` pode estourar; conteúdo OK.
+**Não trocamos a biblioteca**. Continuamos com `react-force-graph-3d` (e todo o resto do arquivo) — só **substituímos o layout** por uma distribuição esférica fixa (Fibonacci sphere) e **rotacionamos** a câmera.
 
-**4. `Sell.tsx`**
-- `text-3xl sm:text-4xl` OK; mas hero stats `grid-cols-2` com `text-2xl sm:text-3xl` font-bold ("R$ 2bi" cabe, "+500" cabe) — ✅.
-- Botões CTA com `text-lg px-8` em `flex-col sm:flex-row` empilham bem.
-- Padding `py-16` em seções pode ser reduzido.
+### Arquivo único alterado: `src/components/equity-brain/jarvis/JarvisGraph3D.tsx`
 
-**5. `ValuationTypeSelector.tsx`**
-- `text-3xl sm:text-4xl` OK no h1.
-- Banner sigilo `inline-flex … px-4 py-2 text-xs sm:text-sm` com 1 linha longa → quebra feia, falta `text-balance` ou layout em coluna.
-- CTA "Descobrir Meu Valor Grátis" com `text-lg px-10 py-6` — vaza em telas estreitas.
-- Stats `flex flex-wrap gap-8` OK, mas `gap-8` é muito no mobile.
-- Card de plano com `text-3xl` "R$ 697" e `<Badge>` ao lado — OK.
+#### 1. Posicionamento esférico (Fibonacci sphere)
 
-**6. `Auth.tsx`**
-- `max-w-md` + `px-4` OK. Form em si está bem. Apenas o `MariBrandStamp` size 520/420 pode causar overflow horizontal sutil em alguns devices — verificar `overflow-hidden` (já existe no parent).
+Em um `useEffect` que roda quando `graphData.nodes` muda, calcular para cada nó:
 
-**7. `Footer.tsx`**
-- Confidentiality banner usa `flex flex-col md:flex-row gap-3` ✅.
-- Grid principal `grid-cols-2 md:grid-cols-4 lg:grid-cols-5` ✅.
-- Bloco "Brand" `col-span-2` no mobile ocupa toda a largura ✅.
-- Copy/footer bottom OK.
+```text
+golden = π · (3 − √5)
+y_norm = 1 − (i / (N−1)) · 2          // de 1 a -1
+r_xy   = √(1 − y_norm²)
+θ      = golden · i
+x = cos(θ) · r_xy · R
+y = y_norm · R
+z = sin(θ) · r_xy · R
+```
 
-## Mudanças propostas (CSS-only)
+Depois fixar com `node.fx = x; node.fy = y; node.fz = z;`. Isso **trava** o nó na posição esférica e neutraliza qualquer força residual.
 
-### `src/components/home/HeroCarousel.tsx`
-- Reduzir `min-h-[440px] md:min-h-[480px]` → `min-h-[380px] md:min-h-[480px]`.
-- `<h1>`: `text-4xl md:text-5xl …` → `text-[2rem] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl` (32px no mobile).
-- Highlight: `text-2xl md:text-3xl …` → `text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl`; ajustar `px-2` → `px-1.5 sm:px-2`.
-- Body: `mb-9` → `mb-6 sm:mb-9`.
-- CTAs: container `flex-wrap` → `flex-col sm:flex-row` no mobile, `w-full sm:w-auto` no botão principal; reduzir `px-7` → `px-5 sm:px-7`.
-- Controls row `gap-6` → `gap-3 sm:gap-6`.
+- `R` (raio da esfera) escalado por contagem de nós: `R = 600 + N * 4`, clamp 700–2200.
+- Ordem: ordenar nós por `heat` decrescente antes do Fibonacci → nós quentes (mais conectados) ficam concentrados perto dos polos visíveis, frios ficam atrás. Isso já dá hierarquia 3D natural sem precisar reordenar Z manualmente.
+- Sellers grandes (`bigSellerRing`) podem receber `R * 1.04` para "saltar" levemente da casca.
 
-### `src/pages/Index.tsx`
-- Hero `pt-28 pb-24` → `pt-24 pb-16 md:pt-40 md:pb-36`.
-- Container `px-6 lg:px-12` → `px-4 sm:px-6 lg:px-12`.
-- CTA "Analisar minha empresa": `h-14 px-10 text-base md:text-lg` → `h-12 sm:h-14 px-6 sm:px-10 text-sm sm:text-base md:text-lg w-full sm:w-auto max-w-full`, e adicionar `whitespace-normal text-center leading-tight` para permitir quebra (ou texto curto no mobile via `<span className="sm:hidden">Analisar agora</span><span className="hidden sm:inline">Analisar minha empresa AGORA →</span>`).
-- Stats grid: `text-xl md:text-2xl` → `text-base sm:text-xl md:text-2xl` + `truncate` removido (já tem em label).
-- Categories grid altura `h-44 md:h-56` OK.
+#### 2. Desligar as forças
 
-### `src/components/home/ConfidentialitySection.tsx`
-- Botão: `h-12 px-8` → `h-12 px-6 sm:px-8 w-full sm:w-auto max-w-xs sm:max-w-none mx-auto whitespace-normal text-center`.
-- Section padding `py-24` → `py-16 md:py-24`.
+No `useEffect` de forças (linhas ~418-513), substituir o bloco atual por:
 
-### `src/components/home/HomeBelowFold.tsx`
-- CTA "Anunciar Grátis": `px-12 h-14 text-lg` → `px-8 sm:px-12 h-12 sm:h-14 text-base sm:text-lg w-full sm:w-auto max-w-xs sm:max-w-none`.
-- Section `py-24 md:py-32` → `py-16 md:py-32`.
-- `<h2>` `text-2xl md:text-4xl` OK.
+```ts
+const fgNow = fgRef.current as any;
+fgNow.d3Force?.("charge", null);
+fgNow.d3Force?.("link", null);
+fgNow.d3Force?.("collide", null);
+fgNow.d3Force?.("center", null);
+fgNow.d3Force?.("seller-spread", null);
+fgNow.d3AlphaDecay?.(1);   // simulação para imediatamente
+fgNow.cooldownTicks?.(0);
+```
 
-### `src/pages/Sell.tsx`
-- Hero `pt-24 pb-16` OK.
-- CTAs: adicionar `w-full sm:w-auto` nos dois botões.
-- Stats `gap-6` → `gap-4 sm:gap-6`, `mt-12` → `mt-10`.
+E remover o `setTimeout(16000)` de freeze — não precisa mais, já está fixo.
 
-### `src/components/valuation/ValuationTypeSelector.tsx`
-- Section `pt-24 pb-20` → `pt-20 pb-16 md:pt-24 md:pb-20`.
-- `<h1>` `text-3xl sm:text-4xl` OK.
-- Banner sigilo `inline-flex … px-4 py-2`: trocar para `flex flex-col sm:inline-flex sm:flex-row items-center gap-2 px-3 sm:px-4 py-2 text-center` e `text-xs sm:text-sm`.
-- CTA "Descobrir Meu Valor Grátis": `text-lg px-10 py-6` → `text-base sm:text-lg px-6 sm:px-10 py-5 sm:py-6 w-full sm:w-auto max-w-xs sm:max-w-none`.
-- Stats counters: `gap-8` → `gap-5 sm:gap-8`; `text-2xl sm:text-3xl` OK.
-- Plan cards `p-6` → `p-5 sm:p-6`.
-- Plan price `text-3xl` → `text-2xl sm:text-3xl`.
-- Buttons das compras individuais: já são `w-full` ✅.
-- Grid "Iniciar Valuation" `grid md:grid-cols-3 gap-6` → `gap-4 md:gap-6`.
+#### 3. Rotação contínua (o "globo girando")
 
-### `src/components/valuation/ValuationWhySection.tsx`, `TrustSection.tsx`, `ValuationBeforeAfter.tsx`
-- Apenas reduzir paddings de seção `py-20`/`py-24` → `py-14 md:py-20` e font-sizes de subtítulos para versões `text-base sm:text-lg` quando estiverem em `text-lg` puro.
-- Garantir `break-words` em parágrafos longos.
+Em vez de rotacionar 350 nós a cada frame (custo alto), **rotacionamos a câmera** ao redor da origem:
 
-### `src/pages/Auth.tsx`
-- `MariBrandStamp` size 520/420: parent já tem `overflow-hidden`, **nenhuma mudança**.
-- `px-4 py-8` OK.
-- Tabs e forms: ✅ já mobile-friendly.
+```ts
+useEffect(() => {
+  const fg = fgRef.current as any;
+  if (!fg) return;
+  let raf = 0;
+  const R_cam = 2800;
+  const start = performance.now();
+  const speed = 0.00012; // rad/ms ≈ 1 volta a cada ~52s
+  const loop = () => {
+    const t = performance.now() - start;
+    const a = t * speed;
+    fg.cameraPosition?.(
+      { x: Math.sin(a) * R_cam, y: Math.cos(a * 0.3) * 200, z: Math.cos(a) * R_cam },
+      { x: 0, y: 0, z: 0 },
+      0
+    );
+    raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
+  return () => cancelAnimationFrame(raf);
+}, [graphData.nodes.length]);
+```
 
-### `src/components/layout/Footer.tsx`
-- Banner sigilo: `gap-3 md:gap-6` OK; `text-xs sm:text-sm` OK ✅.
-- Grid: `gap-8 lg:gap-12` → `gap-6 sm:gap-8 lg:gap-12`.
-- `py-16` → `py-12 md:py-16`.
-- Bottom row já é `flex-col md:flex-row` ✅.
+- Pausa a rotação enquanto o usuário arrasta: detectar via `onNodeDragStart` / `onNodeClick` → `pauseRef.current = true`. Retomar após 8s sem interação.
+- `?focus=` continua funcionando: ao focar, pausamos o auto-orbit (já estava em outro `useEffect`).
 
-## Critério de validação
-Após edições, abrir `/`, `/valuation`, `/sell`, `/vender`, `/auth` em viewport 360px, 390px e 440px e verificar:
-- Sem scroll horizontal.
-- CTAs nunca cortam texto.
-- Highlight amarelo do hero não vaza.
-- Stats numéricos cabem.
+#### 4. Profundidade visual (Z-sorting / opacidade)
+
+O `react-force-graph-3d` já faz depth sort automático via WebGL. Para reforçar a ilusão de esfera (pontos do "fundo" mais sutis), no `buildNodeObject` ler `node.z` e modular a opacidade do `glow`:
+
+```ts
+const zNorm = ((n.z ?? 0) + R) / (2 * R); // 0..1, 1 = frente
+glow.material.opacity *= 0.4 + 0.6 * zNorm;
+```
+
+Isso reproduz exatamente o efeito do vídeo (frente brilhante, fundo apagando).
+
+#### 5. Manter
+
+- Sidebar de filtros, HUD, scanlines, vinheta, flares, sinapses, painel de detalhe, deep-link `?focus=`.
+- Links/arestas continuam renderizando normalmente — vão atravessar a esfera, criando o look de "cérebro/teia interna".
+
+## Riscos
+
+- Com 350 nós sobre a esfera, links atravessando o centro podem virar ruído visual. Mitigação: o `linkOpacityFn` atual já joga links de baixo peso para `0.025` quando há foco; sem foco mantém `0.45`. Pode ser preciso baixar para `0.12` o default. Decidiremos visualmente após ver render.
+- `node.fx/fy/fz` precisam ser setados **antes** do primeiro tick. Vamos setar dentro do `useMemo` do `graphData` (logo após `adaptToJarvisGraph`) para garantir.
 
 ## Fora de escopo
-- Mudanças estruturais (esconder colunas, transformar tabela em cards).
-- Telas logadas (Painel, EB, Meus Anúncios, etc.) — pode ser próximo passo.
-- Refatoração de componentes em variantes mobile/desktop.
+
+- Trocar para Three.js puro / `@react-three/fiber`.
+- Mexer no grafo 2D (`/equity-brain/grafo`).
+- Mudar lógica de scoring / dados.
