@@ -774,22 +774,29 @@ export function JarvisGraph3D() {
     setVisualPrefs(VISUAL_FULL);
   };
 
-  // ---------- Mobile fallback ----------
-  if (isMobile) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-zinc-950 p-8">
-        <div className="text-center max-w-sm">
-          <div className="text-emerald-400 text-4xl mb-3">🧠</div>
-          <h2 className="text-zinc-100 font-bold text-lg mb-2">
-            Equity Brain Jarvis — apenas desktop
-          </h2>
-          <p className="text-zinc-500 text-sm">
-            A visualização 3D do cérebro estratégico exige uma tela maior. Acesse de um computador.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // ---------- Mobile auto-tune (não bloqueia mais — globo roda no celular) ----------
+  const mobileTunedRef = useRef(false);
+  useEffect(() => {
+    if (!isMobile || mobileTunedRef.current) return;
+    mobileTunedRef.current = true;
+    // Defaults leves para abrir já com algo visível mas barato.
+    setSelectedNodeTypes(new Set(["seller", "buyer_strategic", "platform"]));
+    setEnabledLayers(new Set(["ma_direct", "rollup"] as LayerKey[]));
+  }, [isMobile]);
+
+  // DPR cap no mobile — devicePixelRatio=3 em iPhone mata FPS.
+  useEffect(() => {
+    if (!isMobile) return;
+    const id = setTimeout(() => {
+      try {
+        const renderer = (fgRef.current as any)?.renderer?.();
+        if (renderer && typeof renderer.setPixelRatio === "function") {
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        }
+      } catch {}
+    }, 400);
+    return () => clearTimeout(id);
+  }, [isMobile, size.w, size.h]);
 
   if (isError) {
     return (
@@ -814,9 +821,9 @@ export function JarvisGraph3D() {
     <div
       ref={containerRef}
       className="w-full h-full relative overflow-hidden bg-zinc-950"
+      style={{ touchAction: "none" }}
     >
-      {/* Vídeo de fundo cinematográfico — atmosfera, não conteúdo.
-          Filtros agressivos + blend luminosity fazem ele assumir paleta verde/cyan do grafo. */}
+      {!isMobile && (
       <video
         className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
         src="/videos/jarvis-bg.mp4"
@@ -831,6 +838,7 @@ export function JarvisGraph3D() {
           mixBlendMode: "luminosity",
         }}
       />
+      )}
       {/* Vinheta radial — escurece bordas, mantém centro respirando */}
       <div
         className="absolute inset-0 pointer-events-none z-[1]"
@@ -934,7 +942,7 @@ export function JarvisGraph3D() {
             </span>
           </div>
         </div>
-        <div className="flex gap-1.5 text-[9px] font-mono uppercase tracking-wider">
+        <div className="hidden sm:flex gap-1.5 text-[9px] font-mono uppercase tracking-wider">
           <div className="px-2 py-0.5 bg-zinc-950/70 border border-emerald-900/40 backdrop-blur-sm text-emerald-300">
             <span className="text-zinc-500">N</span> {graphData.nodes.length}
           </div>
@@ -1182,7 +1190,7 @@ export function JarvisGraph3D() {
       </div>
 
       {/* Overlay diagnóstico — FPS / nodes / links / flare ativo + copiar logs */}
-      <div className="absolute bottom-3 left-3 z-20 pointer-events-auto">
+      <div className="hidden sm:block absolute bottom-3 left-3 z-20 pointer-events-auto">
         <div className="relative bg-zinc-950/85 backdrop-blur-md border border-emerald-900/50 px-2.5 py-1.5 font-mono">
           <span className="absolute -top-px -left-px w-2 h-2 border-t border-l border-emerald-400" />
           <span className="absolute -top-px -right-px w-2 h-2 border-t border-r border-emerald-400" />
@@ -1217,7 +1225,7 @@ export function JarvisGraph3D() {
       </div>
 
       {/* Legenda inferior */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+      <div className="hidden sm:block absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
         <GraphLegend />
       </div>
 
