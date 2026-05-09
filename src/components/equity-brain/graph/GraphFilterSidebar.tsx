@@ -260,7 +260,8 @@ export function GraphFilterSidebar(props: Props) {
           </Select>
         </Section>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
