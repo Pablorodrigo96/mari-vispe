@@ -87,7 +87,9 @@ export function JarvisGraph3D() {
   const [isMobile, setIsMobile] = useState(false);
 
   // Filtros — espelham o 2D para consistência
-  const [filterCollapsed, setFilterCollapsed] = useState(false);
+  const [filterCollapsed, setFilterCollapsed] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 768,
+  );
   const [selectedVerticals, setSelectedVerticals] = useState<Set<string>>(new Set());
   const [selectedUfs, setSelectedUfs] = useState<Set<string>>(new Set());
   const [selectedNodeTypes, setSelectedNodeTypes] = useState<Set<string>>(DEFAULT_NODE_TYPES);

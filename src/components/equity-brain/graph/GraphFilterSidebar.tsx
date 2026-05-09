@@ -66,7 +66,7 @@ export function GraphFilterSidebar(props: Props) {
     return (
       <button
         onClick={onToggleCollapse}
-        className="absolute top-3 left-3 z-20 h-9 w-9 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-300 backdrop-blur"
+        className="absolute top-3 left-3 z-20 h-10 w-10 md:h-9 md:w-9 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-300 backdrop-blur"
         title="Mostrar filtros"
       >
         <ChevronRight className="h-4 w-4" />
@@ -75,7 +75,14 @@ export function GraphFilterSidebar(props: Props) {
   }
 
   return (
-    <aside className="absolute top-0 left-0 h-full w-64 bg-zinc-950/95 border-r border-zinc-800 overflow-y-auto z-10 backdrop-blur">
+    <>
+      <button
+        type="button"
+        aria-label="Fechar filtros"
+        onClick={onToggleCollapse}
+        className="md:hidden fixed inset-0 z-[19] bg-black/50 backdrop-blur-sm"
+      />
+      <aside className="absolute top-0 left-0 h-full w-[78vw] max-w-[280px] md:w-64 bg-zinc-950/95 border-r border-zinc-800 overflow-y-auto z-20 backdrop-blur">
       <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800 sticky top-0 bg-zinc-950/95">
         <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-300">Filtros</span>
         <div className="flex items-center gap-1">
@@ -253,7 +260,8 @@ export function GraphFilterSidebar(props: Props) {
           </Select>
         </Section>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
