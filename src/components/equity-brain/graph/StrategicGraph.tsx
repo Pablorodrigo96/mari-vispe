@@ -420,20 +420,7 @@ export function StrategicGraph() {
   // ---------- Pulso de movimento removido: o grafo permanece congelado após estabilizar.
   // Toda sensação de "vida" é puramente visual (glow, partículas, anéis HUD). ----------
 
-  // ---------- Mobile fallback ----------
-  if (isMobile) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-zinc-950 p-8">
-        <div className="text-center max-w-sm">
-          <div className="text-emerald-400 text-4xl mb-3">🧠</div>
-          <h2 className="text-zinc-100 font-bold text-lg mb-2">Cérebro estratégico — apenas desktop</h2>
-          <p className="text-zinc-500 text-sm">
-            A rede de oportunidades exige uma tela maior. Acesse de um computador.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Mobile fallback removido — grafo agora roda em qualquer viewport.
 
   if (isError) {
     return (
