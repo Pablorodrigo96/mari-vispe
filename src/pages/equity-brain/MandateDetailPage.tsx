@@ -23,6 +23,7 @@ import { DiagnosticoVispe } from "@/components/equity-brain/DiagnosticoVispe";
 import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
+import { MandateSummaryCard } from "@/components/equity-brain/mandate/MandateSummaryCard";
 
 type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents" | "notes";
 
@@ -151,9 +152,10 @@ export default function MandateDetailPage() {
             <ActivityTimeline entityType="mandate" entityId={mandate.id} />
           </div>
           <div className="space-y-3">
+            <MandateSummaryCard mandate={mandate} />
             <DiagnosticoVispe cnpj={mandate.company_cnpj} />
             <div className="bg-zinc-900/40 border border-zinc-800 rounded p-4 space-y-2">
-              <div className="text-[10px] uppercase text-zinc-400">Resumo</div>
+              <div className="text-[10px] uppercase text-zinc-400">Empresa</div>
               <div className="text-xs text-zinc-300">CNPJ: {mandate.company_cnpj ?? "—"}</div>
               <div className="text-xs text-zinc-300">UF: {mandate.uf ?? "—"}</div>
               <div className="text-xs text-zinc-300">Setor: {mandate.setor_ma ?? "—"}</div>

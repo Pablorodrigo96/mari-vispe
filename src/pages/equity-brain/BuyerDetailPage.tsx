@@ -28,6 +28,7 @@ import { BuyerOperationBlock } from "@/components/equity-brain/buyer/BuyerOperat
 import { BuyerThesisBlock } from "@/components/equity-brain/buyer/BuyerThesisBlock";
 import { BuyerTrackRecordBlock } from "@/components/equity-brain/buyer/BuyerTrackRecordBlock";
 import { EnrichBuyerButton } from "@/components/equity-brain/buyer/EnrichBuyerButton";
+import { BuyerAlertsBanner, BuyerHeaderChips } from "@/components/equity-brain/buyer/BuyerAlertsBanner";
 import { Lightbulb, TrendingUp } from "lucide-react";
 
 type Tab = "overview" | "thesis" | "track" | "matches" | "news" | "whatsapp" | "documents" | "notes";
@@ -75,6 +76,7 @@ export default function BuyerDetailPage() {
               · Setores: {(buyer.setores_interesse ?? []).slice(0, 3).join(", ") || "—"}
             </span>
           </div>
+          <BuyerHeaderChips buyer={buyer} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <WhatsAppActionButton
@@ -112,6 +114,7 @@ export default function BuyerDetailPage() {
         phone={(buyer as any).whatsapp ?? (buyer as any).telefone ?? null}
         uf={(buyer.ufs_interesse ?? [])[0] ?? null}
       />
+      <BuyerAlertsBanner buyer={buyer} />
 
       <TopMatchesHeader buyerId={buyer.id} />
 

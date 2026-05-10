@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DealCard } from "@/components/equity-brain/DealCard";
 import { useCompanyResolver } from "@/hooks/useCompanyResolver";
 import { EntityNotes } from "@/components/equity-brain/notes/EntityNotes";
+import { CompanyEnrichedHeader } from "@/components/equity-brain/company/CompanyEnrichedHeader";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "notes";
@@ -79,6 +80,9 @@ export default function DealDetailPage() {
         </div>
       ) : (
         <div className="space-y-3">
+          <div className="px-6 pt-3">
+            <CompanyEnrichedHeader cnpj={resolved.cnpj} />
+          </div>
           <div className="flex items-center gap-1 border-b border-zinc-800 px-6">
             {([
               { key: "overview" as Tab, label: "Visão geral", Icon: Activity },
