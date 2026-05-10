@@ -127,6 +127,23 @@ export function EBSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={buscaNotasActive}
+                  tooltip="Buscar notas"
+                  className={cn(
+                    buscaNotasActive
+                      ? "!bg-violet-950/40 !text-violet-300 border border-violet-900/60"
+                      : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <Link to="/equity-brain/busca-notas">
+                    <SearchIcon className="h-4 w-4" />
+                    <span>Buscar notas</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
