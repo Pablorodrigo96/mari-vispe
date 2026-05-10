@@ -264,9 +264,7 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
                   </div>
                 )}
               </div>
-              <div className="prose prose-invert prose-sm max-w-none text-zinc-300 text-xs break-words [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1 [&_a]:text-emerald-400">
-                <ReactMarkdown>{n.body_md}</ReactMarkdown>
-              </div>
+              <NoteRenderer body={n.body_md} />
             </div>
           );
         })}
