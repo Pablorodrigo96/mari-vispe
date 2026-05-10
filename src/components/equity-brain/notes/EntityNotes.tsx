@@ -24,6 +24,7 @@ import { TemplatePicker } from "./TemplatePicker";
 import { TagChip } from "./TagChip";
 import { TagAutocomplete } from "./TagAutocomplete";
 import { normalizeTag } from "@/lib/eb/tagHierarchy";
+import { SimilarNotesPanel } from "./SimilarNotesPanel";
 
 interface Props {
   entityType: NoteEntityType;
