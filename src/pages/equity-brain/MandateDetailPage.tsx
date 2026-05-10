@@ -24,7 +24,7 @@ import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
 
-type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents";
+type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents" | "notes";
 
 export default function MandateDetailPage() {
   const { id } = useParams<{ id: string }>();
