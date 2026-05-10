@@ -27,19 +27,7 @@ import { useEffectiveRoles } from "@/hooks/useEffectiveRoles";
 import { NoteRenderer } from "@/components/equity-brain/notes/NoteRenderer";
 import { MentionAutocomplete, useMentionTrigger } from "@/components/equity-brain/notes/MentionAutocomplete";
 import { buildMentionToken } from "@/lib/eb/mentionParser";
-
-const DEFAULT_TEMPLATE = `## Prioridades
-
-- 
-
-## Calls / Reuniões
-
-- 
-
-## Insights & próximos passos
-
-- 
-`;
+import { TemplatePicker } from "@/components/equity-brain/notes/TemplatePicker";
 
 function activityIcon(kind: string) {
   switch ((kind || "").toLowerCase()) {
