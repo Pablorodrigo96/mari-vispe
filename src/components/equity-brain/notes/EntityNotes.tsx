@@ -141,9 +141,25 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-zinc-100">Notas</h3>
-          <span className="text-[10px] text-zinc-500">{notes.length}</span>
+        <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/40 p-0.5">
+          <button
+            onClick={() => setView("notes")}
+            className={cn(
+              "px-2.5 py-1 text-[11px] rounded transition-colors",
+              view === "notes" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
+            )}
+          >
+            Notas <span className="text-zinc-500">{notes.length}</span>
+          </button>
+          <button
+            onClick={() => setView("backlinks")}
+            className={cn(
+              "px-2.5 py-1 text-[11px] rounded transition-colors inline-flex items-center gap-1",
+              view === "backlinks" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
+            )}
+          >
+            <Link2 className="h-3 w-3" /> Mencionada em
+          </button>
         </div>
         <div className="flex items-center gap-2 flex-1 max-w-xs">
           <div className="relative flex-1">
