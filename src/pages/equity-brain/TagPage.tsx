@@ -38,44 +38,44 @@ function useEntityLabels(notes: EntityNote[]) {
     staleTime: 60_000,
     queryFn: async () => {
       const map: Record<string, string> = {};
-      const tasks: Promise<any>[] = [];
+      const tasks: Promise<void>[] = [];
       if (ids.mandate.size > 0) {
         tasks.push(
-          supabase
-            .from("eb_mandates_enriched" as any)
-            .select("id, razao_social, codename")
-            .in("id", Array.from(ids.mandate))
-            .then(({ data }) => {
-              (data as any[] | null)?.forEach((r) => {
-                map[`mandate:${r.id}`] = r.razao_social || r.codename || r.id.slice(0, 8);
-              });
-            }),
+          (async () => {
+            const { data } = await supabase
+              .from("eb_mandates_enriched" as any)
+              .select("id, razao_social, codename")
+              .in("id", Array.from(ids.mandate));
+            (data as any[] | null)?.forEach((r) => {
+              map[`mandate:${r.id}`] = r.razao_social || r.codename || r.id.slice(0, 8);
+            });
+          })(),
         );
       }
       if (ids.buyer_ma.size > 0) {
         tasks.push(
-          supabase
-            .from("eb_buyers_enriched" as any)
-            .select("id, nome")
-            .in("id", Array.from(ids.buyer_ma))
-            .then(({ data }) => {
-              (data as any[] | null)?.forEach((r) => {
-                map[`buyer_ma:${r.id}`] = r.nome || r.id.slice(0, 8);
-              });
-            }),
+          (async () => {
+            const { data } = await supabase
+              .from("eb_buyers_enriched" as any)
+              .select("id, nome")
+              .in("id", Array.from(ids.buyer_ma));
+            (data as any[] | null)?.forEach((r) => {
+              map[`buyer_ma:${r.id}`] = r.nome || r.id.slice(0, 8);
+            });
+          })(),
         );
       }
       if (ids.company.size > 0) {
         tasks.push(
-          supabase
-            .from("eb_companies_enriched" as any)
-            .select("cnpj, razao_social, nome_fantasia")
-            .in("cnpj", Array.from(ids.company))
-            .then(({ data }) => {
-              (data as any[] | null)?.forEach((r) => {
-                map[`company:${r.cnpj}`] = r.nome_fantasia || r.razao_social || r.cnpj;
-              });
-            }),
+          (async () => {
+            const { data } = await supabase
+              .from("eb_companies_enriched" as any)
+              .select("cnpj, razao_social, nome_fantasia")
+              .in("cnpj", Array.from(ids.company));
+            (data as any[] | null)?.forEach((r) => {
+              map[`company:${r.cnpj}`] = r.nome_fantasia || r.razao_social || r.cnpj;
+            });
+          })(),
         );
       }
       await Promise.all(tasks);
@@ -126,7 +126,7 @@ export default function TagPage() {
   const entities = useMemo(() => {
     const out = { mandate: new Map<string, number>(), buyer_ma: new Map<string, number>(), company: new Map<string, number>() };
     for (const n of notes) {
-      if (n.entity_type === "daily") continue;
+      if ((n.entity_type as string) === "daily") continue;
       const bucket = (out as any)[n.entity_type] as Map<string, number> | undefined;
       if (!bucket) continue;
       bucket.set(n.entity_id, (bucket.get(n.entity_id) || 0) + 1);
