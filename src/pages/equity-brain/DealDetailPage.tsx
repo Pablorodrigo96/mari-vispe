@@ -1,9 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, AlertCircle, Building2 } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, Building2, Activity, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DealCard } from "@/components/equity-brain/DealCard";
 import { useCompanyResolver } from "@/hooks/useCompanyResolver";
+import { EntityNotes } from "@/components/equity-brain/notes/EntityNotes";
+import { cn } from "@/lib/utils";
+
+type Tab = "overview" | "notes";
 
 export default function DealDetailPage() {
   const params = useParams<{ cnpj?: string; idOrCode?: string }>();
