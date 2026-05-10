@@ -76,6 +76,7 @@ export default function BuyerDetailPage() {
               · Setores: {(buyer.setores_interesse ?? []).slice(0, 3).join(", ") || "—"}
             </span>
           </div>
+          <BuyerHeaderChips buyer={buyer} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <WhatsAppActionButton
