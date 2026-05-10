@@ -1,15 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, AlertCircle, Building2 } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, Building2, Activity, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DealCard } from "@/components/equity-brain/DealCard";
 import { useCompanyResolver } from "@/hooks/useCompanyResolver";
+import { EntityNotes } from "@/components/equity-brain/notes/EntityNotes";
+import { cn } from "@/lib/utils";
+
+type Tab = "overview" | "notes";
 
 export default function DealDetailPage() {
   const params = useParams<{ cnpj?: string; idOrCode?: string }>();
   const idOrCode = params.cnpj ?? params.idOrCode ?? "";
   const navigate = useNavigate();
   const { data: resolved, isLoading } = useCompanyResolver(idOrCode);
+  const [tab, setTab] = useState<Tab>("overview");
 
   // Canonical-URL redirect: only when we resolve via codename/uuid/ticker/uuid_partial AND the cnpj differs from URL
   useEffect(() => {
@@ -73,7 +78,33 @@ export default function DealDetailPage() {
           </Link>
         </div>
       ) : (
-        <DealCard cnpj={resolved.cnpj} mode="page" />
+        <div className="space-y-3">
+          <div className="flex items-center gap-1 border-b border-zinc-800 px-6">
+            {([
+              { key: "overview" as Tab, label: "Visão geral", Icon: Activity },
+              { key: "notes" as Tab, label: "Notas", Icon: StickyNote },
+            ]).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-xs border-b-2 -mb-px transition-colors",
+                  tab === t.key
+                    ? "border-emerald-500 text-emerald-300"
+                    : "border-transparent text-zinc-400 hover:text-zinc-100",
+                )}
+              >
+                <t.Icon className="h-3.5 w-3.5" /> {t.label}
+              </button>
+            ))}
+          </div>
+          {tab === "overview" && <DealCard cnpj={resolved.cnpj} mode="page" />}
+          {tab === "notes" && (
+            <div className="px-6 py-4">
+              <EntityNotes entityType="company" entityId={resolved.cnpj} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

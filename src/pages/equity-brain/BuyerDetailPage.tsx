@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, MessageCircle, FileText, Activity, Target, Brain, Newspaper, Network } from "lucide-react";
+import { ArrowLeft, MessageCircle, FileText, Activity, Target, Brain, Newspaper, Network, StickyNote } from "lucide-react";
+import { EntityNotes } from "@/components/equity-brain/notes/EntityNotes";
 import { NewsPanel } from "@/components/equity-brain/news/NewsPanel";
 import { cn } from "@/lib/utils";
 import { useBuyerCrm } from "@/hooks/useCrm";
@@ -29,7 +30,7 @@ import { BuyerTrackRecordBlock } from "@/components/equity-brain/buyer/BuyerTrac
 import { EnrichBuyerButton } from "@/components/equity-brain/buyer/EnrichBuyerButton";
 import { Lightbulb, TrendingUp } from "lucide-react";
 
-type Tab = "overview" | "thesis" | "track" | "matches" | "news" | "whatsapp" | "documents";
+type Tab = "overview" | "thesis" | "track" | "matches" | "news" | "whatsapp" | "documents" | "notes";
 
 export default function BuyerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +51,7 @@ export default function BuyerDetailPage() {
     { key: "news", label: "Notícias", Icon: Newspaper },
     { key: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
     { key: "documents", label: "Documentos", Icon: FileText },
+    { key: "notes", label: "Notas", Icon: StickyNote },
   ];
 
   return (
@@ -191,6 +193,10 @@ export default function BuyerDetailPage() {
           entityId={buyer.id}
           companyContext={{ cnpj: (buyer as any).cnpj ?? null }}
         />
+      )}
+
+      {tab === "notes" && (
+        <EntityNotes entityType="buyer_ma" entityId={buyer.id} allowedVisibilities={["internal"]} />
       )}
 
       <AskMariDrawer entity_type="buyer" entity_id={buyer.id} />

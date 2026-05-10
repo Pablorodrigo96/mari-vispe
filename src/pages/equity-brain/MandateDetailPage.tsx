@@ -1,6 +1,7 @@
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { ArrowLeft, MessageCircle, FileText, Activity, DollarSign, Target, Pencil, Newspaper, Network } from "lucide-react";
+import { ArrowLeft, MessageCircle, FileText, Activity, DollarSign, Target, Pencil, Newspaper, Network, StickyNote } from "lucide-react";
+import { EntityNotes } from "@/components/equity-brain/notes/EntityNotes";
 import { NewsPanel } from "@/components/equity-brain/news/NewsPanel";
 import { cn } from "@/lib/utils";
 import { useMandate } from "@/hooks/useCrm";
@@ -23,7 +24,7 @@ import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
 
-type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents";
+type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents" | "notes";
 
 export default function MandateDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +56,7 @@ export default function MandateDetailPage() {
     { key: "news", label: "Notícias", Icon: Newspaper },
     { key: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
     { key: "documents", label: "Documentos & Pipeline", Icon: FileText },
+    { key: "notes", label: "Notas", Icon: StickyNote },
   ];
 
   return (
@@ -196,6 +198,10 @@ export default function MandateDetailPage() {
             <FinancialPipelinePanel mandate={mandate} />
           </div>
         </div>
+      )}
+
+      {tab === "notes" && (
+        <EntityNotes entityType="mandate" entityId={mandate.id} />
       )}
 
       <AskMariDrawer entity_type="mandate" entity_id={mandate.id} />
