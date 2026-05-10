@@ -1,108 +1,110 @@
-## Bloco 3 — @mentions + Backlinks (Knowledge Graph v1)
+## Bloco 4 — Daily Notes (`/equity-brain/diario`)
 
-Com notas funcionando (Bloco 2) e UI alinhada (Bloco 1), agora ligamos o conhecimento: qualquer nota pode citar `@mandato`, `@buyer`, `@empresa` e cada entidade ganha um painel "Mencionada em" que vira a teia do Obsidian-M&A.
-
----
-
-### 1. Sintaxe e parser
-
-Formato no `body_md`:
-```
-@mandate:UUID|Nome
-@buyer:UUID|Nome
-@company:CNPJ|Nome
-```
-Renderizado como link clicável (`/equity-brain/mandato/:id`, `/equity-brain/buyer/:id`, `/equity-brain/empresa/:cnpj`).
-
-Parser em `src/lib/eb/mentionParser.ts`:
-- `extractMentions(body) → Array<{type, ref, label}>`
-- `renderMentionsToMarkdown(body)` substitui pelo link MD antes de passar pro `react-markdown`.
+Cada advisor ganha uma **nota por dia** que vira o hub matinal: abre, vê o que rolou ontem (atividades, menções, deals que mexeram) e escreve o plano do dia em markdown. Reusa toda a stack do Bloco 2/3 (entity_notes, mentions, NoteRenderer).
 
 ---
 
-### 2. Schema — `entity_note_mentions`
+### 1. Schema — extender `entity_notes`
 
-Tabela leve em `equity_brain`:
-- `note_id uuid` (FK → entity_notes, ON DELETE CASCADE)
-- `target_entity_type` (mesmo enum mandate/buyer_ma/company)
-- `target_entity_id text`
-- `created_at`
-- UNIQUE `(note_id, target_entity_type, target_entity_id)`
-- Index em `(target_entity_type, target_entity_id)` pra lookup de backlinks
+Adicionar valor `daily` ao enum `entity_type` (mandate/buyer_ma/company/**daily**).
 
-RLS: leitura aberta a advisor/admin (segue visibilidade da nota-pai via view); insert/delete via trigger no `entity_notes` AFTER INSERT/UPDATE/DELETE que re-extrai e re-popula. Zero gravação manual.
+- `entity_id` para daily = `YYYY-MM-DD` (date como text), garante 1 nota por dia por autor via UNIQUE `(author_id, entity_type, entity_id) WHERE entity_type='daily'`.
+- `visibility` daily = sempre `internal` (privada do autor). RLS já cobre: autor edita próprio, admin lê tudo.
+- Tags livres + suporte a `@mention` herdado (Bloco 3 funciona automático).
 
-View `public.eb_entity_note_mentions` (security_invoker) com join em `eb_entity_notes` pra trazer body_preview, author, updated_at, pinned.
+Migration: ALTER TYPE + índice UNIQUE parcial + policy extra "Autor lê próprias daily notes" (já coberto pela policy de internal, mas reforça).
 
 ---
 
-### 3. Trigger de sync
+### 2. Rota e navegação
 
-Função `equity_brain.sync_note_mentions()`:
-- Em `AFTER INSERT/UPDATE OF body_md`: deleta menções antigas da `note_id` e re-insere via regex Postgres (`\@(mandate|buyer|company):([A-Za-z0-9-]+)`).
-- `AFTER DELETE`: cascade já cuida.
-
-Sem mais lógica no client — verdade fica no DB.
+- Nova rota `/equity-brain/diario` (e `/equity-brain/diario/:date` opcional pra navegar histórico).
+- Item no `EBSidebar` "Diário" (ícone `CalendarDays`, posição entre Hoje e CRM).
+- Atalho: tecla `g d` ou botão "Abrir diário" no topo de `/equity-brain/hoje`.
 
 ---
 
-### 4. UI — Editor com autocomplete
+### 3. Layout da página
 
-`<MentionAutocomplete/>` dentro do textarea do `<EntityNotes/>`:
-- Detecta `@` + 2+ chars → popover com busca em 3 fontes via debounce 250ms:
-  - `eb_mandates_enriched` por razao_social/codename
-  - `eb_buyers_enriched` por nome/cnpj
-  - `eb_companies` por razao_social/codename/cnpj
-- Insere token `@type:id|label` no texto.
-- Limit 8 sugestões total (top-3 por tipo).
+Header:
+- Data grande (`format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })`)
+- Navegador `← ontem · hoje · amanhã →` (limitado a hoje no futuro)
+- Datepicker pra pular pra qualquer dia (shadcn calendar)
 
-Atalho de teclado: ↑/↓ navega, Enter confirma, Esc fecha.
+Corpo em 2 colunas (1 coluna no mobile <440):
+
+**Esquerda (60%) — Editor da nota do dia**
+- Reusa `<EntityNotes entityType="daily" entityId={dateStr} />` simplificado: sempre 1 nota (cria automaticamente no primeiro acesso), sem lista, sem pin, sem search.
+- Componente novo `<DailyNoteEditor date/>` que faz upsert via `useUpsertDailyNote`.
+- Autosave a cada 2s de inatividade (debounce), indicador "Salvo · 14:32".
+- Textarea full-height com mention autocomplete (Bloco 3) e renderização toggle View/Edit.
+
+**Direita (40%) — Feed agregado do dia**
+Card "Atividades do dia" + Card "Menções minhas" + Card "Deals que mexeram":
+
+a) **Atividades** (`crm_activities` where created_by=me AND date_trunc('day', created_at)=date) — ícone+entidade+tipo+hora, link pra entidade.
+
+b) **Menções a mim** (futuro placeholder — por agora skip, só mostrar mensagem). Alternativa MVP: **notas que criei hoje** (`eb_entity_notes` where author_id=me AND date_trunc('day', created_at)=date AND entity_type≠'daily').
+
+c) **Deals atualizados** (`deals` where updated_at::date=date AND owner_id=me) — codename+stage+probabilidade.
+
+Todos lidos via React Query com `queryKey: ['daily-feed', date, userId]`.
 
 ---
 
-### 5. UI — Render de menções
+### 4. Hook `useDailyNote(date)`
 
-No `<NoteRenderer/>`:
-- Antes de `react-markdown`, processa tokens `@type:id|label` → `[label](rota)` + classe especial.
-- Tooltip com tipo (cor: mandate=emerald, buyer=violet, company=amber).
+`src/hooks/useDailyNote.ts`:
+- `useDailyNote(date)`: SELECT em `eb_entity_notes` filtrando entity_type='daily', entity_id=date, author_id=me. `maybeSingle()`.
+- `useUpsertDailyNote()`: INSERT ON CONFLICT DO UPDATE no `entity_notes` direto (RLS permite ao autor).
+- `useDailyFeed(date)`: paralelo `crm_activities` + `eb_entity_notes` (não-daily de hoje) + `deals` atualizados.
 
 ---
 
-### 6. UI — Painel Backlinks
+### 5. Página `DailyDiaryPage.tsx`
 
-Novo componente `<EntityBacklinksPanel entityType entityId/>`:
-- Query `eb_entity_note_mentions` filtrando por target=esta entidade
-- Lista: ícone do tipo da nota-pai · trecho 120 chars · autor · data · link
-- Vazio: hint "Mencione essa entidade em outras notas usando @"
+`src/pages/equity-brain/DailyDiaryPage.tsx`:
+- Lê `:date` (default hoje, formato `YYYY-MM-DD`)
+- Validação: data não pode ser futura (clamp pra hoje)
+- Renderiza `<DailyDiaryHeader/>` + `<DailyNoteEditor/>` + `<DailyFeedColumn/>`
+- Empty state se nota não existe ainda: placeholder "Comece o dia escrevendo o que importa…" + botão "Inserir template" (link pro Bloco 5 futuro, por agora insere snippet fixo com seções "Prioridades / Calls / Insights").
 
-Integração:
-- Mandato → nova sub-aba "Conexões" dentro de tab Notas (toggle "Notas / Mencionada em")
-- Buyer → idem
-- Empresa → idem
+---
 
-Implementação simples: toggle `view: 'notes' | 'backlinks'` no `<EntityNotes/>`.
+### 6. Streak gamificado (leve)
+
+No header do `/diario`: badge "🔥 X dias seguidos" calculado client-side via query `eb_entity_notes` últimas 30 daily notes do autor → contagem de dias consecutivos terminando hoje. Stale 5min. Reaproveita visual de Profile Gamification.
 
 ---
 
 ### 7. Memória
 
-Atualizar `mem://features/entity-notes-kb.md` com seção "Bloco 3" e adicionar nova entrada no índice: `[Entity Mentions & Backlinks]`.
+Atualizar `mem://features/entity-notes-kb.md` com seção "Bloco 4 entregue":
+- enum `daily` + entity_id=date
+- rota `/equity-brain/diario` + sidebar item
+- Hook `useDailyNote/useUpsertDailyNote/useDailyFeed`
+- Componente `DailyNoteEditor` + `DailyFeedColumn`
+- Streak counter
+
+Sem nova entrada no índice — Bloco 4 cabe dentro do mesmo memo do Núcleo de Conhecimento.
 
 ---
 
 ## Fora de escopo
 
-- Grafo visual D3/force (fase posterior, reusa dados desta tabela)
-- @mentions em outros campos (observações, descrições)
-- Notificações quando alguém te menciona
-- Embeddings/semantic search das menções
+- Templates pré-prontos parametrizáveis (Bloco 5)
+- Notificação de "você não escreveu hoje" via email
+- Compartilhar daily com outro advisor (continua privada)
+- Exportar diário (PDF/markdown)
+- Resumo IA do dia (potencialmente Bloco 8 com Mari)
 
 ---
 
 ## Detalhe técnico
 
-- Regex Postgres: `regexp_matches(body_md, '@(mandate|buyer|company):([A-Za-z0-9-]+)(?:\|[^\s]+)?', 'g')` — capturar tipo+id, label opcional não persistida (label vem da entidade no render)
-- `target_entity_id text` (UUID pra mandate/buyer, CNPJ pra company), mesmo padrão de `entity_notes`
-- Autocomplete usa `useQuery` com `enabled: query.length >= 2`, staleTime 30s
-- `<NoteRenderer/>` precisa ser reusado em `<EntityNotes/>` e em `<EntityBacklinksPanel/>` (preview de 120 chars) — extrair se ainda inline
-- Sem mudanças nas páginas — toda integração via `<EntityNotes/>` que já é o ponto único
+- `entity_id` como `YYYY-MM-DD` mantém o text genérico atual (sem refactor de tipo).
+- UNIQUE parcial: `CREATE UNIQUE INDEX entity_notes_daily_unique ON equity_brain.entity_notes (author_id, entity_id) WHERE entity_type = 'daily';`
+- Autosave: `useDebouncedCallback` 2000ms; estado local `dirty` + `lastSavedAt`.
+- View `eb_entity_notes` já expõe daily (security_invoker passa pela RLS de internal+autor).
+- Datepicker shadcn com `pointer-events-auto` e `disabled={(d) => d > new Date()}`.
+- Sem afetar `<EntityNotes/>` existente nas páginas de mandato/buyer/empresa — `DailyNoteEditor` é um wrapper próprio.

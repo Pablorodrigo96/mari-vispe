@@ -137,6 +137,7 @@ const BenchmarkPage = lazy(() => import("./pages/equity-brain/admin/BenchmarkPag
 const BuyerClassificationPage = lazy(() => import("./pages/equity-brain/admin/BuyerClassificationPage"));
 const RfbHubPage = lazy(() => import("./pages/equity-brain/admin/RfbHubPage"));
 const PropostasPage = lazy(() => import("./pages/equity-brain/PropostasPage"));
+const DailyDiaryPage = lazy(() => import("./pages/equity-brain/DailyDiaryPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
@@ -249,6 +250,8 @@ const App = () => (
             >
               <Route index               element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
               <Route path="hoje"          element={<TodayPage />} />
+              <Route path="diario"         element={<DailyDiaryPage />} />
+              <Route path="diario/:date"   element={<DailyDiaryPage />} />
 
               {/* Novas páginas-wrapper */}
               <Route path="oportunidades" element={<EBOportunidadesPage />} />

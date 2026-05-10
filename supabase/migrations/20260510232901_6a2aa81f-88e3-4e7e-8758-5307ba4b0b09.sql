@@ -1,0 +1,1 @@
+ALTER TYPE equity_brain.note_entity_type ADD VALUE IF NOT EXISTS 'daily';

@@ -5,7 +5,7 @@ import {
   ChevronDown, ArrowLeft, LogOut, Sparkles,
   TrendingUp, Building2, GitMerge, FileSignature,
   Settings, Upload, Search, GitCompare, Globe, Activity, Users,
-  Table as TableIcon, Gauge, Copy, Database, Tags,
+  Table as TableIcon, Gauge, Copy, Database, Tags, CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,6 +69,7 @@ export function EBSidebar() {
   const [adminOpen, setAdminOpen] = useState(adminActive);
 
   const hojeActive = location.pathname === "/equity-brain/hoje";
+  const diarioActive = location.pathname.startsWith("/equity-brain/diario");
 
   return (
     <Sidebar collapsible="icon" className="border-r border-zinc-800 bg-zinc-950">
@@ -105,6 +106,23 @@ export function EBSidebar() {
                     <Flame className="h-4 w-4" />
                     <span>Hoje</span>
                     {!collapsed && <Sparkles className="ml-auto h-3 w-3 opacity-70" />}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={diarioActive}
+                  tooltip="Diário"
+                  className={cn(
+                    diarioActive
+                      ? "!bg-emerald-950/40 !text-emerald-300 border border-emerald-900/60"
+                      : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <Link to="/equity-brain/diario">
+                    <CalendarDays className="h-4 w-4" />
+                    <span>Diário</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
