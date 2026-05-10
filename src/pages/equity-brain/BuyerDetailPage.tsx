@@ -195,6 +195,10 @@ export default function BuyerDetailPage() {
         />
       )}
 
+      {tab === "notes" && (
+        <EntityNotes entityType="buyer_ma" entityId={buyer.id} allowedVisibilities={["internal"]} />
+      )}
+
       <AskMariDrawer entity_type="buyer" entity_id={buyer.id} />
     </div>
   );
