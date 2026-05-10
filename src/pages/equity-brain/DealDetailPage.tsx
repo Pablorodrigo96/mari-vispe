@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DealCard } from "@/components/equity-brain/DealCard";
 import { useCompanyResolver } from "@/hooks/useCompanyResolver";
 import { EntityNotes } from "@/components/equity-brain/notes/EntityNotes";
+import { CompanyEnrichedHeader } from "@/components/equity-brain/company/CompanyEnrichedHeader";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "notes";
