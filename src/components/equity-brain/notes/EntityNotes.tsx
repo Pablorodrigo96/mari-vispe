@@ -332,6 +332,8 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
           );
         })}
       </div>
+        </>
+      )}
     </div>
   );
 }
