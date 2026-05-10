@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import { Pin, PinOff, Trash2, Pencil, Plus, Save, X, Search, Globe, Lock, Tag } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Pin, PinOff, Trash2, Pencil, Plus, Save, X, Search, Globe, Lock, Tag, Link2 } from "lucide-react";
 import {
   useEntityNotes,
   useCreateNote,
@@ -17,6 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffectiveRoles } from "@/hooks/useEffectiveRoles";
+import { NoteRenderer } from "./NoteRenderer";
+import { MentionAutocomplete, useMentionTrigger } from "./MentionAutocomplete";
+import { EntityBacklinksPanel } from "./EntityBacklinksPanel";
+import { buildMentionToken } from "@/lib/eb/mentionParser";
 
 interface Props {
   entityType: NoteEntityType;
