@@ -56,6 +56,7 @@ export default function MandateDetailPage() {
     { key: "news", label: "Notícias", Icon: Newspaper },
     { key: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
     { key: "documents", label: "Documentos & Pipeline", Icon: FileText },
+    { key: "notes", label: "Notas", Icon: StickyNote },
   ];
 
   return (
