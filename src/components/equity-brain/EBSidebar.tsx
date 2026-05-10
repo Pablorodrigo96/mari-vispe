@@ -70,6 +70,7 @@ export function EBSidebar() {
 
   const hojeActive = location.pathname === "/equity-brain/hoje";
   const diarioActive = location.pathname.startsWith("/equity-brain/diario");
+  const buscaNotasActive = location.pathname.startsWith("/equity-brain/busca-notas");
 
   return (
     <Sidebar collapsible="icon" className="border-r border-zinc-800 bg-zinc-950">
