@@ -1,151 +1,182 @@
-## Bloco 6 — Tags hierárquicas + página de tag
+## Bloco 7 — Busca semântica de notas (pgvector)
 
-Bloco 5 (templates) entregue. Próximo: transformar o campo `tags TEXT[]` que já existe em `entity_notes` num **sistema navegável de tags hierárquicas** com namespace (`setor/saas`, `estagio/pre-loi`, `tese/consolidacao`). Tag vira link, gera uma página agregadora em `/equity-brain/tag/:slug` e ganha autocomplete no editor.
+Bloco 6 (tags hierárquicas) entregue. Próximo: dar busca semântica nas notas do Núcleo de Conhecimento usando pgvector + Gemini `text-embedding-004` (mesma stack já usada em `company_signals.embedding` e `buyers.embedding`). Permite achar "notas parecidas" e busca por significado (não só palavra-chave).
 
-Zero migração de schema obrigatória — tags já existem. Toda lógica é **convenção sobre `/`** + views derivadas + UI.
-
----
-
-### 1. Convenção de tag hierárquica
-
-- Tag = string lowercase, sem espaço, separador `/` para hierarquia.
-- Exemplos: `setor/saas`, `setor/saas/horizontal`, `estagio/pre-loi`, `tese/consolidacao-fintech`, `prioridade/quente`.
-- Helpers em `src/lib/eb/tagHierarchy.ts`:
-  - `normalizeTag(raw)`: lowercase, trim, espaços→`-`, colapsa `//`.
-  - `tagParts(tag) → string[]` (split por `/`).
-  - `tagAncestors(tag) → string[]` (`setor/saas/horizontal` → `['setor','setor/saas','setor/saas/horizontal']`).
-  - `tagSlug(tag) / unslug(slug)`: `/` ↔ `__` para caber em URL.
-  - `groupTagsByNamespace(tags)`: agrupa por primeira parte.
+Reusa infra existente — sem novas dependências.
 
 ---
 
-### 2. Render visual da tag
+### 1. Schema — embedding na nota
 
-Componente `<TagChip tag onClick?/>`:
-- Exibe `namespace · resto` com namespace em zinc-500 e resto em zinc-200.
-- Hover: ring Volt sutil. Click → `navigate('/equity-brain/tag/' + tagSlug(tag))`.
-- Usado em `EntityNotes` (substitui o Badge plain atual), `EntityBacklinksPanel`, `TagPage`.
+Migration enxuta em `equity_brain.entity_notes`:
 
----
+- `embedding vector(768)` — nullable (Gemini text-embedding-004, mesma dimensão já usada no projeto).
+- `embedding_computed_at timestamptz` — quando foi gerado.
+- `embedding_text_hash text` — sha256 do `title || body_md` no momento do embed (pra detectar drift e re-enfileirar).
+- Index HNSW `entity_notes_embedding_hnsw USING hnsw (embedding vector_cosine_ops) WITH (m=16, ef_construction=64)`.
 
-### 3. Autocomplete de tag no editor
-
-Hook + componente leve em `EntityNotes`:
-- Input atual "tags (separe por vírgula)" ganha `<TagAutocomplete/>` por baixo (popover).
-- Sugestões = top 30 tags mais usadas do autor + tags que começam com o que ele já digitou após a última vírgula.
-- Query: `eb_entity_notes` agregando `tags` (client-side, cache 5min, escopo author_id=me OU advisor/admin).
-- ↑↓/Enter pra escolher; insere com vírgula+espaço e mantém o caret.
-- Bonus: se o usuário digitou `setor/` mostra só filhos de `setor`.
-
-Sem alteração no schema da nota — continua salvando `tags TEXT[]` com normalização aplicada antes do save.
+Coluna existente `search_vector tsvector` (BM25 PT-BR) continua intacta — vamos **combinar** os dois sinais.
 
 ---
 
-### 4. Página `/equity-brain/tag/:slug`
+### 2. Trigger de enfileiramento
 
-`src/pages/equity-brain/TagPage.tsx` + rota em `App.tsx`. Layout:
+Padrão idêntico ao `embed-signal` que já existe:
 
-```text
-Header
-  #setor/saas/horizontal              [N notas · M entidades]
-  [breadcrumb: setor › saas › horizontal]    [chips de irmãos]
+- Função `equity_brain.enqueue_note_embed()`: ao INSERT ou UPDATE de `title`/`body_md`, se `embedding IS NULL` **ou** `embedding_text_hash != novo_hash`, faz `NOTIFY note.embed_pending` com payload `{id}`.
+- Trigger `entity_notes_embed_enqueue AFTER INSERT OR UPDATE OF title, body_md`.
 
-Tabs
-  · Notas (default)
-  · Mandatos
-  · Buyers
-  · Empresas
-  · Sub-tags
+Sem fila persistente — listener da edge function consome on-demand igual signals.
+
+---
+
+### 3. Edge function `embed-note`
+
+Nova função `supabase/functions/embed-note/index.ts`. Espelha `embed-signal`:
+
+- POST `{ note_ids?: uuid[], limit?: int=20 }` — se sem `note_ids`, busca `WHERE embedding IS NULL OR embedding_text_hash != md5(title||body_md)` ordenado por `updated_at desc`.
+- Pra cada nota: `text = (title||'') + '\n\n' + body_md` truncado em 8000 chars.
+- Chama Lovable AI Gateway: `model: google/gemini-embedding-001` (ou `text-embedding-004` — confirmar disponibilidade; já temos secret `LOVABLE_API_KEY`).
+- UPDATE nota com `embedding`, `embedding_computed_at=now()`, `embedding_text_hash=sha256(text)`.
+- Retorna `{ processed, skipped, errors }`.
+
+Cron job (`supabase/config.toml` ou via pg_cron RPC já existente no projeto): roda a cada 10min com `limit=50`. Backfill manual pra notas legadas via 1 chamada inicial sem `limit`.
+
+`verify_jwt = true` (chamada interna por cron com service role).
+
+---
+
+### 4. RPC `eb_notes_similar`
+
+```sql
+public.eb_notes_similar(
+  p_note_id uuid,
+  p_limit int default 10,
+  p_min_similarity float default 0.55
+) RETURNS TABLE (... eb_entity_notes shape, similarity float)
 ```
 
-**Notas**: SELECT em `eb_entity_notes` WHERE `:tag = ANY(tags)` OR (qualquer tag começa com `:tag/`) — limit 50, ordenado por `updated_at desc`. Card mostra entidade-pai (chip mandato/buyer/empresa link), 240ch de preview, autor (`@email` ou nome), data. Toggle "Incluir sub-tags" (default on).
+- SECURITY INVOKER (passa pela RLS da view).
+- `SELECT ... 1 - (n.embedding <=> base.embedding) AS similarity FROM entity_notes n, entity_notes base WHERE base.id=p_note_id AND n.id <> p_note_id AND n.embedding IS NOT NULL ORDER BY n.embedding <=> base.embedding LIMIT p_limit`.
+- Filtra por `similarity >= p_min_similarity`.
 
-**Mandatos / Buyers / Empresas**: derivado das notas — distinct (entity_type, entity_id) → lookup nome em `eb_mandates_enriched` / `eb_buyers_enriched` / `eb_companies_enriched`. Grid de cards 2 col com link pra entidade.
+### 5. RPC `eb_notes_search_hybrid`
 
-**Sub-tags**: lista hierárquica das tags filhas diretas (`setor/saas/*`) com contagem.
+Busca por texto livre que combina BM25 + semântica:
 
-Empty state: "Nenhuma nota usa essa tag ainda. Use `:tag` em qualquer nota para indexar aqui."
+```sql
+public.eb_notes_search_hybrid(
+  p_query text,
+  p_entity_type note_entity_type default null,
+  p_limit int default 20
+)
+```
 
----
+- Embed do `p_query` é feito client-side via edge function `embed-query` (nova, leve, retorna `vector(768)` JSON). Ou: dentro da própria RPC chamamos `net.http_post` pra `embed-query` — preferimos client-side pra simplificar.
+- RPC recebe `p_query_embedding vector(768)` (segundo arg) e:
+  - Calcula `bm25 = ts_rank_cd(search_vector, plainto_tsquery('portuguese', p_query))`.
+  - Calcula `semantic = 1 - (embedding <=> p_query_embedding)`.
+  - `score = 0.4*bm25_normalized + 0.6*semantic` (pesos ajustáveis).
+- Ordena por `score desc`, limit.
 
-### 5. Tags em destaque (descoberta)
-
-Side panel "Tags populares" no topo de `/equity-brain/hoje` **e** no header de `/equity-brain/crm` (fase 1 só Hoje):
-- Top 8 tags por uso nos últimos 30 dias (autor=me; admin vê tudo).
-- Cada chip linka pra `/equity-brain/tag/:slug`.
-
-Hook `useTopTags(scope: 'mine'|'all', days=30)` em `src/hooks/useTopTags.ts`.
-
----
-
-### 6. Performance & dados
-
-Sem nova tabela. Queries usam:
-- `eb_entity_notes` (view existente, security_invoker).
-- Filtro por tag: `tags && ARRAY['setor/saas']::text[]` (igualdade) + `EXISTS (SELECT 1 FROM unnest(tags) t WHERE t LIKE 'setor/saas/%')` (descendentes). Empacotado em **RPC `eb_notes_by_tag(p_tag text, p_include_descendants bool, p_limit int)`** que retorna mesmo shape de `eb_entity_notes` — evita filtragem client-side cara.
-- RPC `eb_top_tags(p_author uuid, p_days int)` retorna `tag text, count int` agrupando por unnest.
-
-Ambas SECURITY INVOKER (passa pela RLS já configurada em `entity_notes`).
-
-Migration enxuta: só as 2 RPCs + index opcional `CREATE INDEX entity_notes_tags_gin ON equity_brain.entity_notes USING gin (tags);` (acelera `&&` e `ANY`).
+Assinatura final: `eb_notes_search_hybrid(p_query text, p_query_embedding vector, p_entity_type ..., p_limit ...)`.
 
 ---
 
-### 7. Normalização no save
+### 6. UI — "Notas similares" no editor
 
-`EntityNotes.handleSave`: mapeia `tags.split(',').map(normalizeTag).filter(Boolean)` antes de mandar. Garante consistência (`Setor / SaaS` → `setor/saas`).
+`<SimilarNotesPanel noteId/>` em `src/components/equity-brain/notes/SimilarNotesPanel.tsx`:
 
----
-
-### 8. Navegação
-
-- Sidebar EB ganha item "Tags" (ícone `Tags` lucide) abaixo de "Diário"? **Não** — manter sidebar enxuta. Acesso só via:
-  - Click numa tag em qualquer lugar
-  - Tags populares no `/equity-brain/hoje`
-  - URL direta
+- Aparece em `EntityNotes` quando uma nota está aberta em modo View, abaixo do render do markdown.
+- Lista top 5 via `useNotesSimilar(noteId)`.
+- Card mostra: chip entity_type, título (link pra entidade-pai), preview 180ch, similarity em %, tags.
+- Empty state ("Embedding ainda não calculado" / "Sem notas similares") — discreto.
 
 ---
 
-### 9. Memória
+### 7. UI — Busca global de notas
 
-Atualizar `mem://features/entity-notes-kb.md` adicionando seção "Bloco 6 entregue":
-- Convenção `/` para hierarquia, helpers em `tagHierarchy.ts`.
-- `<TagChip/>` + `<TagAutocomplete/>` + normalização no save.
-- Rota `/equity-brain/tag/:slug` com 4 tabs (notas/mandatos/buyers/empresas/sub-tags).
-- RPCs `eb_notes_by_tag` e `eb_top_tags`.
-- Index GIN em `entity_notes.tags`.
+Página `/equity-brain/busca-notas` (`src/pages/equity-brain/NoteSearchPage.tsx`):
 
-Sem nova entrada no índice — continua dentro do memo Núcleo de Conhecimento.
+- Input search + filtros (entity_type, autor=me/todos, has-tag).
+- Ao digitar (debounce 400ms): edge `embed-query` retorna vetor → chama `eb_notes_search_hybrid`.
+- Lista resultados com highlight (regex simples dos termos do query) + score visível.
+- Item da sidebar EB "Buscar notas" (ícone `Search`) abaixo de "Diário".
 
----
-
-### 10. Fora de escopo
-
-- Renomear tag em massa (admin UI).
-- Cor por namespace configurável (fase futura — agora paleta fixa: setor=cyan, estagio=amber, tese=violet, prioridade=red, outros=zinc).
-- Tag em mandato/buyer/empresa diretamente (hoje só em notas). Pode vir num Bloco 6.5.
-- Saved searches (`/equity-brain/busca?tag=…&autor=…`).
-- Bloco 7 (pgvector semântico) — fica pra próxima.
+Pro escopo desse bloco, manter sidebar enxuta? **Sim** — colocar o item, é descoberta core.
 
 ---
 
-### 11. Arquivos
+### 8. Hooks
 
-**Novos**
-- `src/lib/eb/tagHierarchy.ts`
-- `src/components/equity-brain/notes/TagChip.tsx`
-- `src/components/equity-brain/notes/TagAutocomplete.tsx`
-- `src/hooks/useTopTags.ts`
-- `src/hooks/useNotesByTag.ts`
-- `src/pages/equity-brain/TagPage.tsx`
-- Migration: `eb_notes_by_tag` + `eb_top_tags` RPCs + GIN index
+- `src/hooks/useNotesSimilar.ts`: `useNotesSimilar(noteId, opts)` → react-query, cache 5min, retorna `{ data: NoteWithSimilarity[] }`.
+- `src/hooks/useNoteSearch.ts`: `useNoteSearch(query, filters)` — orquestra embed-query + RPC.
+
+---
+
+### 9. Edge function `embed-query`
+
+`supabase/functions/embed-query/index.ts`:
+
+- POST `{ query: string }` → `{ embedding: number[768] }`.
+- Reusa exatamente o cliente Gemini que `embed-signal` usa.
+- Cache em memória LRU (50 entries, 10min) por query string pra economizar tokens em digitação rápida.
+- `verify_jwt = true` (só usuário logado).
+
+---
+
+### 10. Performance / custos
+
+- Gemini text-embedding-004: ~$0.025/1M tokens. Nota típica = ~200 tokens. 10k notas = $0.05. Desprezível.
+- HNSW 768-dim em ~10k notas: <5ms por query, índice ~30MB.
+- Re-embed só dispara em UPDATE de `title`/`body_md`, não em `tags`/`pinned`.
+
+---
+
+### 11. Memória
+
+Atualizar `mem://features/entity-notes-kb.md` adicionando "Bloco 7 entregue":
+- Coluna `embedding vector(768)` + index HNSW + trigger de enqueue + edge `embed-note` (cron 10min) + `embed-query`.
+- RPCs `eb_notes_similar`, `eb_notes_search_hybrid`.
+- `<SimilarNotesPanel>` no editor; rota `/equity-brain/busca-notas`.
+- Hybrid score: 40% BM25 + 60% semântico.
+
+---
+
+### 12. Fora de escopo
+
+- Embedding de templates / daily auto-summary.
+- Cross-entity similarity ("notas parecidas com este buyer").
+- Re-ranking com LLM ("agente que lê top-20 e responde").
+- Highlight via LLM (highlight é regex simples).
+- Configuração de pesos por usuário.
+
+---
+
+### 13. Arquivos
+
+**Migration**
+- `entity_notes` ganha `embedding`/`embedding_computed_at`/`embedding_text_hash`.
+- Index HNSW.
+- Trigger + função de enqueue.
+- RPCs `eb_notes_similar` e `eb_notes_search_hybrid`.
+- pg_cron job pra `embed-note` (se pg_cron já está habilitado no projeto — confirmar; se não, migration adiciona).
+
+**Edge functions**
+- `supabase/functions/embed-note/index.ts`
+- `supabase/functions/embed-query/index.ts`
+
+**Novos arquivos**
+- `src/components/equity-brain/notes/SimilarNotesPanel.tsx`
+- `src/pages/equity-brain/NoteSearchPage.tsx`
+- `src/hooks/useNotesSimilar.ts`
+- `src/hooks/useNoteSearch.ts`
 
 **Editados**
-- `src/components/equity-brain/notes/EntityNotes.tsx` (TagChip, autocomplete, normalize no save)
-- `src/components/equity-brain/notes/EntityBacklinksPanel.tsx` (chips clicáveis)
-- `src/App.tsx` (rota `/equity-brain/tag/:slug`)
-- `src/pages/equity-brain/TodayPage.tsx` (banner tags populares — se a página existir; senão skip)
-- `.lovable/memory/features/entity-notes-kb.md`
-- `.lovable/plan.md`
+- `src/components/equity-brain/notes/EntityNotes.tsx` (SimilarNotesPanel em modo View).
+- `src/components/equity-brain/EBSidebar.tsx` (item "Buscar notas").
+- `src/App.tsx` (rota).
+- `.lovable/memory/features/entity-notes-kb.md`.
+- `.lovable/plan.md`.
 
-Entrega tem 1 migration enxuta (2 RPCs + 1 index) e o resto é UI.
+Entrega = 1 migration + 2 edge functions + 4 arquivos UI + 3 edits. Bloco fecha o Núcleo de Conhecimento (Blocos 1–7).
