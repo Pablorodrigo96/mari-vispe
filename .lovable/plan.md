@@ -1,135 +1,161 @@
-## Objetivo
 
-Substituir o layout esférico determinístico atual (Fibonacci sphere com `fx/fy/fz` pinados, todas as forças d3 nulas) por um efeito de **germinação progressiva**: nós nascem na origem, links entram aos poucos, e a simulação de força os empurra organicamente até estabilizarem em formato de globo via `forceRadial`.
+# Fase 6 — Núcleo de Conhecimento Mari
 
-## Arquivo afetado
+## REGRA ZERO respeitada — este plano entrega APENAS o Bloco 0 (Auditorias 1, 2 e 3). Nada de código até Pablo validar.
 
-`src/components/equity-brain/jarvis/JarvisGraph3D.tsx`
+Após validação, os Blocos 1-7 serão planejados/implementados em sequência, cada um com PARADA pra revisão.
 
-## Mudanças
+---
 
-### 1. Estado de links visíveis (germinação)
+## Auditoria 1 — Backend atual
 
-Adicionar:
-```ts
-const [visibleLinkCount, setVisibleLinkCount] = useState(0);
+### Schemas em uso
+- `public` (106 tabelas + 38 views) — App principal (listings, buyer_profiles, etc.) + mirror eb_* (views) do Equity Brain
+- `equity_brain` (70 objetos: 53 tabelas, 13 views, 4 matviews) — Núcleo CRM/Matching M&A
+
+Importante: tudo que aparece como `eb_*` em `public` é **view** que aponta pro schema `equity_brain` real (com RLS aplicada).
+
+### Entidades-alvo identificadas (onde notas/backlinks fazem sentido)
+
+| Entidade   | Tabela canônica            | ID  | Campo livre hoje | Acesso via view pública |
+|------------|----------------------------|-----|------------------|-------------------------|
+| Listing    | `public.listings`          | id  | `description`, `additional_info`, `sale_reason` | `listings_blind` |
+| Mandato    | `equity_brain.mandates`    | id  | `observacoes` (1 string) | `eb_mandates` |
+| Buyer (M&A)| `equity_brain.buyers`      | id  | `observacoes`, `cautela_motivo` | `eb_buyers`, `eb_buyers_enriched` |
+| Empresa    | `equity_brain.companies`   | id  | `raw_data` jsonb | `eb_companies`, `eb_companies_enriched`, `companies_blind` |
+| Contato    | `equity_brain.contacts`    | id  | `notas` (text) | `eb_contacts` |
+| Buyer cliente | `public.buyer_profiles` | id  | `description` | `public_buyer_profiles` |
+| Match      | `equity_brain.matches`     | id  | — | `eb_matches_enriched` |
+| Deal       | `equity_brain.deals`       | id  | — | (sem view pública) |
+| Advisor    | `auth.users` + `user_roles`+ `profiles` | uid | — | — |
+| Captação   | `public.capital_requests`  | id  | `objective` | — |
+
+**Hoje cada entidade tem 1 campo de texto livre** — capacidade muito inferior ao que o Bloco 2 propõe (notas múltiplas, RLS por visibility, histórico, markdown).
+
+### Edge functions relevantes (84 total) — agrupadas por uso
+- **Mari/IA**: `mari-brain`, `mari-chat`, `mari-summarize-deal/thread`, `mari-suggest-actions`, `mari-score-temperature`, `mari-generate-insights`, `mari-draft-message`, `generate-dashboard-insight`
+- **CRM**: `crm-detect-new-matches`, `crm-log-activity`, `news-to-crm-alert`, `process-event`, `drain-events-bulk`
+- **Matching**: `match-batch`, `match-buyer`, `match-company-v2`, `matching-engine`, `process-match-queue`, `rematch-buyer`
+- **Ingestão**: `eb-import-anatel/monday`, `enrich-company-via-rfb`, `ingest-company-news`, `extract-news-event`, `sync-listings-to-equity-brain`
+- **Embeddings (REUTILIZÁVEL no Bloco 7)**: `compute-semantic-embeddings`, `embed-signal`
+
+### Triggers / cron
+- `setup-equity-brain-crons` orquestra crons. Não há nada de "notas" ou "backlinks" hoje.
+
+### O que NÃO existe (e o Bloco 2-7 vai criar)
+- ❌ Tabela polimórfica de notas (`entity_notes`)
+- ❌ Backlinks / menções (`entity_mentions`)
+- ❌ Daily notes do advisor
+- ❌ Templates de mandato
+- ❌ Tags hierárquicas
+- ❌ Embeddings de notas
+
+---
+
+## Auditoria 2 — Frontend atual
+
+### Páginas de detalhe das entidades-alvo
+| Entidade  | Rota                              | Componente                    | Status |
+|-----------|-----------------------------------|-------------------------------|--------|
+| Listing   | `/anuncio/:id` (público)          | `pages/ListingDetail.tsx`     | OK |
+| Listing (advisor) | `/meus-anuncios/:id`     | `pages/ListingCockpit.tsx`    | OK — com `EntityDocChecklist` |
+| Mandato   | `/equity-brain/crm/mandate/:id`   | `pages/equity-brain/MandateDetailPage.tsx` | OK — 5 tabs (Visão, Matches, News, WhatsApp, Documentos) |
+| Buyer M&A | `/equity-brain/crm/buyer/:id`     | `pages/equity-brain/BuyerDetailPage.tsx` | OK |
+| Empresa   | `/equity-brain/company/...` (parcial) | `components/equity-brain/CompanyProfileCard.tsx` | Parcial — usa cards reutilizados |
+| Match     | `/equity-brain/crm/match/:id`     | `pages/equity-brain/MatchDetailPage.tsx` | OK |
+| Deal      | `/equity-brain/deal/:id`          | `pages/equity-brain/UnifiedDealPage.tsx` (3 colunas) | OK |
+| Contato (pessoa) | — (não existe rota dedicada) | — | **❌ AUSENTE** |
+| Advisor (perfil interno) | — | — | **❌ AUSENTE** |
+| Captação  | `/captacao/:id`                   | `pages/CapitalRequestDetail.tsx` | OK |
+| Buyer cliente (perfil app) | `/meus-compradores` (lista) | `pages/RegisterBuyer.tsx`+ list | Sem página de detalhe individual |
+
+### Gaps front × back detectados (a confirmar com Pablo)
+
+Esses são **hipóteses** baseadas na varredura — Bloco 1 precisa de validação dirigida. Sinais fortes:
+
+1. **`eb_mandates_enriched` tem 25+ colunas** (`probability`, `expected_close_at`, `temperature_reason`, `pipeline_stage`, `outcome`, `valor_operacao`, `faturamento_vispe`, `data_inicio/fechamento`, `regiao`, etc.) — `MandateDetailPage` mostra apenas ~6 no header. Resto vive parcialmente em `FinancialPipelinePanel` e `TopMatchesHeader`. **A confirmar:** quais campos da Fase 4 (M&A Monday Replacement) chegaram à UI.
+2. **`equity_brain.buyers` tem** `archetype_id`, `pause_signal`, `prioridade_global`, `cautela_flag/motivo`, `vertical_principal` — verificar se `BuyerDetailPage` renderiza todos.
+3. **`equity_brain.companies` tem** `embedding_computed_at`, `qualification_status`, `qualified_at/by`, `qualification_source`, `linked_buyer_id`, `codename` — confirmar se aparecem em algum CompanyDetail.
+4. **`mandate_summaries` (AI)** — usado em `ConversationSummary`? Confirmar cobertura.
+5. **`market_waves`, `drift_snapshots`** — Fase Onda C/D entregou cards; verificar se todos renderizam.
+
+**Reportarei a lista FINAL de gaps com prints/queries em Bloco 1, após Pablo confirmar quais entidades priorizar.**
+
+---
+
+## Auditoria 3 — Decisões de implementação (proposta)
+
+Para cada entidade-alvo, onde colocar notas + quem vê:
+
+| Entidade | Onde adicionar `<EntityNotes/>` | Visibilidades aplicáveis | Quem vê |
+|----------|--------------------------------|--------------------------|---------|
+| Mandato  | Nova tab "Notas" ou seção em "Visão geral" de `MandateDetailPage` | internal, client | advisor/admin (internal); + dono do listing vinculado (client) |
+| Buyer M&A| Aba "Notas" em `BuyerDetailPage` | internal | advisor/admin apenas (buyers M&A são entidades internas) |
+| Empresa  | Card "Notas" em `CompanyProfileCard` | internal, client, buyer | advisor/admin; dono se tem listing; buyers com NDA (`disclosure_grants`) para `buyer` |
+| Listing  | Seção "Notas internas" em `ListingCockpit` (visão advisor) e `ListingDetail` (cliente vê só visibility=client) | internal, client, public | advisor/admin; dono (client); público (public) |
+| Contato (pessoa) | **Criar rota nova** `/equity-brain/crm/contact/:id` | internal | advisor/admin |
+| Advisor (perfil) | Nova rota `/equity-brain/advisor/:id` (admin) ou tab no MyProfile (próprio) | internal | admin (vê todos); self (vê próprio) |
+| Captação | Aba "Notas" em `CapitalRequestDetail` | internal, client | advisor/admin; dono (client) |
+| Deal     | Coluna "Notas" em `UnifiedDealPage` (já é 3 colunas) | internal | advisor/admin |
+| Daily Notes | Rota nova `/diario` | self | advisor (próprio); admin (todos) |
+
+### Mapeamento de visibility → predicates RLS (proposta)
+
+```sql
+visibility='internal' → has_role(auth.uid(),'advisor') OR has_role(auth.uid(),'admin')
+visibility='client'   → internal-roles OR auth.uid() = owner_of(entity_type, entity_id)
+visibility='buyer'    → internal-roles OR EXISTS (
+    SELECT 1 FROM equity_brain.disclosure_grants
+    WHERE grantee_user_id=auth.uid() AND entity_id=$entity_id AND status='active'
+)
+visibility='public'   → true
 ```
 
-Os nós entram todos de uma vez (com posição inicial em 0,0,0) — o que cresce progressivamente é o conjunto de **links**. Isso é mais barato que filtrar nós e produz o efeito "neurônios formando sinapses".
+`owner_of()` será uma SECURITY DEFINER function que mapeia (entity_type, entity_id) → owner uid (ex.: `listings.user_id`, `buyer_profiles.user_id`, `capital_requests.user_id`). Para mandato/buyer M&A/contato/empresa interna não há "owner cliente" — visibility='client' não se aplica nessas (validação no insert).
 
-### 2. Sequenciador
+### Pontos abertos para Pablo confirmar antes do Bloco 1
 
-Novo `useEffect` disparado quando `graphData.links.length` muda:
+1. **Migrar `observacoes`/`notas`/`additional_info` existentes** para `entity_notes` como nota inicial pinada, **OU** manter campos legacy e usar `entity_notes` só para conteúdo novo? (recomendo migrar via seed na ativação)
+2. **Pessoas (contatos)** precisam de página de detalhe própria (`/equity-brain/crm/contact/:id`)? Hoje aparecem apenas embutidos no mandato/buyer.
+3. **Buyer M&A** suporta `visibility='client'`? Não há "cliente" — propor apenas `internal`.
+4. **Storage de imagens em notas**: criar bucket `entity-notes-images` ou bloquear imagens no MVP?
+5. **Histórico de versões** (Bloco 2.1 opcional): ativar desde o início ou deixar pra Bloco 2.5?
+6. **Prioridade de entidades no Bloco 2**: implementar TODAS de uma vez ou começar por Mandato + Buyer + Empresa e expandir?
 
-```ts
-useEffect(() => {
-  setVisibleLinkCount(0);
-  if (!graphData.links.length) return;
-  const STEP = 3;          // 3 links por tick
-  const INTERVAL_MS = 70;  // ~14fps de germinação
-  const id = setInterval(() => {
-    setVisibleLinkCount((c) => {
-      const next = c + STEP;
-      if (next >= graphData.links.length) {
-        clearInterval(id);
-        return graphData.links.length;
-      }
-      return next;
-    });
-  }, INTERVAL_MS);
-  return () => clearInterval(id);
-}, [graphData.links]);
+---
 
-const displayLinks = useMemo(
-  () => graphData.links.slice(0, visibleLinkCount),
-  [graphData.links, visibleLinkCount],
-);
+## Próximos passos
+
+```text
+[Bloco 0] ─── ESTE PLANO ─── aguardando ✅ de Pablo
+   │
+   ▼
+[Bloco 1] Gaps front × back — preciso de respostas para os 6 pontos abertos acima
+   │
+   ▼
+[Bloco 2] entity_notes + <EntityNotes/>      (8-12h)
+   │
+   ▼
+[Bloco 3] Backlinks @ + entity_mentions      (6-8h)
+   │
+   ▼
+[Bloco 4] Daily Notes /diario                (4-6h)
+   │
+   ▼
+[Bloco 5] Templates de mandato               (4-6h)
+   │
+   ▼
+[Bloco 6] Tags hierárquicas                  (3-5h)
+   │
+   ▼
+[Bloco 7] Smart Connections (pgvector)       (4-6h, reaproveita compute-semantic-embeddings)
 ```
 
-Passar `displayLinks` (não `graphData.links`) para a prop `linkData` do `<ForceGraph3D />`. Os `nodes` continuam sendo o array completo desde o frame zero.
+## Pronto para Bloco 1?
 
-### 3. Posicionamento inicial em (0,0,0)
+Aguardando Pablo:
+1. Validar lista de entidades-alvo da Auditoria 1.
+2. Confirmar/corrigir mapeamento de páginas da Auditoria 2.
+3. Responder os 6 pontos abertos da Auditoria 3.
 
-Remover o bloco do useEffect atual (linhas ~419-478) que fixa `fx/fy/fz` em coordenadas Fibonacci. Substituir por inicialização única:
-
-```ts
-useEffect(() => {
-  if (!graphData.nodes.length) return;
-  graphData.nodes.forEach((n: any) => {
-    // jitter mínimo evita NaN do d3 quando todos coincidem
-    n.x = (Math.random() - 0.5) * 0.5;
-    n.y = (Math.random() - 0.5) * 0.5;
-    n.z = (Math.random() - 0.5) * 0.5;
-    delete n.fx; delete n.fy; delete n.fz;
-  });
-}, [graphData.nodes]);
-```
-
-### 4. Forças d3 (expansão orgânica + globo)
-
-Importar `forceRadial` do `d3-force-3d` (já disponível). Configurar via `useEffect` que aplica forças no `fgRef.current`:
-
-```ts
-import { forceCollide, forceManyBody, forceRadial, forceLink } from "d3-force-3d";
-
-useEffect(() => {
-  const fg = fgRef.current as any;
-  if (!fg || !graphData.nodes.length) return;
-
-  const N = graphData.nodes.length;
-  const R = Math.max(600, Math.min(1800, 500 + N * 3.5));
-  sphereRadiusRef.current = R;
-
-  fg.d3Force("charge", forceManyBody().strength(-180).distanceMax(R * 1.6));
-  fg.d3Force("link", forceLink()
-    .id((d: any) => d.id)
-    .distance((l: any) => 60 + (1 - (l.weight ?? 0.5)) * 90)
-    .strength(0.35));
-  fg.d3Force("collide", forceCollide((n: any) => (n.visualRadius ?? 6) + 4));
-  fg.d3Force("radial", forceRadial(R, 0, 0, 0).strength(0.18));
-  fg.d3Force("center", null);
-
-  // Damping/viscosidade — crescimento controlado, sem explodir
-  fg.d3VelocityDecay(0.55);
-  fg.d3AlphaDecay(0.012);
-  fg.d3AlphaTarget(0.05); // mantém vivo durante a germinação
-  fg.cooldownTicks(Infinity);
-  fg.refresh();
-}, [graphData.nodes]);
-```
-
-### 5. Congelamento após germinação completa
-
-Quando `visibleLinkCount === graphData.links.length`, baixar o `alphaTarget` para 0 e deixar o `alphaDecay` levar a simulação ao repouso. Após estabilizar (~2s), aplicar `cooldownTicks(0)` para congelar e liberar CPU:
-
-```ts
-useEffect(() => {
-  const fg = fgRef.current as any;
-  if (!fg) return;
-  if (visibleLinkCount && visibleLinkCount >= graphData.links.length) {
-    fg.d3AlphaTarget(0);
-    const t = setTimeout(() => {
-      try { fg.cooldownTicks(0); fg.refresh(); } catch {}
-    }, 2500);
-    return () => clearTimeout(t);
-  }
-}, [visibleLinkCount, graphData.links.length]);
-```
-
-### 6. Auto-orbit da câmera
-
-Mantém o orbit existente (linhas ~480+). A câmera continua girando ao redor da origem; agora o globo de fato se forma em volta dela em vez de aparecer pronto.
-
-## Parâmetros ajustáveis (caso "exploda")
-
-Se o crescimento ficar caótico, reduzir nesta ordem:
-- `charge.strength`: −180 → −120
-- `velocityDecay`: 0.55 → 0.7 (mais viscoso)
-- `radial.strength`: 0.18 → 0.28 (puxa mais forte para a esfera)
-- `STEP`: 3 → 1 (germinação mais lenta)
-
-## Fora de escopo
-
-- Renderização de nós (esferas, glow, anéis) — mantida.
-- Filtros, painel de detalhes, presentation mode, ghost synapses, solar flares — mantidos.
-- 2D `StrategicGraph` — não afetado.
+Após o ✅, abrirei novo plano focado APENAS no Bloco 1 (gaps front × back) com queries dirigidas pra cada entidade priorizada.
