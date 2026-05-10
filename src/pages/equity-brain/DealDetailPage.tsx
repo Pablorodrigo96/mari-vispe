@@ -78,7 +78,33 @@ export default function DealDetailPage() {
           </Link>
         </div>
       ) : (
-        <DealCard cnpj={resolved.cnpj} mode="page" />
+        <div className="space-y-3">
+          <div className="flex items-center gap-1 border-b border-zinc-800 px-6">
+            {([
+              { key: "overview" as Tab, label: "Visão geral", Icon: Activity },
+              { key: "notes" as Tab, label: "Notas", Icon: StickyNote },
+            ]).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-xs border-b-2 -mb-px transition-colors",
+                  tab === t.key
+                    ? "border-emerald-500 text-emerald-300"
+                    : "border-transparent text-zinc-400 hover:text-zinc-100",
+                )}
+              >
+                <t.Icon className="h-3.5 w-3.5" /> {t.label}
+              </button>
+            ))}
+          </div>
+          {tab === "overview" && <DealCard cnpj={resolved.cnpj} mode="page" />}
+          {tab === "notes" && (
+            <div className="px-6 py-4">
+              <EntityNotes entityType="company" entityId={resolved.cnpj} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
