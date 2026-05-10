@@ -3071,6 +3071,48 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_entity_notes: {
+        Row: {
+          author_id: string | null
+          body_md: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string | null
+          pinned: boolean | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string | null
+          visibility: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          body_md?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: never
+          id?: string | null
+          pinned?: boolean | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+          visibility?: never
+        }
+        Update: {
+          author_id?: string | null
+          body_md?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: never
+          id?: string | null
+          pinned?: boolean | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+          visibility?: never
+        }
+        Relationships: []
+      }
       eb_events: {
         Row: {
           created_at: string | null
