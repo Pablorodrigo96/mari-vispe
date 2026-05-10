@@ -39,3 +39,9 @@ Próximos blocos: 1 (gaps front×back), 3 (@mentions/backlinks), 4 (Daily Notes 
 - Página `src/pages/equity-brain/DailyDiaryPage.tsx`: rotas `/equity-brain/diario` e `/equity-brain/diario/:date` (App.tsx). Layout 2 colunas (lg:[1fr_360px]): editor à esquerda (autosave debounce 2s, toggle Edit/View, mention autocomplete + NoteRenderer, template default "Prioridades/Calls/Insights" injetado se vazio), 3 FeedCards à direita (Atividades, Notas, Deals).
 - Header tem navegação `← / Hoje / →` + Datepicker shadcn (disabled futuro) + badge 🔥 streak. URL sincroniza com data via `navigate(..., {replace:true})`.
 - Sidebar EB ganhou item "Diário" (ícone `CalendarDays`) logo abaixo de "Hoje".
+
+## Bloco 5 entregue (Templates de notas)
+- Catálogo estático em `src/lib/eb/noteTemplates.ts`: 6 templates (call-discovery, ioi, follow-up, post-mortem, one-on-one, daily-default) com `scope: ('mandate'|'buyer_ma'|'company'|'daily')[]`, ícone Lucide e `body` markdown com placeholders `{{date}}` e `{{entityLabel}}`. Helpers `getTemplatesForScope` e `applyTemplate(tpl, ctx)`.
+- `<TemplatePicker scope context onInsert/>` em `src/components/equity-brain/notes/TemplatePicker.tsx`: botão ghost "Template" → Popover + Command (search) lista templates do escopo, callback recebe markdown já com placeholders aplicados.
+- Integrado em `<EntityNotes/>` ao lado do input de título (escopo = entityType) e em `DailyDiaryPage` no header do editor (escopo daily, ctx.date = data selecionada). Antigo botão "Inserir template do dia" removido — virou dica textual.
+- Sem migrations / sem tabelas — fase 1 puro client-side. Fase 2 futura: `equity_brain.note_templates` para templates customizados.

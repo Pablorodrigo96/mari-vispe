@@ -1,110 +1,101 @@
-## Bloco 4 — Daily Notes (`/equity-brain/diario`)
+## Bloco 5 — Templates de notas
 
-Cada advisor ganha uma **nota por dia** que vira o hub matinal: abre, vê o que rolou ontem (atividades, menções, deals que mexeram) e escreve o plano do dia em markdown. Reusa toda a stack do Bloco 2/3 (entity_notes, mentions, NoteRenderer).
-
----
-
-### 1. Schema — extender `entity_notes`
-
-Adicionar valor `daily` ao enum `entity_type` (mandate/buyer_ma/company/**daily**).
-
-- `entity_id` para daily = `YYYY-MM-DD` (date como text), garante 1 nota por dia por autor via UNIQUE `(author_id, entity_type, entity_id) WHERE entity_type='daily'`.
-- `visibility` daily = sempre `internal` (privada do autor). RLS já cobre: autor edita próprio, admin lê tudo.
-- Tags livres + suporte a `@mention` herdado (Bloco 3 funciona automático).
-
-Migration: ALTER TYPE + índice UNIQUE parcial + policy extra "Autor lê próprias daily notes" (já coberto pela policy de internal, mas reforça).
+Bloco 4 entregue. Próximo passo natural: **templates pré-formatados** que o advisor injeta com 1 clique em qualquer editor de nota (entity ou daily). Acelera radicalmente call discovery, IOI, follow-up, post-mortem e o template do diário.
 
 ---
 
-### 2. Rota e navegação
+### 1. Catálogo de templates (fase 1: estáticos no código)
 
-- Nova rota `/equity-brain/diario` (e `/equity-brain/diario/:date` opcional pra navegar histórico).
-- Item no `EBSidebar` "Diário" (ícone `CalendarDays`, posição entre Hoje e CRM).
-- Atalho: tecla `g d` ou botão "Abrir diário" no topo de `/equity-brain/hoje`.
+Sem tabela nova. Arquivo `src/lib/eb/noteTemplates.ts` exporta array tipado:
 
----
+```ts
+export type NoteTemplate = {
+  id: string;                // 'call-discovery'
+  label: string;             // 'Call Discovery'
+  description: string;       // 1 linha pro tooltip
+  scope: ('mandate'|'buyer_ma'|'company'|'daily')[]; // onde aparece
+  icon: LucideIcon;
+  body: string;              // markdown com placeholders
+};
+```
 
-### 3. Layout da página
+6 templates iniciais:
 
-Header:
-- Data grande (`format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })`)
-- Navegador `← ontem · hoje · amanhã →` (limitado a hoje no futuro)
-- Datepicker pra pular pra qualquer dia (shadcn calendar)
+1. **Call Discovery** — escopo mandate/buyer/company. Seções: Contexto, Dores, Critérios de decisão, Próximos passos, Mentions `@`.
+2. **IOI / Carta de interesse** — buyer/company. Faixa de valuation, condições, prazo.
+3. **Follow-up** — todos. Última interação / Status / Pendências / Próximo toque.
+4. **Post-mortem (Lost)** — mandate/company. Motivo, sinais ignorados, aprendizado.
+5. **Reunião 1:1** — daily. Pauta, decisões, ações.
+6. **Daily padrão** — daily. Substitui o template fixo atual do `DailyDiaryPage`.
 
-Corpo em 2 colunas (1 coluna no mobile <440):
-
-**Esquerda (60%) — Editor da nota do dia**
-- Reusa `<EntityNotes entityType="daily" entityId={dateStr} />` simplificado: sempre 1 nota (cria automaticamente no primeiro acesso), sem lista, sem pin, sem search.
-- Componente novo `<DailyNoteEditor date/>` que faz upsert via `useUpsertDailyNote`.
-- Autosave a cada 2s de inatividade (debounce), indicador "Salvo · 14:32".
-- Textarea full-height com mention autocomplete (Bloco 3) e renderização toggle View/Edit.
-
-**Direita (40%) — Feed agregado do dia**
-Card "Atividades do dia" + Card "Menções minhas" + Card "Deals que mexeram":
-
-a) **Atividades** (`crm_activities` where created_by=me AND date_trunc('day', created_at)=date) — ícone+entidade+tipo+hora, link pra entidade.
-
-b) **Menções a mim** (futuro placeholder — por agora skip, só mostrar mensagem). Alternativa MVP: **notas que criei hoje** (`eb_entity_notes` where author_id=me AND date_trunc('day', created_at)=date AND entity_type≠'daily').
-
-c) **Deals atualizados** (`deals` where updated_at::date=date AND owner_id=me) — codename+stage+probabilidade.
-
-Todos lidos via React Query com `queryKey: ['daily-feed', date, userId]`.
+Placeholders soft: `{{date}}`, `{{entityLabel}}` — substituídos no momento da inserção (sem engine, só `String.replace`).
 
 ---
 
-### 4. Hook `useDailyNote(date)`
+### 2. UI: `<TemplatePicker/>` (popover)
 
-`src/hooks/useDailyNote.ts`:
-- `useDailyNote(date)`: SELECT em `eb_entity_notes` filtrando entity_type='daily', entity_id=date, author_id=me. `maybeSingle()`.
-- `useUpsertDailyNote()`: INSERT ON CONFLICT DO UPDATE no `entity_notes` direto (RLS permite ao autor).
-- `useDailyFeed(date)`: paralelo `crm_activities` + `eb_entity_notes` (não-daily de hoje) + `deals` atualizados.
+Componente `src/components/equity-brain/notes/TemplatePicker.tsx`:
 
----
-
-### 5. Página `DailyDiaryPage.tsx`
-
-`src/pages/equity-brain/DailyDiaryPage.tsx`:
-- Lê `:date` (default hoje, formato `YYYY-MM-DD`)
-- Validação: data não pode ser futura (clamp pra hoje)
-- Renderiza `<DailyDiaryHeader/>` + `<DailyNoteEditor/>` + `<DailyFeedColumn/>`
-- Empty state se nota não existe ainda: placeholder "Comece o dia escrevendo o que importa…" + botão "Inserir template" (link pro Bloco 5 futuro, por agora insere snippet fixo com seções "Prioridades / Calls / Insights").
+- Botão `<Button variant="ghost" size="sm">` com ícone `FileText` + label "Template".
+- Popover shadcn com `Command` (search + lista filtrada por `scope`).
+- Cada item: ícone + label + description; Enter/clique injeta `body` no textarea via callback `onInsert(markdown)`.
+- Comportamento: insere no caret atual; se textarea já tem conteúdo, prefixa com `\n\n`.
 
 ---
 
-### 6. Streak gamificado (leve)
+### 3. Integração nos editores existentes
 
-No header do `/diario`: badge "🔥 X dias seguidos" calculado client-side via query `eb_entity_notes` últimas 30 daily notes do autor → contagem de dias consecutivos terminando hoje. Stale 5min. Reaproveita visual de Profile Gamification.
+**a) `<EntityNotes/>`** (`src/components/equity-brain/notes/EntityNotes.tsx`)
+- No header do form de nova nota / edição, adicionar `<TemplatePicker scope={entityType} onInsert={…}/>` ao lado do toggle Markdown/Preview.
+- `onInsert` faz `setBody(prev => prev ? prev + "\n\n" + tpl : tpl)`.
 
----
-
-### 7. Memória
-
-Atualizar `mem://features/entity-notes-kb.md` com seção "Bloco 4 entregue":
-- enum `daily` + entity_id=date
-- rota `/equity-brain/diario` + sidebar item
-- Hook `useDailyNote/useUpsertDailyNote/useDailyFeed`
-- Componente `DailyNoteEditor` + `DailyFeedColumn`
-- Streak counter
-
-Sem nova entrada no índice — Bloco 4 cabe dentro do mesmo memo do Núcleo de Conhecimento.
+**b) `<DailyDiaryPage/>`** (editor diário)
+- Substituir botão atual "Inserir template" por `<TemplatePicker scope="daily"/>`.
+- Template "Daily padrão" reproduz o snippet fixo de hoje (Prioridades / Calls / Insights) — mantém compatibilidade.
 
 ---
 
-## Fora de escopo
+### 4. Placeholders dinâmicos
 
-- Templates pré-prontos parametrizáveis (Bloco 5)
-- Notificação de "você não escreveu hoje" via email
-- Compartilhar daily com outro advisor (continua privada)
-- Exportar diário (PDF/markdown)
-- Resumo IA do dia (potencialmente Bloco 8 com Mari)
+Helper `applyTemplate(tpl: NoteTemplate, ctx: { date?: string; entityLabel?: string }): string`:
+
+- `{{date}}` → `format(new Date(), "dd/MM/yyyy")` ou `ctx.date`.
+- `{{entityLabel}}` → nome do mandato / razão social / buyer label (passado pelo pai).
+- Outros tokens deixam como estão (futuro Bloco 6/7).
 
 ---
 
-## Detalhe técnico
+### 5. Fora de escopo
 
-- `entity_id` como `YYYY-MM-DD` mantém o text genérico atual (sem refactor de tipo).
-- UNIQUE parcial: `CREATE UNIQUE INDEX entity_notes_daily_unique ON equity_brain.entity_notes (author_id, entity_id) WHERE entity_type = 'daily';`
-- Autosave: `useDebouncedCallback` 2000ms; estado local `dirty` + `lastSavedAt`.
-- View `eb_entity_notes` já expõe daily (security_invoker passa pela RLS de internal+autor).
-- Datepicker shadcn com `pointer-events-auto` e `disabled={(d) => d > new Date()}`.
-- Sem afetar `<EntityNotes/>` existente nas páginas de mandato/buyer/empresa — `DailyNoteEditor` é um wrapper próprio.
+- Templates customizados criados pelo usuário (fase 2 → tabela `equity_brain.note_templates`).
+- Compartilhamento entre advisors.
+- Templates com variáveis interativas (forms in-modal).
+- Atalhos de teclado por template.
+
+---
+
+### 6. Memória
+
+Atualizar `mem://features/entity-notes-kb.md` adicionando seção "Bloco 5 entregue":
+- `noteTemplates.ts` catálogo + tipos
+- `<TemplatePicker/>` integrado a `EntityNotes` + `DailyDiaryPage`
+- 6 templates iniciais com escopo
+- Placeholders `{{date}}` / `{{entityLabel}}`
+
+Sem nova entrada no índice — continua no memo Núcleo de Conhecimento.
+
+---
+
+### 7. Arquivos
+
+**Novos**
+- `src/lib/eb/noteTemplates.ts`
+- `src/components/equity-brain/notes/TemplatePicker.tsx`
+
+**Editados**
+- `src/components/equity-brain/notes/EntityNotes.tsx` (inserir picker no editor)
+- `src/pages/equity-brain/DailyDiaryPage.tsx` (trocar template fixo por picker)
+- `.lovable/memory/features/entity-notes-kb.md`
+- `.lovable/plan.md`
+
+Sem migrations, sem novas tabelas, sem novas rotas. Entrega rápida.

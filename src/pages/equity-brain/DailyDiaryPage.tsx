@@ -27,19 +27,7 @@ import { useEffectiveRoles } from "@/hooks/useEffectiveRoles";
 import { NoteRenderer } from "@/components/equity-brain/notes/NoteRenderer";
 import { MentionAutocomplete, useMentionTrigger } from "@/components/equity-brain/notes/MentionAutocomplete";
 import { buildMentionToken } from "@/lib/eb/mentionParser";
-
-const DEFAULT_TEMPLATE = `## Prioridades
-
-- 
-
-## Calls / Reuniões
-
-- 
-
-## Insights & próximos passos
-
-- 
-`;
+import { TemplatePicker } from "@/components/equity-brain/notes/TemplatePicker";
 
 function activityIcon(kind: string) {
   switch ((kind || "").toLowerCase()) {
@@ -240,25 +228,37 @@ export default function DailyDiaryPage() {
             <div className="text-xs text-zinc-500">
               {isViewingToday ? "Plano do dia" : "Diário"} · {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
             </div>
-            <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/60 p-0.5">
-              <button
-                onClick={() => setMode("edit")}
-                className={cn(
-                  "px-2 py-1 text-[10px] rounded transition-colors inline-flex items-center gap-1",
-                  mode === "edit" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
-                )}
-              >
-                <Pencil className="h-3 w-3" /> Editar
-              </button>
-              <button
-                onClick={() => setMode("view")}
-                className={cn(
-                  "px-2 py-1 text-[10px] rounded transition-colors inline-flex items-center gap-1",
-                  mode === "view" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
-                )}
-              >
-                <Eye className="h-3 w-3" /> Visualizar
-              </button>
+            <div className="flex items-center gap-2">
+              {canWrite && (
+                <TemplatePicker
+                  scope="daily"
+                  context={{ date: format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) }}
+                  onInsert={(md) => {
+                    setBody((prev) => (prev.trim() ? `${prev}\n\n${md}` : md));
+                    setDirty(true);
+                  }}
+                />
+              )}
+              <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/60 p-0.5">
+                <button
+                  onClick={() => setMode("edit")}
+                  className={cn(
+                    "px-2 py-1 text-[10px] rounded transition-colors inline-flex items-center gap-1",
+                    mode === "edit" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
+                  )}
+                >
+                  <Pencil className="h-3 w-3" /> Editar
+                </button>
+                <button
+                  onClick={() => setMode("view")}
+                  className={cn(
+                    "px-2 py-1 text-[10px] rounded transition-colors inline-flex items-center gap-1",
+                    mode === "view" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
+                  )}
+                >
+                  <Eye className="h-3 w-3" /> Visualizar
+                </button>
+              </div>
             </div>
           </div>
 
@@ -287,18 +287,8 @@ export default function DailyDiaryPage() {
                 />
               )}
               {canWrite && !body.trim() && (
-                <div className="mt-2 flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                    onClick={() => {
-                      setBody(DEFAULT_TEMPLATE);
-                      setDirty(true);
-                    }}
-                  >
-                    Inserir template do dia
-                  </Button>
+                <div className="mt-2 text-[11px] text-zinc-500">
+                  Dica: clique em <span className="text-zinc-300">Template</span> no topo para começar com uma estrutura.
                 </div>
               )}
               {dirty && canWrite && (

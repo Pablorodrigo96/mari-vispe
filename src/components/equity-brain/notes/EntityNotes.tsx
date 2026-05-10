@@ -20,6 +20,7 @@ import { NoteRenderer } from "./NoteRenderer";
 import { MentionAutocomplete, useMentionTrigger } from "./MentionAutocomplete";
 import { EntityBacklinksPanel } from "./EntityBacklinksPanel";
 import { buildMentionToken } from "@/lib/eb/mentionParser";
+import { TemplatePicker } from "./TemplatePicker";
 
 interface Props {
   entityType: NoteEntityType;
@@ -198,12 +199,20 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
 
       {showEditor && canWrite && (
         <div className="bg-zinc-900/60 border border-zinc-800 rounded p-3 space-y-2">
-          <Input
-            placeholder="Título (opcional)"
-            value={draft.title}
-            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-            className="h-8 text-xs bg-zinc-950 border-zinc-800 text-zinc-100"
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Título (opcional)"
+              value={draft.title}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+              className="h-8 text-xs bg-zinc-950 border-zinc-800 text-zinc-100 flex-1"
+            />
+            <TemplatePicker
+              scope={entityType}
+              onInsert={(md) =>
+                setDraft((d) => ({ ...d, body_md: d.body_md ? `${d.body_md}\n\n${md}` : md }))
+              }
+            />
+          </div>
           <div className="relative">
             <Textarea
               ref={textareaRef}
