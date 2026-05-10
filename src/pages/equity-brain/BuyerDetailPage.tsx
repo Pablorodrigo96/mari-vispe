@@ -114,6 +114,7 @@ export default function BuyerDetailPage() {
         phone={(buyer as any).whatsapp ?? (buyer as any).telefone ?? null}
         uf={(buyer.ufs_interesse ?? [])[0] ?? null}
       />
+      <BuyerAlertsBanner buyer={buyer} />
 
       <TopMatchesHeader buyerId={buyer.id} />
 
