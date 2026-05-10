@@ -109,6 +109,23 @@ export function EBSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={diarioActive}
+                  tooltip="Diário"
+                  className={cn(
+                    diarioActive
+                      ? "!bg-emerald-950/40 !text-emerald-300 border border-emerald-900/60"
+                      : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <Link to="/equity-brain/diario">
+                    <CalendarDays className="h-4 w-4" />
+                    <span>Diário</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
