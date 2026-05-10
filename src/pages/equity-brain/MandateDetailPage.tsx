@@ -200,6 +200,10 @@ export default function MandateDetailPage() {
         </div>
       )}
 
+      {tab === "notes" && (
+        <EntityNotes entityType="mandate" entityId={mandate.id} />
+      )}
+
       <AskMariDrawer entity_type="mandate" entity_id={mandate.id} />
     </div>
   );
