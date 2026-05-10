@@ -28,6 +28,7 @@ import { BuyerOperationBlock } from "@/components/equity-brain/buyer/BuyerOperat
 import { BuyerThesisBlock } from "@/components/equity-brain/buyer/BuyerThesisBlock";
 import { BuyerTrackRecordBlock } from "@/components/equity-brain/buyer/BuyerTrackRecordBlock";
 import { EnrichBuyerButton } from "@/components/equity-brain/buyer/EnrichBuyerButton";
+import { BuyerAlertsBanner, BuyerHeaderChips } from "@/components/equity-brain/buyer/BuyerAlertsBanner";
 import { Lightbulb, TrendingUp } from "lucide-react";
 
 type Tab = "overview" | "thesis" | "track" | "matches" | "news" | "whatsapp" | "documents" | "notes";
