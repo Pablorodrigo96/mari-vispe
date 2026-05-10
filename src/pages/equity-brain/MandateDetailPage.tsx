@@ -23,6 +23,7 @@ import { DiagnosticoVispe } from "@/components/equity-brain/DiagnosticoVispe";
 import { formatBRL } from "@/lib/equityBrain";
 import { TopMatchesHeader } from "@/components/equity-brain/match/TopMatchesHeader";
 import { WhatsAppActionButton } from "@/components/whatsapp/WhatsAppActionButton";
+import { MandateSummaryCard } from "@/components/equity-brain/mandate/MandateSummaryCard";
 
 type Tab = "overview" | "matches" | "news" | "whatsapp" | "documents" | "notes";
 
