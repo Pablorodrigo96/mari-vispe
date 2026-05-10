@@ -30,7 +30,7 @@ import { BuyerTrackRecordBlock } from "@/components/equity-brain/buyer/BuyerTrac
 import { EnrichBuyerButton } from "@/components/equity-brain/buyer/EnrichBuyerButton";
 import { Lightbulb, TrendingUp } from "lucide-react";
 
-type Tab = "overview" | "thesis" | "track" | "matches" | "news" | "whatsapp" | "documents";
+type Tab = "overview" | "thesis" | "track" | "matches" | "news" | "whatsapp" | "documents" | "notes";
 
 export default function BuyerDetailPage() {
   const { id } = useParams<{ id: string }>();
