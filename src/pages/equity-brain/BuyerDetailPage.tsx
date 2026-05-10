@@ -51,6 +51,7 @@ export default function BuyerDetailPage() {
     { key: "news", label: "Notícias", Icon: Newspaper },
     { key: "whatsapp", label: "WhatsApp", Icon: MessageCircle },
     { key: "documents", label: "Documentos", Icon: FileText },
+    { key: "notes", label: "Notas", Icon: StickyNote },
   ];
 
   return (
