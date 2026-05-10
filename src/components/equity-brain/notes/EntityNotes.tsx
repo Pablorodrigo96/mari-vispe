@@ -204,13 +204,28 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
             className="h-8 text-xs bg-zinc-950 border-zinc-800 text-zinc-100"
           />
-          <Textarea
-            placeholder="Escreva em Markdown. Use **negrito**, *itálico*, listas, links…"
-            value={draft.body_md}
-            onChange={(e) => setDraft({ ...draft, body_md: e.target.value })}
-            rows={6}
-            className="text-xs bg-zinc-950 border-zinc-800 text-zinc-100 font-mono"
-          />
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              placeholder="Escreva em Markdown. Use @ para mencionar mandato, buyer ou empresa…"
+              value={draft.body_md}
+              onChange={(e) => {
+                setDraft({ ...draft, body_md: e.target.value });
+                setCaret(e.target.selectionStart ?? 0);
+              }}
+              onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+              onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+              rows={6}
+              className="text-xs bg-zinc-950 border-zinc-800 text-zinc-100 font-mono"
+            />
+            {trigger && (
+              <MentionAutocomplete
+                query={trigger.query}
+                onPick={(s) => insertMention(s.type, s.ref, s.label)}
+                onClose={() => setCaret((c) => c)}
+              />
+            )}
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Input
               placeholder="tags (separe por vírgula)"
