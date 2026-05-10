@@ -4722,6 +4722,32 @@ export type Database = {
           mandates_count: number
         }[]
       }
+      eb_notes_by_tag: {
+        Args: {
+          p_include_descendants?: boolean
+          p_limit?: number
+          p_tag: string
+        }
+        Returns: {
+          author_id: string | null
+          body_md: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string | null
+          pinned: boolean | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string | null
+          visibility: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "eb_entity_notes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       eb_open_whatsapp_action: {
         Args: {
           p_buyer_id?: string
@@ -4772,6 +4798,13 @@ export type Database = {
           priority_score: number
           ref_id: string
           subline: string
+        }[]
+      }
+      eb_top_tags: {
+        Args: { p_author?: string; p_days?: number; p_limit?: number }
+        Returns: {
+          count: number
+          tag: string
         }[]
       }
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
