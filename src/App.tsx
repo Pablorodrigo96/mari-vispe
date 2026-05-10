@@ -250,6 +250,8 @@ const App = () => (
             >
               <Route index               element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
               <Route path="hoje"          element={<TodayPage />} />
+              <Route path="diario"         element={<DailyDiaryPage />} />
+              <Route path="diario/:date"   element={<DailyDiaryPage />} />
 
               {/* Novas páginas-wrapper */}
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
