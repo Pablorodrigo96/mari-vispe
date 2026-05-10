@@ -14,6 +14,7 @@ export default function DealDetailPage() {
   const idOrCode = params.cnpj ?? params.idOrCode ?? "";
   const navigate = useNavigate();
   const { data: resolved, isLoading } = useCompanyResolver(idOrCode);
+  const [tab, setTab] = useState<Tab>("overview");
 
   // Canonical-URL redirect: only when we resolve via codename/uuid/ticker/uuid_partial AND the cnpj differs from URL
   useEffect(() => {
