@@ -1,86 +1,108 @@
-## Bloco 1 — Sincronizar UI ↔ DB (Mandato · Buyer M&A · Empresa)
+## Bloco 3 — @mentions + Backlinks (Knowledge Graph v1)
 
-Bloco 2 (notas polimórficas) entregou. Agora fechamos os gaps entre campos que **já existem no banco** e o que **a UI exibe/edita** para as 3 entidades-foco.
-
----
-
-### 1. Auditoria rápida (1h, antes do código)
-
-Para cada entidade, comparar 3 lados:
-- Colunas reais em `equity_brain.mandates` / `buyers` / `companies` + view enriched
-- Campos lidos hoje em `MandateDetailPage`, `BuyerDetailPage`, `DealDetailPage`
-- Campos editáveis hoje (forms/inline edits)
-
-Output: tabela `campo | existe DB | mostrado | editável | ação` salva em `.lovable/plan.md`.
+Com notas funcionando (Bloco 2) e UI alinhada (Bloco 1), agora ligamos o conhecimento: qualquer nota pode citar `@mandato`, `@buyer`, `@empresa` e cada entidade ganha um painel "Mencionada em" que vira a teia do Obsidian-M&A.
 
 ---
 
-### 2. Mandato (`/equity-brain/mandato/:id`)
+### 1. Sintaxe e parser
 
-Campos suspeitos faltando na UI (confirmar na auditoria):
-- `probability` (%)  → badge no header + editável inline
-- `expected_close_at` → no header + edição
-- `pipeline_stage` → já existe? validar sync com `eb_pipeline_stages`
-- `valor_operacao` / `faturamento_vispe` → card "Financeiro do mandato"
-- `regiao` → header
-- `temperature_reason` → tooltip no badge de temperatura
+Formato no `body_md`:
+```
+@mandate:UUID|Nome
+@buyer:UUID|Nome
+@company:CNPJ|Nome
+```
+Renderizado como link clicável (`/equity-brain/mandato/:id`, `/equity-brain/buyer/:id`, `/equity-brain/empresa/:cnpj`).
 
-Entrega: novo bloco `<MandateSummaryCard/>` no topo da tab "Visão" + edição via `<InlineEditField/>` (já existe no projeto, reusar).
-
----
-
-### 3. Buyer M&A (`/equity-brain/buyer/:id`)
-
-Campos suspeitos faltando:
-- `archetype_id` → chip com link pro arquétipo
-- `pause_signal` + razão → banner amarelo no topo se ativo
-- `prioridade_global` → badge no header
-- `cautela_flag` + `cautela_motivo` → banner vermelho no topo se ativo
-- `vertical_principal` → chip
-- `observacoes` → já migrado pra notas em Bloco 2; remover do form se ainda aparece
-
-Entrega: `<BuyerAlertsBanner/>` (pause/cautela) + chips no header.
+Parser em `src/lib/eb/mentionParser.ts`:
+- `extractMentions(body) → Array<{type, ref, label}>`
+- `renderMentionsToMarkdown(body)` substitui pelo link MD antes de passar pro `react-markdown`.
 
 ---
 
-### 4. Empresa (`/equity-brain/empresa/:cnpj`)
+### 2. Schema — `entity_note_mentions`
 
-Hoje só tem `DealDetailPage` com 2 tabs (Visão/Notas). Expor:
-- `codename` (já tem?)
-- `qualification_status` + `qualified_at` + `qualified_by` → badge + tooltip
-- `linked_buyer_id` → link card "Comprador vinculado"
-- `embedding_computed_at` → indicador "Indexada na IA" (verde/cinza)
-- `raw_data` → resumo legível (faturamento, funcionários, CNAEs) num accordion "Dados brutos"
+Tabela leve em `equity_brain`:
+- `note_id uuid` (FK → entity_notes, ON DELETE CASCADE)
+- `target_entity_type` (mesmo enum mandate/buyer_ma/company)
+- `target_entity_id text`
+- `created_at`
+- UNIQUE `(note_id, target_entity_type, target_entity_id)`
+- Index em `(target_entity_type, target_entity_id)` pra lookup de backlinks
 
-Entrega: `<CompanyHeaderEnriched/>` + accordion na tab Visão.
+RLS: leitura aberta a advisor/admin (segue visibilidade da nota-pai via view); insert/delete via trigger no `entity_notes` AFTER INSERT/UPDATE/DELETE que re-extrai e re-popula. Zero gravação manual.
 
----
-
-### 5. Hooks/queries
-
-- Verificar se `useMandate`, `useBuyer`, `useDealByCnpj` já trazem esses campos. Se não, atualizar `select(...)` para puxar tudo.
-- Mutations: adicionar updates inline via `supabase.from('eb_*').update(...)` respeitando RLS advisor/admin.
+View `public.eb_entity_note_mentions` (security_invoker) com join em `eb_entity_notes` pra trazer body_preview, author, updated_at, pinned.
 
 ---
 
-### 6. Memória
+### 3. Trigger de sync
 
-Atualizar `mem://features/entity-notes-kb.md` adicionando seção "campos sincronizados Bloco 1" e atualizar índice.
+Função `equity_brain.sync_note_mentions()`:
+- Em `AFTER INSERT/UPDATE OF body_md`: deleta menções antigas da `note_id` e re-insere via regex Postgres (`\@(mandate|buyer|company):([A-Za-z0-9-]+)`).
+- `AFTER DELETE`: cascade já cuida.
+
+Sem mais lógica no client — verdade fica no DB.
 
 ---
 
-## Fora de escopo (próximas fases)
+### 4. UI — Editor com autocomplete
 
-- Bloco 3 (`@mentions`, backlinks, grafo) — depende deste estar limpo
-- Listing / Contato / Captação / Daily Notes / Advisor — fases posteriores
-- Version history das notas, upload de imagens em notas
+`<MentionAutocomplete/>` dentro do textarea do `<EntityNotes/>`:
+- Detecta `@` + 2+ chars → popover com busca em 3 fontes via debounce 250ms:
+  - `eb_mandates_enriched` por razao_social/codename
+  - `eb_buyers_enriched` por nome/cnpj
+  - `eb_companies` por razao_social/codename/cnpj
+- Insere token `@type:id|label` no texto.
+- Limit 8 sugestões total (top-3 por tipo).
+
+Atalho de teclado: ↑/↓ navega, Enter confirma, Esc fecha.
+
+---
+
+### 5. UI — Render de menções
+
+No `<NoteRenderer/>`:
+- Antes de `react-markdown`, processa tokens `@type:id|label` → `[label](rota)` + classe especial.
+- Tooltip com tipo (cor: mandate=emerald, buyer=violet, company=amber).
+
+---
+
+### 6. UI — Painel Backlinks
+
+Novo componente `<EntityBacklinksPanel entityType entityId/>`:
+- Query `eb_entity_note_mentions` filtrando por target=esta entidade
+- Lista: ícone do tipo da nota-pai · trecho 120 chars · autor · data · link
+- Vazio: hint "Mencione essa entidade em outras notas usando @"
+
+Integração:
+- Mandato → nova sub-aba "Conexões" dentro de tab Notas (toggle "Notas / Mencionada em")
+- Buyer → idem
+- Empresa → idem
+
+Implementação simples: toggle `view: 'notes' | 'backlinks'` no `<EntityNotes/>`.
+
+---
+
+### 7. Memória
+
+Atualizar `mem://features/entity-notes-kb.md` com seção "Bloco 3" e adicionar nova entrada no índice: `[Entity Mentions & Backlinks]`.
+
+---
+
+## Fora de escopo
+
+- Grafo visual D3/force (fase posterior, reusa dados desta tabela)
+- @mentions em outros campos (observações, descrições)
+- Notificações quando alguém te menciona
+- Embeddings/semantic search das menções
 
 ---
 
 ## Detalhe técnico
 
-- Auditoria via `supabase--read_query` em `information_schema.columns` + leitura dos 3 arquivos de página
-- Edições inline reusam `<InlineEditField/>` existente (sem novo design system)
-- Banners (pause/cautela) usam `<Alert/>` shadcn com semantic tokens (`destructive`, `warning`)
-- Todos os novos componentes em `src/components/equity-brain/{mandate,buyer,company}/`
-- Sem mudanças de schema neste bloco — só leitura/edição do que já existe
+- Regex Postgres: `regexp_matches(body_md, '@(mandate|buyer|company):([A-Za-z0-9-]+)(?:\|[^\s]+)?', 'g')` — capturar tipo+id, label opcional não persistida (label vem da entidade no render)
+- `target_entity_id text` (UUID pra mandate/buyer, CNPJ pra company), mesmo padrão de `entity_notes`
+- Autocomplete usa `useQuery` com `enabled: query.length >= 2`, staleTime 30s
+- `<NoteRenderer/>` precisa ser reusado em `<EntityNotes/>` e em `<EntityBacklinksPanel/>` (preview de 120 chars) — extrair se ainda inline
+- Sem mudanças nas páginas — toda integração via `<EntityNotes/>` que já é o ponto único

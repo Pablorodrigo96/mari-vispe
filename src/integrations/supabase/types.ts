@@ -3071,6 +3071,24 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_entity_note_mentions: {
+        Row: {
+          author_id: string | null
+          body_preview: string | null
+          created_at: string | null
+          id: string | null
+          note_id: string | null
+          note_updated_at: string | null
+          pinned: boolean | null
+          source_entity_id: string | null
+          source_entity_type: string | null
+          target_entity_id: string | null
+          target_entity_type: string | null
+          title: string | null
+          visibility: string | null
+        }
+        Relationships: []
+      }
       eb_entity_notes: {
         Row: {
           author_id: string | null

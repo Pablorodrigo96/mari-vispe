@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import { Pin, PinOff, Trash2, Pencil, Plus, Save, X, Search, Globe, Lock, Tag } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Pin, PinOff, Trash2, Pencil, Plus, Save, X, Search, Globe, Lock, Tag, Link2 } from "lucide-react";
 import {
   useEntityNotes,
   useCreateNote,
@@ -17,6 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffectiveRoles } from "@/hooks/useEffectiveRoles";
+import { NoteRenderer } from "./NoteRenderer";
+import { MentionAutocomplete, useMentionTrigger } from "./MentionAutocomplete";
+import { EntityBacklinksPanel } from "./EntityBacklinksPanel";
+import { buildMentionToken } from "@/lib/eb/mentionParser";
 
 interface Props {
   entityType: NoteEntityType;
@@ -59,6 +62,28 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
     tags: "",
   });
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"notes" | "backlinks">("notes");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [caret, setCaret] = useState(0);
+  const trigger = useMentionTrigger(draft.body_md, caret);
+
+  function insertMention(type: "mandate" | "buyer" | "company", ref: string, label?: string | null) {
+    if (!trigger) return;
+    const token = buildMentionToken(type, ref, label);
+    const before = draft.body_md.slice(0, trigger.start);
+    const after = draft.body_md.slice(caret);
+    const next = `${before}${token} ${after}`;
+    setDraft({ ...draft, body_md: next });
+    const newCaret = (before + token + " ").length;
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(newCaret, newCaret);
+        setCaret(newCaret);
+      }
+    });
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -116,34 +141,60 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-zinc-100">Notas</h3>
-          <span className="text-[10px] text-zinc-500">{notes.length}</span>
+        <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/40 p-0.5">
+          <button
+            onClick={() => setView("notes")}
+            className={cn(
+              "px-2.5 py-1 text-[11px] rounded transition-colors",
+              view === "notes" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
+            )}
+          >
+            Notas <span className="text-zinc-500">{notes.length}</span>
+          </button>
+          <button
+            onClick={() => setView("backlinks")}
+            className={cn(
+              "px-2.5 py-1 text-[11px] rounded transition-colors inline-flex items-center gap-1",
+              view === "backlinks" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
+            )}
+          >
+            <Link2 className="h-3 w-3" /> Mencionada em
+          </button>
         </div>
-        <div className="flex items-center gap-2 flex-1 max-w-xs">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-500" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar título, conteúdo, tag…"
-              className="pl-7 h-8 text-xs bg-zinc-900/60 border-zinc-800 text-zinc-200 placeholder:text-zinc-500"
-            />
+        {view === "notes" && (
+          <div className="flex items-center gap-2 flex-1 max-w-xs">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-500" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar título, conteúdo, tag…"
+                className="pl-7 h-8 text-xs bg-zinc-900/60 border-zinc-800 text-zinc-200 placeholder:text-zinc-500"
+              />
+            </div>
+            {canWrite && !showEditor && (
+              <Button
+                size="sm"
+                className="bg-[#D9F564] text-zinc-950 hover:bg-[#D9F564]/90 h-8 text-xs"
+                onClick={() => {
+                  resetDraft();
+                  setShowEditor(true);
+                }}
+              >
+                <Plus className="h-3 w-3 mr-1" /> Nova
+              </Button>
+            )}
           </div>
-          {canWrite && !showEditor && (
-            <Button
-              size="sm"
-              className="bg-[#D9F564] text-zinc-950 hover:bg-[#D9F564]/90 h-8 text-xs"
-              onClick={() => {
-                resetDraft();
-                setShowEditor(true);
-              }}
-            >
-              <Plus className="h-3 w-3 mr-1" /> Nova
-            </Button>
-          )}
-        </div>
+        )}
       </div>
+
+      {view === "backlinks" && (
+        <EntityBacklinksPanel entityType={entityType} entityId={entityId} />
+      )}
+
+      {view === "notes" && (
+        <>
+        {/* editor + list */}
 
       {showEditor && canWrite && (
         <div className="bg-zinc-900/60 border border-zinc-800 rounded p-3 space-y-2">
@@ -153,13 +204,28 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
             className="h-8 text-xs bg-zinc-950 border-zinc-800 text-zinc-100"
           />
-          <Textarea
-            placeholder="Escreva em Markdown. Use **negrito**, *itálico*, listas, links…"
-            value={draft.body_md}
-            onChange={(e) => setDraft({ ...draft, body_md: e.target.value })}
-            rows={6}
-            className="text-xs bg-zinc-950 border-zinc-800 text-zinc-100 font-mono"
-          />
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              placeholder="Escreva em Markdown. Use @ para mencionar mandato, buyer ou empresa…"
+              value={draft.body_md}
+              onChange={(e) => {
+                setDraft({ ...draft, body_md: e.target.value });
+                setCaret(e.target.selectionStart ?? 0);
+              }}
+              onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+              onClick={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+              rows={6}
+              className="text-xs bg-zinc-950 border-zinc-800 text-zinc-100 font-mono"
+            />
+            {trigger && (
+              <MentionAutocomplete
+                query={trigger.query}
+                onPick={(s) => insertMention(s.type, s.ref, s.label)}
+                onClose={() => setCaret((c) => c)}
+              />
+            )}
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Input
               placeholder="tags (separe por vírgula)"
@@ -261,13 +327,13 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
                   </div>
                 )}
               </div>
-              <div className="prose prose-invert prose-sm max-w-none text-zinc-300 text-xs break-words [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1 [&_a]:text-emerald-400">
-                <ReactMarkdown>{n.body_md}</ReactMarkdown>
-              </div>
+              <NoteRenderer body={n.body_md} />
             </div>
           );
         })}
       </div>
+        </>
+      )}
     </div>
   );
 }
