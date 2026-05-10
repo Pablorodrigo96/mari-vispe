@@ -21,6 +21,9 @@ import { MentionAutocomplete, useMentionTrigger } from "./MentionAutocomplete";
 import { EntityBacklinksPanel } from "./EntityBacklinksPanel";
 import { buildMentionToken } from "@/lib/eb/mentionParser";
 import { TemplatePicker } from "./TemplatePicker";
+import { TagChip } from "./TagChip";
+import { TagAutocomplete } from "./TagAutocomplete";
+import { normalizeTag } from "@/lib/eb/tagHierarchy";
 
 interface Props {
   entityType: NoteEntityType;
@@ -115,10 +118,14 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
   }
 
   async function handleSave() {
-    const tags = draft.tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+    const tags = Array.from(
+      new Set(
+        draft.tags
+          .split(",")
+          .map((t) => normalizeTag(t))
+          .filter(Boolean),
+      ),
+    );
     if (!draft.body_md.trim()) return;
     if (editingId) {
       await updateMut.mutateAsync({
