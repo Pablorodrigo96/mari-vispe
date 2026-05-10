@@ -62,6 +62,28 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
     tags: "",
   });
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"notes" | "backlinks">("notes");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [caret, setCaret] = useState(0);
+  const trigger = useMentionTrigger(draft.body_md, caret);
+
+  function insertMention(type: "mandate" | "buyer" | "company", ref: string, label?: string | null) {
+    if (!trigger) return;
+    const token = buildMentionToken(type, ref, label);
+    const before = draft.body_md.slice(0, trigger.start);
+    const after = draft.body_md.slice(caret);
+    const next = `${before}${token} ${after}`;
+    setDraft({ ...draft, body_md: next });
+    const newCaret = (before + token + " ").length;
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(newCaret, newCaret);
+        setCaret(newCaret);
+      }
+    });
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
