@@ -161,30 +161,40 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
             <Link2 className="h-3 w-3" /> Mencionada em
           </button>
         </div>
-        <div className="flex items-center gap-2 flex-1 max-w-xs">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-500" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar título, conteúdo, tag…"
-              className="pl-7 h-8 text-xs bg-zinc-900/60 border-zinc-800 text-zinc-200 placeholder:text-zinc-500"
-            />
+        {view === "notes" && (
+          <div className="flex items-center gap-2 flex-1 max-w-xs">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-500" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar título, conteúdo, tag…"
+                className="pl-7 h-8 text-xs bg-zinc-900/60 border-zinc-800 text-zinc-200 placeholder:text-zinc-500"
+              />
+            </div>
+            {canWrite && !showEditor && (
+              <Button
+                size="sm"
+                className="bg-[#D9F564] text-zinc-950 hover:bg-[#D9F564]/90 h-8 text-xs"
+                onClick={() => {
+                  resetDraft();
+                  setShowEditor(true);
+                }}
+              >
+                <Plus className="h-3 w-3 mr-1" /> Nova
+              </Button>
+            )}
           </div>
-          {canWrite && !showEditor && (
-            <Button
-              size="sm"
-              className="bg-[#D9F564] text-zinc-950 hover:bg-[#D9F564]/90 h-8 text-xs"
-              onClick={() => {
-                resetDraft();
-                setShowEditor(true);
-              }}
-            >
-              <Plus className="h-3 w-3 mr-1" /> Nova
-            </Button>
-          )}
-        </div>
+        )}
       </div>
+
+      {view === "backlinks" && (
+        <EntityBacklinksPanel entityType={entityType} entityId={entityId} />
+      )}
+
+      {view === "notes" && (
+        <>
+        {/* editor + list */}
 
       {showEditor && canWrite && (
         <div className="bg-zinc-900/60 border border-zinc-800 rounded p-3 space-y-2">
