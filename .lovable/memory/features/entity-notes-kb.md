@@ -22,3 +22,13 @@ Próximos blocos: 1 (gaps front×back), 3 (@mentions/backlinks), 4 (Daily Notes 
 - `BuyerAlertsBanner` + `BuyerHeaderChips`: pause_signal e cautela_flag/cautela_motivo viram banners; archetype_id/prioridade_global/vertical_principal viram chips no header.
 - `CompanyEnrichedHeader` (`/equity-brain/empresa/:cnpj`): qualification_status, embedding_computed_at ("Indexada IA"), linked_buyer_id (link), score_vendabilidade, nivel_maturidade + accordion "Dados estruturados" com CNAE/setor_ma/funcionarios_estimado/faturamento_estimado/ebitda_estimado.
 - Hooks `useMandate`/`useBuyerCrm` já liam `select("*")` de eb_*_enriched, então sem alterações de hook. Sem mudança de schema.
+
+## Bloco 3 entregue (Mentions & Backlinks)
+- Sintaxe `@mandate:UUID|Label`, `@buyer:UUID|Label`, `@company:CNPJ|Label` no body_md (label opcional, espaços→underscore).
+- Tabela `equity_brain.entity_note_mentions` + trigger `sync_note_mentions` re-extrai via regexp_matches em INSERT/UPDATE OF body_md (cascade no delete). `buyer` na sintaxe mapeia pro enum `buyer_ma`. Backfill rodou via UPDATE noop.
+- View `public.eb_entity_note_mentions` (security_invoker) com body_preview 240ch + RLS read advisor/admin.
+- `src/lib/eb/mentionParser.ts`: extractMentions, renderMentionsToMarkdown (substitui token por `[label](rota "type")`), buildMentionToken, mentionToRoute.
+- `<NoteRenderer/>`: ReactMarkdown que detecta links com title='mandate|buyer|company' e renderiza chip colorido (emerald/violet/amber).
+- `<MentionAutocomplete/>` + hook `useMentionTrigger`: detecta `@xxx` no caret → popover busca paralela mandates/buyers/companies (top-3 cada) com ↑↓/Enter/Esc.
+- `<EntityBacklinksPanel/>`: lista `eb_entity_note_mentions` filtrado por target=entidade, mostra ícone+tipo+título+preview 180ch+data, link pra nota-pai.
+- `<EntityNotes/>`: toggle "Notas / Mencionada em" no header, textarea com mention autocomplete e renderização via NoteRenderer.
