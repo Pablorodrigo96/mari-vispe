@@ -242,21 +242,27 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
               />
             )}
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Input
-              placeholder="tags (separe por vírgula)"
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Input
+                placeholder="tags (ex: setor/saas, estagio/pre-loi)"
+                value={draft.tags}
+                onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
+                className="h-8 text-xs bg-zinc-950 border-zinc-800 text-zinc-100 flex-1 min-w-[160px]"
+              />
+              <select
+                value={draft.visibility}
+                onChange={(e) => setDraft({ ...draft, visibility: e.target.value as NoteVisibility })}
+                className="h-8 text-xs bg-zinc-950 border border-zinc-800 text-zinc-100 rounded px-2"
+              >
+                {allowedVisibilities.includes("internal") && <option value="internal">Interna</option>}
+                {allowedVisibilities.includes("public") && <option value="public">Pública</option>}
+              </select>
+            </div>
+            <TagAutocomplete
               value={draft.tags}
-              onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
-              className="h-8 text-xs bg-zinc-950 border-zinc-800 text-zinc-100 flex-1 min-w-[160px]"
+              onSelect={(next) => setDraft({ ...draft, tags: next })}
             />
-            <select
-              value={draft.visibility}
-              onChange={(e) => setDraft({ ...draft, visibility: e.target.value as NoteVisibility })}
-              className="h-8 text-xs bg-zinc-950 border border-zinc-800 text-zinc-100 rounded px-2"
-            >
-              {allowedVisibilities.includes("internal") && <option value="internal">Interna</option>}
-              {allowedVisibilities.includes("public") && <option value="public">Pública</option>}
-            </select>
           </div>
           <div className="flex items-center gap-2 justify-end">
             <Button size="sm" variant="outline" onClick={resetDraft} className="h-7 text-xs bg-transparent border-zinc-700 text-zinc-300">
@@ -304,9 +310,7 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
                       </Badge>
                     )}
                     {n.tags.map((t) => (
-                      <Badge key={t} variant="outline" className="bg-transparent border-zinc-700 text-zinc-400 text-[10px] gap-1">
-                        <Tag className="h-2.5 w-2.5" /> {t}
-                      </Badge>
+                      <TagChip key={t} tag={t} size="xs" />
                     ))}
                     <span className="text-[10px] text-zinc-500">
                       {new Date(n.updated_at).toLocaleDateString("pt-BR")}
