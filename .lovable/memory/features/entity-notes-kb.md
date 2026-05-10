@@ -45,3 +45,11 @@ Próximos blocos: 1 (gaps front×back), 3 (@mentions/backlinks), 4 (Daily Notes 
 - `<TemplatePicker scope context onInsert/>` em `src/components/equity-brain/notes/TemplatePicker.tsx`: botão ghost "Template" → Popover + Command (search) lista templates do escopo, callback recebe markdown já com placeholders aplicados.
 - Integrado em `<EntityNotes/>` ao lado do input de título (escopo = entityType) e em `DailyDiaryPage` no header do editor (escopo daily, ctx.date = data selecionada). Antigo botão "Inserir template do dia" removido — virou dica textual.
 - Sem migrations / sem tabelas — fase 1 puro client-side. Fase 2 futura: `equity_brain.note_templates` para templates customizados.
+
+## Bloco 6 entregue (Tags hierárquicas + página de tag)
+- Convenção: tag = lowercase, `/` separa hierarquia (`setor/saas/horizontal`, `estagio/pre-loi`, `prioridade/quente`). Helpers em `src/lib/eb/tagHierarchy.ts`: `normalizeTag`, `tagParts`, `tagNamespace`, `tagAncestors`, `tagSlug`/`unslugTag` (slug usa `__` em vez de `/` na URL), `groupTagsByNamespace`, `tagColors` (paleta fixa: setor=cyan, estagio=amber, tese=violet, prioridade=red, outros=zinc).
+- Migration: GIN index `entity_notes_tags_gin` em `equity_brain.entity_notes.tags`. RPCs SECURITY INVOKER `public.eb_notes_by_tag(p_tag, p_include_descendants, p_limit)` e `public.eb_top_tags(p_author, p_days, p_limit)` retornando `(tag, count)`.
+- UI: `<TagChip tag size onClick? clickable?/>` (clica → `/equity-brain/tag/:slug`), `<TagAutocomplete value onSelect/>` (chips abaixo do input baseados em `useTopTags('mine', 60)`). EntityNotes normaliza tags no save via `normalizeTag` + dedupe.
+- Rota `/equity-brain/tag/:slug` (`src/pages/equity-brain/TagPage.tsx`): tabs Notas / Entidades / Sub-tags. Notas vêm de `eb_notes_by_tag`, entidades agrupam por entity_type com lookup batch em eb_mandates_enriched(razao_social/codename) / eb_buyers_enriched(nome) / eb_companies_enriched(nome_fantasia/razao_social/cnpj). Sub-tags derivam de `useTopTags('mine',365,200)` filtrando prefixo `:tag/`. Toggle "Incluir sub-tags" (default on) + breadcrumb hierárquico clicável.
+- Hooks: `src/hooks/useTopTags.ts` (`useTopTags(scope, days, limit)`), `src/hooks/useNotesByTag.ts` (`useNotesByTag(tag, includeDescendants, limit)`).
+- Sidebar NÃO ganhou item Tags — descoberta só via click em chip / URL direta.
