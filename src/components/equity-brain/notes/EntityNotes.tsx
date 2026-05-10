@@ -349,6 +349,7 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
                 )}
               </div>
               <NoteRenderer body={n.body_md} />
+              {editingId !== n.id && <SimilarNotesPanel noteId={n.id} />}
             </div>
           );
         })}
