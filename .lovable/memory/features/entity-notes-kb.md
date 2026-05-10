@@ -32,3 +32,10 @@ Próximos blocos: 1 (gaps front×back), 3 (@mentions/backlinks), 4 (Daily Notes 
 - `<MentionAutocomplete/>` + hook `useMentionTrigger`: detecta `@xxx` no caret → popover busca paralela mandates/buyers/companies (top-3 cada) com ↑↓/Enter/Esc.
 - `<EntityBacklinksPanel/>`: lista `eb_entity_note_mentions` filtrado por target=entidade, mostra ícone+tipo+título+preview 180ch+data, link pra nota-pai.
 - `<EntityNotes/>`: toggle "Notas / Mencionada em" no header, textarea com mention autocomplete e renderização via NoteRenderer.
+
+## Bloco 4 entregue (Daily Notes /diario)
+- Enum `equity_brain.note_entity_type` ganhou valor `daily`; UNIQUE parcial `entity_notes_daily_unique (author_id, entity_id) WHERE entity_type='daily'` garante 1 nota/dia/autor. `entity_id` = `YYYY-MM-DD` (local).
+- Hooks `src/hooks/useDailyNote.ts`: `useDailyNote(date)`, `useUpsertDailyNote(date)` (select existente → update senão insert, respeita RLS author_id=auth.uid()), `useDailyFeed(date)` (paralelo `crm_activities` created_by=me + `eb_entity_notes` não-daily de hoje + `deals` updated_at hoje), `useDailyStreak()` (últimos 30 dias, contagem consecutiva). Helper `dateKey(Date)`.
+- Página `src/pages/equity-brain/DailyDiaryPage.tsx`: rotas `/equity-brain/diario` e `/equity-brain/diario/:date` (App.tsx). Layout 2 colunas (lg:[1fr_360px]): editor à esquerda (autosave debounce 2s, toggle Edit/View, mention autocomplete + NoteRenderer, template default "Prioridades/Calls/Insights" injetado se vazio), 3 FeedCards à direita (Atividades, Notas, Deals).
+- Header tem navegação `← / Hoje / →` + Datepicker shadcn (disabled futuro) + badge 🔥 streak. URL sincroniza com data via `navigate(..., {replace:true})`.
+- Sidebar EB ganhou item "Diário" (ícone `CalendarDays`) logo abaixo de "Hoje".
