@@ -53,10 +53,6 @@ import { GraphFilterSidebar } from "@/components/equity-brain/graph/GraphFilterS
 import { GraphLegend } from "@/components/equity-brain/graph/GraphLegend";
 import { NodeDetailPanel } from "@/components/equity-brain/graph/NodeDetailPanel";
 
-// Tudo começa desligado para abrir leve; usuário ativa progressivamente.
-const DEFAULT_NODE_TYPES = new Set<string>();
-const DEFAULT_LAYERS = new Set<LayerKey>();
-
 // "Ativar tudo" usa estes conjuntos cheios.
 const ALL_NODE_TYPES = new Set([
   "seller",
@@ -76,6 +72,10 @@ const ALL_LAYERS = new Set<LayerKey>([
   "capital",
   "thesis",
 ]);
+
+// Defaults agora abrem com TUDO ligado para o globo nascer cheio.
+const DEFAULT_NODE_TYPES = new Set(ALL_NODE_TYPES);
+const DEFAULT_LAYERS = new Set<LayerKey>(ALL_LAYERS);
 
 const endpointId = (v: any): string =>
   typeof v === "string" ? v : v?.id ?? String(v ?? "");
