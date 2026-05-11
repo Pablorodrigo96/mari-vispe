@@ -255,6 +255,7 @@ const App = () => (
               <Route path="diario"         element={<DailyDiaryPage />} />
               <Route path="diario/:date"   element={<DailyDiaryPage />} />
               <Route path="tag/:slug"      element={<TagPage />} />
+              <Route path="busca-notas"    element={<NoteSearchPage />} />
 
               {/* Novas páginas-wrapper */}
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
