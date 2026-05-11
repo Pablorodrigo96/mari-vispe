@@ -5,6 +5,9 @@ import {
   AlertOctagon,
   Users,
   Sun,
+  Sparkles,
+  Brain,
+  Headphones,
   type LucideIcon,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -12,6 +15,12 @@ import { ptBR } from "date-fns/locale";
 
 export type NoteTemplateScope = "mandate" | "buyer_ma" | "company" | "daily";
 
+/**
+ * When `autoGenerate` is set, picking the template invokes the named edge function
+ * instead of inserting markdown locally. The function is expected to populate
+ * `ai_thesis_summary` / `ai_pitch` / `ai_runs.parsed_output`, which the
+ * `upsert_ai_note` trigger then materialises as a note with `source='ai_*'`.
+ */
 export interface NoteTemplate {
   id: string;
   label: string;
@@ -19,6 +28,11 @@ export interface NoteTemplate {
   scope: NoteTemplateScope[];
   icon: LucideIcon;
   body: string;
+  autoGenerate?: {
+    fn: "claude-classify-thesis" | "claude-generate-pitch" | "claude-analyze-call";
+    /** Which entity types the autogen accepts (subset of scope). */
+    accepts: Array<"mandate" | "buyer_ma" | "company" | "match" | "listing">;
+  };
 }
 
 export const NOTE_TEMPLATES: NoteTemplate[] = [
@@ -144,6 +158,33 @@ _{{date}}_
 
 - 
 `,
+  },
+  {
+    id: "ai-thesis",
+    label: "Gerar tese com Mari",
+    description: "Aciona Claude para gerar tese estruturada (vira nota automática)",
+    scope: ["company", "mandate"],
+    icon: Brain,
+    body: "",
+    autoGenerate: { fn: "claude-classify-thesis", accepts: ["company", "mandate"] },
+  },
+  {
+    id: "ai-pitch",
+    label: "Gerar pitch com Mari",
+    description: "Aciona Claude para gerar pitch comercial (vira nota automática)",
+    scope: ["company", "mandate", "buyer_ma"],
+    icon: Sparkles,
+    body: "",
+    autoGenerate: { fn: "claude-generate-pitch", accepts: ["company", "mandate", "buyer_ma"] },
+  },
+  {
+    id: "ai-call",
+    label: "Analisar última call (Mari)",
+    description: "Aciona Claude para resumir a última call registrada",
+    scope: ["company", "mandate", "buyer_ma"],
+    icon: Headphones,
+    body: "",
+    autoGenerate: { fn: "claude-analyze-call", accepts: ["company", "mandate", "buyer_ma"] },
   },
 ];
 

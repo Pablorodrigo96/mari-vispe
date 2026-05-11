@@ -234,6 +234,8 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
             />
             <TemplatePicker
               scope={(entityType === "match" || entityType === "listing" ? "company" : entityType) as any}
+              entityType={entityType as any}
+              entityId={entityId}
               onInsert={(md) =>
                 setDraft((d) => ({ ...d, body_md: d.body_md ? `${d.body_md}\n\n${md}` : md }))
               }
