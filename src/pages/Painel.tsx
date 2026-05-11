@@ -13,6 +13,7 @@ import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { MariWatermark } from '@/components/brand/MariLogo';
+import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
 import { CockpitWeekStrip } from '@/components/cockpit/CockpitWeekStrip';
 import { MariOriginBadge } from '@/components/painel/MariOriginBadge';
 import { ExecutiveReport } from '@/components/painel/exec/ExecutiveReport';
