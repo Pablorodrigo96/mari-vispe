@@ -4645,6 +4645,20 @@ export type Database = {
         Returns: number
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      eb_ai_runs_by_date: {
+        Args: { p_date: string }
+        Returns: {
+          buyer_id: string
+          cnpj: string
+          created_at: string
+          error_message: string
+          function_name: string
+          id: string
+          match_id: string
+          parsed_output: Json
+          status: string
+        }[]
+      }
       eb_can_view_identity: {
         Args: { p_cnpj?: string; p_listing?: string }
         Returns: boolean
