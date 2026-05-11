@@ -1,101 +1,111 @@
-# Ativar 3 funções Claude dormindo
 
-Execução estrita em **5 blocos sequenciais**, com pausa para aprovação ao final de cada um.
+# Limpeza Estrutural — Seções 1-4 da Auditoria
 
----
+Execução em **11 blocos sequenciais** (Bloco 9 Claude→Gateway já concluído nas mensagens anteriores). Cada bloco termina com smoke test + relatório curto + **pausa para validação do Pablo**.
 
-## Bloco 0 — Inspeção (entregável agora, antes de tocar em código)
-
-Já li o código das 3 funções. Reporto aqui o resumo factual + proposta inicial de UI (preview). **Pablo confirma e libera Bloco 1.**
-
-### claude-generate-pitch
-- **Inputs (body):** `cnpj` (obrigatório), `buyer_id` (opcional — alvo específico), `channel` (`call`|`whatsapp`|`email`, default `call`), `force_refresh`.
-- **O que faz:** lê `equity_brain.companies_scored` + `matches_enriched` (top 1 ou buyer alvo) → monta prompt com empresa/buyer/justificativas/canal → chama Claude → escreve `ai_pitch` em `opportunities_ready` e no match → loga em `ai_runs`.
-- **Output:** `{ parsed: { pitch, abertura_curta, subject? }, tokens, cost_usd, latency_ms }`.
-- **Modelo:** `claude-sonnet-4-20250514`, max_tokens 1024.
-- **Custo/chamada estimado:** ~$0.005–$0.015 (in $3/Mtok · out $15/Mtok, ~500 in + ~500 out).
-- **Auth:** admin OR service_role.
-
-### claude-classify-thesis
-- **Inputs:** `cnpj`, `force_refresh`.
-- **O que faz:** lê `companies_scored` + `company_signals` + top 3 matches → pede ao Claude tese refinada (consolidacao_regional/sucessao_familiar/roll_up_setor/aquisicao_carteira/ganho_margem_governanca) + summary + confidence + red_flags → grava `ai_thesis_summary` em `opportunities_ready` e `matches.is_current`.
-- **Output:** `{ tese_refinada, summary, confidence, red_flags[] }`.
-- **Modelo:** Sonnet 4, 1024 tokens. Custo ~$0.005–$0.012.
-- **Auth:** admin OR service_role.
-- **Observação importante:** classifica **a tese da empresa-alvo** (qual M&A faz sentido), **não a tese do buyer** como o briefing presumiu. Isso muda a UI proposta — ver tabela abaixo.
-
-### claude-analyze-call
-- **Inputs:** `cnpj`, `call_notes` (min 50 chars), `bdr_id` opcional.
-- **O que faz:** lê empresa + `signal_catalog` (signal_keys válidas) → extrai JSON estruturado (`intencao_venda` 0–1, `timing_estimado`, `dor_principal`, `sinais_novos[]`, `faturamento_mencionado`, `ebitda_mencionado`, `followup_recomendado`) → grava em `ai_runs` apenas. **Não toca `company_signals` ainda** (Fase 7 do roadmap).
-- **Modelo:** Sonnet 4, 1024 tokens. Custo ~$0.005–$0.015.
-- **Auth:** admin OR advisor OR service_role.
-
-### Propostas iniciais de UI (Pablo aprova em detalhe nos Blocos 2-4)
-
-| Função | Onde encaixa melhor | Razão |
-|---|---|---|
-| `claude-generate-pitch` | Card de oportunidade no `/equity-brain` + aba "Pitch" em `MatchDetailPage` (combinação A+B do briefing) | Já tem `opportunities_ready.ai_pitch` e `matches.ai_pitch` — só precisa expor + botão "Gerar/Regenerar" por canal (call/wpp/email). |
-| `claude-classify-thesis` | Card "Tese refinada" na `CompanyDetailPage` (EB) + ação batch admin (recalcular opportunities) | Função opera sobre **empresa-alvo**, não buyer. Encaixe natural é no 360 da company. |
-| `claude-analyze-call` | Modal "Registrar call" disparado de qualquer entidade EB (mandato/empresa/buyer) + persistência em `crm_activities` linkando `ai_runs` | Já há infra de atividades CRM; sinais extraídos viram nota estruturada e ficam prontos pra Fase 7 alimentar `company_signals`. |
+## Regras globais
+- Validação dupla (grep + confirmação) antes de remover arquivo.
+- Componentes órfãos vão para `src/_archive/` com `tsconfig` exclude — não deletar.
+- `CREATE INDEX CONCURRENTLY` em migrations separadas (sem transação).
+- Em dúvida: parar e perguntar.
+- Smoke padrão entre blocos: login → /painel → /mari → /equity-brain → /marketplace.
 
 ---
 
-## Bloco 1 — Migração para Lovable AI Gateway (preview do que farei após aprovação do Bloco 0)
+## Bloco 1 — Dead-links (9 padrões)
+Substituições globais via grep+replace:
+- `/auth/register` → `/auth?tab=signup` (garantir que `Auth.tsx` lê `searchParams.get('tab')`)
+- `/registrar-comprador` → `/cadastrar-comprador`
+- `/termos` → `/terms`
+- `/privacidade` e `/privacy` → criar página interna placeholder `/privacy` (texto LGPD básico, Pablo edita depois)
+- `/dashboard` bare → `/dashboard/executivo`
+- `/match-inbox`, `/pipeline`, `/crm/buyer/:id`, `/crm/mandate/:id` → prefixar `/equity-brain/...`
 
-Para cada uma das 3 funções:
+Reportar antes de batches >10 ocorrências no mesmo arquivo.
 
-1. **Trocar `fetch` direto + `apiKey`** por wrapper centralizado. `_shared/apiTrack.ts` já tem `callLovableAI()` (gateway com telemetria embutida). Vou:
-   - Adicionar opção `system` em `callLovableAI` (o gateway aceita `messages` com role `system` no formato OpenAI).
-   - Trocar payload: `model: "anthropic/claude-sonnet-4-20250514"`, `messages: [{role:"system", content: SYSTEM_PROMPT}, {role:"user", content: userPrompt}]`, `max_tokens: 1024`.
-   - Ler `data.choices[0].message.content` em vez de `data.content[0].text`.
-   - Remover `assertProviderAllowed("anthropic")` (gateway já governa) — manter o guard só por compatibilidade temporária com `provider="lovable_ai"`.
-   - Recalcular custo pelo `api_pricing` row de `lovable_ai` (já em uso) — eliminar constantes hard-coded `COST_INPUT_PER_MTOK`/`COST_OUTPUT_PER_MTOK`.
+## Bloco 2 — 10 lazy imports sem rota
+Remover de `App.tsx`: `EBDashboardPage, EBBuyersPage, EBTesesPage, EBMapaPage, EBGrafoPage, EBBoardPage, QuickFillPage, AnatelCruzamentoPage, MyCompaniesPage, CrmHubPage`. Se algum arquivo for usado fora de rota → manter arquivo, remover só import. Marcar não-referenciados para Bloco 4.
 
-2. **Tratamento de erro:** 429 → "Sistema sobrecarregado"; 402 → "Limite atingido"; 500 genérico. Surface em JSON para a UI.
+## Bloco 3 — Consolidar 4 dashboards duplicados
+1. Adicionar `<Navigate>` em `/dashboard/executivo|mandato|match|nbo` → `/equity-brain/dashboards/...`
+2. **Investigar agora** duplos internos do EB:
+   - `ExecutiveDashboardPage` vs `DashboardExecutivoPage`
+   - `MatchAnalyticsPage` vs `DashboardMatchPage`
+   - Grep referências, identificar a viva, arquivar a morta. Se ambas vivas → pausar e pedir decisão.
 
-3. **Deletar `ANTHROPIC_API_KEY`** dos secrets — só após smoke test de cada função via gateway retornar OK e aparecer em `api_usage_logs` com `provider="lovable_ai"`.
+## Bloco 4 — Arquivar 14 componentes não-UI órfãos
+Criar `src/_archive/.gitkeep` + adicionar `"src/_archive"` ao `tsconfig` exclude.
+Mover (grep dupla-checado): `equity-brain/{BuyerCard,DealGraph,SAVBadge}.tsx`, `equity-brain/company/EnrichCompanyButton.tsx`, `equity-brain/crm/{MandateTransitionsTab,MandatesTable,RoleBadges,WhatsAppPanel}.tsx`, `map/MapTopFilterBar.tsx`, `marketplace/BusinessCard.tsx`, `sell/SellWizard.tsx`, `valuation/{UpgradeCard,ValuationHero,ValuationSuccess}.tsx`.
 
-4. **Smoke test (SQL):**
-   ```sql
-   SELECT function_name, provider, count(*), sum(cost_usd)
-   FROM api_usage_logs
-   WHERE function_name LIKE 'claude-%'
-     AND created_at > now() - interval '1 hour'
-   GROUP BY 1,2;
-   ```
+## Bloco 5 — UI cleanup + InfoHint
+- Arquivar 9 shadcn não usados: `aspect-ratio, breadcrumb, context-menu, hover-card, input-otp, menubar, navigation-menu, pagination, resizable`.
+- Consolidar `InfoHint`: mesclar features de `admin/analytics/InfoHint` em `equity-brain/InfoHint`, atualizar imports, arquivar o de admin.
+
+## Bloco 6 — WhatsApp `wa.me` literal
+- Substituir literal em `MariResult.tsx:24` por `getWhatsAppLink()`.
+- Grep no projeto inteiro por `wa.me/` e padronizar todos via helper.
+- Estender helper para aceitar mensagem custom se ainda não aceita.
+
+## Bloco 7 — Índices + buckets restritos
+- ~26 `CREATE INDEX CONCURRENTLY IF NOT EXISTS` em FKs comuns (uma migration por índice). Lista base no prompt mestre + completar com auditoria.
+- Buckets `avatars` e `listing-images`: restringir LIST (manter SELECT por path conhecido público). Análise + policy proposta dentro do bloco.
+
+## Bloco 8 — REVOKE EXECUTE em DEFINER + edge órfã
+1. Listar 117 funções `SECURITY DEFINER` com EXECUTE para anon/auth.
+2. Classificar A (públicas), B (auth-only), C (advisor/admin), D (service_role), indecisas.
+3. REVOKEs em batches de 10 com smoke entre. Indecisas → reportar.
+4. Arquivar edge function `crm-log-activity` (grep + cron.job + chamadas internas zero).
+
+## Bloco 9 — ✅ JÁ FEITO
+Claude → Lovable AI Gateway nas 3 funções (`generate-pitch`, `classify-thesis`, `analyze-call`). ANTHROPIC_API_KEY deletada. Marcar como concluído no checkpoint.
+
+## Bloco 10 — Stripe (auditoria + gaps)
+Pablo confirma que Stripe "já está funcionando". Então:
+1. **Auditar primeiro** estado atual antes de mexer:
+   - Existe edge function `stripe-webhook`? Eventos cobertos?
+   - `create-checkout` e `customer-portal` passam `idempotencyKey`?
+   - Catches retornam `error.message` cru ao client?
+2. Reportar achados → Pablo aprova quais lacunas fechar.
+3. Possíveis fixes (só se gap real):
+   - Criar `stripe-webhook` (handler com `constructEvent`, eventos subscription/checkout/invoice).
+   - Adicionar `idempotencyKey` em checkout/portal.
+   - Sanear erros: log interno + mensagem genérica ao client (com tratamento específico `StripeCardError`).
+4. Configuração do endpoint no Stripe Dashboard + `STRIPE_WEBHOOK_SECRET` fica com Pablo.
+
+## Bloco 11 — Lovable AI: 429/402 + alerta 404
+- Garantir que `_shared/apiTrack.ts::trackedAIFetch` trata 429 (retry exponencial, max 3) e 402 (log crítico, erro claro).
+- Forçar 12 funções restantes a usar `trackedAIFetch` em vez de fetch direto.
+- Criar edge function cron diário 09h `check-ai-health`: conta 404s últimas 24h, se >5 insere notificação para admins.
+
+## Bloco 12 — BrasilAPI + RFB/Anatel + Nominatim + fire-webhook
+- **BrasilAPI**: backend usa `trackedFetch`. Criar edge `proxy-brasilapi` com rate limit (10/h anon, 60/h auth) + cache 24h (tabela `brasilapi_cache`). Frontend (`MariCalculator`, `useNationalSearch`) chama proxy.
+- **RFB/Anatel Postgres**: criar `_shared/externalPgPool.ts` com pool reutilizado, timeout 10s, telemetria em `api_usage_logs` (`provider='external_pg_rfb|anatel'`).
+- **Nominatim**: User-Agent identificável + sleep 1.1s entre requests (TOS-compliant).
+- **fire-webhook**: HMAC SHA-256 outbound com header `X-Mari-Signature`, secret `WEBHOOK_SIGNING_SECRET`. Doc de validação para receptores.
 
 ---
 
-## Blocos 2-4 — UI por função (uma rodada de aprovação Pablo cada)
-
-Para cada função: apresento 2-3 opções com prós/contras → Pablo escolhe → implemento com:
-- Botão destacado (cor Volt, ícone ✨), estados idle/loading/erro/resultado.
-- Persistência (tabela existente ou nova).
-- Discoverability: tooltip primeira-vez + badge "NOVO" 7d + card no `/equity-brain/hoje`.
-- Ações pós-resultado: copiar, compartilhar via WhatsApp (`getWhatsAppLink`), regenerar.
-
-**Tabelas previstas (avalio reutilização antes de criar):**
-- `generate-pitch`: já temos `opportunities_ready.ai_pitch` + `matches.ai_pitch` + `ai_runs`. Possivelmente só criar `generated_pitches` se quisermos histórico por canal/tom.
-- `classify-thesis`: já existe `opportunities_ready.ai_thesis_summary` + `matches.ai_thesis_summary`/`ai_confidence`. Sem nova tabela.
-- `analyze-call`: gravar em `crm_activities` (kind=`call_analysis`, payload JSON) + link pra `ai_runs.id`. Sem nova tabela.
+## Checkpoint final
+Tabela comparativa antes/depois: linter Supabase, bundle JS, componentes ativos, rotas, componentes órfãos, índices, funções DEFINER abertas, integrações com telemetria, webhooks com HMAC. Smoke end-to-end final.
 
 ---
 
-## Bloco 5 — Smoke test consolidado + relatório de custo
+## Detalhes técnicos relevantes
 
-- Fluxo comprador (pitch) + fluxo advisor (tese + call) end-to-end.
-- Query final em `api_usage_logs` agrupada por feature.
-- Checklist de discoverability (3/3 pontos por feature).
-- Custo total dos testes + estimativa mensal.
+**Auth.tsx tab param**: verificar se já lê `searchParams.get('tab')` em `useEffect`; se não, adicionar `useState` inicializado com esse valor.
 
----
+**`_archive` no Vite**: tsconfig exclude já cobre TS, mas garantir que nenhum `import` quebrado fica no código vivo (Vite só processa o que é importado, então sem importações = sem build error).
 
-## Pré-requisito CRÍTICO (não posso validar — Pablo confirma)
+**Migrations de índice**: cada `CREATE INDEX CONCURRENTLY` em arquivo separado porque Supabase migrations rodam em transação por default; concurrent não funciona em transaction.
 
-Antes do Bloco 1.3 (deletar `ANTHROPIC_API_KEY`):
-- [ ] Pablo confirmou no console Anthropic que **há limite de gasto $50/mês configurado** OU
-- [ ] Pablo autoriza deletar a chave direto (preferível — gateway é caminho único).
+**DEFINER classificação**: usar `pg_proc.proacl` + `has_function_privilege` para gerar relatório. Funções na whitelist explícita (helpers RLS, RPCs `*_public`) ficam intocadas.
 
-## Aprovação solicitada
+**Stripe audit primeiro**: evita refazer trabalho. Leio `supabase/functions/stripe-*/index.ts` no início do Bloco 10 e reporto antes de tocar qualquer coisa.
 
-Liberar **Bloco 0** (este resumo está OK?) → seguir para **Bloco 1** (migração das 3 funções para gateway + smoke test + deletar `ANTHROPIC_API_KEY`).
+**trackedAIFetch retry 429**: backoff `2^attempt * 1000ms` (1s, 2s, 4s). 402 não faz retry — é falta de crédito, não rate limit.
+
+## Tempo estimado
+8-14h trabalho total. Bloco 9 já abatido → ~7-12h restantes. Blocos 8 e 10 são os mais sensíveis (REVOKE pode quebrar features; Stripe é fluxo crítico de receita).
+
+## Ordem de execução
+Sequencial conforme numeração. Pausa obrigatória entre blocos. Próximo passo após sua aprovação: **Bloco 1 — Dead-links**.
