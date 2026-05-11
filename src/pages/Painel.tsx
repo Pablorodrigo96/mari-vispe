@@ -352,6 +352,7 @@ export default function Painel() {
               </CardContent>
             </Card>
           )}
+          </div>
         </div>
       </div>
     </div>
