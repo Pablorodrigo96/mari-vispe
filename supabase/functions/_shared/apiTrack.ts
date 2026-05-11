@@ -537,28 +537,43 @@ export async function trackedAIFetch(
     }
   } catch (_) { /* ignore */ }
 
+  // Retry on 429 with exponential backoff (1s, 2s, 4s). Never retry 402 (no credits).
   let resp: Response;
-  try {
-    resp = await fetch(url, init);
-  } catch (e: any) {
-    await logApiUsage({
-      provider, category, model: bodyModel,
-      function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
-      latency_ms: Date.now() - start, status: "error",
-      error_message: String(e?.message ?? e).slice(0, 500), metadata: opts.metadata,
-    });
-    throw e;
+  let attempt = 0;
+  const maxAttempts = 3;
+  while (true) {
+    try {
+      resp = await fetch(url, init);
+    } catch (e: any) {
+      await logApiUsage({
+        provider, category, model: bodyModel,
+        function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
+        latency_ms: Date.now() - start, status: "error",
+        error_message: String(e?.message ?? e).slice(0, 500), metadata: opts.metadata,
+      });
+      throw e;
+    }
+    if (resp.status !== 429 || attempt >= maxAttempts - 1) break;
+    const backoffMs = Math.pow(2, attempt) * 1000;
+    console.warn(`[trackedAIFetch] 429 on ${opts.function_name} attempt ${attempt + 1}/${maxAttempts}, retrying in ${backoffMs}ms`);
+    await new Promise((r) => setTimeout(r, backoffMs));
+    attempt++;
   }
   const latency = Date.now() - start;
 
   if (!resp.ok) {
+    if (resp.status === 402) {
+      console.error(`[trackedAIFetch] CRITICAL 402 (no credits) on ${opts.function_name} provider=${provider} model=${bodyModel ?? "?"}`);
+    }
     const cloned = resp.clone();
     cloned.text().then((t) => {
       logApiUsage({
         provider, category, model: bodyModel,
         function_name: opts.function_name, feature: opts.feature, user_id: opts.user_id,
-        latency_ms: latency, status: resp.status === 429 ? "rate_limited" : "error",
-        http_status: resp.status, error_message: t.slice(0, 500), metadata: opts.metadata,
+        latency_ms: latency,
+        status: resp.status === 429 ? "rate_limited" : resp.status === 402 ? "budget_exceeded" : "error",
+        http_status: resp.status, error_message: t.slice(0, 500),
+        metadata: { ...opts.metadata, retry_attempts: attempt },
       });
     }).catch(() => {});
     return resp;
