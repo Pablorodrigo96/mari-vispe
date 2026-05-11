@@ -4613,6 +4613,10 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      bootstrap_cron_secrets_internal: {
+        Args: { _anon_key: string; _service_role_key: string }
+        Returns: undefined
+      }
       buyer_neutral_description: {
         Args: {
           _setores: string[]
