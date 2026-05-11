@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock, MessageSquare, Pencil, AlertTriangle } from 'lucide-react';
+import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock, MessageSquare, Pencil, AlertTriangle, KeyRound } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdvisorWhatsAppStatus } from '@/hooks/useAdvisorWhatsAppStatus';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -272,6 +272,30 @@ export default function AdminUsers() {
       toast.error('Erro ao excluir: ' + (e.message ?? 'desconhecido'));
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleResetPassword(user: UserWithRoles) {
+    const label = user.full_name || user.email;
+    const pwd = window.prompt(
+      `Definir NOVA senha para ${label}\n\nMínimo 6 caracteres. O usuário poderá logar imediatamente com ela e deve trocar no próximo acesso.`,
+      '',
+    );
+    if (pwd === null) return;
+    if (pwd.length < 6) {
+      toast.error('Senha precisa ter pelo menos 6 caracteres');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-set-password', {
+        body: { user_id: user.user_id, new_password: pwd },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success(`Senha redefinida para ${label}`);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erro ao redefinir senha: ' + (e.message ?? 'desconhecido'));
     }
   }
 
@@ -659,6 +683,10 @@ export default function AdminUsers() {
                               {user.user_id !== currentUser?.id && (
                                 <>
                                   <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleResetPassword(user)}>
+                                    <KeyRound className="h-4 w-4 mr-2" />
+                                    Resetar senha
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => openDelete(user)}
                                     className="text-destructive focus:text-destructive"

@@ -1,123 +1,71 @@
-## Camada de orientação por tela — "i" amigável em tudo
+## Diagnóstico
 
-Objetivo: advisor/seller/admin abre qualquer tela e entende em 5 segundos **pra que serve, o que fazer e uma dica** — sem ler tutorial externo.
+O usuário **sergio.william@vispe.com.br** descreve: o email de redefinição chega, abre a página, mas ao confirmar a nova senha aparece **"Não foi possível redefinir a senha. O link pode ter expirado."**
 
----
+Esse toast vem de `supabase.auth.updateUser({ password })` retornando erro. Investigando o código atual, três causas se sobrepõem:
 
-### 1. Infra (1 vez, depois é só catálogo)
+1. **Pré-fetch de antivírus em servidores corporativos (Outlook/Microsoft Defender, Gmail)** consome o token de recovery antes do clique humano. Quando o Sérgio clica de verdade, o token já foi usado → "expirado".
+2. **`redirectTo` usa `window.location.origin`** em `ForgotPasswordDialog.tsx`. Se ele pediu reset em um domínio (ex.: preview Lovable) e clica no link em outro device cuja URL canônica é `mari.vispe.com.br`, a sessão recovery pode não ser criada corretamente.
+3. **`ResetPassword.tsx` verifica `getSession()` no `useEffect` inicial**, antes do `onAuthStateChange` processar o hash de recovery → falsos negativos. E não há listener para o evento `PASSWORD_RECOVERY`.
 
-**A. Componente novo `<PageHeaderHint>`** (`src/components/ui/PageHeaderHint.tsx`)
-- (i) discreto ao lado do `<h1>` da página.
-- Tooltip com 3 blocos curtos no estilo iFood help:
-  - **Pra que serve** (1 linha)
-  - **Faça agora** (1–2 bullets imperativos, max 2 linhas)
-  - **Dica** (1 linha, opcional)
-- Tom curto e direto. Sem jargão técnico (sem "RPC", "JWT", "RLS").
-- Recebe `pageKey: string` e busca no catálogo. Fallback silencioso se não existir.
+Não há nenhuma edge function de admin para resetar senha (só `admin-delete-user`). Sem isso, hoje a única forma de destravar o Sérgio é eu (admin) ir ao painel Lovable Cloud manualmente.
 
-**B. Componente `<SectionHint>`** (mesmo arquivo, export auxiliar)
-- (i) menor para blocos internos (tabela, kanban, formulário, lista de matches).
-- Mesma estrutura, fonte ainda menor, max 2 linhas por bloco.
-- Recebe `sectionKey: string`.
+## Plano
 
-**C. Catálogo único `src/lib/screenGuides.ts`**
-```ts
-export type Guide = { purpose: string; doNow: string[]; tip?: string };
-export const PAGE_GUIDES: Record<string, Guide> = { ... };
-export const SECTION_GUIDES: Record<string, Guide> = { ... };
-```
-- Todas as strings em pt-BR, tom imperativo, máx 80 chars por bullet.
-- Convenção de chaves: `pageKey` = rota slugificada (`eb.hoje`, `painel`, `vender.wizard`). `sectionKey` = `pageKey + "." + bloco` (`eb.hoje.feed`, `pipeline.kanban.coluna`).
+### 1. Destravar o Sérgio imediatamente (operacional, sem código)
 
-**D. Reaproveitar (não duplicar):**
-- `<InfoHint>` existente fica responsável só por KPIs/charts (já uso atual). `<PageHeaderHint>` e `<SectionHint>` são novos para orientação de tela — mesmo visual (Volt-accent, dark glassmorphism) para consistência.
+Como admin, vou abrir **Cloud → Users**, localizar `sergio.william@vispe.com.br` e usar **"Send password recovery"** ou **"Set password"** diretamente. Como esse caminho não passa por email com prefetch, ele resolve no ato.
 
----
-
-### 2. Catálogo de conteúdo — quem escreve o quê
-
-Vou popular `screenGuides.ts` com texto curto para **TODAS** as 70+ telas, em **3 ondas** dentro do mesmo entregável (não é faseamento de approval — é só ordem de implementação no mesmo loop):
-
-**Onda 1 — Crítico advisor (12 telas)**
-`/painel`, `/equity-brain/hoje`, `/equity-brain/diario`, `/equity-brain/crm` (hub), `/equity-brain/mandato/:id`, `/equity-brain/buyer/:id`, `/equity-brain/deal/:id`, `/equity-brain/pipeline`, `/equity-brain/matches`, `/equity-brain/exec`, `/equity-brain/match/analytics`, `/equity-brain/imports`
-
-**Onda 2 — EB restante (~30 telas)**
-Calls, NoteSearch, Compradores, Mapa, Grafo (3), ISP (3), Mandatos table, Match Inbox/Detail, Exports, Disclosures, Permissions, Health, Coverage, Shadow, Tag, Teses, News, Propostas, QuickFill, MyCompanies, BuyersPage, MandateForm, CrmAssignments, CrmAudit, AccessAudit, Dedupe, OportunidadesPage/EmAndamento, PipelineHistory
-
-**Onda 3 — Seller + Admin (~25 telas)**
-`/vender` (wizard 4 steps), `/meus-anuncios`, `/meus-anuncios/:id`, `/matching`, `/captacao`, `/perfil`, `/valuation`, `/mari`, `/admin/aprovacoes`, `/admin/usuarios`, `/admin/listings`, `/admin/integrations`, `/admin/health`, `/admin/api-costs`, `/admin/franchisees`, `/admin/partners`, etc.
-
-Cada entrada do catálogo segue **template fixo**:
-```
-hoje: {
-  purpose: "Sua tela do dia. Mostra quem ligar, quem cobrar, o que a Mari achou.",
-  doNow: [
-    "Comece pelos cards vermelhos (urgência).",
-    "Use o botão WhatsApp pra registrar contato automático."
-  ],
-  tip: "A Mari recalcula a lista a cada 4h.",
-}
+```text
+<lov-open-backend>Abrir Lovable Cloud Users</lov-open-backend>
 ```
 
----
+Vou deixar a ação pronta na resposta final pra você clicar e executar.
 
-### 3. Onde plugar o (i) em cada tela
+### 2. Endurecer o fluxo de reset (código)
 
-Padrão visual: `<h1 className="...">Título <PageHeaderHint pageKey="..." /></h1>`. Sem mudança de layout, só adiciona o ícone após o título.
+**A) `src/components/auth/ForgotPasswordDialog.tsx`**
+- Trocar `redirectTo: ${origin}/reset-password` por um helper `getResetRedirectUrl()` que prioriza, nesta ordem:
+  1. Custom domain canônico (`https://mari.vispe.com.br/reset-password`) quando rodando em produção
+  2. `window.location.origin` em dev/preview
+- Mostrar mensagem reforçando *"Abra o link no mesmo dispositivo onde solicitou e clique apenas uma vez. Se demorar mais de 1h, peça um novo."*
 
-Para `<SectionHint>`, plugar no header de cada bloco (já existem componentes `FeedCard`, `KpiHeader`, `PipelineFunnel`, `TasksWidget`, etc. — só adiciono o (i) no JSX existente).
+**B) `src/pages/ResetPassword.tsx`** — reescrita defensiva
+- Trocar a checagem inicial por um `onAuthStateChange` que escuta `PASSWORD_RECOVERY` e seta `hasRecoverySession=true` quando o evento dispara
+- Manter `getSession()` apenas como fallback após 600ms (para casos onde o hash já foi processado antes do mount)
+- Logar no console o `error.message` completo quando `updateUser` falhar (hoje engole o motivo) e exibir ao usuário a mensagem real da Supabase em vez de "pode ter expirado"
+- Adicionar botão **"Pedir um novo link"** que reabre o dialog de forgot-password sem precisar voltar pra `/auth`
 
-Lista priorizada dos blocos internos com `<SectionHint>` (Onda 1+2):
-- Cockpit Week Strip do `/painel` (5 cards)
-- 5 FeedCards de `/diario` (Insight Mari, Atividades, Notas, Deals, IA)
-- 7 cards de `/hoje`
-- 3 colunas do Deal unificado (vendedor·match·buyer)
-- Kanban: cada coluna do pipeline ganha (i) no header
-- Match Inbox: filtros + lista
-- Imports: zona de upload + tabela de status
-- ISP: import + mercado + sugestões
-- Wizard `/vender`: cada step (4)
-- Wizard captação: lead score + form
-- Aprovações admin: tab pendentes + tab histórico
+**C) Configuração Supabase Auth — Site URL & Redirect URLs**
+- Verificar/garantir que estão na allowlist:
+  - `https://mari.vispe.com.br`
+  - `https://mari.vispe.com.br/reset-password`
+  - `https://mari-vispe.lovable.app`
+  - `https://mari-vispe.lovable.app/reset-password`
+  - `https://id-preview--3527d651-37d5-470b-a926-60f25d8e322b.lovable.app`
+- Site URL canônico = `https://mari.vispe.com.br`
+- Isso é configurado em **Cloud → Users → Auth Settings (URL Configuration)**, não via código
 
----
+### 3. Edge function `admin-set-password` (opcional, mas recomendado)
 
-### 4. Onboarding leve (bônus de baixo custo)
+Cria função admin-only (gate via `has_role(auth.uid(),'admin')`) que recebe `{ user_id, new_password }` e chama `supabase.auth.admin.updateUserById`. Isso permite destravar usuários futuros direto pelo painel admin sem entrar no Lovable Cloud.
 
-- Hook `useFirstTimeOnPage(pageKey)` — guarda em `localStorage` (`mari_pageguide_seen_v1`) quais telas o usuário já visitou.
-- Na **primeira visita** de uma tela: o (i) do header pulsa em Volt por 4 segundos e abre o tooltip automaticamente uma vez. Depois fica neutro.
-- Botão "Ver guia novamente" pequenininho no header do AppShell que reseta o `localStorage` se o usuário quiser revisitar.
+- Local: `supabase/functions/admin-set-password/index.ts`
+- Botão **"Resetar senha"** no `/admin/usuarios` (`AdminUsers.tsx`) ao lado do delete.
 
----
+### 4. (Opcional — fase 2) Auth-email-hook
 
-### 5. Fora de escopo
+Hoje os emails de reset saem com o template padrão Lovable (sem branding mari). Não é a causa do bug, mas se quiser, em outro passo podemos scaffold `auth-email-hook` para mandar pelo `notify.vispe.com.br` com layout mari + link único + texto mais claro instruindo *"clique apenas uma vez, expira em 1h"*.
 
-- Não cria drawer de ajuda lateral nem tour interativo passo a passo.
-- Não mexe nos tooltips existentes (`ebTooltips.ts`) — eles continuam servindo KPIs/charts.
-- Não cria sistema CMS pra editar tooltips por usuário não-dev (texto fica em código, em pt-BR, fácil de revisar via PR).
-- Não traduz pra inglês (BR-only).
-- Não muda schema, não cria tabela, não toca em RLS.
+## Fora de escopo
 
----
+- Não alterar `AuthContext.tsx` nem RLS
+- Não mexer em login normal, MFA ou signup
+- Não scaffold auth-email-hook nesta rodada (separamos em fase 2)
 
-### 6. Estrutura técnica resumida
+## Critério de aceite
 
-```
-src/
-├── components/ui/PageHeaderHint.tsx   ← novo (PageHeaderHint + SectionHint)
-├── hooks/useFirstTimeOnPage.ts        ← novo
-└── lib/
-    ├── ebTooltips.ts                  ← intocado (KPIs)
-    └── screenGuides.ts                ← novo (catálogo 70+ telas)
-```
-
-Páginas tocadas: ~70 arquivos, mas cada um leva 1 linha de import + 1 atributo `<PageHeaderHint pageKey="..." />` no h1. Blocos internos: ~30 inserts adicionais. Zero refactor.
-
----
-
-### 7. Critério de pronto
-
-- Toda página advisor/seller/admin tem (i) no header com texto pt-BR curto.
-- Blocos internos críticos (listados acima) têm (i) próprio.
-- Primeira visita pulsa por 4s; visitas seguintes ficam neutras.
-- Catálogo está num único arquivo, fácil de revisar e ajustar texto sem mexer em componente.
+- Sérgio consegue entrar hoje
+- Próximo usuário que pedir reset: ao clicar no email → vê a página → digita senha → loga normalmente, mesmo se for em outro device
+- Se o token tiver sido prefetched ou expirado, a tela mostra **a mensagem real** + botão "Pedir um novo link" sem precisar navegar
+- Admin tem botão "Resetar senha" em `/admin/usuarios`
