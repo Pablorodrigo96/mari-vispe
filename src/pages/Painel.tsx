@@ -194,23 +194,29 @@ export default function Painel() {
           <ColFeedAgenda feed={bbg.data?.feed ?? []} />
         </div>
 
-        {/* === BELOW THE FOLD — conteúdo existente (Bloco 2 reorganiza) === */}
+        {/* === BELOW THE FOLD — Bloco 2: densidade Bloomberg === */}
 
-        {/* Executive report — Quanto vale, quanto pode valer, quando vender */}
-        <ExecutiveReport snapshot={snapshot} firstName={greetingName} />
+        {/* Section: Análise executiva */}
+        <BBGSection label="Análise executiva" subtitle="Valuation · setor · timeline · pilares de ROI">
+          <ExecutiveReport snapshot={snapshot} firstName={greetingName} />
+        </BBGSection>
 
-      {/* Cockpit "Sua semana na Mari" — 5 AI cards */}
-      <CockpitWeekStrip />
+        {/* Section: Cockpit semanal */}
+        <BBGSection label="Cockpit · Sua semana na Mari" subtitle="Sinais de IA atualizados toda 2ª feira">
+          <CockpitWeekStrip />
+        </BBGSection>
 
-      {/* KPIs row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <KPI label="Anúncios" value={counts?.listings ?? '—'} icon={ClipboardList} />
-        <KPI label="Valuations" value={counts?.valuations ?? '—'} icon={ChartBar} />
-        <KPI label="Captações" value={counts?.capital ?? '—'} icon={DollarSign} />
-        <KPI label="Visualizações 30d" value="—" icon={Eye} hint="Em breve" />
-      </div>
+        {/* Section: Atividade + ações */}
+        <BBGSection label="Atividade · Operação" subtitle="KPIs, próxima ação e módulos">
+          {/* KPIs inline (denser) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border mb-5 border border-border">
+            <KPI label="Anúncios" value={counts?.listings ?? '—'} icon={ClipboardList} />
+            <KPI label="Valuations" value={counts?.valuations ?? '—'} icon={ChartBar} />
+            <KPI label="Captações" value={counts?.capital ?? '—'} icon={DollarSign} />
+            <KPI label="Views 30d" value="—" icon={Eye} hint="Em breve" />
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Modules grid 2x2 */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {modules.map((m) => (
