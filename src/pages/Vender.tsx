@@ -6,6 +6,7 @@ import NewListingWizard from '@/components/sell/wizard/NewListingWizard';
 import { AnonymityDisclaimer } from '@/components/sell/AnonymityDisclaimer';
 import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { useAuth } from '@/contexts/AuthContext';
+import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
 
 const Vender = () => {
   const { user, loading } = useAuth();
@@ -39,8 +40,8 @@ const Vender = () => {
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-8">
               <p className="text-[10px] uppercase tracking-[0.4em] text-accent mb-3">designed forward</p>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-                Anuncie sua Empresa
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 inline-flex items-center justify-center">
+                Anuncie sua Empresa<PageHeaderHint pageKey="vender" />
               </h1>
               <p className="text-muted-foreground">
                 Preencha os dados abaixo para cadastrar sua empresa no marketplace

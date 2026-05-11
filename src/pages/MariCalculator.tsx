@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react";
 import { CnpjInput } from "@/components/mari-calc/CnpjInput";
 import { MariResult, MariResultData } from "@/components/mari-calc/MariResult";
 import { computeWindow } from "@/lib/mariWindowHeuristic";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 
 interface BrasilApiCnpj {
   razao_social?: string;
@@ -76,8 +77,8 @@ export default function MariCalculator() {
               <Sparkles className="h-3 w-3 text-accent" />
               <span className="text-[10px] uppercase tracking-wider font-semibold text-accent">Calculadora pública</span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 break-words leading-tight">
-              Quanto tempo até sua empresa ser vendida?
+            <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 break-words leading-tight inline-flex items-center justify-center flex-wrap">
+              Quanto tempo até sua empresa ser vendida?<PageHeaderHint pageKey="mari" className="ml-2 align-middle" />
             </h1>
             <p className="text-base md:text-lg text-muted-foreground break-words">
               Digite o CNPJ. A Mari estima a <strong className="text-foreground">janela de venda nos próximos 24 meses</strong>,

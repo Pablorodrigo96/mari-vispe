@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowLeftRight } from "lucide-react";
 import { MatchAnalyticsContent } from "@/components/equity-brain/crm/match/MatchAnalyticsContent";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 
 export default function MatchAnalyticsPage() {
   return (
@@ -13,6 +14,7 @@ export default function MatchAnalyticsPage() {
           <h1 className="text-2xl font-bold text-zinc-100 mt-1 tracking-tight flex items-center gap-2">
             <ArrowLeftRight className="h-6 w-6 text-[#D9F564]" />
             Match Analytics — Vendedores × Compradores
+            <PageHeaderHint pageKey="eb.match.analytics" />
           </h1>
           <p className="text-xs text-zinc-400 mt-1 break-words">
             Cruza oferta (mandatos vigentes) com demanda (compradores ativos) por dimensão.

@@ -7,6 +7,7 @@ import { MatchWhyCard } from "@/components/equity-brain/match/MatchWhyCard";
 import { usePipelineStages, STAGE_COLOR_CLASSES } from "@/hooks/usePipelineStages";
 import { brl } from "@/lib/dealFormatters";
 import { cn } from "@/lib/utils";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 
 /**
  * Página unificada do Deal: mandato + buyer movimentados juntos no pipeline.
@@ -52,7 +53,7 @@ export default function UnifiedDealPage() {
             <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
           </Button>
           <div className="min-w-0">
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500">Deal · par mandato ⇄ buyer</div>
+            <div className="text-[10px] uppercase tracking-wider text-zinc-500 inline-flex items-center">Deal · par mandato ⇄ buyer<PageHeaderHint pageKey="eb.deal" /></div>
             <div className="text-base font-bold text-zinc-100 truncate break-words inline-flex items-center gap-2">
               <span className="text-[#D9F564]">{company?.codename ?? company?.razao_social ?? deal.cnpj}</span>
               <ArrowRight className="h-3.5 w-3.5 text-zinc-500" />
