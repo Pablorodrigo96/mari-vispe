@@ -339,7 +339,7 @@ function RoiSummary({ snapshot }: { snapshot: ValuationSnapshot }) {
           <SummaryStat label="Ganho líquido" value={brl(totalRet - totalInv)} accent="emerald" />
         </div>
         <p className="text-xs text-muted-foreground mt-4 break-words">
-          Para cada R$ 1 investido em preparação você captura aproximadamente R$ {(totalRet / totalInv).toFixed(0)} no preço de venda. Esse cálculo assume que você executa os 4 pilares dentro da janela 2026-2027.
+          Cada R$ 1 investido em preparação volta como ~R$ {(totalRet / totalInv).toFixed(0)} no preço de venda — desde que os 4 pilares sejam executados dentro da janela 2026-2027.
         </p>
       </CardContent>
     </Card>
