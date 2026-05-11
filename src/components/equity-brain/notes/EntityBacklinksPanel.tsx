@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase, Users, Building2, Pin } from "lucide-react";
+import { Briefcase, Users, Building2, Pin, Target, FileText, CalendarDays } from "lucide-react";
 import type { NoteEntityType } from "@/hooks/useEntityNotes";
 
 interface Props {
@@ -13,6 +13,9 @@ const SOURCE_META: Record<string, { Icon: any; color: string; route: (id: string
   mandate: { Icon: Briefcase, color: "text-emerald-300", route: (id) => `/equity-brain/mandato/${id}`, label: "Mandato" },
   buyer_ma: { Icon: Users, color: "text-violet-300", route: (id) => `/equity-brain/buyer/${id}`, label: "Buyer" },
   company: { Icon: Building2, color: "text-amber-300", route: (id) => `/equity-brain/empresa/${id}`, label: "Empresa" },
+  match: { Icon: Target, color: "text-sky-300", route: (id) => `/equity-brain/match/${id}`, label: "Match" },
+  listing: { Icon: FileText, color: "text-rose-300", route: (id) => `/listing/${id}`, label: "Anúncio" },
+  daily: { Icon: CalendarDays, color: "text-zinc-300", route: (id) => `/equity-brain/diario/${id}`, label: "Diário" },
 };
 
 export function EntityBacklinksPanel({ entityType, entityId }: Props) {
@@ -56,7 +59,7 @@ export function EntityBacklinksPanel({ entityType, entityId }: Props) {
       {items.map((m) => {
         const meta = SOURCE_META[m.source_entity_type] ?? SOURCE_META.company;
         const Icon = meta.Icon;
-        const preview = (m.body_preview ?? "").replace(/@(mandate|buyer|company):[A-Za-z0-9-]+(?:\|[^\s]+)?/g, "@$1").slice(0, 180);
+        const preview = (m.body_preview ?? "").replace(/@(mandate|buyer|company|match|listing|daily):[A-Za-z0-9_\-:.]+(?:\|[^\s]+)?/g, "@$1").slice(0, 180);
         return (
           <Link
             key={m.id}
