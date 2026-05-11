@@ -1,26 +1,52 @@
-## Adicionar mini-box "Advisor pessoal" no rodapé da sidebar
+## Cérebro 3D — mais nós e melhor espaçamento
 
-Adicionar um pequeno card acima do footer de usuário em `src/components/layout/AppSidebar.tsx`, visível para todos os usuários logados.
+Dois ajustes no `JarvisGraph3D.tsx` para o globo parecer mais rico e os pontos pararem de se sobrepor.
 
-### Conteúdo
-- Label superior: "Seu advisor pessoal"
-- Nome: **Rafael Cocolichio**
-- CTA: "Falar com ele" → abre WhatsApp via helper `getWhatsAppLink(5551992338258)` (telefone padrão já registrado em memória do projeto) em nova aba
+### 1. Trazer mais empresas (parecer "muito mais cadastros")
 
-### Estilo (tokens Mari)
-- Card com `bg-muted/40 border border-border rounded-lg p-3`
-- Acento Volt no ícone MessageCircle e no link "Falar com ele"
-- Avatar pequeno com iniciais "RC" (`bg-volt/20 text-volt`)
-- `break-words` no nome conforme padrão do projeto
+Limites atuais nas queries (linhas 272, 282, 326):
+- `eb_companies` → 150
+- `eb_companies_scored` → 150
+- `eb_matches` → 300
 
-### Comportamento por estado
-- **Expandido**: card completo (avatar + label + nome + CTA)
-- **Colapsado**: apenas botão ícone MessageCircle (Volt) com tooltip "Rafael Cocolichio — Falar"
+Aumentar para:
+- `eb_companies` → **500**
+- `eb_companies_scored` → **500**
+- `eb_matches` → **1000**
 
-### Posição
-Inserido logo antes do bloco `{/* User footer */}` (linha 290), separado por `border-t`.
+Buyers e teses já vêm sem limite — sem mudança.
 
-### Arquivos afetados
-- `src/components/layout/AppSidebar.tsx` (única mudança)
+### 2. Aumentar a distância entre nós (linhas 446-464)
 
-Sem migrações, sem mudanças em outros componentes.
+Atual:
+```
+R   = clamp(500 + N*3.5, 600, 1800)
+charge.strength(-180).distanceMax(R * 1.6)
+link.distance = 60 + (1-weight)*90   // 60..150
+collide = visualRadius + 4
+radial(R).strength(0.18)
+```
+
+Novo (mais espalhado, casca maior):
+```
+R   = clamp(800 + N*5.0, 900, 2600)   // sphere 50% maior
+charge.strength(-340).distanceMax(R * 1.8)   // ~2x repulsão
+link.distance = 110 + (1-weight)*160  // 110..270
+collide = visualRadius + 14           // 4 → 14 (anti-overlap)
+radial(R).strength(0.14)              // casca um pouco mais "frouxa"
+```
+
+E ajuste do damping para acomodar a expansão maior sem tremor:
+```
+d3VelocityDecay(0.50)   // 0.55 → 0.50
+d3AlphaDecay(0.010)     // 0.012 → 0.010
+```
+
+### 3. Câmera inicial (linha 561-563)
+
+Aumentar `camR` proporcional ao novo R (mantendo o fator já existente) — sem mudança de código, pois deriva de `sphereRadiusRef.current`.
+
+### Escopo
+- Único arquivo: `src/components/equity-brain/jarvis/JarvisGraph3D.tsx`
+- Sem migrações, sem mudanças em dados, sem mudanças em UI/HUD.
+- Smoke: abrir `/equity-brain/grafo-jarvis`, conferir contador "N" ≥ 400 e ausência de clusters sobrepostos no centro.
