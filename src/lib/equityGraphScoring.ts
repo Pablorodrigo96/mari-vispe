@@ -148,6 +148,7 @@ export const NODE_COLORS: Record<string, string> = {
   platform: "hsl(38, 92%, 55%)",         // amber — consolidador / plataforma de roll-up
   asset: "hsl(240, 5%, 65%)",            // zinc — ativo isolado
   strategy: "hsl(345, 90%, 60%)",        // rose — manobra estratégica
+  seller_cold: "hsl(220, 8%, 55%)",      // graphite — população RFB (decorativo, sem dados)
 };
 
 export const NODE_LABELS: Record<string, string> = {
