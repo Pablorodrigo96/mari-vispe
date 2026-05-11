@@ -199,10 +199,10 @@ const App = () => (
               <Route path="/parceiro" element={<RequireRole roles={["advisor","admin","franchisee"]} allowPartnerAccountant><PartnerDashboard /></RequireRole>} />
 
               {/* Top-level dashboards (admin/advisor) */}
-              <Route path="/dashboard/executivo" element={<RequireRole roles={["admin", "advisor"]}><DashboardExecutivoPage /></RequireRole>} />
-              <Route path="/dashboard/mandato"   element={<RequireRole roles={["admin", "advisor"]}><DashboardMandatoPage /></RequireRole>} />
-              <Route path="/dashboard/match"     element={<RequireRole roles={["admin", "advisor"]}><DashboardMatchPage /></RequireRole>} />
-              <Route path="/dashboard/nbo"       element={<RequireRole roles={["admin", "advisor"]}><DashboardNboPage /></RequireRole>} />
+              <Route path="/dashboard/executivo" element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
+              <Route path="/dashboard/mandato"   element={<Navigate to="/equity-brain/dashboards/mandatos"  replace />} />
+              <Route path="/dashboard/match"     element={<Navigate to="/equity-brain/dashboards/match"     replace />} />
+              <Route path="/dashboard/nbo"       element={<Navigate to="/equity-brain/dashboards/propostas" replace />} />
 
               {/* Admin (sidebar do AppShell + RequireRole) */}
               <Route path="/admin" element={<RequireRole roles={["admin"]}><AdminDashboard /></RequireRole>} />
