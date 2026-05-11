@@ -114,7 +114,7 @@ export const PlansPreview = () => {
                     : ''
                 }`}
               >
-                <Link to="/auth/register">{plan.cta}</Link>
+                <Link to="/auth?tab=signup">{plan.cta}</Link>
               </Button>
             </div>
           ))}

@@ -91,11 +91,11 @@ export const StepIdentification = ({ data, onChange }: StepIdentificationProps) 
         />
         <label htmlFor="acceptTerms" className="text-sm text-muted-foreground cursor-pointer">
           Aceito os{' '}
-          <a href="/termos" className="text-accent hover:underline">
+          <a href="/terms" className="text-accent hover:underline">
             termos e condições
           </a>{' '}
           e a{' '}
-          <a href="/privacidade" className="text-accent hover:underline">
+          <a href="/terms" className="text-accent hover:underline">
             política de privacidade
           </a>
           .

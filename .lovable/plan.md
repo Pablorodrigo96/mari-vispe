@@ -1,71 +1,129 @@
-## Sub-tarefa 3 — `security_invoker=on` em 16 views públicas
+# Limpeza Consolidada — Seções 1, 2, 3 da Auditoria
 
-### Descoberta (read-only)
+Executar em **7 blocos sequenciais**, com pausa para validação entre cada um. Após cada bloco eu reporto diff + smoke test e espero o "ok" antes de avançar.
 
-Inventário atualizado de `pg_class` em `public` confirmou:
+---
 
-- **Total de views (`relkind='v'`)**: 60
-- **Já com `security_invoker`**: 44 ✅
-- **Faltando `security_invoker`**: **16**
-- **Materialized views reais (`relkind='m'`)**: **0** — os antigos `mv_dashboard_*` são views normais (já com `security_invoker=true`). Não há MV para tratar com wrapper.
+## Bloco 1 — Corrigir 9 dead-links (30-60min)
 
-Isso simplifica drasticamente o plano original (Sub-tarefa 3 caiu de ~23 alvos com wrappers para 16 ALTER VIEW simples, zero código front-end).
+**Substituições via grep+replace:**
 
-### 16 views alvo
+| Errado | Correto |
+|---|---|
+| `/auth/register` | `/auth?tab=signup` |
+| `/registrar-comprador` | `/cadastrar-comprador` |
+| `/termos` | `/terms` |
+| `/privacidade`, `/privacy` | **decisão Pablo** (A: criar página interna placeholder · B: redirect vispe.com.br · C: apontar /terms) — default A |
+| `/dashboard` (bare) | `/dashboard/executivo` |
+| `/match-inbox` | `/equity-brain/match-inbox` |
+| `/pipeline` | `/equity-brain/pipeline` |
+| `/crm/buyer/:id` | `/equity-brain/crm/buyer/:id` |
+| `/crm/mandate/:id` | `/equity-brain/crm/mandate/:id` |
 
-Agrupadas por domínio para facilitar smoke test:
+**Auth.tsx:** garantir leitura de `?tab=signup|login` via `useSearchParams` para abrir tab correta.
 
-**Grupo A — EB / CRM (6)**
-1. `eb_companies`
-2. `eb_companies_enriched`
-3. `eb_companies_scored`
-4. `eb_mandates`
-5. `eb_opportunities_ready`
-6. `eb_v_deal_metrics`
-7. `eb_crm_audit_v2`
+**Smoke:** footer Termos/Privacidade, CTA signup, links internos EB.
 
-**Grupo B — Analytics (7)**
-8. `v_analytics_browsers`
-9. `v_analytics_cta`
-10. `v_analytics_devices`
-11. `v_analytics_exit_pages`
-12. `v_analytics_funnel`
-13. `v_analytics_hourly_heatmap`
-14. `v_analytics_retention`
+---
 
-**Grupo C — Misc (2)**
-15. `api_usage_daily_summary`
-16. `mari_insights`
+## Bloco 2 — Remover 10 lazy imports sem rota (15min)
 
-### Execução (1 migration única)
+Remover de `src/App.tsx`: `EBDashboardPage`, `EBBuyersPage`, `EBTesesPage`, `EBMapaPage`, `EBGrafoPage`, `EBBoardPage`, `QuickFillPage`, `AnatelCruzamentoPage`, `MyCompaniesPage`, `CrmHubPage`.
 
-Uma única migração com 16 `ALTER VIEW ... SET (security_invoker = on);`. Sem mudanças em RLS, sem mudanças em código front-end, sem alteração de schema. Operação idempotente e reversível.
+Para cada um: grep duplo no projeto inteiro. Se zero refs ativas → marcar arquivo para Bloco 4. Se ainda referenciado em outro lugar → remover só o import.
 
-```sql
-ALTER VIEW public.eb_companies SET (security_invoker = on);
-ALTER VIEW public.eb_companies_enriched SET (security_invoker = on);
--- ... (14 outras)
+**Smoke:** build OK, bundle reduzido (medir antes/depois).
+
+---
+
+## Bloco 3 — Consolidar 4 dashboards duplicados (1-2h)
+
+**Decisão arquitetural:** `/equity-brain/dashboards/*` vira canônico; `/dashboard/*` vira `<Navigate replace>`.
+
+```tsx
+<Route path="/dashboard/executivo" element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
+<Route path="/dashboard/mandato"   element={<Navigate to="/equity-brain/dashboards/mandatos"  replace />} />
+<Route path="/dashboard/match"     element={<Navigate to="/equity-brain/dashboards/match"     replace />} />
+<Route path="/dashboard/nbo"       element={<Navigate to="/equity-brain/dashboards/propostas" replace />} />
 ```
 
-### Por que isso resolve
+**Investigar duplos internos** (reportar antes de remover):
+- `ExecutiveDashboardPage` vs `DashboardExecutivoPage`
+- `MatchAnalyticsPage` vs `DashboardMatchPage`
 
-Com `security_invoker=on`, a view passa a respeitar as RLS policies do **usuário que consulta** em vez das do criador da view (superuser/postgres). Isso fecha a brecha em que tabelas RLS-protegidas vazavam dados via view.
+---
 
-### Validação pós-migration
+## Bloco 4 — Remover 14 componentes órfãos não-UI (30-60min)
 
-1. **Linter** roda automático após migration → contagem de "Security Definer View" deve cair em ~16.
-2. **Smoke front-end** (manual, Pablo no painel `/painel`, `/equity-brain/crm`, `/admin/analytics`):
-   - Painéis EB carregam normalmente para admin/advisor.
-   - Vendedor-puro continua sem ver dados sensíveis (codename funcionando).
-   - Dashboard analytics renderiza gráficos para admin.
-3. **Risco**: se alguma view referenciava tabela sem RLS adequada, query pode passar a retornar 0 linhas para certos roles. Mitigação: rollback rápido com `ALTER VIEW ... RESET (security_invoker)` ou `SET (security_invoker = off)`.
+Mover para `src/_archive/` (não deletar) — adicionar `_archive` ao `tsconfig.app.json` exclude:
 
-### Detalhes técnicos
+`equity-brain/{BuyerCard,DealGraph,SAVBadge}.tsx`, `equity-brain/company/EnrichCompanyButton.tsx`, `equity-brain/crm/{MandateTransitionsTab,MandatesTable,RoleBadges,WhatsAppPanel}.tsx`, `map/MapTopFilterBar.tsx`, `marketplace/BusinessCard.tsx`, `sell/SellWizard.tsx`, `valuation/{UpgradeCard,ValuationHero,ValuationSuccess}.tsx`.
 
-- Não há `relkind='m'` em `public` → o plano original de "criar wrapper views para 4 MVs" é descartado por inexistência.
-- Não há mudanças em `src/`; o front-end consome as views via Supabase client e não muda contrato.
-- `mem://index.md` ganha uma linha em Core: "Todas as views em `public` rodam com `security_invoker=on`."
+**Procedimento por componente:** grep duplo → se zero refs reais (descontando definição) move para `_archive/`. Suspeitos → reporta antes.
 
-### Próximo passo após aprovação
+Smoke test a cada batch de 3-4.
 
-Após smoke OK, libero **Sub-tarefa 4** (políticas abertas em `equity_brain.deals`: trocar 3 USING(true) por policies por role).
+---
+
+## Bloco 5 — 9 Shadcn UI + colisão InfoHint (30min)
+
+**Mover para `_archive/ui/`:** `aspect-ratio`, `breadcrumb`, `context-menu`, `hover-card`, `input-otp`, `menubar`, `navigation-menu`, `pagination`, `resizable`.
+
+**Consolidar InfoHint:**
+1. Diff entre `admin/analytics/InfoHint.tsx` e `equity-brain/InfoHint.tsx`
+2. Mesclar features faltantes no canônico (`equity-brain/InfoHint`)
+3. Substituir todos os imports
+4. Arquivar `admin/analytics/InfoHint.tsx`
+
+---
+
+## Bloco 6 — Índices em ~26 tabelas (30-60min)
+
+Cada índice = uma migration separada (CONCURRENTLY não roda em transaction). Padrão `idx_<tabela>_<coluna>`.
+
+Tabelas-alvo (FKs comuns `user_id`, `request_id`, `listing_id`, etc.):
+- `public`: `valuation_history.user_id`, `valuation_purchases.user_id`, `capital_requests.(user_id,status)`, `capital_matches.request_id`, `capital_messages.request_id`, `capital_timeline.request_id`, `capital_providers.user_id`, `interest_logs.listing_id`, `messages.listing_id`, `partner_activities.partner_user_id`, `franchisee_regions.user_id`, `franchisee_requests.user_id`, `advisor_requests.user_id`
+- `equity_brain`: `isp_anatel_imports.created_at`, `buyer_revealed_thetas.buyer_id`, `signal_catalog.*` (validar coluna)
+
+Para cada: confirmar coluna usada em queries reais; verificar índice pré-existente em `pg_indexes`; rodar `EXPLAIN ANALYZE` antes/depois em 3-5 queries representativas.
+
+---
+
+## Bloco 7 — REVOKE EXECUTE + edge function órfã (1-2h)
+
+**7.1 Listar 117 funções DEFINER** chamáveis por anon/auth via `pg_proc` + `has_function_privilege`.
+
+**7.2 Classificar cada uma:**
+- **A** Pública por design (manter) — `has_role`, `is_company_visible_in_crm`, `analyze_cnpj_public`, helpers de RLS
+- **B** Authenticated apenas → `REVOKE ... FROM anon`
+- **C** Advisor/admin apenas → `REVOKE ... FROM anon, authenticated`
+- **D** Service_role apenas → `REVOKE ... FROM anon, authenticated`
+
+Priorizar nomes sensíveis: `*_admin_*`, `*_recompute_*`, `*_internal_*`, `*_bulk_*`, `delete_*`, `drop_*`. Casos duvidosos → reportar, não revogar.
+
+Aplicar em batches de ~10 funções com smoke entre cada batch.
+
+**7.3 Edge function órfã `crm-log-activity`:** grep no projeto + cron jobs + outras edge functions. Se zero refs → mover código para `_archive/edge-functions/` (manter deploy Supabase intocado).
+
+---
+
+## Regras globais
+
+1. **Validação dupla** antes de remover qualquer arquivo (grep amplo).
+2. **Diff reportado** antes de aplicar batches >10 arquivos.
+3. **Pausa entre blocos** — Pablo valida.
+4. **Smoke test obrigatório** após cada bloco: login, `/painel`, `/marketplace`, `/mari`, `/equity-brain`, `/equity-brain/crm`.
+5. **Dúvida = não remover.** Reportar.
+6. Nenhuma correção criativa fora do escopo listado.
+
+---
+
+## Checkpoint Final
+
+Tabela comparativa antes/depois: bundle KB, componentes ativos, rotas declaradas, funções DEFINER abertas a anon, índices, linter Supabase issues, erros TS. Smoke geral. Aí libera Seção 4 da auditoria.
+
+## Decisões necessárias antes de iniciar
+
+1. **`/privacidade`** → opção A, B ou C? (default: A — placeholder interno)
+2. **Órfãos** → mover para `_archive/` ou deletar definitivo? (default: `_archive/`)
+3. **Funções DEFINER duvidosas** → quero te chamar antes ou seguir conservador (não revogar)? (default: conservador)

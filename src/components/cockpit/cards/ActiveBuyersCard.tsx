@@ -36,7 +36,7 @@ export function ActiveBuyersCard({ ctx, loading }: Props) {
         accent="blue"
         empty
         emptyMessage="Ainda não temos compradores rastreados pra cruzar com você."
-        emptyCta={{ label: "Cadastrar uma tese", to: "/registrar-comprador" }}
+        emptyCta={{ label: "Cadastrar uma tese", to: "/cadastrar-comprador" }}
       />
     );
   }
