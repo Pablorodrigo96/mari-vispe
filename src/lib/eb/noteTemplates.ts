@@ -159,6 +159,33 @@ _{{date}}_
 - 
 `,
   },
+  {
+    id: "ai-thesis",
+    label: "Gerar tese com Mari",
+    description: "Aciona Claude para gerar tese estruturada (vira nota automática)",
+    scope: ["company", "mandate"],
+    icon: Brain,
+    body: "",
+    autoGenerate: { fn: "claude-classify-thesis", accepts: ["company", "mandate"] },
+  },
+  {
+    id: "ai-pitch",
+    label: "Gerar pitch com Mari",
+    description: "Aciona Claude para gerar pitch comercial (vira nota automática)",
+    scope: ["company", "mandate", "buyer_ma"],
+    icon: Sparkles,
+    body: "",
+    autoGenerate: { fn: "claude-generate-pitch", accepts: ["company", "mandate", "buyer_ma"] },
+  },
+  {
+    id: "ai-call",
+    label: "Analisar última call (Mari)",
+    description: "Aciona Claude para resumir a última call registrada",
+    scope: ["company", "mandate", "buyer_ma"],
+    icon: Headphones,
+    body: "",
+    autoGenerate: { fn: "claude-analyze-call", accepts: ["company", "mandate", "buyer_ma"] },
+  },
 ];
 
 export function getTemplatesForScope(scope: NoteTemplateScope): NoteTemplate[] {
