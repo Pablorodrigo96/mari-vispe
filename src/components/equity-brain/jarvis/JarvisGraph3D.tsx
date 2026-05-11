@@ -672,11 +672,11 @@ export function JarvisGraph3D() {
   const coldGeoRef = useRef<SphereGeometry | null>(null);
   const coldMatRef = useRef<MeshBasicMaterial | null>(null);
   if (!coldGeoRef.current) {
-    coldGeoRef.current = new SphereGeometry(2.2, 8, 8);
+    coldGeoRef.current = new SphereGeometry(3.0, 8, 8);
     coldMatRef.current = new MeshBasicMaterial({
-      color: new Color("hsl(220, 8%, 55%)"),
+      color: new Color("hsl(220, 18%, 72%)"),
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.78,
     });
   }
 
@@ -1125,14 +1125,19 @@ export function JarvisGraph3D() {
             return null as any;
           }}
           linkDirectionalParticles={(l: any) => {
-            // Partículas custam GPU por link. Mantemos só nos casos focais.
+            // Em foco: realça apenas os vizinhos do nó selecionado.
             if (focusId) {
               const sId = endpointId((l as any).source);
               const tId = endpointId((l as any).target);
               if (sId === focusId || tId === focusId) return isGoldLink(l) ? 3 : 2;
               return 0;
             }
+            // Idle: mantém fluxo permanente nos eixos M&A principais.
             if (isGoldLink(l)) return 2;
+            const t = l.edge_type;
+            if (t === "buyer_acquires_seller" || t === "platform_addon" || t === "valuation_arbitrage") {
+              return 1;
+            }
             return 0;
           }}
           linkDirectionalParticleWidth={(l: any) => {

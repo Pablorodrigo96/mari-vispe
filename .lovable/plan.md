@@ -1,29 +1,39 @@
-Vou corrigir o travamento do Jarvis 3D atacando os gargalos que aparecem no código atual: recriação de milhares de objetos Three.js, logs/renders em loop, simulação D3 infinita, múltiplos requestAnimationFrame e camadas CSS/vídeo caras sobre WebGL.
+## Problema
 
-## Plano
+Na rodada anterior eu cortei DEMAIS:
+- Partículas direcionais (raios animados nas conexões) só ligam em foco/hover ou em gold → no estado idle o globo fica "morto", sem fluxo.
+- Os ~2k pontos da nuvem RFB ficaram cinza muito escuro (`hsl(220, 8%, 55%)`) com opacidade 0.45 e raio 2.2 — sobre o vídeo escuro de fundo, somem.
 
-1. **Modo performance por padrão**
-   - Manter a sensação de globo cheio, mas reduzir o custo inicial: menos física em tempo real e mais posicionamento determinístico/pinado para a nuvem de empresas.
-   - Capar o pixel ratio também no desktop para evitar renderizar WebGL em resolução muito maior que o necessário.
+## Correções (apenas visual, sem mexer em física/dados)
 
-2. **Parar re-renderizações desnecessárias do React**
-   - Remover o `console.log` executado a cada render do `JarvisGraph3D`.
-   - Trocar o contador de FPS que atualiza state todo segundo por uma atualização mais barata ou desacoplada.
-   - Reduzir updates gerados pela germinação de links (`setInterval` adicionando 3 links a cada 70ms), que hoje força o React/ForceGraph a receber novo `graphData` dezenas de vezes.
+### 1. Nuvem fria visível de novo
+Em `JarvisGraph3D.tsx` (~linhas 672-681) ajustar geometria/material compartilhados dos `seller_cold`:
+- Raio da esfera compartilhada: `2.2 → 3.0`
+- Cor: `hsl(220, 8%, 55%)` → `hsl(220, 18%, 72%)` (graphite mais claro, lê sobre vídeo escuro)
+- Opacidade: `0.45 → 0.78`
+- Atualizar `NODE_COLORS.seller_cold` em `equityGraphScoring.ts` para o mesmo HSL claro, mantendo coerência da legenda.
 
-3. **Simplificar os nós Three.js**
-   - Substituir nós decorativos da base fria por objetos muito leves, sem glow/anel/label e com geometria/material compartilhados.
-   - Reduzir segmentos de esferas/anéis para os nós vivos.
-   - Evitar recriar materiais caros por link/nó quando não há foco/hover.
+Custo: zero — continua sendo 1 geometria + 1 material compartilhados via `Mesh(coldGeoRef, coldMatRef)`.
 
-4. **Reduzir animações paralelas**
-   - Desligar ou limitar por padrão `useGhostSynapses`, `useSolarFlares` e partículas direcionais em massa.
-   - Manter apenas o orbit da câmera e alguns links vivos para preservar a estética.
+### 2. Raios de conexão de volta no estado idle
+Em `JarvisGraph3D.tsx` (~linhas 1127-1137) reescrever `linkDirectionalParticles` para manter fluxo permanente nos tipos "sempre vivos" sem explodir a contagem:
 
-5. **Remover camadas caras sobre conteúdo animado**
-   - Trocar `backdrop-blur` dos HUDs sobre o canvas por fundos sólidos/translúcidos e text-shadow quando necessário.
-   - Desativar filtro `blur()` do vídeo de fundo no Jarvis 3D, porque blur sobre WebGL/vídeo animado costuma derrubar FPS.
+```
+- Em foco: vizinhos do nó focado → 3 (gold) / 2 (outros). Resto → 0.
+- Sem foco:
+    - gold (seller↔seller fusão/rollup): 2
+    - buyer_acquires_seller, platform_addon, valuation_arbitrage: 1
+    - demais: 0
+```
 
-6. **Validar depois da implementação**
-   - Abrir `/equity-brain/admin/jarvis` e conferir: FPS, quantidade de nós, fluidez do orbit e ausência de warnings/loops no console.
-   - Se ainda ficar pesado, adicionar um controle “Qualidade: Performance / Visual / Máxima” para permitir alternar densidade e efeitos sem travar.
+Isso traz de volta a sensação de "sinapses correndo" no globo enquanto custa pouco: a maioria dos links continua sem partícula (cross_sell, geo, tech, etc.), só os eixos M&A principais ficam animados.
+
+Manter velocidade/largura atuais (`linkDirectionalParticleSpeed` e `Width` já estão bons).
+
+### 3. Validação
+Abrir `/equity-brain/admin/jarvis` e conferir:
+- Pontos cinza da nuvem RFB legíveis sobre o vídeo de fundo
+- Raios azuis/dourados/rosa fluindo permanentemente nos links M&A
+- FPS continua na faixa de 20+ (HUD canto inferior)
+
+Nenhuma outra parte da otimização anterior (DPR cap, sem console.log, segmentos 14, ghost/flares off, link interval removido) é tocada.
