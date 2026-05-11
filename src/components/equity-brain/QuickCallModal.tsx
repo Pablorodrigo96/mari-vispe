@@ -294,6 +294,95 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
               </div>
               <div className="text-[10px] text-zinc-600 tabular-nums">{notes.length} chars</div>
             </div>
+
+            {/* Botão analisar com Mari */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={analyzeWithMari}
+                disabled={analyzing || notes.trim().length < 50}
+                className="text-[11px] px-3 h-7 inline-flex items-center gap-1 rounded bg-[#D9F564] text-zinc-900 font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed relative"
+              >
+                {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Analisar com Mari
+                <span className="absolute -top-1.5 -right-1.5 text-[8px] font-bold px-1 rounded bg-zinc-900 text-[#D9F564] border border-[#D9F564]/40">NOVO</span>
+              </button>
+              {analysis && (
+                <button
+                  type="button"
+                  onClick={applyAnalysisToForm}
+                  className="text-[11px] px-2.5 h-7 inline-flex items-center gap-1 rounded border border-[#D9F564]/40 text-[#D9F564] hover:bg-[#D9F564]/10"
+                >
+                  ↑ Aplicar nos campos
+                </button>
+              )}
+              {notes.trim().length > 0 && notes.trim().length < 50 && (
+                <span className="text-[10px] text-zinc-500">Faltam {50 - notes.trim().length} chars pra Mari</span>
+              )}
+            </div>
+
+            {/* Resultado da análise da Mari */}
+            {analysis && (
+              <div className="mt-3 rounded border border-[#D9F564]/30 bg-zinc-950/60 p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[#D9F564]">
+                  <Sparkles className="h-3 w-3" /> Mari extraiu desta call
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+                  {typeof analysis.intencao_venda === "number" && (
+                    <div>
+                      <div className="text-[9px] uppercase text-zinc-500">Intenção</div>
+                      <div className={cn(
+                        "font-semibold",
+                        analysis.intencao_venda >= 0.7 ? "text-emerald-300" :
+                        analysis.intencao_venda >= 0.4 ? "text-amber-300" : "text-zinc-300"
+                      )}>{Math.round(analysis.intencao_venda * 100)}%</div>
+                    </div>
+                  )}
+                  {analysis.timing_estimado && (
+                    <div>
+                      <div className="text-[9px] uppercase text-zinc-500">Timing</div>
+                      <div className="text-zinc-100 font-semibold">{analysis.timing_estimado}</div>
+                    </div>
+                  )}
+                  {analysis.dor_principal && (
+                    <div>
+                      <div className="text-[9px] uppercase text-zinc-500">Dor</div>
+                      <div className="text-zinc-100 font-semibold">{analysis.dor_principal}</div>
+                    </div>
+                  )}
+                  {analysis.faturamento_mencionado && (
+                    <div>
+                      <div className="text-[9px] uppercase text-zinc-500">Faturamento</div>
+                      <div className="text-zinc-100 font-semibold break-words">{analysis.faturamento_mencionado}</div>
+                    </div>
+                  )}
+                  {analysis.ebitda_mencionado && (
+                    <div>
+                      <div className="text-[9px] uppercase text-zinc-500">EBITDA</div>
+                      <div className="text-zinc-100 font-semibold break-words">{analysis.ebitda_mencionado}</div>
+                    </div>
+                  )}
+                </div>
+                {analysis.sinais_novos && analysis.sinais_novos.length > 0 && (
+                  <div>
+                    <div className="text-[9px] uppercase text-zinc-500 mb-1">Sinais novos sugeridos</div>
+                    <div className="flex flex-wrap gap-1">
+                      {analysis.sinais_novos.map((s, i) => (
+                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-200 border border-emerald-700/40 font-mono">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {analysis.followup_recomendado && (
+                  <div className="rounded bg-zinc-900/60 border border-zinc-800 p-2 mt-1">
+                    <div className="text-[9px] uppercase text-zinc-500 mb-0.5">Follow-up recomendado</div>
+                    <div className="text-[11px] text-zinc-200 break-words leading-relaxed">{analysis.followup_recomendado}</div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         )}
