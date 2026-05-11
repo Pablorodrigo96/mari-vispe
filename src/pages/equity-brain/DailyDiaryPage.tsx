@@ -31,6 +31,7 @@ import { MentionAutocomplete, useMentionTrigger } from "@/components/equity-brai
 import { buildMentionToken } from "@/lib/eb/mentionParser";
 import { TemplatePicker } from "@/components/equity-brain/notes/TemplatePicker";
 import MariInsightCard from "@/components/equity-brain/diary/MariInsightCard";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 
 function activityIcon(kind: string) {
   switch ((kind || "").toLowerCase()) {
@@ -149,6 +150,9 @@ export default function DailyDiaryPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-950 text-zinc-100 p-4 md:p-6">
       {/* Header */}
+      <h1 className="text-xl font-bold text-zinc-100 inline-flex items-center mb-3">
+        Diário<PageHeaderHint pageKey="eb.diario" />
+      </h1>
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="flex items-center gap-2 bg-zinc-900/60 border border-zinc-800 rounded-lg p-1">
           <Button

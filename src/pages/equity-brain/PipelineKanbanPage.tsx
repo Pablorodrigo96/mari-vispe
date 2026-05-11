@@ -12,6 +12,7 @@ import { PipelineStagesEditor } from "@/components/equity-brain/crm/PipelineStag
 import { StageTimeBadge, getStageTimeState } from "@/components/equity-brain/crm/StageTimeBadge";
 import { usePipelineStages, STAGE_COLOR_CLASSES } from "@/hooks/usePipelineStages";
 import { InfoHint } from "@/components/equity-brain/InfoHint";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { cn } from "@/lib/utils";
 
 type Mandate = {
@@ -183,7 +184,7 @@ export default function PipelineKanbanPage() {
             <ArrowLeft className="h-3 w-3" /> CRM
           </Link>
           <h1 className="text-2xl font-bold text-zinc-100 mt-1 tracking-tight inline-flex items-center gap-2">
-            Pipeline M&amp;A
+            Pipeline M&amp;A<PageHeaderHint pageKey="eb.pipeline" />
             <InfoHint
               title="Pipeline M&A"
               what="Kanban dos mandatos por etapa do processo. Cada cartão mostra tempo na etapa, tipo de operação e valor."

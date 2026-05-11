@@ -3,6 +3,7 @@ import { PublicFooter as Footer } from '@/components/layout/PublicFooter';
 import { MatchingHero } from '@/components/matching/MatchingHero';
 import { CompanySearchCard } from '@/components/matching/CompanySearchCard';
 import { NationalSearchPanel } from '@/components/matching/NationalSearchPanel';
+import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
 
 export default function Matching() {
   return (
@@ -15,7 +16,7 @@ export default function Matching() {
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground">Base Nacional de Empresas</h2>
+            <h2 className="text-2xl font-bold text-foreground inline-flex items-center">Base Nacional de Empresas<PageHeaderHint pageKey="matching" /></h2>
             <p className="text-muted-foreground mt-1">
               Pesquise entre mais de 5 milhões de empresas ativas da Receita Federal
             </p>

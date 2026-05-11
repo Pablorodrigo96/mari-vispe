@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -259,7 +260,7 @@ export default function MyListings() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Meus Anúncios</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground inline-flex items-center">Meus Anúncios<PageHeaderHint pageKey="meus-anuncios" /></h1>
               <p className="text-muted-foreground mt-1">
                 Gerencie seus anúncios de empresas à venda
               </p>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 
 interface CityStat {
   ibge_code: string | null;
@@ -175,6 +176,7 @@ export default function IspMarketPage() {
           <h1 className="text-base font-bold flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-emerald-400" />
             Mercado ISP — Inteligência de Banda Larga Fixa
+            <PageHeaderHint pageKey="eb.isp.market" />
           </h1>
           <div className="ml-auto flex items-center gap-2">
             <Select value={period} onValueChange={setPeriod}>

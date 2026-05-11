@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, MessageCircle } from 'lucide-react';
 import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
+import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
 import type { SimulatorInputs, ScoringResult } from '@/lib/capitalScoring';
 
 export type CapitalObjective = 'giro' | 'expansao' | 'refinanciamento' | 'socio';
@@ -44,6 +45,7 @@ export default function Capital() {
                 <h1 className="text-4xl lg:text-5xl font-black text-foreground leading-tight">
                   Capte de R$ 10 mil a R$ 5 milhões{' '}
                   <span className="text-accent">sem sair do digital</span>
+                  <PageHeaderHint pageKey="capital" className="ml-2 align-middle" />
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-xl">
                   Simule agora, descubra seu score de aprovação e receba propostas

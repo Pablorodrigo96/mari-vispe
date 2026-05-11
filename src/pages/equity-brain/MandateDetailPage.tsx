@@ -13,6 +13,7 @@ import { DocumentsPanel } from "@/components/equity-brain/crm/DocumentsPanel";
 import { FinancialPipelinePanel } from "@/components/equity-brain/crm/FinancialPipelinePanel";
 import { StatusBadge } from "@/components/equity-brain/crm/StatusBadge";
 import { RegionBadge } from "@/components/equity-brain/crm/RegionBadge";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge";
 import { TasksWidget } from "@/components/equity-brain/crm/TasksWidget";
 import { ConversationSummary } from "@/components/equity-brain/crm/ConversationSummary";
@@ -69,7 +70,7 @@ export default function MandateDetailPage() {
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 pb-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold text-zinc-100 break-words">{name}</h1>
+            <h1 className="text-xl font-bold text-zinc-100 break-words inline-flex items-center">{name}<PageHeaderHint pageKey="eb.mandato" /></h1>
             <TemperatureBadge temp={(mandate as any).temperature} reason={(mandate as any).temperature_reason} />
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-2">

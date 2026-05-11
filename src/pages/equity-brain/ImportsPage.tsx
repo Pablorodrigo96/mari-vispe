@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Upload, FileSpreadsheet, Briefcase, Target, Activity, Building2, Users, Package, Snowflake } from "lucide-react";
 import { useState } from "react";
 import { ImportDialog } from "@/components/equity-brain/crm/ImportDialog";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 
 type Entity = "companies" | "mandates" | "buyers" | "contacts" | "activities" | "bundle";
 
@@ -25,7 +26,7 @@ export default function ImportsPage() {
 
       <header className="border-b border-zinc-800 pb-4 flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-zinc-100">Imports</h1>
+          <h1 className="text-xl font-bold text-zinc-100 inline-flex items-center">Imports<PageHeaderHint pageKey="eb.imports" /></h1>
           <p className="text-[11px] text-zinc-500 mt-1">
             Suba planilhas (.xlsx ou .csv) e o sistema popula tudo: tabelas, gráficos do CRM, dashboards executivos, matches e market waves recalculam sozinhos.
           </p>

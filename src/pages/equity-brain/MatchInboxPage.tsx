@@ -6,6 +6,7 @@ import { useMatchInbox, useMatchPercentiles, type MatchInboxRow as MatchRow } fr
 import { MatchInboxRow } from "@/components/equity-brain/match/MatchInboxRow";
 import { MatchDetailDrawer } from "@/components/equity-brain/match/MatchDetailDrawer";
 import { InfoHint } from "@/components/equity-brain/InfoHint";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { ALL_UFS, SETORES } from "@/lib/dealFormatters";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,7 @@ export default function MatchInboxPage() {
           </Link>
           <h1 className="text-2xl font-bold text-zinc-100 mt-1 tracking-tight inline-flex items-center gap-2">
             <ArrowLeftRight className="h-6 w-6 text-[#D9F564]" />
-            Match Inbox
+            Match Inbox<PageHeaderHint pageKey="eb.match-inbox" />
             <InfoHint
               title="Match Inbox"
               what="Fila de pares vendedor↔comprador calculados pelo motor IA. Cada linha é um possível negócio pronto para ação."
