@@ -200,9 +200,9 @@ export function MariResult({ data }: { data: MariResultData }) {
 
       <Button asChild size="lg" variant="outline" className="w-full bg-transparent">
         <a
-          href={`https://wa.me/5551992338258?text=${encodeURIComponent(
+          href={getWhatsAppLink(
             `Oi! Calculei a janela do CNPJ ${cnpj} na Mari e quero falar com um advisor.`,
-          )}`}
+          )}
           target="_blank"
           rel="noreferrer"
         >
