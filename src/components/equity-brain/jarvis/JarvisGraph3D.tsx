@@ -865,14 +865,15 @@ export function JarvisGraph3D() {
     setEnabledLayers(new Set(["ma_direct", "rollup"] as LayerKey[]));
   }, [isMobile]);
 
-  // DPR cap no mobile — devicePixelRatio=3 em iPhone mata FPS.
+  // DPR cap universal — devicePixelRatio alto (Retina/HiDPI) detona FPS no WebGL.
+  // Cap em 1.25 (desktop) e 1.5 (mobile) mantém visual aceitável e dobra o FPS.
   useEffect(() => {
-    if (!isMobile) return;
     const id = setTimeout(() => {
       try {
         const renderer = (fgRef.current as any)?.renderer?.();
         if (renderer && typeof renderer.setPixelRatio === "function") {
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+          const cap = isMobile ? 1.5 : 1.25;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
         }
       } catch {}
     }, 400);
