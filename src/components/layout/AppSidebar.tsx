@@ -5,10 +5,11 @@ import {
   UserSearch, Target, ChartBar, FileText, Award, Calculator, DollarSign,
   Briefcase, Sparkles, Shield, Brain, ChevronDown, LogOut, User, ChevronLeft,
   ChevronRight, BarChart3, FileSignature, Handshake, FileBarChart,
-  TrendingUp, CheckSquare,
+  TrendingUp, CheckSquare, MessageCircle,
 } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
 import { cn } from '@/lib/utils';
+import { getWhatsAppLink } from '@/lib/whatsapp';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -286,6 +287,40 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
           </div>
         )}
       </nav>
+
+      {/* Personal advisor mini-box */}
+      <div className="border-t border-border p-3 shrink-0">
+        {collapsed ? (
+          <a
+            href={getWhatsAppLink('Olá Rafael, vim pela Mari.', '5551992338258')}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Rafael Cocolichio — Falar"
+            className="flex items-center justify-center h-10 rounded-lg text-volt hover:bg-volt/10 transition-colors"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </a>
+        ) : (
+          <div className="rounded-lg border border-border bg-muted/40 p-2.5">
+            <p className="text-[10px] uppercase tracking-wide text-zinc-400 mb-1.5">Seu advisor pessoal</p>
+            <div className="flex items-center gap-2">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="bg-volt/20 text-volt text-[10px] font-semibold">RC</AvatarFallback>
+              </Avatar>
+              <p className="text-xs font-medium text-foreground break-words leading-tight flex-1">Rafael Cocolichio</p>
+            </div>
+            <a
+              href={getWhatsAppLink('Olá Rafael, vim pela Mari.', '5551992338258')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-volt hover:underline"
+            >
+              <MessageCircle className="h-3 w-3" />
+              Falar com ele
+            </a>
+          </div>
+        )}
+      </div>
 
       {/* User footer */}
       <div className="border-t border-border p-3 shrink-0">
