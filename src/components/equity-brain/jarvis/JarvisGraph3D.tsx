@@ -269,7 +269,7 @@ export function JarvisGraph3D() {
             .select(
               "cnpj,razao_social,nome_fantasia,setor_ma,uf,municipio,faturamento_estimado,ebitda_estimado,funcionarios_estimado,cnae_descricao,has_listing,listing_id",
             )
-            .limit(500);
+            .limit(3000);
           return (data ?? []) as any[];
         },
       },
@@ -279,7 +279,7 @@ export function JarvisGraph3D() {
           const { data } = await supabase
             .from("eb_companies_scored" as any)
             .select("cnpj,ma_score")
-            .limit(500);
+            .limit(3000);
           return (data ?? []) as any[];
         },
       },
