@@ -76,7 +76,7 @@ serve(async (req) => {
       `Foque em variações relevantes ou padrões de pipeline, sem repetir os números literalmente.\n\n` +
       `Snapshot: ${snapshotStr}`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -86,7 +86,7 @@ serve(async (req) => {
           { role: "user", content: prompt },
         ],
       }),
-    });
+    }, { function_name: "generate-dashboard-insight", feature: "insight", model: "google/gemini-2.5-flash", metadata: { dashboard_type } });
 
     if (aiResp.status === 429) {
       await logHealth(admin, "rate_limited", `${dashboard_type} 429`);
