@@ -1,15 +1,10 @@
 // Equity Brain — claude-classify-thesis
-// Usa Claude Sonnet 4 (claude-sonnet-4-20250514) para refinar a classificação de tese
-// de uma empresa e gerar um summary estratégico curto.
+// Refina classificação de tese de M&A da empresa-alvo via Lovable AI Gateway.
 // Auth: admin OR service_role.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import {
-  assertProviderAllowed,
-  ProviderBudgetExceededError,
-  ProviderDisabledError,
-} from "../_shared/apiTrack.ts";
+import { callLovableAI } from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,11 +12,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "google/gemini-2.5-flash";
 const MAX_TOKENS = 1024;
-// Pricing Sonnet 4 (USD per 1M tokens)
-const COST_INPUT_PER_MTOK = 3;
-const COST_OUTPUT_PER_MTOK = 15;
 
 const SYSTEM_PROMPT = `Você é um analista sênior de M&A da Vispe Capital, especializado em PMEs brasileiras.
 Sua função é, dado um perfil de empresa-alvo + buyers compatíveis + signals já detectados,
@@ -63,10 +55,9 @@ serve(async (req) => {
   const t0 = Date.now();
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
 
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }), {
+  if (!Deno.env.get("LOVABLE_API_KEY")) {
+    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -76,19 +67,6 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: auth.error }), {
       status: auth.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  }
-
-  // Provider guard: kill switch + monthly budget
-  try {
-    await assertProviderAllowed("anthropic");
-  } catch (e) {
-    if (e instanceof ProviderDisabledError || e instanceof ProviderBudgetExceededError) {
-      return new Response(JSON.stringify({ error: e.message, code: e.name }), {
-        status: e.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    throw e;
   }
 
   try {
@@ -165,44 +143,49 @@ ${(matches ?? []).map((m: any, i: number) => `${i + 1}. ${m.buyer_nome} (${m.buy
 
 Produza a análise no formato JSON pedido.`;
 
-    // 4) Chama Claude
-    const claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
+    // 4) Lovable AI Gateway
+    const aiResp = await callLovableAI({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+    }, {
+      function_name: "claude-classify-thesis",
+      feature: "thesis_classification",
+      user_id: auth.userId,
+      metadata: { cnpj },
     });
 
-    if (!claudeResp.ok) {
-      const errText = await claudeResp.text();
-      console.error("Claude API error:", claudeResp.status, errText);
+    if (!aiResp.ok) {
+      const errText = await aiResp.text();
+      console.error("Gateway error:", aiResp.status, errText);
       await supabase.schema("equity_brain" as any).from("ai_runs").insert({
         function_name: "classify_thesis",
         cnpj,
         model: MODEL,
         prompt_input: { user: userPrompt },
         status: "error",
-        error_message: `${claudeResp.status}: ${errText}`,
+        error_message: `${aiResp.status}: ${errText}`,
         latency_ms: Date.now() - t0,
         triggered_by: auth.userId,
       });
-      return new Response(JSON.stringify({ error: "Claude API error", status: claudeResp.status, detail: errText }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const userMsg = aiResp.status === 429
+        ? "Sistema sobrecarregado, tente novamente em instantes."
+        : aiResp.status === 402
+        ? "Limite de uso de IA atingido. Contate o admin."
+        : "Erro ao classificar tese.";
+      return new Response(JSON.stringify({ error: userMsg, status: aiResp.status, detail: errText }), {
+        status: aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const claudeJson = await claudeResp.json();
-    const text: string = claudeJson.content?.[0]?.text ?? "";
+    const aiJson = await aiResp.json();
+    const text: string = aiJson.choices?.[0]?.message?.content ?? "";
 
-    // 5) Parse JSON (tolera prefácio com ``` que Claude às vezes envia)
+    // 5) Parse JSON (tolera prefácio com ```)
     let parsed: any = null;
     try {
       parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
@@ -210,19 +193,9 @@ Produza a análise no formato JSON pedido.`;
       parsed = null;
     }
 
-    const tokensIn = claudeJson.usage?.input_tokens ?? 0;
-    const tokensOut = claudeJson.usage?.output_tokens ?? 0;
-    const costUsd = (tokensIn * COST_INPUT_PER_MTOK / 1_000_000) + (tokensOut * COST_OUTPUT_PER_MTOK / 1_000_000);
-
-    try {
-      const { logApiUsage } = await import("../_shared/apiTrack.ts");
-      await logApiUsage({
-        provider: "anthropic", category: "llm", model: MODEL,
-        function_name: "claude-classify-thesis", feature: "thesis_classification",
-        input_tokens: tokensIn, output_tokens: tokensOut, total_tokens: tokensIn + tokensOut,
-        status: "success", http_status: 200,
-      });
-    } catch (e) { console.error("apiTrack:", e); }
+    const tokensIn = aiJson.usage?.prompt_tokens ?? 0;
+    const tokensOut = aiJson.usage?.completion_tokens ?? 0;
+    const costUsd = 0; // já contabilizado por callLovableAI em api_usage_logs
 
     // 6) Atualiza tabelas se parse foi bem
     if (parsed?.summary) {
