@@ -155,7 +155,10 @@ export default function Painel() {
       {/* Hero / greeting */}
       <div className="mb-6 relative">
         <div className="flex items-center gap-3 flex-wrap mb-2">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Olá, {greetingName} 👋</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground inline-flex items-center">
+            Olá, {greetingName} 👋
+            <PageHeaderHint pageKey="painel" />
+          </h1>
           {eff.roles.length > 0 && (
             <div className="flex gap-1.5 flex-wrap">
               {eff.roles.map((r) => (
