@@ -13,6 +13,9 @@ const SOURCE_META: Record<string, { Icon: any; color: string; route: (id: string
   mandate: { Icon: Briefcase, color: "text-emerald-300", route: (id) => `/equity-brain/mandato/${id}`, label: "Mandato" },
   buyer_ma: { Icon: Users, color: "text-violet-300", route: (id) => `/equity-brain/buyer/${id}`, label: "Buyer" },
   company: { Icon: Building2, color: "text-amber-300", route: (id) => `/equity-brain/empresa/${id}`, label: "Empresa" },
+  match: { Icon: Target, color: "text-sky-300", route: (id) => `/equity-brain/match/${id}`, label: "Match" },
+  listing: { Icon: FileText, color: "text-rose-300", route: (id) => `/listing/${id}`, label: "Anúncio" },
+  daily: { Icon: CalendarDays, color: "text-zinc-300", route: (id) => `/equity-brain/diario/${id}`, label: "Diário" },
 };
 
 export function EntityBacklinksPanel({ entityType, entityId }: Props) {
