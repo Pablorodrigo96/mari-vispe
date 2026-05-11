@@ -359,14 +359,14 @@ export default function DailyDiaryPage() {
             })}
           </FeedCard>
 
-          <FeedCard title="Notas que criei hoje" count={feed?.notes.length ?? 0}>
-            {(feed?.notes ?? []).length === 0 && (
+          <FeedCard title="Notas que criei hoje" count={feed?.notes.length ?? 0} loading={feedLoading}>
+            {!feedLoading && (feed?.notes ?? []).length === 0 && (
               <EmptyHint>Você ainda não escreveu notas em outras entidades hoje.</EmptyHint>
             )}
             {(feed?.notes ?? []).map((n: any) => {
               const href = entityHref(n.entity_type, n.entity_id);
               const content = (
-                <div className="px-2 py-1.5 text-[11px] hover:bg-zinc-800/40 rounded">
+                <div className="px-2 py-2 text-[11px] hover:bg-zinc-800/60 rounded">
                   <div className="flex items-center gap-1 text-zinc-400">
                     <FileText className="h-3 w-3" />
                     <span className="uppercase tracking-wide text-[9px]">{n.entity_type}</span>
@@ -383,15 +383,15 @@ export default function DailyDiaryPage() {
             })}
           </FeedCard>
 
-          <FeedCard title="Deals que mexeram" count={feed?.deals.length ?? 0}>
-            {(feed?.deals ?? []).length === 0 && (
+          <FeedCard title="Deals que mexeram" count={feed?.deals.length ?? 0} loading={feedLoading}>
+            {!feedLoading && (feed?.deals ?? []).length === 0 && (
               <EmptyHint>Nenhum deal movimentou hoje.</EmptyHint>
             )}
             {(feed?.deals ?? []).map((d: any) => (
               <a
                 key={d.id}
                 href={`/equity-brain/deal/${d.id}`}
-                className="block px-2 py-1.5 text-[11px] hover:bg-zinc-800/40 rounded"
+                className="block px-2 py-2 text-[11px] hover:bg-zinc-800/60 rounded"
               >
                 <div className="flex items-center gap-2">
                   <Briefcase className="h-3 w-3 text-zinc-500" />
@@ -412,8 +412,8 @@ export default function DailyDiaryPage() {
             ))}
           </FeedCard>
 
-          <FeedCard title="Pendências IA" count={feed?.ai?.length ?? 0}>
-            {(feed?.ai ?? []).length === 0 && (
+          <FeedCard title="Pendências IA" count={feed?.ai?.length ?? 0} loading={feedLoading}>
+            {!feedLoading && (feed?.ai ?? []).length === 0 && (
               <EmptyHint>Nenhuma análise da Mari executada hoje.</EmptyHint>
             )}
             {(feed?.ai ?? []).map((r: any) => {
@@ -427,7 +427,7 @@ export default function DailyDiaryPage() {
                 ? `/equity-brain/buyer/${r.buyer_id}`
                 : null;
               const inner = (
-                <div className="px-2 py-1.5 text-[11px] hover:bg-zinc-800/40 rounded">
+                <div className="px-2 py-2 text-[11px] hover:bg-zinc-800/60 rounded">
                   <div className="flex items-center gap-1.5">
                     {isErr ? (
                       <AlertTriangle className="h-3 w-3 text-amber-400" />
@@ -458,14 +458,46 @@ export default function DailyDiaryPage() {
   );
 }
 
-function FeedCard({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+function FeedCard({
+  title,
+  count,
+  loading,
+  children,
+}: {
+  title: string;
+  count: number;
+  loading?: boolean;
+  children: React.ReactNode;
+}) {
+  const hasItems = count > 0;
   return (
     <div className="bg-zinc-900/40 border border-zinc-800 rounded-lg">
       <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
         <span className="text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">{title}</span>
-        <span className="text-[10px] text-zinc-500 tabular-nums">{count}</span>
+        {loading ? (
+          <span className="h-4 w-6 rounded bg-zinc-800/60 animate-pulse" />
+        ) : (
+          <span
+            className={
+              hasItems
+                ? "text-[10px] tabular-nums px-1.5 py-0.5 rounded bg-[#D9F564]/15 text-[#D9F564] border border-[#D9F564]/30"
+                : "text-[10px] text-zinc-600 tabular-nums px-1.5"
+            }
+          >
+            {count}
+          </span>
+        )}
       </div>
-      <div className="p-1.5 space-y-0.5 max-h-[28vh] overflow-y-auto">{children}</div>
+      <div className="p-1.5 space-y-0.5 max-h-[28vh] overflow-y-auto">
+        {loading ? (
+          <div className="space-y-1.5 p-1.5">
+            <div className="h-3 bg-zinc-800/60 rounded animate-pulse" />
+            <div className="h-3 bg-zinc-800/60 rounded animate-pulse w-2/3" />
+          </div>
+        ) : (
+          children
+        )}
+      </div>
     </div>
   );
 }
@@ -473,3 +505,4 @@ function FeedCard({ title, count, children }: { title: string; count: number; ch
 function EmptyHint({ children }: { children: React.ReactNode }) {
   return <div className="text-[11px] text-zinc-600 italic px-2 py-3">{children}</div>;
 }
+
