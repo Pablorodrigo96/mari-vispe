@@ -323,27 +323,27 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
       </div>
 
       {/* User footer */}
-      <div className="border-t border-border p-3 shrink-0">
+      <div className="border-t border-sidebar-border p-3 shrink-0">
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
             <Avatar className="h-8 w-8"><AvatarFallback className="bg-accent text-accent-foreground text-xs">{userInitials}</AvatarFallback></Avatar>
-            <button onClick={handleSignOut} title="Sair" className="text-zinc-300 hover:text-destructive">
+            <button onClick={handleSignOut} title="Sair" className="text-sidebar-foreground/80 hover:text-destructive">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
         ) : (
-          <>
-            <Link to="/meu-perfil" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors">
+          <div className="rounded-lg border border-sidebar-border bg-sidebar-accent p-2.5">
+            <Link to="/meu-perfil" className="flex items-center gap-2 p-1 rounded-md hover:bg-sidebar-accent/70 transition-colors">
               <Avatar className="h-8 w-8"><AvatarFallback className="bg-accent text-accent-foreground text-xs">{userInitials}</AvatarFallback></Avatar>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
-                <p className="text-[10px] text-zinc-400">Meu perfil</p>
+                <p className="text-xs font-medium text-sidebar-foreground truncate">{user?.email}</p>
+                <p className="text-[10px] text-sidebar-foreground/60">Meu perfil</p>
               </div>
             </Link>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start mt-1 text-zinc-300 hover:text-destructive">
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start mt-1 text-sidebar-foreground/80 hover:text-destructive">
               <LogOut className="h-3.5 w-3.5 mr-2" />Sair
             </Button>
-          </>
+          </div>
         )}
       </div>
     </aside>
