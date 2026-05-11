@@ -32,11 +32,11 @@ async function classify(lovableKey: string, title: string, summary: string): Pro
     temperature: 0,
   };
 
-  const resp = await fetch(AI_GATEWAY, {
+  const resp = await trackedAIFetch(AI_GATEWAY, {
     method: "POST",
     headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
+  }, { function_name: "extract-news-event", feature: "classify", model: body.model });
   if (!resp.ok) {
     console.error("classify error", resp.status, await resp.text().catch(() => ""));
     return "generic";
