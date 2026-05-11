@@ -59,10 +59,9 @@ serve(async (req) => {
   const t0 = Date.now();
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
 
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }), {
+  if (!Deno.env.get("LOVABLE_API_KEY")) {
+    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -72,19 +71,6 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: auth.error }), {
       status: auth.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  }
-
-  // Provider guard: kill switch + monthly budget
-  try {
-    await assertProviderAllowed("anthropic");
-  } catch (e) {
-    if (e instanceof ProviderDisabledError || e instanceof ProviderBudgetExceededError) {
-      return new Response(JSON.stringify({ error: e.message, code: e.name }), {
-        status: e.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    throw e;
   }
 
   try {
