@@ -325,9 +325,15 @@ export default function DailyDiaryPage() {
 
         {/* Feed column */}
         <div className="space-y-3">
-          <FeedCard title="Atividades do dia" count={feed?.activities.length ?? 0}>
-            {(feed?.activities ?? []).length === 0 && (
-              <EmptyHint>Nenhuma atividade registrada.</EmptyHint>
+          <MariInsightCard dateStr={dateStr} isToday={isViewingToday} />
+
+          <FeedCard title="Atividades do dia" count={feed?.activities.length ?? 0} loading={feedLoading}>
+            {!feedLoading && (feed?.activities ?? []).length === 0 && (
+              <EmptyHint>
+                Nenhuma atividade hoje. Abra o{" "}
+                <a href="/equity-brain/hoje" className="text-[#D9F564] hover:underline">WhatsApp Bridge</a>{" "}
+                para registrar uma.
+              </EmptyHint>
             )}
             {(feed?.activities ?? []).map((a: any) => {
               const href = entityHref(a.entity_type, a.entity_id);
