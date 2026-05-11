@@ -301,13 +301,13 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
             <MessageCircle className="h-4 w-4" />
           </a>
         ) : (
-          <div className="rounded-lg border border-border bg-muted/40 p-2.5">
+          <div className="rounded-lg border border-border bg-muted/40 p-2.5 bg-gray-900">
             <p className="text-[10px] uppercase tracking-wide text-zinc-400 mb-1.5">Seu advisor pessoal</p>
             <div className="flex items-center gap-2">
               <Avatar className="h-7 w-7">
                 <AvatarFallback className="bg-volt/20 text-volt text-[10px] font-semibold">RC</AvatarFallback>
               </Avatar>
-              <p className="text-xs font-medium text-foreground break-words leading-tight flex-1">Rafael Cocolichio</p>
+              <p className="text-xs font-medium text-foreground break-words leading-tight flex-1 text-slate-50">Rafael Cocolichio</p>
             </div>
             <a
               href={getWhatsAppLink('Olá Rafael, vim pela Mari.', '5551992338258')}
