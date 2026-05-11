@@ -30,6 +30,7 @@ import { NoteRenderer } from "@/components/equity-brain/notes/NoteRenderer";
 import { MentionAutocomplete, useMentionTrigger } from "@/components/equity-brain/notes/MentionAutocomplete";
 import { buildMentionToken } from "@/lib/eb/mentionParser";
 import { TemplatePicker } from "@/components/equity-brain/notes/TemplatePicker";
+import MariInsightCard from "@/components/equity-brain/diary/MariInsightCard";
 
 function activityIcon(kind: string) {
   switch ((kind || "").toLowerCase()) {
