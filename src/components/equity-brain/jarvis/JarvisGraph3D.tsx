@@ -1125,8 +1125,15 @@ export function JarvisGraph3D() {
             return null as any;
           }}
           linkDirectionalParticles={(l: any) => {
-            if (isGoldLink(l)) return 4;
-            return shouldShowParticles(l) ? 3 : 0;
+            // Partículas custam GPU por link. Mantemos só nos casos focais.
+            if (focusId) {
+              const sId = endpointId((l as any).source);
+              const tId = endpointId((l as any).target);
+              if (sId === focusId || tId === focusId) return isGoldLink(l) ? 3 : 2;
+              return 0;
+            }
+            if (isGoldLink(l)) return 2;
+            return 0;
           }}
           linkDirectionalParticleWidth={(l: any) => {
             const base = 0.6 + (l.weight ?? 0.5) * 1.6;
