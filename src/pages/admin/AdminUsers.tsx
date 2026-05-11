@@ -298,6 +298,8 @@ export default function AdminUsers() {
       toast.error('Erro ao redefinir senha: ' + (e.message ?? 'desconhecido'));
     }
   }
+
+  async function handleTogglePartnerAccountant(userId: string, currentValue: boolean) {
     try {
       const { error } = await supabase
         .from('profiles')
