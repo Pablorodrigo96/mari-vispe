@@ -1,13 +1,33 @@
-import { Quote } from "lucide-react";
+import { ReactNode } from "react";
+import { RichParagraph } from "./RichText";
 
-export function CommentaryBox({ children }: { children: React.ReactNode }) {
-  if (!children) return null;
+interface Props {
+  children?: ReactNode;
+  titulo?: string;
+  punchLine?: string | null;
+}
+
+export function CommentaryBox({ children, titulo, punchLine }: Props) {
+  const text = typeof children === "string" ? children : null;
+  if (!text && !punchLine && !children) return null;
   return (
-    <div className="mt-5 flex gap-3 rounded-lg border border-border/60 bg-muted/40 p-4">
-      <Quote className="h-4 w-4 shrink-0 text-accent" />
-      <p className="text-sm leading-relaxed text-muted-foreground break-words">
-        {children}
-      </p>
+    <div className="relative mt-9 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-accent/[0.06] via-card to-card p-7 sm:p-8">
+      <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-accent via-accent/60 to-transparent" />
+      {titulo && (
+        <h3 className="mb-3 text-lg font-bold tracking-tight text-foreground sm:text-xl">
+          {titulo}
+        </h3>
+      )}
+      {text ? (
+        <RichParagraph text={text} className="text-[15px] leading-relaxed text-muted-foreground" />
+      ) : (
+        children
+      )}
+      {punchLine && (
+        <p className="mt-5 border-t border-border/50 pt-5 text-[17px] font-semibold italic tracking-tight text-foreground break-words">
+          {punchLine}
+        </p>
+      )}
     </div>
   );
 }

@@ -16,7 +16,10 @@ export interface SectorResearchRow {
   tokens_usados: number;
   refresh_count: number;
   updated_at: string;
+  schema_version?: number;
 }
+
+const CURRENT_SCHEMA_VERSION = 2;
 
 export interface SectorPayload {
   setor: string;
@@ -56,8 +59,10 @@ export function useSectorResearch(setorSlug: string) {
     enabled: !!setorSlug,
   });
 
+  const isStaleSchema =
+    !!query.data && (query.data.schema_version ?? 1) < CURRENT_SCHEMA_VERSION;
   const isExpired = query.data
-    ? new Date(query.data.expires_at).getTime() < Date.now()
+    ? isStaleSchema || new Date(query.data.expires_at).getTime() < Date.now()
     : false;
 
   const generate = useMutation<any, Error, boolean | undefined>({
