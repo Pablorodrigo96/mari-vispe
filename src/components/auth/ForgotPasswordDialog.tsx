@@ -46,6 +46,17 @@ export function ForgotPasswordDialog({ open, onOpenChange, defaultEmail = '' }: 
             Informe seu email e enviaremos um link para você criar uma nova senha.
           </DialogDescription>
         </DialogHeader>
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200 flex gap-2">
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-medium text-amber-100">Antes de continuar:</p>
+            <ul className="list-disc pl-4 space-y-0.5 opacity-90">
+              <li>Abra o link no <strong>mesmo dispositivo</strong> onde está pedindo.</li>
+              <li>Clique <strong>apenas uma vez</strong> — o link é de uso único.</li>
+              <li>Vale por <strong>1 hora</strong>. Depois disso, peça outro.</li>
+            </ul>
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="forgot-email">Email</Label>
