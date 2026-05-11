@@ -68,8 +68,15 @@ export default function ResetPassword() {
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (error) {
-      console.error('[reset-password] updateUser error:', error);
-      const msg = error.message || 'Falha ao redefinir senha.';
+      const anyErr = error as any;
+      console.error('[reset-password] updateUser error:', {
+        message: error.message,
+        name: error.name,
+        code: anyErr?.code,
+        status: anyErr?.status,
+      });
+      const detail = anyErr?.code ? ` (${anyErr.code})` : '';
+      const msg = (error.message || 'Falha ao redefinir senha.') + detail;
       setErrorMsg(msg);
       toast.error(msg);
       return;
