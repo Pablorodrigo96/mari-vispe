@@ -5,10 +5,11 @@ import {
   UserSearch, Target, ChartBar, FileText, Award, Calculator, DollarSign,
   Briefcase, Sparkles, Shield, Brain, ChevronDown, LogOut, User, ChevronLeft,
   ChevronRight, BarChart3, FileSignature, Handshake, FileBarChart,
-  TrendingUp, CheckSquare,
+  TrendingUp, CheckSquare, MessageCircle,
 } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
 import { cn } from '@/lib/utils';
+import { getWhatsAppLink } from '@/lib/whatsapp';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
