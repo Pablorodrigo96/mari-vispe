@@ -683,6 +683,10 @@ export default function AdminUsers() {
                               {user.user_id !== currentUser?.id && (
                                 <>
                                   <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleResetPassword(user)}>
+                                    <KeyRound className="h-4 w-4 mr-2" />
+                                    Resetar senha
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => openDelete(user)}
                                     className="text-destructive focus:text-destructive"
