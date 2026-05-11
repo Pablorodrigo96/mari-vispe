@@ -26,7 +26,7 @@ export function ForgotPasswordDialog({ open, onOpenChange, defaultEmail = '' }: 
     }
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: getResetRedirectUrl(),
     });
     setLoading(false);
     if (error) {
