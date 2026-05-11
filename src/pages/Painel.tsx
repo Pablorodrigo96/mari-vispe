@@ -388,3 +388,18 @@ function KPI({ label, value, icon: Icon, hint }: { label: string; value: any; ic
     </Card>
   );
 }
+
+function BBGSection({ label, subtitle, children }: { label: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-8">
+      <div className="flex items-baseline justify-between gap-3 mb-3 pb-2 border-b border-border/70">
+        <div className="flex items-baseline gap-3 min-w-0">
+          <h2 className="text-[11px] uppercase tracking-[0.18em] font-bold text-foreground/90 font-mono">{label}</h2>
+          {subtitle && <p className="text-[10px] text-muted-foreground/80 truncate">{subtitle}</p>}
+        </div>
+        <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-wider">live</span>
+      </div>
+      {children}
+    </section>
+  );
+}
