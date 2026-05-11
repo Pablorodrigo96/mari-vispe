@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase, Users, Building2, Pin } from "lucide-react";
+import { Briefcase, Users, Building2, Pin, Target, FileText, CalendarDays } from "lucide-react";
 import type { NoteEntityType } from "@/hooks/useEntityNotes";
 
 interface Props {
