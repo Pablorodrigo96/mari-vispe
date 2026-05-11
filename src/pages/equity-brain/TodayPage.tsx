@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Flame, Snowflake, Sparkles, MessageCircle, Eye, Clock, ChevronRight, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { Badge } from "@/components/ui/badge";
 import { useTodayCards, useDismissCard, useMandateSummary, type TodayCard } from "@/hooks/useTodayCards";
 import { openWhatsAppForContact } from "@/lib/whatsappBridge";
@@ -205,7 +206,7 @@ export default function TodayPage() {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="h-5 w-5 text-[#D9F564]" />
-            <h1 className="text-2xl md:text-3xl font-bold text-zinc-100">Hoje</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 inline-flex items-center">Hoje<PageHeaderHint pageKey="eb.hoje" /></h1>
           </div>
           <p className="text-sm text-zinc-400 break-words">
             As <span className="text-[#D9F564] font-semibold">{cards.length || "—"} ações</span> que mais importam agora.
