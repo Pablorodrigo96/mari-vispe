@@ -96,7 +96,7 @@ const StepContact = ({ data, onChange }: StepContactProps) => {
               Termos de Uso
             </a>{' '}
             e{' '}
-            <a href="/privacy" className="text-gold hover:underline">
+            <a href="/terms" className="text-gold hover:underline">
               Política de Privacidade
             </a>
             . Autorizo a mari a divulgar meu anúncio e entrar em contato
