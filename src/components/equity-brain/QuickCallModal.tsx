@@ -280,7 +280,7 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
 
           <div>
             <Label className="text-xs uppercase tracking-wider text-zinc-400">
-              Notas da call <span className="text-zinc-600">(opcional · ≥ 20 chars · ≥ 50 dispara IA)</span>
+              Notas da call <span className="text-zinc-600">(opcional · ≥ 20 chars · ≥ 50 ativa Mari)</span>
             </Label>
             <Textarea
               value={notes}
