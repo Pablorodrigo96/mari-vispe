@@ -1,31 +1,33 @@
-import { Info } from "lucide-react";
-
 interface Props {
   numero: number;
+  eyebrow?: string;
   titulo: string;
-  fonte?: string;
   descricao?: string;
+  fonte?: string;
 }
 
-export function SectionHeader({ numero, titulo, fonte, descricao }: Props) {
+export function SectionHeader({ numero, eyebrow, titulo, descricao, fonte }: Props) {
+  const num = String(numero).padStart(2, "0");
   return (
-    <header className="mb-6 flex items-start gap-4">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 font-mono text-lg font-bold text-accent">
-        {String(numero).padStart(2, "0")}
-      </div>
+    <header className="mb-9 flex flex-wrap items-end justify-between gap-5">
       <div className="min-w-0 flex-1">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+        <div className="mb-3 font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+          {num} — {eyebrow ?? titulo}
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl break-words max-w-3xl">
           {titulo}
         </h2>
         {descricao && (
-          <p className="mt-1 text-sm text-muted-foreground break-words">{descricao}</p>
-        )}
-        {fonte && (
-          <p className="mt-1 flex items-center gap-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground/80">
-            <Info className="h-3 w-3" /> Fonte: {fonte}
+          <p className="mt-2 text-sm text-muted-foreground break-words max-w-2xl">
+            {descricao}
           </p>
         )}
       </div>
+      {fonte && (
+        <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground text-right max-w-[200px] break-words">
+          {fonte}
+        </p>
+      )}
     </header>
   );
 }

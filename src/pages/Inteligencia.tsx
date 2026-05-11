@@ -18,7 +18,7 @@ export default function Inteligencia() {
   const { data, isLoading, isMissing, isExpired, generate, isGenerating, generateError } =
     useSectorResearch(sectorSlug);
 
-  // Auto-refresh em background quando expirado
+  // Refresh em background quando expirado
   useEffect(() => {
     if (data && isExpired && !isGenerating) {
       generate(true);
@@ -27,64 +27,75 @@ export default function Inteligencia() {
 
   const setorNome = data?.setor_nome_completo || sectorSlug.replace(/-/g, " ");
 
-  if (sectorLoading || isLoading) {
-    return (
-      <div className="container mx-auto max-w-5xl px-4 py-8 space-y-4">
-        <Skeleton className="h-12 w-2/3" />
-        <Skeleton className="h-4 w-1/2" />
-        <Skeleton className="h-40 w-full mt-8" />
-      </div>
-    );
-  }
-
-  if (isMissing || generateError) {
-    return (
-      <div className="container mx-auto max-w-5xl px-4 py-8">
-        <InteligenciaHero setorNome={setorNome} />
-        <div className="mt-8">
-          {generateError ? (
-            <EmptyState
-              title="Não conseguimos gerar agora"
-              description={String((generateError as any)?.message ?? "Tente novamente em alguns minutos.")}
-              cta="Tentar novamente"
-              onAction={() => generate(false)}
-            />
-          ) : (
-            <GeneratingState
-              setorNome={setorNome}
-              isGenerating={isGenerating}
-              onGenerate={() => generate(false)}
-            />
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const p = data!.payload_json;
-
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8">
-      <InteligenciaHero
-        setorNome={p.setor || setorNome}
-        periodoReferencia={data!.periodo_referencia}
-        dataGeracao={data!.data_geracao}
-        isExpired={isExpired}
-        onRefresh={() => generate(true)}
-        isRefreshing={isGenerating}
+    <div className="relative min-h-[100dvh] bg-background">
+      {/* Grid sutil de fundo */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            "linear-gradient(hsl(var(--accent)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--accent)) 1px, transparent 1px)",
+          backgroundSize: "56px 56px",
+          maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+          WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+        }}
       />
-      <PainelRanking data={p.painel_1_ranking} />
-      <PainelEficiencia data={p.painel_2_eficiencia} />
-      <PainelVelocidade data={p.painel_3_velocidade} />
-      <PainelHeadToHead data={p.painel_4_head_to_head} />
-      <PainelMnA data={p.painel_5_mna} />
-      <ConclusaoSetorial data={p.conclusao_setorial} />
-      <FootnoteSource fontes={data!.fontes_primarias} />
-      {p.limitacoes?.length ? (
-        <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-400 break-words">
-          Limitações declaradas: {p.limitacoes.join(" · ")}
-        </p>
-      ) : null}
+
+      <div className="relative z-10 mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
+        {sectorLoading || isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-14 w-2/3" />
+            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="mt-10 h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ) : isMissing || generateError ? (
+          <>
+            <InteligenciaHero setorNome={setorNome} />
+            <div className="mt-8">
+              {generateError ? (
+                <EmptyState
+                  title="Não conseguimos gerar agora"
+                  description={String(
+                    (generateError as any)?.message ?? "Tente novamente em alguns minutos.",
+                  )}
+                  cta="Tentar novamente"
+                  onAction={() => generate(false)}
+                />
+              ) : (
+                <GeneratingState
+                  setorNome={setorNome}
+                  isGenerating={isGenerating}
+                  onGenerate={() => generate(false)}
+                />
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <InteligenciaHero
+              setorNome={data!.payload_json?.setor || setorNome}
+              periodoReferencia={data!.periodo_referencia}
+              dataGeracao={data!.data_geracao}
+              isExpired={isExpired}
+              onRefresh={() => generate(true)}
+              isRefreshing={isGenerating}
+            />
+            <PainelRanking data={data!.payload_json?.painel_1_ranking} />
+            <PainelEficiencia data={data!.payload_json?.painel_2_eficiencia} />
+            <PainelVelocidade data={data!.payload_json?.painel_3_velocidade} />
+            <PainelHeadToHead data={data!.payload_json?.painel_4_head_to_head} />
+            <PainelMnA data={data!.payload_json?.painel_5_mna} />
+            <ConclusaoSetorial data={data!.payload_json?.conclusao_setorial} />
+            <FootnoteSource fontes={data!.fontes_primarias} />
+            {data!.payload_json?.limitacoes?.length ? (
+              <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-400 break-words">
+                Limitações declaradas: {data!.payload_json.limitacoes.join(" · ")}
+              </p>
+            ) : null}
+          </>
+        )}
+      </div>
     </div>
   );
 }

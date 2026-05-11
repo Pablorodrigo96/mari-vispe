@@ -4,7 +4,11 @@ import { CommentaryBox } from "./shared/CommentaryBox";
 
 interface Player {
   nome: string;
+  subtitulo?: string;
   crescimento_pct?: number;
+  net_adds_ano_label?: string;
+  net_adds_dia_label?: string;
+  classificacao?: "organico" | "inorganico" | "tecnologia" | "hibrido";
   organico_pct?: number;
   inorganico_pct?: number;
   tecnologia_pct?: number;
@@ -12,85 +16,107 @@ interface Player {
 }
 
 interface Props {
-  data?: { players?: Player[]; comentario?: string };
+  data?: { players?: Player[]; comentario?: string; punch_line?: string };
 }
+
+const CLASS_LABELS: Record<string, { label: string; cls: string }> = {
+  organico: { label: "Orgânico", cls: "border-accent/30 bg-accent/5 text-accent" },
+  inorganico: { label: "M&A", cls: "border-amber-500/30 bg-amber-500/5 text-amber-400" },
+  tecnologia: { label: "Tecnologia", cls: "border-violet-500/30 bg-violet-500/5 text-violet-300" },
+  hibrido: { label: "Híbrido", cls: "border-border bg-muted/40 text-muted-foreground" },
+};
 
 export function PainelVelocidade({ data }: Props) {
   if (!data?.players?.length) return null;
-  const max = Math.max(...data.players.map((p) => Math.abs(p.crescimento_pct || 0)));
+
+  // Ordena por crescimento desc
+  const players = [...data.players].sort(
+    (a, b) => (b.crescimento_pct ?? 0) - (a.crescimento_pct ?? 0),
+  );
+  const max = Math.max(...players.map((p) => Math.abs(p.crescimento_pct ?? 0)), 1);
 
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
+      viewport={{ once: true, amount: 0.15 }}
       transition={{ duration: 0.4 }}
-      className="py-10"
+      className="mb-24"
     >
       <SectionHeader
         numero={3}
-        titulo="Quem cresce — e como cresce?"
-        descricao="Decomposição do crescimento entre orgânico, inorgânico (M&A) e tecnologia."
+        eyebrow="Velocidade de aquisição"
+        titulo="Quem cresce — e como?"
+        descricao="Crescimento decomposto em orgânico, inorgânico (M&A) e tecnologia."
       />
-      <div className="space-y-4">
-        {data.players.map((p, i) => {
+      <div className="space-y-1.5">
+        {players.map((p, i) => {
           const growth = p.crescimento_pct ?? 0;
-          const pct = max > 0 ? (Math.abs(growth) / max) * 100 : 0;
+          const pct = (Math.abs(growth) / max) * 100;
           const positive = growth >= 0;
+          const cls = CLASS_LABELS[p.classificacao ?? "hibrido"];
           return (
-            <div
+            <motion.div
               key={i}
-              className="rounded-lg border border-border/60 bg-card p-4"
+              initial={{ opacity: 0, x: -8 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.3, delay: i * 0.03 }}
+              className="grid grid-cols-[28px_minmax(0,1fr)_120px] items-center gap-3 rounded-xl border border-border/60 bg-card px-4 py-3.5 sm:grid-cols-[36px_minmax(0,2fr)_minmax(0,3fr)_minmax(120px,150px)] sm:gap-4"
             >
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-semibold text-foreground break-words">
-                  {p.nome}
-                </span>
-                <span
-                  className={`font-mono text-lg font-bold ${
-                    positive ? "text-accent" : "text-rose-400"
-                  }`}
-                >
-                  {positive ? "+" : ""}
-                  {growth.toFixed(1)}%
-                </span>
+              <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-semibold text-foreground">
+                    {p.nome}
+                  </span>
+                  {cls && (
+                    <span
+                      className={`shrink-0 rounded border px-1.5 py-px font-mono text-[9px] uppercase tracking-wider ${cls.cls}`}
+                    >
+                      {cls.label}
+                    </span>
+                  )}
+                </div>
+                {p.subtitulo && (
+                  <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {p.subtitulo}
+                  </div>
+                )}
               </div>
-              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
-                <motion.div
+              <div className="relative hidden h-2 overflow-hidden rounded-full bg-muted/40 sm:block">
+                <motion.span
                   initial={{ width: 0 }}
                   whileInView={{ width: `${pct}%` }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.7, delay: i * 0.05 }}
-                  className={positive ? "h-full bg-accent" : "h-full bg-rose-400"}
+                  transition={{ duration: 0.7, delay: i * 0.04 }}
+                  className={`absolute left-0 top-0 bottom-0 rounded-full bg-gradient-to-r ${
+                    positive ? "from-accent to-amber-400" : "from-rose-400 to-rose-500"
+                  }`}
                 />
               </div>
-              <div className="mt-3 flex flex-wrap gap-2 font-mono text-[10px] uppercase tracking-wider">
-                {typeof p.organico_pct === "number" && (
-                  <span className="rounded border border-accent/30 bg-accent/5 px-2 py-1 text-accent">
-                    Orgânico {p.organico_pct}%
-                  </span>
-                )}
-                {typeof p.inorganico_pct === "number" && (
-                  <span className="rounded border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-amber-400">
-                    M&amp;A {p.inorganico_pct}%
-                  </span>
-                )}
-                {typeof p.tecnologia_pct === "number" && (
-                  <span className="rounded border border-border bg-muted/40 px-2 py-1 text-muted-foreground">
-                    Tech {p.tecnologia_pct}%
-                  </span>
+              <div className="text-right">
+                <div className="font-mono text-sm font-bold tabular-nums text-foreground">
+                  {p.net_adds_dia_label ?? (
+                    <span className={positive ? "text-accent" : "text-rose-400"}>
+                      {positive ? "+" : ""}
+                      {growth.toFixed(1)}%
+                    </span>
+                  )}
+                </div>
+                {p.net_adds_ano_label && (
+                  <div className="mt-0.5 font-mono text-[10px] text-accent">
+                    {p.net_adds_ano_label}
+                  </div>
                 )}
               </div>
-              {p.fonte && (
-                <p className="mt-2 font-mono text-[10px] text-muted-foreground break-words">
-                  {p.fonte}
-                </p>
-              )}
-            </div>
+            </motion.div>
           );
         })}
       </div>
-      <CommentaryBox>{data.comentario}</CommentaryBox>
+      <CommentaryBox punchLine={data.punch_line}>{data.comentario}</CommentaryBox>
     </motion.section>
   );
 }
