@@ -667,8 +667,27 @@ export function JarvisGraph3D() {
   }, [focusId, graphData.links]);
 
   // ---------- Node visual ----------
+  // Geometria/material compartilhados para a nuvem fria (2k+ pontos).
+  // Sem cache, cada um aloca 2 esferas (24x24 segs) + material = morte de FPS.
+  const coldGeoRef = useRef<SphereGeometry | null>(null);
+  const coldMatRef = useRef<MeshBasicMaterial | null>(null);
+  if (!coldGeoRef.current) {
+    coldGeoRef.current = new SphereGeometry(2.2, 8, 8);
+    coldMatRef.current = new MeshBasicMaterial({
+      color: new Color("hsl(220, 8%, 55%)"),
+      transparent: true,
+      opacity: 0.45,
+    });
+  }
+
   const buildNodeObject = (node: any): Object3D => {
     const n = node as JarvisNode;
+
+    // Fast path para nós da base fria (decorativos, sem hover/label/glow).
+    if ((n as any).type === "seller_cold") {
+      return new Mesh(coldGeoRef.current!, coldMatRef.current!);
+    }
+
     const group = new Group();
     const fallback = NODE_COLORS[n.type] ?? "#71717a";
     let baseColor: Color;
@@ -685,9 +704,9 @@ export function JarvisGraph3D() {
     const dimmed =
       focusId !== null && focusNeighborIds && !focusNeighborIds.has(n.id);
 
-    // Núcleo
+    // Núcleo (segmentos reduzidos de 24→14: visual igual, ~3x menos triângulos)
     const sphere = new Mesh(
-      new SphereGeometry(radius, 24, 24),
+      new SphereGeometry(radius, 14, 14),
       new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
