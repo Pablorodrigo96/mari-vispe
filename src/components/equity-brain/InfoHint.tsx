@@ -64,7 +64,7 @@ export function InfoHint({
         )}
         <div className="text-xs text-zinc-200 leading-relaxed break-words">
           <span className="text-zinc-500 font-medium">O que é: </span>
-          {what}
+          {whatText}
         </div>
         {action && (
           <div className="text-xs text-zinc-200 leading-relaxed break-words mt-1.5">
