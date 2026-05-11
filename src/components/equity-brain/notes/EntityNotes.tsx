@@ -24,6 +24,7 @@ import { TemplatePicker } from "./TemplatePicker";
 import { TagChip } from "./TagChip";
 import { TagAutocomplete } from "./TagAutocomplete";
 import { normalizeTag } from "@/lib/eb/tagHierarchy";
+import { SimilarNotesPanel } from "./SimilarNotesPanel";
 
 interface Props {
   entityType: NoteEntityType;
@@ -348,6 +349,7 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
                 )}
               </div>
               <NoteRenderer body={n.body_md} />
+              {editingId !== n.id && <SimilarNotesPanel noteId={n.id} />}
             </div>
           );
         })}

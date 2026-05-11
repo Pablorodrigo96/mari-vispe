@@ -139,6 +139,7 @@ const RfbHubPage = lazy(() => import("./pages/equity-brain/admin/RfbHubPage"));
 const PropostasPage = lazy(() => import("./pages/equity-brain/PropostasPage"));
 const DailyDiaryPage = lazy(() => import("./pages/equity-brain/DailyDiaryPage"));
 const TagPage = lazy(() => import("./pages/equity-brain/TagPage"));
+const NoteSearchPage = lazy(() => import("./pages/equity-brain/NoteSearchPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
@@ -254,6 +255,7 @@ const App = () => (
               <Route path="diario"         element={<DailyDiaryPage />} />
               <Route path="diario/:date"   element={<DailyDiaryPage />} />
               <Route path="tag/:slug"      element={<TagPage />} />
+              <Route path="busca-notas"    element={<NoteSearchPage />} />
 
               {/* Novas páginas-wrapper */}
               <Route path="oportunidades" element={<EBOportunidadesPage />} />

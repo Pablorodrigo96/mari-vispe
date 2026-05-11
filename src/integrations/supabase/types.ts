@@ -3094,6 +3094,7 @@ export type Database = {
           author_id: string | null
           body_md: string | null
           created_at: string | null
+          embedding_computed_at: string | null
           entity_id: string | null
           entity_type: string | null
           id: string | null
@@ -3107,6 +3108,7 @@ export type Database = {
           author_id?: string | null
           body_md?: string | null
           created_at?: string | null
+          embedding_computed_at?: string | null
           entity_id?: string | null
           entity_type?: never
           id?: string | null
@@ -3120,6 +3122,7 @@ export type Database = {
           author_id?: string | null
           body_md?: string | null
           created_at?: string | null
+          embedding_computed_at?: string | null
           entity_id?: string | null
           entity_type?: never
           id?: string | null
@@ -4732,6 +4735,7 @@ export type Database = {
           author_id: string | null
           body_md: string | null
           created_at: string | null
+          embedding_computed_at: string | null
           entity_id: string | null
           entity_type: string | null
           id: string | null
@@ -4747,6 +4751,49 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      eb_notes_search_hybrid: {
+        Args: {
+          p_entity_type?: string
+          p_limit?: number
+          p_query: string
+          p_query_embedding: string
+        }
+        Returns: {
+          author_id: string
+          bm25: number
+          body_md: string
+          created_at: string
+          embedding_computed_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          pinned: boolean
+          score: number
+          semantic: number
+          tags: string[]
+          title: string
+          updated_at: string
+          visibility: string
+        }[]
+      }
+      eb_notes_similar: {
+        Args: { p_limit?: number; p_min_similarity?: number; p_note_id: string }
+        Returns: {
+          author_id: string
+          body_md: string
+          created_at: string
+          embedding_computed_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          pinned: boolean
+          similarity: number
+          tags: string[]
+          title: string
+          updated_at: string
+          visibility: string
+        }[]
       }
       eb_open_whatsapp_action: {
         Args: {
