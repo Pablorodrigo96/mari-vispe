@@ -28,7 +28,7 @@ import { forceCollide, forceManyBody, forceRadial, forceLink } from "d3-force-3d
 import SpriteText from "three-spritetext";
 import { useGhostSynapses } from "./useGhostSynapses";
 import { useSolarFlares } from "./useSolarFlares";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -53,10 +53,6 @@ import { GraphFilterSidebar } from "@/components/equity-brain/graph/GraphFilterS
 import { GraphLegend } from "@/components/equity-brain/graph/GraphLegend";
 import { NodeDetailPanel } from "@/components/equity-brain/graph/NodeDetailPanel";
 
-// Tudo começa desligado para abrir leve; usuário ativa progressivamente.
-const DEFAULT_NODE_TYPES = new Set<string>();
-const DEFAULT_LAYERS = new Set<LayerKey>();
-
 // "Ativar tudo" usa estes conjuntos cheios.
 const ALL_NODE_TYPES = new Set([
   "seller",
@@ -76,6 +72,10 @@ const ALL_LAYERS = new Set<LayerKey>([
   "capital",
   "thesis",
 ]);
+
+// Defaults agora abrem com TUDO ligado para o globo nascer cheio.
+const DEFAULT_NODE_TYPES = new Set(ALL_NODE_TYPES);
+const DEFAULT_LAYERS = new Set<LayerKey>(ALL_LAYERS);
 
 const endpointId = (v: any): string =>
   typeof v === "string" ? v : v?.id ?? String(v ?? "");
@@ -269,7 +269,7 @@ export function JarvisGraph3D() {
             .select(
               "cnpj,razao_social,nome_fantasia,setor_ma,uf,municipio,faturamento_estimado,ebitda_estimado,funcionarios_estimado,cnae_descricao,has_listing,listing_id",
             )
-            .limit(500);
+            .limit(3000);
           return (data ?? []) as any[];
         },
       },
@@ -279,7 +279,7 @@ export function JarvisGraph3D() {
           const { data } = await supabase
             .from("eb_companies_scored" as any)
             .select("cnpj,ma_score")
-            .limit(500);
+            .limit(3000);
           return (data ?? []) as any[];
         },
       },
@@ -334,6 +334,24 @@ export function JarvisGraph3D() {
   const isError = queries.some((q) => q.isError);
   const [companiesQ, scoredQ, buyersQ, thesesQ, btQ, matchesQ] = queries;
 
+  // Cold sample da RFB (~2k CNPJs ativos aleatórios) — nuvem decorativa do globo.
+  // Carregamento em paralelo, sem bloquear o loading principal.
+  const coldQ = useQuery({
+    queryKey: ["sg", "cold-sample-rfb"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("jarvis-cold-sample", {
+        body: { limit: 2000 },
+      });
+      if (error) {
+        console.warn("[Jarvis3D] cold-sample failed:", error);
+        return [] as any[];
+      }
+      return (data?.points ?? []) as any[];
+    },
+    staleTime: 1000 * 60 * 30, // 30min — base RFB muda devagar
+    retry: 1,
+  });
+
   const enabledEdgeTypes = useMemo<Set<EdgeType>>(() => {
     const set = new Set<EdgeType>();
     enabledLayers.forEach((k) =>
@@ -365,7 +383,7 @@ export function JarvisGraph3D() {
         matches: matchesQ.data ?? [],
       },
       {
-        maxNodes: 350,
+        maxNodes: 1800,
         minWeight,
         minConfidence,
         enabledEdgeTypes,
@@ -390,9 +408,55 @@ export function JarvisGraph3D() {
       (n) => connected.has(n.id) || n.type === "thesis" || n.type === "strategy",
     );
 
-    return adaptToJarvisGraph(finalNodes, filteredEdges);
+    const live = adaptToJarvisGraph(finalNodes, filteredEdges);
+
+    // ---------- Merge cold sample (RFB) — pontos cinzas decorativos ----------
+    // Posicionados em casca esférica externa via Fibonacci (distribuição uniforme),
+    // pinados (fx/fy/fz) para não serem puxados pela simulação de força.
+    const cold = coldQ.data ?? [];
+    const liveIds = new Set(live.nodes.map((n) => n.id));
+    const coldNodes: JarvisNode[] = [];
+    const R_OUTER = 1400; // raio fixo da nuvem (independe do globo interno)
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const N = cold.length;
+    for (let i = 0; i < N; i++) {
+      const c = cold[i] as any;
+      const id = `cold:${c.cnpj}`;
+      if (liveIds.has(id)) continue;
+      // Fibonacci sphere
+      const y = 1 - (i / Math.max(1, N - 1)) * 2;
+      const r = Math.sqrt(Math.max(0, 1 - y * y));
+      const theta = golden * i;
+      const x = Math.cos(theta) * r;
+      const z = Math.sin(theta) * r;
+      coldNodes.push({
+        id,
+        type: "seller_cold" as any,
+        label: c.razao_social ?? c.cnpj ?? "",
+        vertical: null as any,
+        uf: c.uf ?? null,
+        strategic_score: 0,
+        metadata: { source: "rfb_cold", municipio: c.municipio, cnae: c.cnae_descricao } as any,
+        degree: 0,
+        strongDegree: 0,
+        hot: false,
+        heat: 0,
+        visualRadius: 2.2,
+        showLabel: false,
+        strategicRole: "target" as any,
+        isNeuron: false,
+        displayColor: "hsl(220, 8%, 55%)",
+        bigSellerRing: false,
+        // posições pinadas
+        x: x * R_OUTER, y: y * R_OUTER, z: z * R_OUTER,
+        fx: x * R_OUTER, fy: y * R_OUTER, fz: z * R_OUTER,
+      } as any);
+    }
+
+    return { nodes: [...live.nodes, ...coldNodes], links: live.links };
   }, [
     companiesQ.data, scoredQ.data, buyersQ.data, thesesQ.data, btQ.data, matchesQ.data,
+    coldQ.data,
     minWeight, minConfidence, enabledEdgeTypes,
     selectedNodeTypes, selectedUfs, selectedVerticals, thesisFilter, buyerFilter,
   ]);
@@ -424,11 +488,12 @@ export function JarvisGraph3D() {
   const sphereRadiusRef = useRef(900);
   const [visibleLinkCount, setVisibleLinkCount] = useState(0);
 
-  // 1. Posicionamento inicial: todos os nós em (0,0,0) com jitter mínimo
-  //    (jitter evita NaN do d3 quando vetores coincidem exatamente).
+  // 1. Posicionamento inicial: nós "vivos" nascem na origem; nós cold já vêm
+  //    pinados em casca Fibonacci e DEVEM preservar fx/fy/fz.
   useEffect(() => {
     if (!graphData.nodes.length) return;
     graphData.nodes.forEach((n: any) => {
+      if (n.type === "seller_cold") return; // já posicionado e pinado
       n.x = (Math.random() - 0.5) * 0.5;
       n.y = (Math.random() - 0.5) * 0.5;
       n.z = (Math.random() - 0.5) * 0.5;
@@ -442,8 +507,9 @@ export function JarvisGraph3D() {
     const fg = fgRef.current as any;
     if (!fg || !graphData.nodes.length) return;
 
-    const N = graphData.nodes.length;
-    const R = Math.max(900, Math.min(2600, 800 + N * 5.0));
+    // N "vivo" para dimensionar o globo (ignora cold que é só decoração externa)
+    const N = graphData.nodes.filter((n: any) => n.type !== "seller_cold").length;
+    const R = Math.max(1200, Math.min(3600, 900 + N * 4.5));
     sphereRadiusRef.current = R;
 
     let raf = 0;
@@ -461,7 +527,7 @@ export function JarvisGraph3D() {
           "collide",
           forceCollide((n: any) => (n.visualRadius ?? 6) + 14),
         );
-        fg.d3Force?.("radial", forceRadial(R, 0, 0, 0).strength(0.14));
+        fg.d3Force?.("radial", forceRadial(R, 0, 0, 0).strength(0.22));
         fg.d3Force?.("center", null);
         fg.d3Force?.("seller-spread", null);
 
@@ -546,14 +612,14 @@ export function JarvisGraph3D() {
     if (!graphData.nodes.length) return;
     let raf = 0;
     const start = performance.now();
-    const speed = 0.00012; // ~52s por volta
+    const speed = 0.00009; // ~70s por volta (mais imersivo com globo cheio)
     const loop = () => {
       const fg = fgRef.current as any;
       const now = performance.now();
       const interacting = now < orbitInteractUntilRef.current;
       if (fg && !orbitPausedRef.current && !interacting) {
         const R = sphereRadiusRef.current;
-        const camR = R * 2.6;
+        const camR = R * 3.6; // afasta mais — leitura de "planeta girando"
         const a = (now - start) * speed;
         try {
           fg.cameraPosition?.(
