@@ -9,7 +9,7 @@ interface Props {
 export function BBGPanel({ className = '', children }: Props) {
   return (
     <section
-      className={`border border-zinc-800 bg-zinc-950/40 rounded-lg p-4 ${className}`}
+      className={`border border-border bg-card/60 backdrop-blur-sm rounded-lg p-4 ${className}`}
     >
       {children}
     </section>
@@ -21,12 +21,12 @@ export function BBGHeader({ title, accent }: { title: string; accent?: boolean }
     <div className="mb-3">
       <h2
         className={`text-[10px] uppercase tracking-[0.14em] font-semibold ${
-          accent ? 'text-volt' : 'text-zinc-500'
+          accent ? 'text-volt' : 'text-muted-foreground'
         }`}
       >
         {title}
       </h2>
-      <div className="h-px bg-zinc-800 mt-2" />
+      <div className="h-px bg-border mt-2" />
     </div>
   );
 }
@@ -41,12 +41,12 @@ export function BBGEmpty({
   to?: string;
 }) {
   return (
-    <div className="flex flex-col items-start gap-2 py-4 text-xs text-zinc-500">
+    <div className="flex flex-col items-start gap-2 py-4 text-xs text-muted-foreground">
       <p className="leading-snug break-words">{title}</p>
       {cta && to && (
         <Link
           to={to}
-          className="inline-flex items-center gap-1 text-volt hover:underline font-medium"
+          className="inline-flex items-center gap-1 text-volt hover:underline font-semibold"
         >
           {cta} <ArrowRight className="h-3 w-3" />
         </Link>

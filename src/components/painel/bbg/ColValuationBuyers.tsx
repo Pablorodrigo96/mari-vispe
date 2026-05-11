@@ -23,24 +23,24 @@ export function ColValuationBuyers({ snapshot, buyersCount = 8 }: Props) {
         <BBGHeader title="Valuation" />
         {snapshot ? (
           <>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
               Atual estimado
             </p>
-            <p className="text-5xl font-mono font-bold tabular-nums tracking-tight text-zinc-100 leading-none">
+            <p className="text-5xl md:text-6xl font-mono font-black tabular-nums tracking-tight text-foreground leading-none">
               {brl(snapshot.valorAtual, { compact: true })}
             </p>
 
-            <div className="mt-5 border border-volt/30 bg-gradient-to-br from-volt/5 to-transparent rounded-lg p-4">
-              <p className="text-[10px] uppercase tracking-wider text-volt font-semibold mb-1">
+            <div className="mt-5 border border-volt/40 bg-volt/10 rounded-lg p-4">
+              <p className="text-[10px] uppercase tracking-wider text-volt font-bold mb-1">
                 Potencial · pico 2027
               </p>
-              <p className="text-3xl font-mono font-bold tabular-nums tracking-tight text-volt leading-none">
+              <p className="text-4xl font-mono font-black tabular-nums tracking-tight text-foreground leading-none">
                 {brl(snapshot.valorPotencial, { compact: true })}
               </p>
-              <div className="h-px bg-volt/20 my-3" />
-              <p className="text-xs text-zinc-300 font-mono">
+              <div className="h-px bg-volt/30 my-3" />
+              <p className="text-xs text-foreground font-mono font-semibold">
                 +{brl(snapshot.gap, { compact: true })} de oportunidade
-                <span className="text-zinc-500">
+                <span className="text-muted-foreground font-normal">
                   {' '}
                   ({snapshot.gapPct.toFixed(0)}%)
                 </span>
@@ -49,7 +49,7 @@ export function ColValuationBuyers({ snapshot, buyersCount = 8 }: Props) {
 
             <Link
               to="/meus-valuations"
-              className="mt-3 inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-volt"
+              className="mt-3 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
             >
               Detalhes técnicos <ArrowRight className="h-3 w-3" />
             </Link>
@@ -67,10 +67,10 @@ export function ColValuationBuyers({ snapshot, buyersCount = 8 }: Props) {
       <BBGPanel>
         <BBGHeader title="Compradores ativos" />
         <div className="flex items-baseline gap-2 mb-4">
-          <span className="text-3xl font-mono font-bold tabular-nums text-zinc-100">
+          <span className="text-3xl font-mono font-black tabular-nums text-foreground">
             {buyersCount}
           </span>
-          <span className="text-xs text-zinc-500">
+          <span className="text-xs text-muted-foreground">
             possíveis compradores
           </span>
         </div>
@@ -78,28 +78,28 @@ export function ColValuationBuyers({ snapshot, buyersCount = 8 }: Props) {
         <ul className="space-y-2">
           {BUYER_BREAKDOWN.map((b) => (
             <li key={b.label} className="flex items-center gap-3 text-xs">
-              <div className="flex-1 h-4 bg-zinc-900 rounded-sm overflow-hidden relative">
+              <div className="flex-1 h-4 bg-muted rounded-sm overflow-hidden relative">
                 <div
-                  className="h-full bg-volt/70 transition-all"
+                  className="h-full bg-volt/80 transition-all"
                   style={{ width: `${b.pct}%` }}
                 />
               </div>
-              <span className="w-10 text-right font-mono tabular-nums text-zinc-300">
+              <span className="w-10 text-right font-mono tabular-nums text-foreground font-semibold">
                 {b.pct}%
               </span>
-              <span className="w-28 text-zinc-400 truncate">{b.label}</span>
+              <span className="w-28 text-muted-foreground truncate">{b.label}</span>
             </li>
           ))}
         </ul>
 
-        <div className="mt-4 flex items-center gap-1.5 text-[10px] text-zinc-500">
+        <div className="mt-4 flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <Lock className="h-3 w-3" />
           Identidade protegida por NDA
         </div>
 
         <Link
           to="/matching"
-          className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-volt hover:underline"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-volt hover:underline"
         >
           Falar com advisor <ArrowRight className="h-3 w-3" />
         </Link>
