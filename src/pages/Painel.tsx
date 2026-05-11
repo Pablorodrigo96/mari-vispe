@@ -12,12 +12,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import { MariWatermark } from '@/components/brand/MariLogo';
+
 import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
 import { CockpitWeekStrip } from '@/components/cockpit/CockpitWeekStrip';
 import { MariOriginBadge } from '@/components/painel/MariOriginBadge';
 import { ExecutiveReport } from '@/components/painel/exec/ExecutiveReport';
 import { buildSnapshot } from '@/lib/painelExecutive';
+import { BloombergTopBar } from '@/components/painel/bbg/BloombergTopBar';
+import { ColEmpresa } from '@/components/painel/bbg/ColEmpresa';
+import { ColValuationBuyers } from '@/components/painel/bbg/ColValuationBuyers';
+import { ColFeedAgenda } from '@/components/painel/bbg/ColFeedAgenda';
+import { usePainelBloomberg } from '@/hooks/usePainelBloomberg';
 
 interface ModuleBox {
   title: string;
@@ -101,7 +106,9 @@ export default function Painel() {
   });
 
   const greetingName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'usuário';
+  const fullName = profile?.full_name || user?.email?.split('@')[0] || 'Usuário';
   const snapshot = buildSnapshot(lastValuation);
+  const bbg = usePainelBloomberg();
 
   // Onboarding progress
   const checks = [
@@ -144,42 +151,53 @@ export default function Painel() {
     },
   ];
 
+  const lastListingUpdate = recentListings?.[0]?.created_at ? new Date(recentListings[0].created_at) : null;
+
   return (
-    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto relative">
-      {/* Magazine-style brand watermark in the hero */}
-      <MariWatermark
-        color="volt"
-        opacity={0.05}
-        className="hidden md:block absolute -right-24 -top-16 w-[420px] h-[420px] pointer-events-none"
+    <div className="relative -m-4 lg:-m-6 xl:-m-8">
+      {/* Bloomberg top bar — full bleed */}
+      <BloombergTopBar
+        userName={fullName}
+        roles={eff.roles}
+        lastSyncMinutes={bbg.data?.lastSyncMinutes ?? null}
       />
 
-      {/* Hero / greeting */}
-      <div className="mb-6 relative">
-        <div className="flex items-center gap-3 flex-wrap mb-2">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground inline-flex items-center">
+      <div className="p-4 lg:p-6 xl:p-8 max-w-[1500px] mx-auto">
+        {/* Hero / greeting (denser) */}
+        <div className="mb-5 flex items-center justify-between gap-4 flex-wrap">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground inline-flex items-center">
             Olá, {greetingName} 👋
             <PageHeaderHint pageKey="painel" />
           </h1>
-          {eff.roles.length > 0 && (
-            <div className="flex gap-1.5 flex-wrap">
-              {eff.roles.map((r) => (
-                <Badge key={r} variant="secondary" className="text-[10px] uppercase tracking-wider">{r}</Badge>
-              ))}
-              {eff.isPartnerAccountant && <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-accent/50 text-accent">Parceiro Contábil</Badge>}
-              {eff.isBDR && <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-emerald-500/50 text-emerald-600">BDR</Badge>}
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {eff.isPartnerAccountant && <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-accent/50 text-accent">Parceiro Contábil</Badge>}
+            {eff.isBDR && <Badge variant="outline" className="text-[10px] uppercase tracking-wider border-emerald-500/50 text-emerald-600">BDR</Badge>}
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground">Bem-vindo de volta à plataforma. Acesse os módulos abaixo para começar.</p>
-      </div>
 
-      {/* Mari origin badge (se veio da calculadora pública) */}
-      <div className="mb-4">
-        <MariOriginBadge />
-      </div>
+        {/* Mari origin badge (se veio da calculadora pública) */}
+        <div className="mb-5">
+          <MariOriginBadge />
+        </div>
 
-      {/* Executive report — Quanto vale, quanto pode valer, quando vender */}
-      <ExecutiveReport snapshot={snapshot} firstName={greetingName} />
+        {/* === ABOVE THE FOLD — 3 colunas Bloomberg === */}
+        <div className="grid grid-cols-1 lg:grid-cols-[24%_52%_24%] gap-4 mb-8">
+          <ColEmpresa
+            companyName={profile?.company_name}
+            segment={lastValuation?.segment}
+            score={bbg.data?.score ?? { score: 0, label: 'Cadastro inicial', breakdown: [] }}
+            hasListing={(counts?.listings ?? 0) > 0}
+            listingsCount={counts?.listings ?? 0}
+            lastListingUpdate={lastListingUpdate}
+          />
+          <ColValuationBuyers snapshot={snapshot} buyersCount={bbg.data?.buyersCount && bbg.data.buyersCount > 0 ? bbg.data.buyersCount : 8} />
+          <ColFeedAgenda feed={bbg.data?.feed ?? []} />
+        </div>
+
+        {/* === BELOW THE FOLD — conteúdo existente (Bloco 2 reorganiza) === */}
+
+        {/* Executive report — Quanto vale, quanto pode valer, quando vender */}
+        <ExecutiveReport snapshot={snapshot} firstName={greetingName} />
 
       {/* Cockpit "Sua semana na Mari" — 5 AI cards */}
       <CockpitWeekStrip />
@@ -334,6 +352,7 @@ export default function Painel() {
               </CardContent>
             </Card>
           )}
+          </div>
         </div>
       </div>
     </div>
