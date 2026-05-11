@@ -4964,6 +4964,7 @@ export type Database = {
           total_runs: number
         }[]
       }
+      get_sector_for_user: { Args: { _user_id?: string }; Returns: string }
       get_teaser_view_count: {
         Args: { p_listing_id: string }
         Returns: {
