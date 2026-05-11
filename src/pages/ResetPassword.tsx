@@ -27,8 +27,11 @@ export default function ResetPassword() {
 
     // Listener captures the PASSWORD_RECOVERY event fired by supabase-js
     // once it finishes parsing the hash from the email link.
+    console.info('[reset-password] mount | hash?', !!window.location.hash, '| search?', !!window.location.search);
+
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
+      console.info('[reset-password] onAuthStateChange event:', event, '| hasSession:', !!session);
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         setState('ready');
       }
@@ -39,6 +42,7 @@ export default function ResetPassword() {
     const t = setTimeout(async () => {
       if (!mounted) return;
       const { data } = await supabase.auth.getSession();
+      console.info('[reset-password] fallback getSession | hasSession:', !!data.session);
       setState((curr) => (curr === 'ready' ? curr : data.session ? 'ready' : 'missing'));
     }, 800);
 
