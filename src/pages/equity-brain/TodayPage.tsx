@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Flame, Snowflake, Sparkles, MessageCircle, Eye, Clock, ChevronRight, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { Badge } from "@/components/ui/badge";
 import { useTodayCards, useDismissCard, useMandateSummary, type TodayCard } from "@/hooks/useTodayCards";
 import { openWhatsAppForContact } from "@/lib/whatsappBridge";
