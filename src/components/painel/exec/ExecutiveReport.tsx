@@ -130,8 +130,8 @@ function ValuationTriCard({ snapshot }: { snapshot: ValuationSnapshot }) {
         <BigCard
           label="Quanto pode valer (2027)"
           value={brl(snapshot.valorPotencial)}
-          ic={`Estimado × 1,78 • IC: ${brl(snapshot.icLowPot)} – ${brl(snapshot.icHighPot)}`}
-          hint={snapshot.ebitdaMarginPotential ? `EBITDA alvo: ${snapshot.ebitdaMarginPotential.toFixed(1)}%` : 'Com estrutura ideal'}
+          ic={`Projeção no pico do mercado · IC: ${brl(snapshot.icLowPot)} – ${brl(snapshot.icHighPot)}`}
+          hint={snapshot.ebitdaMarginPotential ? `EBITDA alvo: ${snapshot.ebitdaMarginPotential.toFixed(1)}% · estrutura ideal` : 'Empresa pronta para o comprador certo'}
           tone="accent"
         />
         <BigCard
