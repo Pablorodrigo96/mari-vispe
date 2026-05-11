@@ -612,14 +612,14 @@ export function JarvisGraph3D() {
     if (!graphData.nodes.length) return;
     let raf = 0;
     const start = performance.now();
-    const speed = 0.00012; // ~52s por volta
+    const speed = 0.00009; // ~70s por volta (mais imersivo com globo cheio)
     const loop = () => {
       const fg = fgRef.current as any;
       const now = performance.now();
       const interacting = now < orbitInteractUntilRef.current;
       if (fg && !orbitPausedRef.current && !interacting) {
         const R = sphereRadiusRef.current;
-        const camR = R * 2.6;
+        const camR = R * 3.6; // afasta mais — leitura de "planeta girando"
         const a = (now - start) * speed;
         try {
           fg.cameraPosition?.(
