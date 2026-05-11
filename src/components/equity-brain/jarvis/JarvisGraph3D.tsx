@@ -539,43 +539,23 @@ export function JarvisGraph3D() {
     return () => cancelAnimationFrame(raf);
   }, [graphData.nodes]);
 
-  // 3. Sequenciador: links entram em blocos de 3 a cada 70ms.
+  // 3. Germinação removida — todos os links já entram juntos (sem setState a cada 70ms).
   useEffect(() => {
-    setVisibleLinkCount(0);
-    if (!graphData.links.length) return;
-    const STEP = 3;
-    const INTERVAL_MS = 70;
-    const id = window.setInterval(() => {
-      setVisibleLinkCount((c) => {
-        const next = c + STEP;
-        if (next >= graphData.links.length) {
-          window.clearInterval(id);
-          return graphData.links.length;
-        }
-        return next;
-      });
-    }, INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [graphData.links]);
+    setVisibleLinkCount(graphData.links.length);
+  }, [graphData.links.length]);
 
-  // 4. Congela a simulação ~2.5s após germinação completa (libera CPU).
+  // 4. Congela a simulação rapidamente após o build para liberar CPU.
   useEffect(() => {
     const fg = fgRef.current as any;
-    if (!fg) return;
-    if (visibleLinkCount && visibleLinkCount >= graphData.links.length && graphData.links.length > 0) {
-      try { fg.d3AlphaTarget?.(0); } catch {}
-      const t = window.setTimeout(() => {
-        try { fg.cooldownTicks?.(0); fg.refresh?.(); } catch {}
-      }, 2500);
-      return () => window.clearTimeout(t);
-    }
-  }, [visibleLinkCount, graphData.links.length]);
+    if (!fg || !graphData.nodes.length) return;
+    const t = window.setTimeout(() => {
+      try { fg.d3AlphaTarget?.(0); fg.cooldownTicks?.(0); fg.refresh?.(); } catch {}
+    }, 3500);
+    return () => window.clearTimeout(t);
+  }, [graphData.nodes.length, graphData.links.length]);
 
-  // displayLinks: subset dos links já germinados, passado ao ForceGraph3D
-  const displayLinks = useMemo(
-    () => graphData.links.slice(0, visibleLinkCount),
-    [graphData.links, visibleLinkCount],
-  );
+  // displayLinks: todos os links visíveis
+  const displayLinks = graphData.links;
 
   // ---------- Auto-orbit da câmera (o globo "gira") ----------
   // Em vez de rotacionar 350 nós a cada frame, orbitamos a câmera ao redor da
