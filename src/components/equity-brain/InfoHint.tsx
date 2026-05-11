@@ -6,9 +6,11 @@ export interface InfoHintProps {
   /** Optional title shown in bold at the top of the tooltip. */
   title?: string;
   /** What the indicator means. */
-  what: string;
+  what?: string;
   /** Practical action the user can take. */
   action?: string;
+  /** @deprecated Legacy single-text API (admin analytics). Falls back to `what` if `what` is not provided. */
+  text?: string;
   side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
   className?: string;
@@ -27,11 +29,13 @@ export function InfoHint({
   title,
   what,
   action,
+  text,
   side = "top",
   align = "center",
   className,
   iconClassName,
 }: InfoHintProps) {
+  const whatText = what ?? text ?? "";
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
@@ -60,7 +64,7 @@ export function InfoHint({
         )}
         <div className="text-xs text-zinc-200 leading-relaxed break-words">
           <span className="text-zinc-500 font-medium">O que é: </span>
-          {what}
+          {whatText}
         </div>
         {action && (
           <div className="text-xs text-zinc-200 leading-relaxed break-words mt-1.5">

@@ -6,7 +6,7 @@ import { useTrackingHealth, getBrowserTrackingState } from "@/hooks/useTrackingH
 import { trackEvent } from "@/lib/analytics";
 import { useState } from "react";
 import { toast } from "sonner";
-import { InfoHint } from "./InfoHint";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { analyticsTooltips } from "@/lib/analyticsTooltips";
 
 export function TrackingHealthCard() {
