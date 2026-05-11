@@ -1,15 +1,11 @@
 // Equity Brain — claude-analyze-call (esqueleto Fase 6, conectado na Fase 7)
-// Recebe transcrição/notas de uma call comercial e extrai sinais estruturados.
+// Recebe transcrição/notas de uma call comercial e extrai sinais estruturados via Lovable AI Gateway.
 // Por ora apenas parseia e loga em ai_runs — não toca em company_signals.
-// Auth: admin OR advisor OR service_role (BDR pode ser advisor).
+// Auth: admin OR advisor OR service_role.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import {
-  assertProviderAllowed,
-  ProviderBudgetExceededError,
-  ProviderDisabledError,
-} from "../_shared/apiTrack.ts";
+import { callLovableAI } from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,10 +13,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "google/gemini-2.5-flash";
 const MAX_TOKENS = 1024;
-const COST_INPUT_PER_MTOK = 3;
-const COST_OUTPUT_PER_MTOK = 15;
 
 const SYSTEM_PROMPT = `Você é um analista de CRM. Recebe notas de uma call comercial e extrai sinais estruturados.
 NUNCA invente. Se não souber, retorne null no campo.
