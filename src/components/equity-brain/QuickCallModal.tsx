@@ -131,6 +131,7 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
     if (!v) {
       setNextPitch(null);
       setCopied(false);
+      setAnalysis(null);
     }
     onOpenChange(v);
   };
