@@ -41,6 +41,8 @@ import {
 import { categories } from '@/data/mockData';
 import { getCategoryFallbackImage } from '@/lib/categoryImages';
 import { SimilarListings } from '@/components/listing/SimilarListings';
+import { EntityNotes } from '@/components/equity-brain/notes/EntityNotes';
+import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 
 interface Listing {
   id: string | null;
@@ -91,6 +93,8 @@ const formatCurrency = (value: number | null | undefined) => {
 };
 
 const ListingDetail = () => {
+  const { isAdvisor, isAdmin } = useEffectiveRoles();
+  const canSeeInternalNotes = isAdvisor || isAdmin;
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [listing, setListing] = useState<Listing | null>(null);
@@ -768,6 +772,17 @@ const ListingDetail = () => {
             state={listing.state}
           />
         </div>
+
+        {canSeeInternalNotes && listing.id && (
+          <div className="container mx-auto max-w-6xl px-4 py-6">
+            <div className="rounded-lg border border-amber-700/40 bg-amber-500/5 p-4">
+              <div className="text-[10px] uppercase tracking-wider text-amber-300 mb-3 flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3" /> Notas internas · advisor/admin
+              </div>
+              <EntityNotes entityType="listing" entityId={listing.id} allowedVisibilities={["internal"]} />
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Lightbox */}

@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
-export type NoteEntityType = "mandate" | "buyer_ma" | "company";
+export type NoteEntityType = "mandate" | "buyer_ma" | "company" | "match" | "listing" | "daily";
 export type NoteVisibility = "internal" | "public";
+export type NoteSource = "manual" | "ai_pitch" | "ai_thesis" | "ai_call" | "template";
 
 export interface EntityNote {
   id: string;
@@ -16,6 +17,10 @@ export interface EntityNote {
   visibility: NoteVisibility;
   pinned: boolean;
   tags: string[];
+  source?: NoteSource;
+  source_ref_id?: string | null;
+  section_order?: number;
+  version?: number;
   created_at: string;
   updated_at: string;
 }

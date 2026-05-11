@@ -20,6 +20,7 @@ import { GeneratePitchCard } from "@/components/equity-brain/match/GeneratePitch
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { OUTCOMES, relativeTime } from "@/lib/equityBrain";
+import { EntityNotes } from "@/components/equity-brain/notes/EntityNotes";
 import { cn } from "@/lib/utils";
 
 function ContactRow({
@@ -315,6 +316,16 @@ export default function MatchDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Notas internas (advisor) */}
+      {matchId && (
+        <div className="rounded border border-zinc-800 bg-zinc-900/60 p-4">
+          <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-3">
+            Notas internas deste match
+          </div>
+          <EntityNotes entityType="match" entityId={matchId} allowedVisibilities={["internal"]} />
+        </div>
+      )}
     </div>
   );
 }
