@@ -18,6 +18,11 @@ import { CockpitWeekStrip } from '@/components/cockpit/CockpitWeekStrip';
 import { MariOriginBadge } from '@/components/painel/MariOriginBadge';
 import { ExecutiveReport } from '@/components/painel/exec/ExecutiveReport';
 import { buildSnapshot } from '@/lib/painelExecutive';
+import { BloombergTopBar } from '@/components/painel/bbg/BloombergTopBar';
+import { ColEmpresa } from '@/components/painel/bbg/ColEmpresa';
+import { ColValuationBuyers } from '@/components/painel/bbg/ColValuationBuyers';
+import { ColFeedAgenda } from '@/components/painel/bbg/ColFeedAgenda';
+import { usePainelBloomberg } from '@/hooks/usePainelBloomberg';
 
 interface ModuleBox {
   title: string;
