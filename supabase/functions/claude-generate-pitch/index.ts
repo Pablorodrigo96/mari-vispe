@@ -1,15 +1,11 @@
 // Equity Brain — claude-generate-pitch
-// Usa Claude Sonnet 4 para gerar pitch comercial PERSONALIZADO (2-3 parágrafos)
+// Gera pitch comercial PERSONALIZADO (2-3 parágrafos) via Lovable AI Gateway
 // para o BDR usar em call/whatsapp/email.
 // Auth: admin OR service_role.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import {
-  assertProviderAllowed,
-  ProviderBudgetExceededError,
-  ProviderDisabledError,
-} from "../_shared/apiTrack.ts";
+import { callLovableAI } from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,10 +13,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "google/gemini-2.5-flash";
 const MAX_TOKENS = 1024;
-const COST_INPUT_PER_MTOK = 3;
-const COST_OUTPUT_PER_MTOK = 15;
 
 const SYSTEM_PROMPT = `Você é um BDR sênior da Vispe Capital, especialista em abordagem consultiva para fundadores de PMEs.
 Seu trabalho NÃO é vender consultoria — é gerar conversa estratégica.
