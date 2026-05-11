@@ -7,6 +7,7 @@ import { ArrowRight, Building2, AlertTriangle, TrendingUp, TrendingDown, Minus, 
 import type { WindowResult } from "@/lib/mariWindowHeuristic";
 import { setMariPrefill } from "@/lib/mariPrefill";
 import { useAuth } from "@/contexts/AuthContext";
+import { getWhatsAppLink } from "@/lib/whatsapp";
 
 export interface MariResultData {
   cnpj: string;
