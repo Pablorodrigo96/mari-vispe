@@ -690,27 +690,8 @@ export function JarvisGraph3D() {
     return set;
   }, [focusId, graphData.links]);
 
-  // ---------- Node visual ----------
-  // Geometria/material compartilhados para a nuvem fria (2k+ pontos).
-  // Sem cache, cada um aloca 2 esferas (24x24 segs) + material = morte de FPS.
-  const coldGeoRef = useRef<SphereGeometry | null>(null);
-  const coldMatRef = useRef<MeshBasicMaterial | null>(null);
-  if (!coldGeoRef.current) {
-    coldGeoRef.current = new SphereGeometry(3.6, 8, 8);
-    coldMatRef.current = new MeshBasicMaterial({
-      color: new Color("hsl(73, 85%, 68%)"), // Volt amarelo-limão (brand) — alta visibilidade sobre fundo escuro
-      transparent: true,
-      opacity: 0.92,
-    });
-  }
-
   const buildNodeObject = (node: any): Object3D => {
     const n = node as JarvisNode;
-
-    // Fast path para nós da base fria (decorativos, sem hover/label/glow).
-    if ((n as any).type === "seller_cold") {
-      return new Mesh(coldGeoRef.current!, coldMatRef.current!);
-    }
 
     const group = new Group();
     const fallback = NODE_COLORS[n.type] ?? "#71717a";
