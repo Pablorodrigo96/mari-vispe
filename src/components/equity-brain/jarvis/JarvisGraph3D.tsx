@@ -672,11 +672,11 @@ export function JarvisGraph3D() {
   const coldGeoRef = useRef<SphereGeometry | null>(null);
   const coldMatRef = useRef<MeshBasicMaterial | null>(null);
   if (!coldGeoRef.current) {
-    coldGeoRef.current = new SphereGeometry(3.0, 8, 8);
+    coldGeoRef.current = new SphereGeometry(3.6, 8, 8);
     coldMatRef.current = new MeshBasicMaterial({
-      color: new Color("hsl(220, 18%, 72%)"),
+      color: new Color("hsl(73, 85%, 68%)"), // Volt amarelo-limão (brand) — alta visibilidade sobre fundo escuro
       transparent: true,
-      opacity: 0.78,
+      opacity: 0.92,
     });
   }
 
