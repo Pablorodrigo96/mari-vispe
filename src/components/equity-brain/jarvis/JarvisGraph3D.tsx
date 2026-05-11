@@ -461,12 +461,7 @@ export function JarvisGraph3D() {
     selectedNodeTypes, selectedUfs, selectedVerticals, thesisFilter, buyerFilter,
   ]);
 
-  // [DIAG] log para diagnosticar tela branca — remover depois de validado
-  console.log("[Jarvis3D] render", {
-    isLoading, isError,
-    nodes: graphData.nodes.length, links: graphData.links.length,
-    isMobile, size,
-  });
+  // (log de render removido — estava forçando trabalho extra a cada frame)
 
   const verticalsList = useMemo(() => {
     const set = new Set<string>();
@@ -544,43 +539,23 @@ export function JarvisGraph3D() {
     return () => cancelAnimationFrame(raf);
   }, [graphData.nodes]);
 
-  // 3. Sequenciador: links entram em blocos de 3 a cada 70ms.
+  // 3. Germinação removida — todos os links já entram juntos (sem setState a cada 70ms).
   useEffect(() => {
-    setVisibleLinkCount(0);
-    if (!graphData.links.length) return;
-    const STEP = 3;
-    const INTERVAL_MS = 70;
-    const id = window.setInterval(() => {
-      setVisibleLinkCount((c) => {
-        const next = c + STEP;
-        if (next >= graphData.links.length) {
-          window.clearInterval(id);
-          return graphData.links.length;
-        }
-        return next;
-      });
-    }, INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [graphData.links]);
+    setVisibleLinkCount(graphData.links.length);
+  }, [graphData.links.length]);
 
-  // 4. Congela a simulação ~2.5s após germinação completa (libera CPU).
+  // 4. Congela a simulação rapidamente após o build para liberar CPU.
   useEffect(() => {
     const fg = fgRef.current as any;
-    if (!fg) return;
-    if (visibleLinkCount && visibleLinkCount >= graphData.links.length && graphData.links.length > 0) {
-      try { fg.d3AlphaTarget?.(0); } catch {}
-      const t = window.setTimeout(() => {
-        try { fg.cooldownTicks?.(0); fg.refresh?.(); } catch {}
-      }, 2500);
-      return () => window.clearTimeout(t);
-    }
-  }, [visibleLinkCount, graphData.links.length]);
+    if (!fg || !graphData.nodes.length) return;
+    const t = window.setTimeout(() => {
+      try { fg.d3AlphaTarget?.(0); fg.cooldownTicks?.(0); fg.refresh?.(); } catch {}
+    }, 3500);
+    return () => window.clearTimeout(t);
+  }, [graphData.nodes.length, graphData.links.length]);
 
-  // displayLinks: subset dos links já germinados, passado ao ForceGraph3D
-  const displayLinks = useMemo(
-    () => graphData.links.slice(0, visibleLinkCount),
-    [graphData.links, visibleLinkCount],
-  );
+  // displayLinks: todos os links visíveis
+  const displayLinks = graphData.links;
 
   // ---------- Auto-orbit da câmera (o globo "gira") ----------
   // Em vez de rotacionar 350 nós a cada frame, orbitamos a câmera ao redor da
@@ -639,11 +614,10 @@ export function JarvisGraph3D() {
     return () => cancelAnimationFrame(raf);
   }, [graphData.nodes.length]);
 
-  // ---------- Sinapses fantasmas (10% dos nós marcados como neurônios) ----------
-  useGhostSynapses(fgRef, graphData.nodes, !isLoading && graphData.nodes.length > 0);
-
-  // ---------- Solar flare (explosão solar a cada ~10s) ----------
-  useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2, setFlareActive);
+  // ---------- Sinapses fantasmas + Solar flares: DESLIGADAS por padrão (caras em FPS) ----------
+  // Mantemos os hooks no código mas com enabled=false; podem voltar via toggle futuro.
+  useGhostSynapses(fgRef, graphData.nodes, false);
+  useSolarFlares(fgRef, graphData.nodes, false, setFlareActive);
 
   // ---------- Auto-focus em ?focus=<id> ----------
   useEffect(() => {
@@ -693,8 +667,27 @@ export function JarvisGraph3D() {
   }, [focusId, graphData.links]);
 
   // ---------- Node visual ----------
+  // Geometria/material compartilhados para a nuvem fria (2k+ pontos).
+  // Sem cache, cada um aloca 2 esferas (24x24 segs) + material = morte de FPS.
+  const coldGeoRef = useRef<SphereGeometry | null>(null);
+  const coldMatRef = useRef<MeshBasicMaterial | null>(null);
+  if (!coldGeoRef.current) {
+    coldGeoRef.current = new SphereGeometry(2.2, 8, 8);
+    coldMatRef.current = new MeshBasicMaterial({
+      color: new Color("hsl(220, 8%, 55%)"),
+      transparent: true,
+      opacity: 0.45,
+    });
+  }
+
   const buildNodeObject = (node: any): Object3D => {
     const n = node as JarvisNode;
+
+    // Fast path para nós da base fria (decorativos, sem hover/label/glow).
+    if ((n as any).type === "seller_cold") {
+      return new Mesh(coldGeoRef.current!, coldMatRef.current!);
+    }
+
     const group = new Group();
     const fallback = NODE_COLORS[n.type] ?? "#71717a";
     let baseColor: Color;
@@ -711,9 +704,9 @@ export function JarvisGraph3D() {
     const dimmed =
       focusId !== null && focusNeighborIds && !focusNeighborIds.has(n.id);
 
-    // Núcleo
+    // Núcleo (segmentos reduzidos de 24→14: visual igual, ~3x menos triângulos)
     const sphere = new Mesh(
-      new SphereGeometry(radius, 24, 24),
+      new SphereGeometry(radius, 14, 14),
       new MeshBasicMaterial({
         color: baseColor,
         transparent: true,
@@ -891,14 +884,15 @@ export function JarvisGraph3D() {
     setEnabledLayers(new Set(["ma_direct", "rollup"] as LayerKey[]));
   }, [isMobile]);
 
-  // DPR cap no mobile — devicePixelRatio=3 em iPhone mata FPS.
+  // DPR cap universal — devicePixelRatio alto (Retina/HiDPI) detona FPS no WebGL.
+  // Cap em 1.25 (desktop) e 1.5 (mobile) mantém visual aceitável e dobra o FPS.
   useEffect(() => {
-    if (!isMobile) return;
     const id = setTimeout(() => {
       try {
         const renderer = (fgRef.current as any)?.renderer?.();
         if (renderer && typeof renderer.setPixelRatio === "function") {
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+          const cap = isMobile ? 1.5 : 1.25;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
         }
       } catch {}
     }, 400);
@@ -941,7 +935,7 @@ export function JarvisGraph3D() {
         playsInline
         preload="auto"
         style={{
-          filter: `brightness(${videoBrightnessVal}) saturate(0.5) blur(1px) hue-rotate(60deg)`,
+          filter: `brightness(${videoBrightnessVal}) saturate(0.5) hue-rotate(60deg)`,
           mixBlendMode: "luminosity",
         }}
       />
@@ -1131,8 +1125,15 @@ export function JarvisGraph3D() {
             return null as any;
           }}
           linkDirectionalParticles={(l: any) => {
-            if (isGoldLink(l)) return 4;
-            return shouldShowParticles(l) ? 3 : 0;
+            // Partículas custam GPU por link. Mantemos só nos casos focais.
+            if (focusId) {
+              const sId = endpointId((l as any).source);
+              const tId = endpointId((l as any).target);
+              if (sId === focusId || tId === focusId) return isGoldLink(l) ? 3 : 2;
+              return 0;
+            }
+            if (isGoldLink(l)) return 2;
+            return 0;
           }}
           linkDirectionalParticleWidth={(l: any) => {
             const base = 0.6 + (l.weight ?? 0.5) * 1.6;
