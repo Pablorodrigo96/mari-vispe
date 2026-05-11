@@ -45,6 +45,7 @@ const BlindTeaser = lazy(() => import("./pages/BlindTeaser"));
 
 // Authenticated user pages
 const Painel = lazy(() => import("./pages/Painel"));
+const Inteligencia = lazy(() => import("./pages/Inteligencia"));
 const MyListings = lazy(() => import("./pages/MyListings"));
 const ListingCockpit = lazy(() => import("./pages/ListingCockpit"));
 const EditListing = lazy(() => import("./pages/EditListing"));
