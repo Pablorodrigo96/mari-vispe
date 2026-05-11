@@ -22,6 +22,10 @@ import {
   Color,
   AdditiveBlending,
   DoubleSide,
+  Points,
+  BufferGeometry,
+  Float32BufferAttribute,
+  PointsMaterial,
   type Object3D,
 } from "three";
 import { forceCollide, forceManyBody, forceRadial, forceLink } from "d3-force-3d";
@@ -410,56 +414,76 @@ export function JarvisGraph3D() {
 
     const live = adaptToJarvisGraph(finalNodes, filteredEdges);
 
-    // ---------- Merge cold sample (RFB) — pontos cinzas decorativos ----------
-    // Posicionados em casca esférica externa via Fibonacci (distribuição uniforme),
-    // pinados (fx/fy/fz) para não serem puxados pela simulação de força.
-    const cold = coldQ.data ?? [];
-    const liveIds = new Set(live.nodes.map((n) => n.id));
-    const coldNodes: JarvisNode[] = [];
-    const R_OUTER = 1400; // raio fixo da nuvem (independe do globo interno)
-    const golden = Math.PI * (3 - Math.sqrt(5));
-    const N = cold.length;
-    for (let i = 0; i < N; i++) {
-      const c = cold[i] as any;
-      const id = `cold:${c.cnpj}`;
-      if (liveIds.has(id)) continue;
-      // Fibonacci sphere
-      const y = 1 - (i / Math.max(1, N - 1)) * 2;
-      const r = Math.sqrt(Math.max(0, 1 - y * y));
-      const theta = golden * i;
-      const x = Math.cos(theta) * r;
-      const z = Math.sin(theta) * r;
-      coldNodes.push({
-        id,
-        type: "seller_cold" as any,
-        label: c.razao_social ?? c.cnpj ?? "",
-        vertical: null as any,
-        uf: c.uf ?? null,
-        strategic_score: 0,
-        metadata: { source: "rfb_cold", municipio: c.municipio, cnae: c.cnae_descricao } as any,
-        degree: 0,
-        strongDegree: 0,
-        hot: false,
-        heat: 0,
-        visualRadius: 2.2,
-        showLabel: false,
-        strategicRole: "target" as any,
-        isNeuron: false,
-        displayColor: "hsl(220, 8%, 55%)",
-        bigSellerRing: false,
-        // posições pinadas
-        x: x * R_OUTER, y: y * R_OUTER, z: z * R_OUTER,
-        fx: x * R_OUTER, fy: y * R_OUTER, fz: z * R_OUTER,
-      } as any);
-    }
-
-    return { nodes: [...live.nodes, ...coldNodes], links: live.links };
+    // Nuvem fria: NÃO entra no graphData (evita d3-force iterar 2k+ nós a cada
+    // tick). Posições Fibonacci são calculadas aqui e renderizadas como um
+    // único THREE.Points na cena (vide effect abaixo).
+    return { nodes: live.nodes, links: live.links };
   }, [
     companiesQ.data, scoredQ.data, buyersQ.data, thesesQ.data, btQ.data, matchesQ.data,
-    coldQ.data,
     minWeight, minConfidence, enabledEdgeTypes,
     selectedNodeTypes, selectedUfs, selectedVerticals, thesisFilter, buyerFilter,
   ]);
+
+  // Posições da nuvem fria (Fibonacci sphere) — recalcula apenas quando a base muda.
+  const coldPositions = useMemo(() => {
+    const cold = coldQ.data ?? [];
+    const R_OUTER = 1400;
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const N = cold.length;
+    const arr = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) {
+      const y = 1 - (i / Math.max(1, N - 1)) * 2;
+      const r = Math.sqrt(Math.max(0, 1 - y * y));
+      const theta = golden * i;
+      arr[i * 3] = Math.cos(theta) * r * R_OUTER;
+      arr[i * 3 + 1] = y * R_OUTER;
+      arr[i * 3 + 2] = Math.sin(theta) * r * R_OUTER;
+    }
+    return arr;
+  }, [coldQ.data]);
+
+  // Adiciona/atualiza a nuvem fria como um único Points na cena do ForceGraph.
+  // Custo: 1 draw call para 2k pontos (vs 2k Meshes → 2k draws + 2k posições no d3).
+  const coldPointsRef = useRef<Points | null>(null);
+  useEffect(() => {
+    const fg = fgRef.current as any;
+    if (!fg) return;
+    const scene = fg.scene?.();
+    if (!scene) return;
+
+    // limpa anterior
+    if (coldPointsRef.current) {
+      scene.remove(coldPointsRef.current);
+      coldPointsRef.current.geometry.dispose();
+      (coldPointsRef.current.material as PointsMaterial).dispose();
+      coldPointsRef.current = null;
+    }
+    if (!coldPositions.length) return;
+
+    const geo = new BufferGeometry();
+    geo.setAttribute("position", new Float32BufferAttribute(coldPositions, 3));
+    const mat = new PointsMaterial({
+      color: new Color("hsl(73, 85%, 68%)"), // Volt — mesma cor de antes
+      size: 7.2,                              // visualmente equivalente a sphere(3.6)
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.92,
+      depthWrite: false,
+    });
+    const pts = new Points(geo, mat);
+    pts.frustumCulled = false;
+    scene.add(pts);
+    coldPointsRef.current = pts;
+
+    return () => {
+      if (coldPointsRef.current) {
+        scene.remove(coldPointsRef.current);
+        coldPointsRef.current.geometry.dispose();
+        (coldPointsRef.current.material as PointsMaterial).dispose();
+        coldPointsRef.current = null;
+      }
+    };
+  }, [coldPositions]);
 
   // (log de render removido — estava forçando trabalho extra a cada frame)
 
@@ -550,7 +574,7 @@ export function JarvisGraph3D() {
     if (!fg || !graphData.nodes.length) return;
     const t = window.setTimeout(() => {
       try { fg.d3AlphaTarget?.(0); fg.cooldownTicks?.(0); fg.refresh?.(); } catch {}
-    }, 3500);
+    }, 1500);
     return () => window.clearTimeout(t);
   }, [graphData.nodes.length, graphData.links.length]);
 
@@ -666,27 +690,8 @@ export function JarvisGraph3D() {
     return set;
   }, [focusId, graphData.links]);
 
-  // ---------- Node visual ----------
-  // Geometria/material compartilhados para a nuvem fria (2k+ pontos).
-  // Sem cache, cada um aloca 2 esferas (24x24 segs) + material = morte de FPS.
-  const coldGeoRef = useRef<SphereGeometry | null>(null);
-  const coldMatRef = useRef<MeshBasicMaterial | null>(null);
-  if (!coldGeoRef.current) {
-    coldGeoRef.current = new SphereGeometry(3.6, 8, 8);
-    coldMatRef.current = new MeshBasicMaterial({
-      color: new Color("hsl(73, 85%, 68%)"), // Volt amarelo-limão (brand) — alta visibilidade sobre fundo escuro
-      transparent: true,
-      opacity: 0.92,
-    });
-  }
-
   const buildNodeObject = (node: any): Object3D => {
     const n = node as JarvisNode;
-
-    // Fast path para nós da base fria (decorativos, sem hover/label/glow).
-    if ((n as any).type === "seller_cold") {
-      return new Mesh(coldGeoRef.current!, coldMatRef.current!);
-    }
 
     const group = new Group();
     const fallback = NODE_COLORS[n.type] ?? "#71717a";
