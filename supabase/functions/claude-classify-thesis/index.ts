@@ -1,15 +1,10 @@
 // Equity Brain — claude-classify-thesis
-// Usa Claude Sonnet 4 (claude-sonnet-4-20250514) para refinar a classificação de tese
-// de uma empresa e gerar um summary estratégico curto.
+// Refina classificação de tese de M&A da empresa-alvo via Lovable AI Gateway.
 // Auth: admin OR service_role.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import {
-  assertProviderAllowed,
-  ProviderBudgetExceededError,
-  ProviderDisabledError,
-} from "../_shared/apiTrack.ts";
+import { callLovableAI } from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,11 +12,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "google/gemini-2.5-flash";
 const MAX_TOKENS = 1024;
-// Pricing Sonnet 4 (USD per 1M tokens)
-const COST_INPUT_PER_MTOK = 3;
-const COST_OUTPUT_PER_MTOK = 15;
 
 const SYSTEM_PROMPT = `Você é um analista sênior de M&A da Vispe Capital, especializado em PMEs brasileiras.
 Sua função é, dado um perfil de empresa-alvo + buyers compatíveis + signals já detectados,
