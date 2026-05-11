@@ -140,7 +140,7 @@ export function useDailyFeed(date: string) {
       next.setUTCDate(next.getUTCDate() + 1);
       const end = next.toISOString();
 
-      const [actsRes, notesRes, dealsRes] = await Promise.all([
+      const [actsRes, notesRes, dealsRes, aiRes] = await Promise.all([
         (supabase as any)
           .schema("equity_brain")
           .from("crm_activities")
@@ -152,7 +152,7 @@ export function useDailyFeed(date: string) {
           .limit(30),
         supabase
           .from("eb_entity_notes" as any)
-          .select("id, entity_type, entity_id, title, body_md, created_at")
+          .select("id, entity_type, entity_id, title, body_md, created_at, source")
           .eq("author_id", user!.id)
           .neq("entity_type", "daily")
           .gte("created_at", start)
@@ -168,12 +168,14 @@ export function useDailyFeed(date: string) {
           .lt("updated_at", end)
           .order("updated_at", { ascending: false })
           .limit(20),
+        supabase.rpc("eb_ai_runs_by_date" as any, { p_date: date }),
       ]);
 
       return {
         activities: (actsRes.data as any[]) ?? [],
         notes: (notesRes.data as any[]) ?? [],
         deals: (dealsRes.data as any[]) ?? [],
+        ai: (aiRes.data as any[]) ?? [],
       };
     },
   });
