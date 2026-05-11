@@ -113,6 +113,9 @@ export default function AdminAnalytics() {
         {/* Saúde do tracking */}
         <TrackingHealthCard />
 
+        {/* Custo de APIs externas */}
+        <ApiCostSection />
+
         {/* Visitantes — Novos vs Recorrentes */}
         <VisitorsSection
           range={range}
