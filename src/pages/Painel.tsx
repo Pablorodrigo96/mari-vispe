@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -23,6 +24,7 @@ import { ColEmpresa } from '@/components/painel/bbg/ColEmpresa';
 import { ColValuationBuyers } from '@/components/painel/bbg/ColValuationBuyers';
 import { ColFeedAgenda } from '@/components/painel/bbg/ColFeedAgenda';
 import { usePainelBloomberg } from '@/hooks/usePainelBloomberg';
+import { NextActionCard } from '@/components/painel/bbg/NextActionCard';
 
 interface ModuleBox {
   title: string;
@@ -194,23 +196,29 @@ export default function Painel() {
           <ColFeedAgenda feed={bbg.data?.feed ?? []} />
         </div>
 
-        {/* === BELOW THE FOLD — conteúdo existente (Bloco 2 reorganiza) === */}
+        {/* === BELOW THE FOLD — Bloco 2: densidade Bloomberg === */}
 
-        {/* Executive report — Quanto vale, quanto pode valer, quando vender */}
-        <ExecutiveReport snapshot={snapshot} firstName={greetingName} />
+        {/* Section: Análise executiva */}
+        <BBGSection label="Análise executiva" subtitle="Valuation · setor · timeline · pilares de ROI">
+          <ExecutiveReport snapshot={snapshot} firstName={greetingName} />
+        </BBGSection>
 
-      {/* Cockpit "Sua semana na Mari" — 5 AI cards */}
-      <CockpitWeekStrip />
+        {/* Section: Cockpit semanal */}
+        <BBGSection label="Cockpit · Sua semana na Mari" subtitle="Sinais de IA atualizados toda 2ª feira">
+          <CockpitWeekStrip />
+        </BBGSection>
 
-      {/* KPIs row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <KPI label="Anúncios" value={counts?.listings ?? '—'} icon={ClipboardList} />
-        <KPI label="Valuations" value={counts?.valuations ?? '—'} icon={ChartBar} />
-        <KPI label="Captações" value={counts?.capital ?? '—'} icon={DollarSign} />
-        <KPI label="Visualizações 30d" value="—" icon={Eye} hint="Em breve" />
-      </div>
+        {/* Section: Atividade + ações */}
+        <BBGSection label="Atividade · Operação" subtitle="KPIs, próxima ação e módulos">
+          {/* KPIs inline (denser) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border mb-5 border border-border">
+            <KPI label="Anúncios" value={counts?.listings ?? '—'} icon={ClipboardList} />
+            <KPI label="Valuations" value={counts?.valuations ?? '—'} icon={ChartBar} />
+            <KPI label="Captações" value={counts?.capital ?? '—'} icon={DollarSign} />
+            <KPI label="Views 30d" value="—" icon={Eye} hint="Em breve" />
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Modules grid 2x2 */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {modules.map((m) => (
@@ -239,7 +247,12 @@ export default function Painel() {
         </div>
 
         {/* Right column */}
-        <div className="space-y-5">
+        <div className="space-y-4">
+          <NextActionCard
+            hasProfile={!!(profile?.full_name && profile?.phone)}
+            hasListing={(counts?.listings ?? 0) > 0}
+            hasValuation={(counts?.valuations ?? 0) > 0}
+          />
           {/* Onboarding */}
           {progress < 100 && (
             <Card>
@@ -354,6 +367,7 @@ export default function Painel() {
           )}
           </div>
         </div>
+        </BBGSection>
       </div>
     </div>
   );
@@ -373,5 +387,20 @@ function KPI({ label, value, icon: Icon, hint }: { label: string; value: any; ic
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function BBGSection({ label, subtitle, children }: { label: string; subtitle?: string; children: ReactNode }) {
+  return (
+    <section className="mb-8">
+      <div className="flex items-baseline justify-between gap-3 mb-3 pb-2 border-b border-border/70">
+        <div className="flex items-baseline gap-3 min-w-0">
+          <h2 className="text-[11px] uppercase tracking-[0.18em] font-bold text-foreground/90 font-mono">{label}</h2>
+          {subtitle && <p className="text-[10px] text-muted-foreground/80 truncate">{subtitle}</p>}
+        </div>
+        <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-wider">live</span>
+      </div>
+      {children}
+    </section>
   );
 }
