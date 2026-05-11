@@ -6,26 +6,52 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Lock, ArrowLeft } from 'lucide-react';
+import { Lock, ArrowLeft, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MariLogo } from '@/components/brand/MariLogo';
+import { ForgotPasswordDialog } from '@/components/auth/ForgotPasswordDialog';
+
+type RecoveryState = 'checking' | 'ready' | 'missing';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hasRecoverySession, setHasRecoverySession] = useState<boolean | null>(null);
+  const [state, setState] = useState<RecoveryState>('checking');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   useEffect(() => {
-    // Supabase auto-creates a session of type recovery when user clicks the email link
-    supabase.auth.getSession().then(({ data }) => {
-      setHasRecoverySession(!!data.session);
+    let mounted = true;
+
+    // Listener captures the PASSWORD_RECOVERY event fired by supabase-js
+    // once it finishes parsing the hash from the email link.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        setState('ready');
+      }
     });
+
+    // Fallback: if the hash was processed before mount (deep-link refresh),
+    // we may already have a session. Give it a tick to settle.
+    const t = setTimeout(async () => {
+      if (!mounted) return;
+      const { data } = await supabase.auth.getSession();
+      setState((curr) => (curr === 'ready' ? curr : data.session ? 'ready' : 'missing'));
+    }, 800);
+
+    return () => {
+      mounted = false;
+      clearTimeout(t);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     if (password.length < 6) {
       toast.error('A senha deve ter pelo menos 6 caracteres');
       return;
@@ -38,7 +64,10 @@ export default function ResetPassword() {
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (error) {
-      toast.error('Não foi possível redefinir a senha. O link pode ter expirado.');
+      console.error('[reset-password] updateUser error:', error);
+      const msg = error.message || 'Falha ao redefinir senha.';
+      setErrorMsg(msg);
+      toast.error(msg);
       return;
     }
     toast.success('Senha redefinida com sucesso!');
@@ -62,14 +91,37 @@ export default function ResetPassword() {
             <CardDescription>Use no mínimo 6 caracteres.</CardDescription>
           </CardHeader>
           <CardContent>
-            {hasRecoverySession === false ? (
-              <div className="text-sm text-muted-foreground space-y-3">
-                <p>Sessão de recuperação não encontrada. O link pode ter expirado.</p>
-                <Button onClick={() => navigate('/auth')} variant="outline" className="bg-transparent">
-                  Voltar para login
-                </Button>
+            {state === 'checking' && (
+              <div className="text-sm text-muted-foreground">Validando link de recuperação…</div>
+            )}
+
+            {state === 'missing' && (
+              <div className="space-y-4">
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-100 flex gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="font-medium">Link de recuperação não encontrado ou já usado.</p>
+                    <p className="opacity-80">
+                      Isso normalmente acontece quando o link foi aberto duas vezes, em outro
+                      dispositivo, ou ficou em filtros antivírus do servidor de email.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    onClick={() => setForgotOpen(true)}
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                  >
+                    Pedir um novo link
+                  </Button>
+                  <Button onClick={() => navigate('/auth')} variant="outline" className="bg-transparent">
+                    Voltar para login
+                  </Button>
+                </div>
               </div>
-            ) : (
+            )}
+
+            {state === 'ready' && (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-pwd">Nova senha</Label>
@@ -100,6 +152,21 @@ export default function ResetPassword() {
                     />
                   </div>
                 </div>
+                {errorMsg && (
+                  <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-md p-2 flex items-start gap-2">
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <div className="space-y-1">
+                      <p>{errorMsg}</p>
+                      <button
+                        type="button"
+                        onClick={() => setForgotOpen(true)}
+                        className="underline opacity-80 hover:opacity-100"
+                      >
+                        Pedir um novo link
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <Button type="submit" disabled={loading} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
                   {loading ? 'Salvando...' : 'Redefinir senha'}
                 </Button>
@@ -114,6 +181,8 @@ export default function ResetPassword() {
           </Link>
         </div>
       </div>
+
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </div>
   );
 }
