@@ -334,6 +334,24 @@ export function JarvisGraph3D() {
   const isError = queries.some((q) => q.isError);
   const [companiesQ, scoredQ, buyersQ, thesesQ, btQ, matchesQ] = queries;
 
+  // Cold sample da RFB (~2k CNPJs ativos aleatórios) — nuvem decorativa do globo.
+  // Carregamento em paralelo, sem bloquear o loading principal.
+  const coldQ = useQuery({
+    queryKey: ["sg", "cold-sample-rfb"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("jarvis-cold-sample", {
+        body: { limit: 2000 },
+      });
+      if (error) {
+        console.warn("[Jarvis3D] cold-sample failed:", error);
+        return [] as any[];
+      }
+      return (data?.points ?? []) as any[];
+    },
+    staleTime: 1000 * 60 * 30, // 30min — base RFB muda devagar
+    retry: 1,
+  });
+
   const enabledEdgeTypes = useMemo<Set<EdgeType>>(() => {
     const set = new Set<EdgeType>();
     enabledLayers.forEach((k) =>
@@ -365,7 +383,7 @@ export function JarvisGraph3D() {
         matches: matchesQ.data ?? [],
       },
       {
-        maxNodes: 350,
+        maxNodes: 1800,
         minWeight,
         minConfidence,
         enabledEdgeTypes,
@@ -390,9 +408,55 @@ export function JarvisGraph3D() {
       (n) => connected.has(n.id) || n.type === "thesis" || n.type === "strategy",
     );
 
-    return adaptToJarvisGraph(finalNodes, filteredEdges);
+    const live = adaptToJarvisGraph(finalNodes, filteredEdges);
+
+    // ---------- Merge cold sample (RFB) — pontos cinzas decorativos ----------
+    // Posicionados em casca esférica externa via Fibonacci (distribuição uniforme),
+    // pinados (fx/fy/fz) para não serem puxados pela simulação de força.
+    const cold = coldQ.data ?? [];
+    const liveIds = new Set(live.nodes.map((n) => n.id));
+    const coldNodes: JarvisNode[] = [];
+    const R_OUTER = 1400; // raio fixo da nuvem (independe do globo interno)
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const N = cold.length;
+    for (let i = 0; i < N; i++) {
+      const c = cold[i] as any;
+      const id = `cold:${c.cnpj}`;
+      if (liveIds.has(id)) continue;
+      // Fibonacci sphere
+      const y = 1 - (i / Math.max(1, N - 1)) * 2;
+      const r = Math.sqrt(Math.max(0, 1 - y * y));
+      const theta = golden * i;
+      const x = Math.cos(theta) * r;
+      const z = Math.sin(theta) * r;
+      coldNodes.push({
+        id,
+        type: "seller_cold" as any,
+        label: c.razao_social ?? c.cnpj ?? "",
+        vertical: null as any,
+        uf: c.uf ?? null,
+        strategic_score: 0,
+        metadata: { source: "rfb_cold", municipio: c.municipio, cnae: c.cnae_descricao } as any,
+        degree: 0,
+        strongDegree: 0,
+        hot: false,
+        heat: 0,
+        visualRadius: 2.2,
+        showLabel: false,
+        strategicRole: "target" as any,
+        isNeuron: false,
+        displayColor: "hsl(220, 8%, 55%)",
+        bigSellerRing: false,
+        // posições pinadas
+        x: x * R_OUTER, y: y * R_OUTER, z: z * R_OUTER,
+        fx: x * R_OUTER, fy: y * R_OUTER, fz: z * R_OUTER,
+      } as any);
+    }
+
+    return { nodes: [...live.nodes, ...coldNodes], links: live.links };
   }, [
     companiesQ.data, scoredQ.data, buyersQ.data, thesesQ.data, btQ.data, matchesQ.data,
+    coldQ.data,
     minWeight, minConfidence, enabledEdgeTypes,
     selectedNodeTypes, selectedUfs, selectedVerticals, thesisFilter, buyerFilter,
   ]);
