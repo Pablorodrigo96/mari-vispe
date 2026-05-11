@@ -614,11 +614,10 @@ export function JarvisGraph3D() {
     return () => cancelAnimationFrame(raf);
   }, [graphData.nodes.length]);
 
-  // ---------- Sinapses fantasmas (10% dos nós marcados como neurônios) ----------
-  useGhostSynapses(fgRef, graphData.nodes, !isLoading && graphData.nodes.length > 0);
-
-  // ---------- Solar flare (explosão solar a cada ~10s) ----------
-  useSolarFlares(fgRef, graphData.nodes, !isLoading && graphData.nodes.length >= 2, setFlareActive);
+  // ---------- Sinapses fantasmas + Solar flares: DESLIGADAS por padrão (caras em FPS) ----------
+  // Mantemos os hooks no código mas com enabled=false; podem voltar via toggle futuro.
+  useGhostSynapses(fgRef, graphData.nodes, false);
+  useSolarFlares(fgRef, graphData.nodes, false, setFlareActive);
 
   // ---------- Auto-focus em ?focus=<id> ----------
   useEffect(() => {
