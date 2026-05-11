@@ -41,6 +41,8 @@ import {
 import { categories } from '@/data/mockData';
 import { getCategoryFallbackImage } from '@/lib/categoryImages';
 import { SimilarListings } from '@/components/listing/SimilarListings';
+import { EntityNotes } from '@/components/equity-brain/notes/EntityNotes';
+import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 
 interface Listing {
   id: string | null;
