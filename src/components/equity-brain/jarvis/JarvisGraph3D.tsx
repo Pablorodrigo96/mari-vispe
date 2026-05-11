@@ -488,11 +488,12 @@ export function JarvisGraph3D() {
   const sphereRadiusRef = useRef(900);
   const [visibleLinkCount, setVisibleLinkCount] = useState(0);
 
-  // 1. Posicionamento inicial: todos os nós em (0,0,0) com jitter mínimo
-  //    (jitter evita NaN do d3 quando vetores coincidem exatamente).
+  // 1. Posicionamento inicial: nós "vivos" nascem na origem; nós cold já vêm
+  //    pinados em casca Fibonacci e DEVEM preservar fx/fy/fz.
   useEffect(() => {
     if (!graphData.nodes.length) return;
     graphData.nodes.forEach((n: any) => {
+      if (n.type === "seller_cold") return; // já posicionado e pinado
       n.x = (Math.random() - 0.5) * 0.5;
       n.y = (Math.random() - 0.5) * 0.5;
       n.z = (Math.random() - 0.5) * 0.5;
@@ -506,8 +507,9 @@ export function JarvisGraph3D() {
     const fg = fgRef.current as any;
     if (!fg || !graphData.nodes.length) return;
 
-    const N = graphData.nodes.length;
-    const R = Math.max(900, Math.min(2600, 800 + N * 5.0));
+    // N "vivo" para dimensionar o globo (ignora cold que é só decoração externa)
+    const N = graphData.nodes.filter((n: any) => n.type !== "seller_cold").length;
+    const R = Math.max(1200, Math.min(3600, 900 + N * 4.5));
     sphereRadiusRef.current = R;
 
     let raf = 0;
@@ -525,7 +527,7 @@ export function JarvisGraph3D() {
           "collide",
           forceCollide((n: any) => (n.visualRadius ?? 6) + 14),
         );
-        fg.d3Force?.("radial", forceRadial(R, 0, 0, 0).strength(0.14));
+        fg.d3Force?.("radial", forceRadial(R, 0, 0, 0).strength(0.22));
         fg.d3Force?.("center", null);
         fg.d3Force?.("seller-spread", null);
 
