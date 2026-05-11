@@ -269,7 +269,7 @@ export function JarvisGraph3D() {
             .select(
               "cnpj,razao_social,nome_fantasia,setor_ma,uf,municipio,faturamento_estimado,ebitda_estimado,funcionarios_estimado,cnae_descricao,has_listing,listing_id",
             )
-            .limit(150);
+            .limit(500);
           return (data ?? []) as any[];
         },
       },
@@ -279,7 +279,7 @@ export function JarvisGraph3D() {
           const { data } = await supabase
             .from("eb_companies_scored" as any)
             .select("cnpj,ma_score")
-            .limit(150);
+            .limit(500);
           return (data ?? []) as any[];
         },
       },
@@ -323,7 +323,7 @@ export function JarvisGraph3D() {
               "cnpj,buyer_id,thesis_key,match_score,setor_fit,geografia_fit,porte_fit,tese_fit,is_current",
             )
             .eq("is_current", true)
-            .limit(300);
+            .limit(1000);
           return (data ?? []) as any[];
         },
       },
@@ -443,31 +443,31 @@ export function JarvisGraph3D() {
     if (!fg || !graphData.nodes.length) return;
 
     const N = graphData.nodes.length;
-    const R = Math.max(600, Math.min(1800, 500 + N * 3.5));
+    const R = Math.max(900, Math.min(2600, 800 + N * 5.0));
     sphereRadiusRef.current = R;
 
     let raf = 0;
     raf = requestAnimationFrame(() => {
       try {
-        fg.d3Force?.("charge", forceManyBody().strength(-180).distanceMax(R * 1.6));
+        fg.d3Force?.("charge", forceManyBody().strength(-340).distanceMax(R * 1.8));
         fg.d3Force?.(
           "link",
           forceLink()
             .id((d: any) => d.id)
-            .distance((l: any) => 60 + (1 - (l.weight ?? 0.5)) * 90)
+            .distance((l: any) => 110 + (1 - (l.weight ?? 0.5)) * 160)
             .strength(0.35),
         );
         fg.d3Force?.(
           "collide",
-          forceCollide((n: any) => (n.visualRadius ?? 6) + 4),
+          forceCollide((n: any) => (n.visualRadius ?? 6) + 14),
         );
-        fg.d3Force?.("radial", forceRadial(R, 0, 0, 0).strength(0.18));
+        fg.d3Force?.("radial", forceRadial(R, 0, 0, 0).strength(0.14));
         fg.d3Force?.("center", null);
         fg.d3Force?.("seller-spread", null);
 
         // Damping/viscosidade — crescimento controlado, sem explodir
-        fg.d3VelocityDecay?.(0.55);
-        fg.d3AlphaDecay?.(0.012);
+        fg.d3VelocityDecay?.(0.50);
+        fg.d3AlphaDecay?.(0.010);
         fg.d3AlphaTarget?.(0.05); // mantém vivo durante a germinação
         fg.cooldownTicks?.(Infinity);
         fg.refresh?.();
