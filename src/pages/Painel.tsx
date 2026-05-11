@@ -390,7 +390,7 @@ function KPI({ label, value, icon: Icon, hint }: { label: string; value: any; ic
   );
 }
 
-function BBGSection({ label, subtitle, children }: { label: string; subtitle?: string; children: React.ReactNode }) {
+function BBGSection({ label, subtitle, children }: { label: string; subtitle?: string; children: ReactNode }) {
   return (
     <section className="mb-8">
       <div className="flex items-baseline justify-between gap-3 mb-3 pb-2 border-b border-border/70">
