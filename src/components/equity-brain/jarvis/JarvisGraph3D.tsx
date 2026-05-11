@@ -22,6 +22,10 @@ import {
   Color,
   AdditiveBlending,
   DoubleSide,
+  Points,
+  BufferGeometry,
+  Float32BufferAttribute,
+  PointsMaterial,
   type Object3D,
 } from "three";
 import { forceCollide, forceManyBody, forceRadial, forceLink } from "d3-force-3d";
