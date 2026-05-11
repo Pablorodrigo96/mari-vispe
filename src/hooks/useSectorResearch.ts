@@ -60,8 +60,8 @@ export function useSectorResearch(setorSlug: string) {
     ? new Date(query.data.expires_at).getTime() < Date.now()
     : false;
 
-  const generate = useMutation({
-    mutationFn: async (force = false) => {
+  const generate = useMutation<any, Error, boolean | undefined>({
+    mutationFn: async (force?: boolean) => {
       const { data, error } = await supabase.functions.invoke("research-sector", {
         body: { setor_slug: setorSlug, force_refresh: force },
       });
