@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Mail } from 'lucide-react';
+import { Mail, AlertCircle } from 'lucide-react';
+import { getResetRedirectUrl } from '@/lib/authRedirects';
 
 interface Props {
   open: boolean;
