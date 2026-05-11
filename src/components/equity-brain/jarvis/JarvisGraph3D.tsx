@@ -461,12 +461,7 @@ export function JarvisGraph3D() {
     selectedNodeTypes, selectedUfs, selectedVerticals, thesisFilter, buyerFilter,
   ]);
 
-  // [DIAG] log para diagnosticar tela branca — remover depois de validado
-  console.log("[Jarvis3D] render", {
-    isLoading, isError,
-    nodes: graphData.nodes.length, links: graphData.links.length,
-    isMobile, size,
-  });
+  // (log de render removido — estava forçando trabalho extra a cada frame)
 
   const verticalsList = useMemo(() => {
     const set = new Set<string>();
