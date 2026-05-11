@@ -52,11 +52,11 @@ Deno.serve(async (req) => {
     ];
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
-    });
+    }, { function_name: "mari-chat", feature: "chat", user_id: user.id, model: "google/gemini-2.5-flash", metadata: { entity_type, entity_id } });
     if (!aiRes.ok) {
       return new Response(JSON.stringify({ error: aiRes.status === 429 ? "Rate limit" : aiRes.status === 402 ? "Sem créditos" : "Erro AI" }), { status: aiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
