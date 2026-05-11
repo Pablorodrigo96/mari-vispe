@@ -143,44 +143,49 @@ ${(matches ?? []).map((m: any, i: number) => `${i + 1}. ${m.buyer_nome} (${m.buy
 
 Produza a análise no formato JSON pedido.`;
 
-    // 4) Chama Claude
-    const claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
+    // 4) Lovable AI Gateway
+    const aiResp = await callLovableAI({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+    }, {
+      function_name: "claude-classify-thesis",
+      feature: "thesis_classification",
+      user_id: auth.userId,
+      metadata: { cnpj },
     });
 
-    if (!claudeResp.ok) {
-      const errText = await claudeResp.text();
-      console.error("Claude API error:", claudeResp.status, errText);
+    if (!aiResp.ok) {
+      const errText = await aiResp.text();
+      console.error("Gateway error:", aiResp.status, errText);
       await supabase.schema("equity_brain" as any).from("ai_runs").insert({
         function_name: "classify_thesis",
         cnpj,
         model: MODEL,
         prompt_input: { user: userPrompt },
         status: "error",
-        error_message: `${claudeResp.status}: ${errText}`,
+        error_message: `${aiResp.status}: ${errText}`,
         latency_ms: Date.now() - t0,
         triggered_by: auth.userId,
       });
-      return new Response(JSON.stringify({ error: "Claude API error", status: claudeResp.status, detail: errText }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const userMsg = aiResp.status === 429
+        ? "Sistema sobrecarregado, tente novamente em instantes."
+        : aiResp.status === 402
+        ? "Limite de uso de IA atingido. Contate o admin."
+        : "Erro ao classificar tese.";
+      return new Response(JSON.stringify({ error: userMsg, status: aiResp.status, detail: errText }), {
+        status: aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const claudeJson = await claudeResp.json();
-    const text: string = claudeJson.content?.[0]?.text ?? "";
+    const aiJson = await aiResp.json();
+    const text: string = aiJson.choices?.[0]?.message?.content ?? "";
 
-    // 5) Parse JSON (tolera prefácio com ``` que Claude às vezes envia)
+    // 5) Parse JSON (tolera prefácio com ```)
     let parsed: any = null;
     try {
       parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
@@ -188,19 +193,9 @@ Produza a análise no formato JSON pedido.`;
       parsed = null;
     }
 
-    const tokensIn = claudeJson.usage?.input_tokens ?? 0;
-    const tokensOut = claudeJson.usage?.output_tokens ?? 0;
-    const costUsd = (tokensIn * COST_INPUT_PER_MTOK / 1_000_000) + (tokensOut * COST_OUTPUT_PER_MTOK / 1_000_000);
-
-    try {
-      const { logApiUsage } = await import("../_shared/apiTrack.ts");
-      await logApiUsage({
-        provider: "anthropic", category: "llm", model: MODEL,
-        function_name: "claude-classify-thesis", feature: "thesis_classification",
-        input_tokens: tokensIn, output_tokens: tokensOut, total_tokens: tokensIn + tokensOut,
-        status: "success", http_status: 200,
-      });
-    } catch (e) { console.error("apiTrack:", e); }
+    const tokensIn = aiJson.usage?.prompt_tokens ?? 0;
+    const tokensOut = aiJson.usage?.completion_tokens ?? 0;
+    const costUsd = 0; // já contabilizado por callLovableAI em api_usage_logs
 
     // 6) Atualiza tabelas se parse foi bem
     if (parsed?.summary) {
