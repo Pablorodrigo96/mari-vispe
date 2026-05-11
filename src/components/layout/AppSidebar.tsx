@@ -46,7 +46,10 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
   const groups: NavGroup[] = [
     {
       id: 'overview', name: 'Visão Geral', icon: LayoutDashboard,
-      children: [{ name: 'Painel', href: '/painel', icon: LayoutDashboard }],
+      children: [
+        { name: 'Painel', href: '/painel', icon: LayoutDashboard },
+        { name: 'Inteligência de Mercado', href: '/inteligencia', icon: Sparkles },
+      ],
     },
     {
       id: 'marketplace', name: 'Marketplace', icon: Store,

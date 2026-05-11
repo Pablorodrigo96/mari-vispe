@@ -45,6 +45,7 @@ const BlindTeaser = lazy(() => import("./pages/BlindTeaser"));
 
 // Authenticated user pages
 const Painel = lazy(() => import("./pages/Painel"));
+const Inteligencia = lazy(() => import("./pages/Inteligencia"));
 const MyListings = lazy(() => import("./pages/MyListings"));
 const ListingCockpit = lazy(() => import("./pages/ListingCockpit"));
 const EditListing = lazy(() => import("./pages/EditListing"));
@@ -185,6 +186,7 @@ const App = () => (
 
               {/* Authenticated-only routes (AppShell will redirect to /auth via the page itself) */}
               <Route path="/painel" element={<Painel />} />
+              <Route path="/inteligencia" element={<Inteligencia />} />
               <Route path="/meus-anuncios" element={<MyListings />} />
               <Route path="/meus-anuncios/:id" element={<ListingCockpit />} />
               <Route path="/editar-anuncio/:id" element={<EditListing />} />
