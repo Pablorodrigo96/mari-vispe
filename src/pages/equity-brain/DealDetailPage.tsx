@@ -6,6 +6,7 @@ import { DealCard } from "@/components/equity-brain/DealCard";
 import { useCompanyResolver } from "@/hooks/useCompanyResolver";
 import { EntityNotes } from "@/components/equity-brain/notes/EntityNotes";
 import { CompanyEnrichedHeader } from "@/components/equity-brain/company/CompanyEnrichedHeader";
+import { ClassifyThesisCard } from "@/components/equity-brain/company/ClassifyThesisCard";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "notes";
@@ -102,7 +103,14 @@ export default function DealDetailPage() {
               </button>
             ))}
           </div>
-          {tab === "overview" && <DealCard cnpj={resolved.cnpj} mode="page" />}
+          {tab === "overview" && (
+            <div className="space-y-3">
+              <div className="px-6">
+                <ClassifyThesisCard cnpj={resolved.cnpj} />
+              </div>
+              <DealCard cnpj={resolved.cnpj} mode="page" />
+            </div>
+          )}
           {tab === "notes" && (
             <div className="px-6 py-4">
               <EntityNotes entityType="company" entityId={resolved.cnpj} />
