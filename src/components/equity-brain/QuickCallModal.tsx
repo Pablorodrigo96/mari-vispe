@@ -26,6 +26,59 @@ export function QuickCallModal({ cnpj, razaoSocial, open, onOpenChange, onSubmit
   const [notes, setNotes] = useState("");
   const [nextPitch, setNextPitch] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<{
+    intencao_venda?: number | null;
+    timing_estimado?: string | null;
+    dor_principal?: string | null;
+    sinais_novos?: string[];
+    faturamento_mencionado?: string | null;
+    ebitda_mencionado?: string | null;
+    followup_recomendado?: string | null;
+  } | null>(null);
+
+  const TIMING_MAP_AI_TO_FORM: Record<string, string> = {
+    agora: "agora", "6m": "6m", "12m+": "12m", nao: "nao",
+  };
+
+  async function analyzeWithMari() {
+    const trimmed = notes.trim();
+    if (trimmed.length < 50) {
+      toast.error("Adicione pelo menos 50 caracteres nas notas para a Mari analisar");
+      return;
+    }
+    setAnalyzing(true);
+    setAnalysis(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("claude-analyze-call", {
+        body: { cnpj, call_notes: trimmed },
+      });
+      if (error) throw error;
+      const parsed = data?.parsed;
+      if (!parsed) throw new Error("Mari não retornou análise estruturada");
+      setAnalysis(parsed);
+      toast.success(`Mari analisou · ${data?.tokens?.output ?? 0} tokens`);
+    } catch (e: any) {
+      console.error("analyze-call error:", e);
+      toast.error(e?.message ?? "Falha ao analisar com Mari");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  function applyAnalysisToForm() {
+    if (!analysis) return;
+    if (analysis.timing_estimado) {
+      const mapped = TIMING_MAP_AI_TO_FORM[analysis.timing_estimado];
+      if (mapped) setTiming(mapped);
+    }
+    if (analysis.dor_principal) setDor(analysis.dor_principal);
+    if (typeof analysis.intencao_venda === "number") {
+      const stars = Math.max(1, Math.min(5, Math.round(analysis.intencao_venda * 5)));
+      setInterest(stars);
+    }
+    toast.success("Campos preenchidos pela Mari");
+  }
 
   const m = useMutation({
     mutationFn: async () => {
