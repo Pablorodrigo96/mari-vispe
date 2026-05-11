@@ -191,7 +191,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 title={g.name}
                 className={cn(
                   'flex items-center justify-center h-10 my-1 rounded-lg transition-colors',
-                  isGroupActive ? 'bg-accent/15 text-accent' : 'text-zinc-300 hover:bg-muted hover:text-foreground'
+                  isGroupActive ? 'bg-accent/15 text-accent' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 )}
               >
                 <g.icon className="h-4 w-4" />
@@ -205,7 +205,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 onClick={() => toggle(g.id)}
                 className={cn(
                   'w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors',
-                  isGroupActive ? 'text-accent' : 'text-zinc-300 hover:text-foreground hover:bg-muted/50'
+                  isGroupActive ? 'text-accent' : 'text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60'
                 )}
               >
                 <span className="flex items-center gap-2">
@@ -215,7 +215,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isOpen && 'rotate-180')} />
               </button>
               {isOpen && (
-                <ul className="mt-0.5 ml-3 pl-3 border-l border-border space-y-0.5">
+                <ul className="mt-0.5 ml-3 pl-3 border-l border-sidebar-border space-y-0.5">
                   {g.children.map((c) => {
                     const isActive = location.pathname === c.href;
                     return (
@@ -226,7 +226,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                             'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors',
                             isActive
                               ? 'bg-accent/15 text-accent font-medium'
-                              : 'text-zinc-300 hover:text-foreground hover:bg-muted'
+                              : 'text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent'
                           )}
                         >
                           <c.icon className="h-3.5 w-3.5" />
