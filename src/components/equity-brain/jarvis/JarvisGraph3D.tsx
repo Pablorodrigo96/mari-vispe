@@ -916,7 +916,7 @@ export function JarvisGraph3D() {
         playsInline
         preload="auto"
         style={{
-          filter: `brightness(${videoBrightnessVal}) saturate(0.5) blur(1px) hue-rotate(60deg)`,
+          filter: `brightness(${videoBrightnessVal}) saturate(0.5) hue-rotate(60deg)`,
           mixBlendMode: "luminosity",
         }}
       />
