@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.track-event]
 verify_jwt = false
+
+[functions.embed-note]
+verify_jwt = false
+
+[functions.embed-query]
+verify_jwt = false
