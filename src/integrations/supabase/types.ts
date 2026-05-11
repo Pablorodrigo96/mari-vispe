@@ -4820,6 +4820,7 @@ export type Database = {
           id: string
           pinned: boolean
           similarity: number
+          source: string
           tags: string[]
           title: string
           updated_at: string
