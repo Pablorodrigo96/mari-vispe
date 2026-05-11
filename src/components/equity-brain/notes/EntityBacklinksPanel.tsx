@@ -59,7 +59,7 @@ export function EntityBacklinksPanel({ entityType, entityId }: Props) {
       {items.map((m) => {
         const meta = SOURCE_META[m.source_entity_type] ?? SOURCE_META.company;
         const Icon = meta.Icon;
-        const preview = (m.body_preview ?? "").replace(/@(mandate|buyer|company):[A-Za-z0-9-]+(?:\|[^\s]+)?/g, "@$1").slice(0, 180);
+        const preview = (m.body_preview ?? "").replace(/@(mandate|buyer|company|match|listing|daily):[A-Za-z0-9_\-:.]+(?:\|[^\s]+)?/g, "@$1").slice(0, 180);
         return (
           <Link
             key={m.id}
