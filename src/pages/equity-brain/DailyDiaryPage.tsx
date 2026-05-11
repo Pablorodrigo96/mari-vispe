@@ -82,7 +82,7 @@ export default function DailyDiaryPage() {
 
   const { data: note, isLoading } = useDailyNote(dateStr);
   const upsertMut = useUpsertDailyNote(dateStr);
-  const { data: feed } = useDailyFeed(dateStr);
+  const { data: feed, isLoading: feedLoading } = useDailyFeed(dateStr);
   const { data: streak = 0 } = useDailyStreak();
 
   const [body, setBody] = useState<string>("");
