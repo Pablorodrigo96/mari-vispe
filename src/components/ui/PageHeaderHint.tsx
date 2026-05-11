@@ -42,6 +42,14 @@ function HintTooltipContent({ guide }: { guide: Guide }) {
           </ul>
         </div>
       )}
+      {guide.risk && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider font-bold text-red-400 mb-0.5">
+            Se não fizer
+          </div>
+          <div className="text-zinc-300 leading-snug break-words">{guide.risk}</div>
+        </div>
+      )}
       {guide.tip && (
         <div>
           <div className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 mb-0.5">
