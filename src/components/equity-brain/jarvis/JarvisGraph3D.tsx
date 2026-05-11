@@ -574,7 +574,7 @@ export function JarvisGraph3D() {
     if (!fg || !graphData.nodes.length) return;
     const t = window.setTimeout(() => {
       try { fg.d3AlphaTarget?.(0); fg.cooldownTicks?.(0); fg.refresh?.(); } catch {}
-    }, 3500);
+    }, 1500);
     return () => window.clearTimeout(t);
   }, [graphData.nodes.length, graphData.links.length]);
 
