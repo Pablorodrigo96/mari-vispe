@@ -81,27 +81,18 @@ async function extractStructured(perplexityKey: string, sourceUrl: string, title
     temperature: 0,
   };
 
-  const resp = await fetch(PERPLEXITY_API, {
+  const resp = await trackedAIFetch(PERPLEXITY_API, {
     method: "POST",
     headers: { "Authorization": `Bearer ${perplexityKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
+  }, { function_name: "extract-news-event", feature: "news_event_extraction", model: body.model });
   if (!resp.ok) {
     console.error("extract err", resp.status, await resp.text().catch(() => ""));
     return null;
   }
   const data = await resp.json();
   const content = data?.choices?.[0]?.message?.content;
-
-  try {
-    const { logApiUsage } = await import("../_shared/apiTrack.ts");
-    await logApiUsage({
-      provider: "perplexity", category: "llm", model: body.model,
-      function_name: "extract-news-event", feature: "news_event_extraction",
-      input_tokens: data?.usage?.prompt_tokens, output_tokens: data?.usage?.completion_tokens,
-      total_tokens: data?.usage?.total_tokens, status: "success", http_status: 200,
-    });
-  } catch (e) { console.error("apiTrack:", e); }
+  // Usage already logged by trackedAIFetch.
 
   try { return JSON.parse(content); } catch { return null; }
 }
