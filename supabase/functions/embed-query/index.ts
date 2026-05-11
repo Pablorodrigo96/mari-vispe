@@ -4,6 +4,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,11 +50,11 @@ async function generateEmbedding(text: string): Promise<number[] | null> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) { console.error("[embed-query] LOVABLE_API_KEY missing"); return null; }
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+    const resp = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/embeddings", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: "google/text-embedding-004", input: text.slice(0, 2000) }),
-    });
+    }, { function_name: "embed-query", model: "google/text-embedding-004" });
     if (!resp.ok) {
       const t = await resp.text();
       console.error(`[embed-query] gateway ${resp.status}: ${t.slice(0, 300)}`);

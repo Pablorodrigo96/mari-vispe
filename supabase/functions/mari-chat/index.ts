@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { trackedAIFetch } from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,28 +52,18 @@ Deno.serve(async (req) => {
     ];
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await trackedAIFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
-    });
+    }, { function_name: "mari-chat", feature: "chat", user_id: user.id, model: "google/gemini-2.5-flash", metadata: { entity_type, entity_id } });
     if (!aiRes.ok) {
       return new Response(JSON.stringify({ error: aiRes.status === 429 ? "Rate limit" : aiRes.status === 402 ? "Sem créditos" : "Erro AI" }), { status: aiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     const data = await aiRes.json();
     const reply = data.choices?.[0]?.message?.content ?? "";
 
-    try {
-      const { logApiUsage } = await import("../_shared/apiTrack.ts");
-      await logApiUsage({
-        provider: "lovable_ai", category: "llm", model: "google/gemini-2.5-flash",
-        function_name: "mari-chat", feature: "chat",
-        user_id: user.id,
-        input_tokens: data.usage?.prompt_tokens, output_tokens: data.usage?.completion_tokens,
-        total_tokens: data.usage?.total_tokens, status: "success", http_status: 200,
-        metadata: { entity_type, entity_id },
-      });
-    } catch (e) { console.error("apiTrack:", e); }
+    // Usage already logged by trackedAIFetch above.
 
     // Persist both messages
     await supabase.schema("equity_brain").from("mari_chat_messages").insert([
