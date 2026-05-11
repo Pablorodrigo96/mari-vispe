@@ -163,13 +163,13 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
       )}
     >
       {/* Brand */}
-      <div className="h-20 px-4 border-b border-border flex items-center justify-between shrink-0">
+      <div className="h-20 px-4 border-b border-sidebar-border flex items-center justify-between shrink-0">
         <Link to="/painel" className="flex items-center min-w-0">
           <MariLogo variant={collapsed ? 'symbol-dark' : 'dark'} size={collapsed ? 48 : 80} />
         </Link>
         <button
           onClick={onToggleCollapse}
-          className="text-zinc-300 hover:text-foreground p-1 rounded hidden lg:block"
+          className="text-sidebar-foreground/80 hover:text-sidebar-foreground p-1 rounded hidden lg:block"
           aria-label="Colapsar menu"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
