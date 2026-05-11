@@ -365,6 +365,7 @@ export default function Painel() {
           )}
           </div>
         </div>
+        </BBGSection>
       </div>
     </div>
   );
