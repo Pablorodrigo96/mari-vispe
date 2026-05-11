@@ -1,60 +1,41 @@
-## Block 3 — Fix de contraste/tema no cockpit Bloomberg
+## Objetivo
 
-### Diagnóstico
-O screenshot mostra que todos os painéis Bloomberg do `/painel` estão "apagados": títulos, valores e CTAs em cinza-claro sobre fundo claro. A raiz é simples — os 5 componentes novos usam classes Tailwind `zinc-*` fixas (paleta dark-only), mas o painel está em tema claro. Resultado: `text-zinc-500` vira quase branco em fundo branco, `border-zinc-800` somem, `bg-zinc-950/40` não rende.
+Padronizar a sidebar (`src/components/layout/AppSidebar.tsx`) usando tokens de design (`sidebar-*`) em vez de cores cruas (`bg-gray-900`, `text-slate-50`, `text-zinc-300/400`, `bg-muted`, `border-border`). Resultado: contraste alto e consistente entre todos os cards/textos da sidebar, com a mesma base visual que o "Personal Advisor".
 
-Nenhuma feature, query ou layout muda. Só presentation.
+## Contexto
 
-### Mudanças (5 arquivos)
+`index.css` já define o conjunto `--sidebar-background` (0 0% 4%), `--sidebar-foreground` (0 0% 88%), `--sidebar-accent` (0 0% 12%), `--sidebar-border` (0 0% 16%) — idênticos em light e dark. O `<aside>` já usa `bg-sidebar text-sidebar-foreground`. Hoje o resto do arquivo mistura `text-zinc-300/400`, `text-foreground`, `bg-muted`, `border-border` (tokens do tema geral), o que gera o efeito "apagado" quando o tema global muda. O patch anterior resolveu isso no card do advisor adicionando `bg-gray-900` + `text-slate-50` hardcoded — esse é o débito a remover.
 
-**1. `src/components/painel/bbg/BBGPanel.tsx`**
-- `border-zinc-800 bg-zinc-950/40` → `border-border bg-card/60 backdrop-blur-sm`
-- Header: `text-zinc-500` → `text-muted-foreground`; `accent ? text-volt` mantém Volt
-- Divisor: `bg-zinc-800` → `bg-border`
-- BBGEmpty: `text-zinc-500` → `text-muted-foreground`
+## Mudanças (somente `src/components/layout/AppSidebar.tsx`)
 
-**2. `src/components/painel/bbg/BloombergTopBar.tsx`**
-- `border-zinc-800 bg-zinc-950/60` → `border-border bg-card/80 backdrop-blur`
-- `text-zinc-200` → `text-foreground`; `text-zinc-500/600` → `text-muted-foreground`
-- Badges role: `border-zinc-800 text-zinc-400` → `border-border text-muted-foreground`
-- Botão notificações: `hover:bg-zinc-900` → `hover:bg-muted`
+### 1. Card "Personal Advisor" (linhas 304–321)
+- `rounded-lg border border-border bg-muted/40 p-2.5 bg-gray-900` → `rounded-lg border border-sidebar-border bg-sidebar-accent p-2.5`
+- `text-zinc-400` (label "Seu advisor pessoal") → `text-sidebar-foreground/60`
+- `text-foreground ... text-slate-50` (nome) → `text-sidebar-foreground`
+- Avatar fallback e link Volt permanecem (já usam token `volt`).
 
-**3. `src/components/painel/bbg/ColEmpresa.tsx`**
-- Nome empresa: `text-zinc-100` → `text-foreground`
-- Segmento: `text-zinc-400` → `text-muted-foreground`
-- Score (62): `text-zinc-100` → `text-foreground` + classe `text-5xl font-black` pra dar peso (Bloomberg-style mas legível)
-- Barra progress: `bg-zinc-900` → `bg-muted`; preenchimento mantém `bg-volt`
-- Label "PRÉ-VENDA": `text-volt` (já ok), aumentar para `text-xs font-bold`
-- Breakdown items: `text-zinc-400/200/600` → `text-muted-foreground` / `text-foreground` / `text-muted-foreground/60`
-- Janela de venda: `text-zinc-500` → `text-muted-foreground`; `text-zinc-200` → `text-foreground`
-- Anúncios: `text-zinc-100` → `text-foreground`; `text-zinc-500` → `text-muted-foreground`
+### 2. Card "User footer" (linhas 326–347) — aplicar mesma casca do advisor
+- Envolver o bloco do perfil em `rounded-lg border border-sidebar-border bg-sidebar-accent p-2.5` (espelhando o advisor) para que os dois cards inferiores fiquem visualmente irmãos.
+- `hover:bg-muted` no `<Link to="/meu-perfil">` → `hover:bg-sidebar-accent/70`
+- `text-foreground` (email) → `text-sidebar-foreground`
+- `text-zinc-400` ("Meu perfil") → `text-sidebar-foreground/60`
+- Botão "Sair": `text-zinc-300` → `text-sidebar-foreground/80`
 
-**4. `src/components/painel/bbg/ColValuationBuyers.tsx`**
-- "ATUAL ESTIMADO" label: `text-zinc-500` → `text-muted-foreground font-semibold`
-- Valor R$ 17,8M: `text-zinc-100` → `text-foreground` (já vem do tema, fica preto sólido)
-- Card potencial: trocar `border-volt/30 from-volt/5` por `border-volt/40 bg-volt/10` para destacar — o card volt deve "saltar"
-- `text-zinc-300` (texto interno) → `text-foreground`
-- `text-zinc-500` → `text-muted-foreground`
-- "Detalhes técnicos": `text-zinc-400 hover:text-volt` → `text-muted-foreground hover:text-foreground`
-- Compradores: número grande `text-zinc-100` → `text-foreground`; barras `bg-zinc-900` → `bg-muted`; labels `text-zinc-300/400` → `text-foreground` / `text-muted-foreground`
+### 3. Navegação (linhas 180–289) — varrer zinc/foreground/muted/border
+- Botão de grupo (208): `text-zinc-300 hover:text-foreground hover:bg-muted/50` → `text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60`; ativo `text-accent` mantém (token semântico).
+- `ul` filha (218): `border-l border-border` → `border-l border-sidebar-border`
+- Itens filhos (229): `text-zinc-300 hover:text-foreground hover:bg-muted` → `text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent`
+- Item ativo (228): `bg-accent/15 text-accent` mantém.
+- Collapsed group icon (194): `text-zinc-300 hover:bg-muted hover:text-foreground` → `text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground`
+- Cockpit Interno (246, 278): `border-t border-border` → `border-t border-sidebar-border`; links Admin → mesmas substituições zinc→sidebar-foreground/muted→sidebar-accent. Links Equity Brain mantêm `text-emerald-500`.
+- Brand bar (166, 172): `border-b border-border` → `border-b border-sidebar-border`; botão de colapso `text-zinc-300 hover:text-foreground` → `text-sidebar-foreground/80 hover:text-sidebar-foreground`.
+- Wrappers dos cards inferiores (292, 326): `border-t border-border` → `border-t border-sidebar-border`.
 
-**5. `src/components/painel/bbg/ColFeedAgenda.tsx`**
-- Icon wrapper: `border-zinc-800 bg-zinc-900/50` → `border-border bg-muted/50`
-- Icon: `text-zinc-400` → `text-muted-foreground`
-- Label feed: `text-zinc-200` → `text-foreground`
-- Detail/data: `text-zinc-500/600` → `text-muted-foreground / text-muted-foreground/60`
+## Fora de escopo
 
-### Ganhos visuais esperados
-- "R$ 17,8M" e "R$ 24M" passam a aparecer em preto sólido (foreground) — agora dominam a tela como num terminal real.
-- Headers "VALUATION", "FEED DE ATIVIDADE" passam de fantasma a `muted-foreground` legível.
-- CTA "Cadastrar agora" no card Sua Empresa fica em Volt sólido visível.
-- Score 62 ganha peso tipográfico.
-- Card de Potencial (pico 2027) ganha destaque com `bg-volt/10` em vez de gradiente quase transparente.
-- Dark mode continua funcionando (tokens semânticos rendem nos dois).
+- Outros arquivos com `bg-gray-900` / `text-slate-50` (ex.: `MondayParity`, cards do Equity Brain, `TeaserDetails`) — não tocados nesta passada; só a sidebar foi pedida.
+- Nenhuma mudança em layout, espaçamento, tipografia, lógica ou queries.
 
-### Não inclui
-- Nenhuma alteração em queries, hooks, dados, rotas
-- Nenhuma feature nova
-- Layout/grid permanecem idênticos
+## Validação
 
-Próximo bloco (4) seria animação count-up nos números, pulse no "live" e micro-borders 1px — só depois desse fix de contraste, porque polish sobre algo ilegível não resolve.
+Após a edição: olhar `/painel` com sidebar expandida e colapsada; conferir (a) card do advisor sem o hack `bg-gray-900` e ainda contrastado; (b) card do usuário com a mesma casca; (c) itens de menu legíveis em hover/ativo; (d) nenhum `bg-gray-900`/`text-slate-50`/`text-zinc-*`/`bg-muted`/`border-border` remanescente em `AppSidebar.tsx` (`rg` final).

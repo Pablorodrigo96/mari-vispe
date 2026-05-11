@@ -163,13 +163,13 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
       )}
     >
       {/* Brand */}
-      <div className="h-20 px-4 border-b border-border flex items-center justify-between shrink-0">
+      <div className="h-20 px-4 border-b border-sidebar-border flex items-center justify-between shrink-0">
         <Link to="/painel" className="flex items-center min-w-0">
           <MariLogo variant={collapsed ? 'symbol-dark' : 'dark'} size={collapsed ? 48 : 80} />
         </Link>
         <button
           onClick={onToggleCollapse}
-          className="text-zinc-300 hover:text-foreground p-1 rounded hidden lg:block"
+          className="text-sidebar-foreground/80 hover:text-sidebar-foreground p-1 rounded hidden lg:block"
           aria-label="Colapsar menu"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -191,7 +191,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 title={g.name}
                 className={cn(
                   'flex items-center justify-center h-10 my-1 rounded-lg transition-colors',
-                  isGroupActive ? 'bg-accent/15 text-accent' : 'text-zinc-300 hover:bg-muted hover:text-foreground'
+                  isGroupActive ? 'bg-accent/15 text-accent' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 )}
               >
                 <g.icon className="h-4 w-4" />
@@ -205,7 +205,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 onClick={() => toggle(g.id)}
                 className={cn(
                   'w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors',
-                  isGroupActive ? 'text-accent' : 'text-zinc-300 hover:text-foreground hover:bg-muted/50'
+                  isGroupActive ? 'text-accent' : 'text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60'
                 )}
               >
                 <span className="flex items-center gap-2">
@@ -215,7 +215,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isOpen && 'rotate-180')} />
               </button>
               {isOpen && (
-                <ul className="mt-0.5 ml-3 pl-3 border-l border-border space-y-0.5">
+                <ul className="mt-0.5 ml-3 pl-3 border-l border-sidebar-border space-y-0.5">
                   {g.children.map((c) => {
                     const isActive = location.pathname === c.href;
                     return (
@@ -226,7 +226,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                             'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors',
                             isActive
                               ? 'bg-accent/15 text-accent font-medium'
-                              : 'text-zinc-300 hover:text-foreground hover:bg-muted'
+                              : 'text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent'
                           )}
                         >
                           <c.icon className="h-3.5 w-3.5" />
@@ -243,7 +243,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
 
         {/* Cockpit Interno (admin/advisor) */}
         {(eff.isAdmin || eff.isAdvisor) && !collapsed && (
-          <div className="mt-4 pt-3 border-t border-border">
+          <div className="mt-4 pt-3 border-t border-sidebar-border">
             <div className="flex items-center gap-2 px-3 mb-1">
               <Sparkles className="h-3 w-3 text-emerald-500" />
               <span className="text-[10px] uppercase tracking-widest font-semibold text-emerald-500">
@@ -255,7 +255,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
                 <li>
                   <Link
                     to="/admin"
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-zinc-300 hover:text-foreground hover:bg-muted"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                   >
                     <Shield className="h-3.5 w-3.5" />
                     Admin
@@ -275,9 +275,9 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
           </div>
         )}
         {(eff.isAdmin || eff.isAdvisor) && collapsed && (
-          <div className="mt-3 pt-3 border-t border-border space-y-1">
+          <div className="mt-3 pt-3 border-t border-sidebar-border space-y-1">
             {eff.isAdmin && (
-              <Link to="/admin" title="Admin" className="flex items-center justify-center h-10 rounded-lg text-zinc-300 hover:bg-muted hover:text-foreground">
+              <Link to="/admin" title="Admin" className="flex items-center justify-center h-10 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground">
                 <Shield className="h-4 w-4" />
               </Link>
             )}
@@ -289,7 +289,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
       </nav>
 
       {/* Personal advisor mini-box */}
-      <div className="border-t border-border p-3 shrink-0">
+      <div className="border-t border-sidebar-border p-3 shrink-0">
         {collapsed ? (
           <a
             href={getWhatsAppLink('Olá Rafael, vim pela Mari.', '5551992338258')}
@@ -301,13 +301,13 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
             <MessageCircle className="h-4 w-4" />
           </a>
         ) : (
-          <div className="rounded-lg border border-border bg-muted/40 p-2.5 bg-gray-900">
-            <p className="text-[10px] uppercase tracking-wide text-zinc-400 mb-1.5">Seu advisor pessoal</p>
+          <div className="rounded-lg border border-sidebar-border bg-sidebar-accent p-2.5">
+            <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/60 mb-1.5">Seu advisor pessoal</p>
             <div className="flex items-center gap-2">
               <Avatar className="h-7 w-7">
                 <AvatarFallback className="bg-volt/20 text-volt text-[10px] font-semibold">RC</AvatarFallback>
               </Avatar>
-              <p className="text-xs font-medium text-foreground break-words leading-tight flex-1 text-slate-50">Rafael Cocolichio</p>
+              <p className="text-xs font-medium text-sidebar-foreground break-words leading-tight flex-1">Rafael Cocolichio</p>
             </div>
             <a
               href={getWhatsAppLink('Olá Rafael, vim pela Mari.', '5551992338258')}
@@ -323,27 +323,27 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
       </div>
 
       {/* User footer */}
-      <div className="border-t border-border p-3 shrink-0">
+      <div className="border-t border-sidebar-border p-3 shrink-0">
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
             <Avatar className="h-8 w-8"><AvatarFallback className="bg-accent text-accent-foreground text-xs">{userInitials}</AvatarFallback></Avatar>
-            <button onClick={handleSignOut} title="Sair" className="text-zinc-300 hover:text-destructive">
+            <button onClick={handleSignOut} title="Sair" className="text-sidebar-foreground/80 hover:text-destructive">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
         ) : (
-          <>
-            <Link to="/meu-perfil" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors">
+          <div className="rounded-lg border border-sidebar-border bg-sidebar-accent p-2.5">
+            <Link to="/meu-perfil" className="flex items-center gap-2 p-1 rounded-md hover:bg-sidebar-accent/70 transition-colors">
               <Avatar className="h-8 w-8"><AvatarFallback className="bg-accent text-accent-foreground text-xs">{userInitials}</AvatarFallback></Avatar>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
-                <p className="text-[10px] text-zinc-400">Meu perfil</p>
+                <p className="text-xs font-medium text-sidebar-foreground truncate">{user?.email}</p>
+                <p className="text-[10px] text-sidebar-foreground/60">Meu perfil</p>
               </div>
             </Link>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start mt-1 text-zinc-300 hover:text-destructive">
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start mt-1 text-sidebar-foreground/80 hover:text-destructive">
               <LogOut className="h-3.5 w-3.5 mr-2" />Sair
             </Button>
-          </>
+          </div>
         )}
       </div>
     </aside>
