@@ -245,7 +245,12 @@ export default function Painel() {
         </div>
 
         {/* Right column */}
-        <div className="space-y-5">
+        <div className="space-y-4">
+          <NextActionCard
+            hasProfile={!!(profile?.full_name && profile?.phone)}
+            hasListing={(counts?.listings ?? 0) > 0}
+            hasValuation={(counts?.valuations ?? 0) > 0}
+          />
           {/* Onboarding */}
           {progress < 100 && (
             <Card>
