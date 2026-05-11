@@ -26,7 +26,10 @@ async function checkAuth(req: Request, supabaseUrl: string, serviceKey: string) 
   if (!authHeader?.startsWith("Bearer ")) return { ok: false, status: 401, error: "Unauthorized" };
   const token = authHeader.replace("Bearer ", "");
   if (token === serviceKey) return { ok: true };
-  const sbUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+  // Allow anon JWT as cron-authorized (pg_cron schedule uses anon key)
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  if (token === anonKey) return { ok: true };
+  const sbUser = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: claimsData } = await sbUser.auth.getClaims(token);
