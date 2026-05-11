@@ -323,6 +323,7 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
                   {n.title && <div className="text-sm font-semibold text-zinc-100 break-words">{n.title}</div>}
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <VisibilityBadge v={n.visibility} />
+                    <SourceBadge source={(n as any).source} />
                     {n.pinned && (
                       <Badge variant="outline" className="bg-transparent border-[#D9F564]/40 text-[#D9F564] text-[10px] gap-1">
                         <Pin className="h-2.5 w-2.5" /> Fixada
