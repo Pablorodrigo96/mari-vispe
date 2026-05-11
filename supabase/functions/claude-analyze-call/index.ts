@@ -83,6 +83,19 @@ serve(async (req) => {
     });
   }
 
+  // Provider guard: kill switch + monthly budget
+  try {
+    await assertProviderAllowed("anthropic");
+  } catch (e) {
+    if (e instanceof ProviderDisabledError || e instanceof ProviderBudgetExceededError) {
+      return new Response(JSON.stringify({ error: e.message, code: e.name }), {
+        status: e.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    throw e;
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const cnpj: string | undefined = body.cnpj;
