@@ -44,8 +44,7 @@ async function fetchSample(limit: number): Promise<ColdPoint[]> {
   const client = new Client(url);
   await client.connect();
   try {
-    // TABLESAMPLE em estabelecimentos pega ~0.05% das ~50M rows e depois LIMIT.
-    // Join leve em empresas para nome. Rápido (~300ms) sem ORDER BY random() full scan.
+    // TABLESAMPLE 1% + LIMIT — rápido em ~50M rows e devolve volume suficiente.
     const q = `
       SELECT
         (e.cnpj_basico || e.cnpj_ordem || e.cnpj_dv) AS cnpj,
@@ -53,10 +52,9 @@ async function fetchSample(limit: number): Promise<ColdPoint[]> {
         e.uf,
         e.municipio::text AS municipio,
         e.cnae_fiscal_principal::text AS cnae_descricao
-      FROM estabelecimentos e TABLESAMPLE SYSTEM (0.1)
+      FROM estabelecimentos e TABLESAMPLE SYSTEM (1)
       INNER JOIN empresas em ON em.cnpj_basico = e.cnpj_basico
-      WHERE e.situacao_cadastral = '2'
-        AND e.uf IS NOT NULL
+      WHERE e.uf IS NOT NULL
       LIMIT $1
     `;
     const res = await client.queryObject<ColdPoint>(q, [limit]);
