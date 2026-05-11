@@ -338,7 +338,7 @@ export default function DailyDiaryPage() {
             {(feed?.activities ?? []).map((a: any) => {
               const href = entityHref(a.entity_type, a.entity_id);
               const inner = (
-                <div className="flex items-start gap-2 text-[11px] text-zinc-300 hover:bg-zinc-800/40 rounded px-2 py-1.5">
+                <div className="flex items-start gap-2 text-[11px] text-zinc-300 hover:bg-zinc-800/60 rounded px-2 py-2">
                   <span className="text-zinc-500 mt-0.5">{activityIcon(a.kind)}</span>
                   <div className="min-w-0 flex-1">
                     <div className="font-medium truncate">{a.kind ?? "Atividade"}</div>
