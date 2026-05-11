@@ -404,6 +404,47 @@ export default function DailyDiaryPage() {
               </a>
             ))}
           </FeedCard>
+
+          <FeedCard title="Pendências IA" count={feed?.ai?.length ?? 0}>
+            {(feed?.ai ?? []).length === 0 && (
+              <EmptyHint>Nenhuma análise da Mari executada hoje.</EmptyHint>
+            )}
+            {(feed?.ai ?? []).map((r: any) => {
+              const fn = (r.function_name ?? "").replace(/^claude-/, "");
+              const isErr = r.status && r.status !== "success" && r.status !== "ok";
+              const target = r.cnpj
+                ? `/equity-brain/empresa/${r.cnpj}`
+                : r.match_id
+                ? `/equity-brain/match/${r.match_id}`
+                : r.buyer_id
+                ? `/equity-brain/buyer/${r.buyer_id}`
+                : null;
+              const inner = (
+                <div className="px-2 py-1.5 text-[11px] hover:bg-zinc-800/40 rounded">
+                  <div className="flex items-center gap-1.5">
+                    {isErr ? (
+                      <AlertTriangle className="h-3 w-3 text-amber-400" />
+                    ) : (
+                      <Sparkles className="h-3 w-3 text-[#D9F564]" />
+                    )}
+                    <span className="font-medium text-zinc-200 truncate">{fn || "ai-run"}</span>
+                    <span className="ml-auto text-[10px] text-zinc-500 tabular-nums">
+                      {format(new Date(r.created_at), "HH:mm")}
+                    </span>
+                  </div>
+                  <div className="text-zinc-500 truncate">
+                    {r.cnpj ? `CNPJ ${r.cnpj}` : r.match_id ? `Match ${r.match_id.slice(0, 8)}` : r.buyer_id ? `Buyer ${r.buyer_id.slice(0, 8)}` : "—"}
+                    {isErr && r.error_message && <span className="text-amber-400"> · {r.error_message.slice(0, 60)}</span>}
+                  </div>
+                </div>
+              );
+              return target ? (
+                <a key={r.id} href={target}>{inner}</a>
+              ) : (
+                <div key={r.id}>{inner}</div>
+              );
+            })}
+          </FeedCard>
         </div>
       </div>
     </div>
