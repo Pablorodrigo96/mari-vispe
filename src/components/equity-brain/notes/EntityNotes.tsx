@@ -48,6 +48,24 @@ function VisibilityBadge({ v }: { v: NoteVisibility }) {
   );
 }
 
+const SOURCE_META: Record<string, { label: string; icon: string; cls: string }> = {
+  ai_thesis: { label: "Tese · Mari", icon: "🧠", cls: "border-emerald-700/50 text-emerald-300" },
+  ai_pitch:  { label: "Pitch · Mari", icon: "🎯", cls: "border-violet-700/50 text-violet-300" },
+  ai_call:   { label: "Call · Mari", icon: "📞", cls: "border-amber-700/50 text-amber-300" },
+  template:  { label: "De template", icon: "📋", cls: "border-zinc-700 text-zinc-400" },
+};
+
+function SourceBadge({ source }: { source?: string | null }) {
+  if (!source || source === "manual") return null;
+  const meta = SOURCE_META[source];
+  if (!meta) return null;
+  return (
+    <Badge variant="outline" className={`bg-transparent text-[10px] gap-1 ${meta.cls}`}>
+      <span>{meta.icon}</span> {meta.label}
+    </Badge>
+  );
+}
+
 export function EntityNotes({ entityType, entityId, allowedVisibilities = ["internal", "public"] }: Props) {
   const { user } = useAuth();
   const { isAdvisor, isAdmin } = useEffectiveRoles();
@@ -215,7 +233,7 @@ export function EntityNotes({ entityType, entityId, allowedVisibilities = ["inte
               className="h-8 text-xs bg-zinc-950 border-zinc-800 text-zinc-100 flex-1"
             />
             <TemplatePicker
-              scope={entityType}
+              scope={(entityType === "match" || entityType === "listing" ? "company" : entityType) as any}
               onInsert={(md) =>
                 setDraft((d) => ({ ...d, body_md: d.body_md ? `${d.body_md}\n\n${md}` : md }))
               }
