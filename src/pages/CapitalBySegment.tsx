@@ -61,9 +61,38 @@ const segments: Record<string, {
   },
 };
 
+const slugAliases: Record<string, string> = {
+  tecnologia: 'tech',
+  tec: 'tech',
+  ti: 'tech',
+  software: 'tech',
+  saas: 'tech',
+  fintech: 'tech',
+  healthtech: 'tech',
+  saude: 'saude',
+  'saúde': 'saude',
+  health: 'saude',
+  clinicas: 'saude',
+  hospitais: 'saude',
+  varejo: 'varejo',
+  retail: 'varejo',
+  comercio: 'varejo',
+  'comércio': 'varejo',
+  ecommerce: 'varejo',
+  'e-commerce': 'varejo',
+  industria: 'industria',
+  'indústria': 'industria',
+  industry: 'industria',
+  manufatura: 'industria',
+  agro: 'industria',
+  agroindustria: 'industria',
+};
+
 export default function CapitalBySegment() {
   const { slug } = useParams<{ slug: string }>();
-  const segment = segments[slug || ''];
+  const normalized = (slug || '').toLowerCase().trim();
+  const key = segments[normalized] ? normalized : slugAliases[normalized];
+  const segment = key ? segments[key] : undefined;
 
   if (!segment) {
     return (

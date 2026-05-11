@@ -16,44 +16,32 @@ type Slide = {
   ctaLink?: string;
 };
 
+// Narrativa em 5 atos (alinhada ao documento de visão Mari)
+// 1) Verdade dura · 2) Segredo do mercado · 3) Solução preditiva · 4) Proteção (sigilo) · 5) Convite (diagnóstico)
 const SLIDES: Slide[] = [
   {
-    badge: 'PARA TODO EMPRESÁRIO',
+    badge: 'ATO 1 · A VERDADE DURA',
     headline: 'Você não decide quando vender sua empresa.',
     highlight: 'O mercado decide.',
     body: `E a maioria dos empresários percebe isso tarde demais. Recebe proposta ruim, vende fora de timing, ou simplesmente não percebe que era o melhor momento.\n\nA Mari muda esse jogo.`,
     cta: 'Descobrir meu timing',
   },
   {
-    badge: 'PARA TODO EMPRESÁRIO',
-    headline: 'Todo empresário vai vender a empresa um dia.',
-    highlight: 'Mas poucos sabem quanto ela vale.',
-    body: `E menos ainda sabem quem poderia comprar você AGORA.\n\nEnquanto você opera o negócio, há compradores olhando para o seu mercado. Você não vê. Eles também não sabem que você existe — até a Mari conectar vocês.`,
-    cta: 'Ver quem está olhando',
-  },
-  {
-    badge: 'INTELIGÊNCIA DE MERCADO',
+    badge: 'ATO 2 · O QUE OS GRANDES SEMPRE SOUBERAM',
     headline: 'Você está perdendo dinheiro.',
     highlight: 'E nem sabe.',
     body: `Não é por falta de esforço. É por falta de informação.\n\nGrandes fundos, bancos e players de M&A sempre souberam antes: quem vai vender, quando vender e por quanto. Essa inteligência nunca foi acessível. Até agora.`,
     cta: 'Acessar essa inteligência',
   },
   {
-    badge: 'INTELIGÊNCIA PREDITIVA',
+    badge: 'ATO 3 · A SOLUÇÃO PREDITIVA',
     headline: 'Vender empresa não é sorte.',
     highlight: 'É timing, preparação e comprador certo.',
     body: `A Mari analisa sua empresa, seu mercado e os possíveis compradores. Mostra se você deveria vender agora, esperar, ou valorizar mais antes.\n\nSem achismo. Sem tentativa e erro.`,
     cta: 'Calcular meu timing',
   },
   {
-    badge: 'A DIFERENÇA MARI',
-    headline: 'Eu estou olhando para a sua empresa.',
-    highlight: 'Antes de você pedir.',
-    body: `Mari não espera você se cadastrar. Não espera proposta chegar.\n\nEla está aqui agora, analisando 21 milhões de CNPJs do Brasil, identificando quem está em janela. Se é você, descobre em 1 minuto.`,
-    cta: 'Descobrir agora',
-  },
-  {
-    badge: 'SIGILO ABSOLUTO',
+    badge: 'ATO 4 · PROTEÇÃO TOTAL',
     headline: 'Nenhum concorrente vai saber que você está aqui.',
     highlight: '100% sigilosa. 100% anônima.',
     body: `Sócios, funcionários, concorrentes e bancos não têm acesso à sua identidade. Sua empresa entra na vitrine apenas com codinome (ex: MARI-TECH-1234).\n\nRazão social, CNPJ e dados financeiros só são revelados após NDA assinado — e somente se VOCÊ aprovar caso a caso.`,
@@ -61,7 +49,7 @@ const SLIDES: Slide[] = [
     ctaLink: '/sell',
   },
   {
-    badge: 'DIAGNÓSTICO GRATUITO',
+    badge: 'ATO 5 · SEU CONVITE',
     headline: 'Descubra agora o que impede sua empresa de valer milhões.',
     highlight: 'E como remover esses impedimentos.',
     body: `A maioria das empresas brasileiras vale 30% a 50% menos do que poderia. Não é falta de talento — é falta de visão sobre o que o mercado realmente valoriza.\n\nNosso diagnóstico gratuito mostra em minutos onde sua empresa perde valor e o que fazer para recuperá-lo.`,
@@ -69,6 +57,7 @@ const SLIDES: Slide[] = [
     ctaLink: '/valuation',
   },
 ];
+
 
 const AUTOPLAY_DELAY = 8000;
 

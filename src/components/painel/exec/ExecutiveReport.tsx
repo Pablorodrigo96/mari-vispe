@@ -130,8 +130,8 @@ function ValuationTriCard({ snapshot }: { snapshot: ValuationSnapshot }) {
         <BigCard
           label="Quanto pode valer (2027)"
           value={brl(snapshot.valorPotencial)}
-          ic={`Estimado × 1,78 • IC: ${brl(snapshot.icLowPot)} – ${brl(snapshot.icHighPot)}`}
-          hint={snapshot.ebitdaMarginPotential ? `EBITDA alvo: ${snapshot.ebitdaMarginPotential.toFixed(1)}%` : 'Com estrutura ideal'}
+          ic={`Projeção no pico do mercado · IC: ${brl(snapshot.icLowPot)} – ${brl(snapshot.icHighPot)}`}
+          hint={snapshot.ebitdaMarginPotential ? `EBITDA alvo: ${snapshot.ebitdaMarginPotential.toFixed(1)}% · estrutura ideal` : 'Empresa pronta para o comprador certo'}
           tone="accent"
         />
         <BigCard
@@ -339,7 +339,7 @@ function RoiSummary({ snapshot }: { snapshot: ValuationSnapshot }) {
           <SummaryStat label="Ganho líquido" value={brl(totalRet - totalInv)} accent="emerald" />
         </div>
         <p className="text-xs text-muted-foreground mt-4 break-words">
-          Para cada R$ 1 investido em preparação você captura aproximadamente R$ {(totalRet / totalInv).toFixed(0)} no preço de venda. Esse cálculo assume que você executa os 4 pilares dentro da janela 2026-2027.
+          Cada R$ 1 investido em preparação volta como ~R$ {(totalRet / totalInv).toFixed(0)} no preço de venda — desde que os 4 pilares sejam executados dentro da janela 2026-2027.
         </p>
       </CardContent>
     </Card>
@@ -397,15 +397,15 @@ function AnonBuyersCard({ firstName }: { firstName: string }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Lock className="h-5 w-5 text-accent" /> Acesso restrito</DialogTitle>
             <DialogDescription className="break-words">
-              Esses compradores estão sob NDA. Revelar identidade fora do processo certo compromete a negociação. O advisor sabe quando e como apresentar você.
+              Por sigilo, a identidade dos compradores fica protegida até o NDA. Mostrar nomes fora do processo certo enfraquece sua negociação — e tira do seu lado a vantagem de surpresa.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <p className="text-sm text-muted-foreground">Quando você falar com um advisor Vispe:</p>
+            <p className="text-sm text-muted-foreground">O advisor Vispe destrava isso para você:</p>
             <ul className="space-y-2 text-sm">
-              <li className="flex gap-2"><Building2 className="h-4 w-4 text-accent shrink-0 mt-0.5" /> Ele mostra exatamente quais compradores estão olhando</li>
-              <li className="flex gap-2"><Target className="h-4 w-4 text-accent shrink-0 mt-0.5" /> Monta a estratégia de negociação certa</li>
-              <li className="flex gap-2"><Calendar className="h-4 w-4 text-accent shrink-0 mt-0.5" /> Acompanha o processo até o closing</li>
+              <li className="flex gap-2"><Building2 className="h-4 w-4 text-accent shrink-0 mt-0.5" /> Apresenta nominalmente quem está olhando para a sua empresa</li>
+              <li className="flex gap-2"><Target className="h-4 w-4 text-accent shrink-0 mt-0.5" /> Define a estratégia de abordagem (quem chama primeiro, em que ordem)</li>
+              <li className="flex gap-2"><Calendar className="h-4 w-4 text-accent shrink-0 mt-0.5" /> Conduz o processo, do primeiro contato ao closing</li>
             </ul>
           </div>
           <DialogFooter>
