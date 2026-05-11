@@ -1,0 +1,27 @@
+-- Revoke EXECUTE on trigger handler functions — they only run from triggers, never from clients
+REVOKE EXECUTE ON FUNCTION public.auto_create_partner_reservation() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.auto_match_providers() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.calculate_lead_score() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_interest_notification() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_message_notification() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_promo_notification() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.eb_log_pipeline_transition() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.notify_matching_buyers() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.notify_on_capital_request() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.notify_partner_interest() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.notify_partner_interest_response() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.qualify_reservation_on_vdr() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.set_listing_codename() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.sla_deadline_setter() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_buyer_profile_to_eb() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_capital_request_to_eb() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_listing_bootstrap_eb() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_valuation_to_eb() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_analytics_log_capital_lead() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_analytics_log_interest_lead() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_analytics_log_signup() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_whatsapp_msg_mirror_activity() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_whatsapp_msg_touch_mandate() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_lead_score_on_doc() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_listing_vdr_readiness() FROM anon, authenticated;
