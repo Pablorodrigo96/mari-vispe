@@ -16,6 +16,7 @@ import { QuickStartMandateDialog } from "@/components/equity-brain/match/QuickSt
 import { AddContactDialog } from "@/components/equity-brain/match/AddContactDialog";
 import { RequestDisclosureDialog } from "@/components/equity-brain/RequestDisclosureDialog";
 import { MatchWhyCard } from "@/components/equity-brain/match/MatchWhyCard";
+import { GeneratePitchCard } from "@/components/equity-brain/match/GeneratePitchCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { OUTCOMES, relativeTime } from "@/lib/equityBrain";
@@ -242,6 +243,9 @@ export default function MatchDetailPage() {
 
       {/* Por que esse match — agora com SHAP completo, p_close, EV, razões e contrafactual */}
       <MatchWhyCard match={row} />
+
+      {/* Mari sugere o pitch (IA) */}
+      <GeneratePitchCard cnpj={row.cnpj} buyerId={row.buyer_id} />
 
       {/* Contatos */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
