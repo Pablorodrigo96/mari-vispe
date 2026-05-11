@@ -106,7 +106,9 @@ export default function Painel() {
   });
 
   const greetingName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'usuário';
+  const fullName = profile?.full_name || user?.email?.split('@')[0] || 'Usuário';
   const snapshot = buildSnapshot(lastValuation);
+  const bbg = usePainelBloomberg();
 
   // Onboarding progress
   const checks = [
