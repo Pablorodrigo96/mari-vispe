@@ -124,42 +124,47 @@ ${call_notes}
 
 Extraia os sinais no formato JSON pedido.`;
 
-    // 3) Claude
-    const claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
+    // 3) Lovable AI Gateway
+    const aiResp = await callLovableAI({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+    }, {
+      function_name: "claude-analyze-call",
+      feature: "call_analysis",
+      user_id: bdr_id ?? auth.userId,
+      metadata: { cnpj },
     });
 
-    if (!claudeResp.ok) {
-      const errText = await claudeResp.text();
-      console.error("Claude API error:", claudeResp.status, errText);
+    if (!aiResp.ok) {
+      const errText = await aiResp.text();
+      console.error("Gateway error:", aiResp.status, errText);
       await supabase.schema("equity_brain" as any).from("ai_runs").insert({
         function_name: "analyze_call",
         cnpj,
         model: MODEL,
         prompt_input: { user: userPrompt, call_notes },
         status: "error",
-        error_message: `${claudeResp.status}: ${errText}`,
+        error_message: `${aiResp.status}: ${errText}`,
         latency_ms: Date.now() - t0,
         triggered_by: bdr_id ?? auth.userId,
       });
-      return new Response(JSON.stringify({ error: "Claude API error", status: claudeResp.status, detail: errText }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const userMsg = aiResp.status === 429
+        ? "Sistema sobrecarregado, tente novamente em instantes."
+        : aiResp.status === 402
+        ? "Limite de uso de IA atingido. Contate o admin."
+        : "Erro ao analisar call.";
+      return new Response(JSON.stringify({ error: userMsg, status: aiResp.status, detail: errText }), {
+        status: aiResp.status === 429 || aiResp.status === 402 ? aiResp.status : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const claudeJson = await claudeResp.json();
-    const text: string = claudeJson.content?.[0]?.text ?? "";
+    const aiJson = await aiResp.json();
+    const text: string = aiJson.choices?.[0]?.message?.content ?? "";
 
     let parsed: any = null;
     try {
@@ -168,19 +173,9 @@ Extraia os sinais no formato JSON pedido.`;
       parsed = null;
     }
 
-    const tokensIn = claudeJson.usage?.input_tokens ?? 0;
-    const tokensOut = claudeJson.usage?.output_tokens ?? 0;
-    const costUsd = (tokensIn * COST_INPUT_PER_MTOK / 1_000_000) + (tokensOut * COST_OUTPUT_PER_MTOK / 1_000_000);
-
-    try {
-      const { logApiUsage } = await import("../_shared/apiTrack.ts");
-      await logApiUsage({
-        provider: "anthropic", category: "llm", model: MODEL,
-        function_name: "claude-analyze-call", feature: "call_analysis",
-        input_tokens: tokensIn, output_tokens: tokensOut, total_tokens: tokensIn + tokensOut,
-        status: "success", http_status: 200,
-      });
-    } catch (e) { console.error("apiTrack:", e); }
+    const tokensIn = aiJson.usage?.prompt_tokens ?? 0;
+    const tokensOut = aiJson.usage?.completion_tokens ?? 0;
+    const costUsd = 0; // já contabilizado por callLovableAI em api_usage_logs
 
     // NOTA Fase 6: NÃO escreve em company_signals nem em matches.status.
     // Fase 7 (feedback loop) vai consumir parsed_output deste log para:
