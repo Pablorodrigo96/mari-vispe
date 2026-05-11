@@ -139,6 +139,7 @@ const RfbHubPage = lazy(() => import("./pages/equity-brain/admin/RfbHubPage"));
 const PropostasPage = lazy(() => import("./pages/equity-brain/PropostasPage"));
 const DailyDiaryPage = lazy(() => import("./pages/equity-brain/DailyDiaryPage"));
 const TagPage = lazy(() => import("./pages/equity-brain/TagPage"));
+const NoteSearchPage = lazy(() => import("./pages/equity-brain/NoteSearchPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
