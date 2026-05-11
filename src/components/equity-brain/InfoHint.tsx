@@ -29,11 +29,13 @@ export function InfoHint({
   title,
   what,
   action,
+  text,
   side = "top",
   align = "center",
   className,
   iconClassName,
 }: InfoHintProps) {
+  const whatText = what ?? text ?? "";
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
