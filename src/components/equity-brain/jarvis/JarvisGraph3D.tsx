@@ -28,7 +28,7 @@ import { forceCollide, forceManyBody, forceRadial, forceLink } from "d3-force-3d
 import SpriteText from "three-spritetext";
 import { useGhostSynapses } from "./useGhostSynapses";
 import { useSolarFlares } from "./useSolarFlares";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
