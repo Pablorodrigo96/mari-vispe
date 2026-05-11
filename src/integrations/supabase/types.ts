@@ -2064,6 +2064,19 @@ export type Database = {
       }
     }
     Views: {
+      api_usage_daily_by_provider: {
+        Row: {
+          calls: number | null
+          cost_brl: number | null
+          cost_usd: number | null
+          day: string | null
+          errors: number | null
+          provider: string | null
+          tokens_in: number | null
+          tokens_out: number | null
+        }
+        Relationships: []
+      }
       api_usage_daily_summary: {
         Row: {
           avg_latency_ms: number | null
@@ -5012,6 +5025,14 @@ export type Database = {
       }
       reject_franchisee_request: {
         Args: { p_reason?: string; p_request_id: string }
+        Returns: undefined
+      }
+      set_provider_budget: {
+        Args: { _provider: string; _usd: number }
+        Returns: undefined
+      }
+      set_provider_enabled: {
+        Args: { _enabled: boolean; _provider: string }
         Returns: undefined
       }
       update_mandate_field: {

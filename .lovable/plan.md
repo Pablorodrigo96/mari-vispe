@@ -1,129 +1,101 @@
-# Limpeza Consolidada — Seções 1, 2, 3 da Auditoria
+## Contexto
 
-Executar em **7 blocos sequenciais**, com pausa para validação entre cada um. Após cada bloco eu reporto diff + smoke test e espero o "ok" antes de avançar.
+As 3 edge functions `claude-generate-pitch`, `claude-classify-thesis`, `claude-analyze-call` chamam `api.anthropic.com` direto com `ANTHROPIC_API_KEY`. Hoje:
 
----
+- Já chamam `logApiUsage` com `provider="anthropic"` + token usage + custo → **a instrumentação existe**.
+- Mas `api_usage_logs` tem **0 registros** para anthropic, porque **nenhuma das 3 funções é chamada** (zero callsites no código, zero invocações em `function_edge_logs`).
+- `api_pricing` já tem linhas para `claude-sonnet-4-20250514`, `claude-3-5-sonnet`, `claude-3-5-haiku` e `default`.
+- `api_settings` só tem `monthly_budget_brl=5000` (global, não por provider).
 
-## Bloco 1 — Corrigir 9 dead-links (30-60min)
+Risco real: as funções estão **deployadas e públicas**. Se forem invocadas (intencionalmente ou via abuso), a fatura Anthropic sobe sem teto e sem alerta.
 
-**Substituições via grep+replace:**
+## Objetivo
 
-| Errado | Correto |
-|---|---|
-| `/auth/register` | `/auth?tab=signup` |
-| `/registrar-comprador` | `/cadastrar-comprador` |
-| `/termos` | `/terms` |
-| `/privacidade`, `/privacy` | **decisão Pablo** (A: criar página interna placeholder · B: redirect vispe.com.br · C: apontar /terms) — default A |
-| `/dashboard` (bare) | `/dashboard/executivo` |
-| `/match-inbox` | `/equity-brain/match-inbox` |
-| `/pipeline` | `/equity-brain/pipeline` |
-| `/crm/buyer/:id` | `/equity-brain/crm/buyer/:id` |
-| `/crm/mandate/:id` | `/equity-brain/crm/mandate/:id` |
+Manter Anthropic direto, mas eliminar o invisível: visibilidade de custo, alerta, e kill switch antes da chave virar surpresa de fatura.
 
-**Auth.tsx:** garantir leitura de `?tab=signup|login` via `useSearchParams` para abrir tab correta.
+## Mudanças
 
-**Smoke:** footer Termos/Privacidade, CTA signup, links internos EB.
+### 1. Kill switch + budget por provider (`api_settings`)
 
----
+Adicionar 3 chaves novas:
+- `anthropic_enabled` (bool, default `true`) — kill switch global.
+- `anthropic_monthly_budget_usd` (number, default `50`) — teto mensal em USD.
+- `anthropic_alert_threshold_pct` (number, default `0.8`) — dispara aviso a 80%.
 
-## Bloco 2 — Remover 10 lazy imports sem rota (15min)
+### 2. Guard centralizado em `_shared/apiTrack.ts`
 
-Remover de `src/App.tsx`: `EBDashboardPage`, `EBBuyersPage`, `EBTesesPage`, `EBMapaPage`, `EBGrafoPage`, `EBBoardPage`, `QuickFillPage`, `AnatelCruzamentoPage`, `MyCompaniesPage`, `CrmHubPage`.
+Nova função `assertProviderAllowed(provider)`:
+- Lê `${provider}_enabled` de `api_settings` (cache 5 min, mesmo padrão do pricing).
+- Lê custo MTD de `api_usage_logs` (cache 60 s).
+- Se kill switch desligado → lança `ProviderDisabledError` (HTTP 503).
+- Se MTD ≥ budget → lança `ProviderBudgetExceededError` (HTTP 402).
+- Logs estruturados com `console.warn` para o limiar de alerta (≥ threshold_pct).
 
-Para cada um: grep duplo no projeto inteiro. Se zero refs ativas → marcar arquivo para Bloco 4. Se ainda referenciado em outro lugar → remover só o import.
+Chamada inserida no topo das 3 `claude-*/index.ts`, **antes** do `fetch` para Anthropic, devolvendo erro HTTP com mensagem clara.
 
-**Smoke:** build OK, bundle reduzido (medir antes/depois).
+### 3. View de custo agregado: `api_usage_daily_by_provider`
 
----
-
-## Bloco 3 — Consolidar 4 dashboards duplicados (1-2h)
-
-**Decisão arquitetural:** `/equity-brain/dashboards/*` vira canônico; `/dashboard/*` vira `<Navigate replace>`.
-
-```tsx
-<Route path="/dashboard/executivo" element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
-<Route path="/dashboard/mandato"   element={<Navigate to="/equity-brain/dashboards/mandatos"  replace />} />
-<Route path="/dashboard/match"     element={<Navigate to="/equity-brain/dashboards/match"     replace />} />
-<Route path="/dashboard/nbo"       element={<Navigate to="/equity-brain/dashboards/propostas" replace />} />
+```sql
+create view api_usage_daily_by_provider as
+select
+  date_trunc('day', created_at) as day,
+  provider,
+  count(*) as calls,
+  sum(coalesce(input_tokens,0)) as tokens_in,
+  sum(coalesce(output_tokens,0)) as tokens_out,
+  sum(coalesce(cost_usd,0)) as cost_usd,
+  count(*) filter (where status_code >= 400) as errors
+from api_usage_logs
+group by 1, 2;
 ```
 
-**Investigar duplos internos** (reportar antes de remover):
-- `ExecutiveDashboardPage` vs `DashboardExecutivoPage`
-- `MatchAnalyticsPage` vs `DashboardMatchPage`
+RLS: visível apenas para `admin` (via `has_role`).
 
----
+### 4. Painel admin: aba "Custo de APIs"
 
-## Bloco 4 — Remover 14 componentes órfãos não-UI (30-60min)
+Em `/admin/analytics` (já existe `AdminAnalytics.tsx` + `VisitorsSection`/`TrackingHealthCard`), adicionar nova seção `ApiCostSection`:
 
-Mover para `src/_archive/` (não deletar) — adicionar `_archive` ao `tsconfig.app.json` exclude:
+- **KPIs topo**: custo MTD por provider (anthropic, lovable-ai, brasilapi, nominatim), MTD vs budget (barra), nº de chamadas, taxa de erro.
+- **Gráfico**: linha de custo diário últimos 30d por provider (recharts, já em uso).
+- **Tabela**: top 10 funções por custo no mês (function_name, calls, cost_usd, last_call).
+- **Toggle kill switch** por provider (chama RPC `set_provider_enabled(provider, enabled)`).
+- **Input budget mensal** (RPC `set_provider_budget(provider, usd)`).
 
-`equity-brain/{BuyerCard,DealGraph,SAVBadge}.tsx`, `equity-brain/company/EnrichCompanyButton.tsx`, `equity-brain/crm/{MandateTransitionsTab,MandatesTable,RoleBadges,WhatsAppPanel}.tsx`, `map/MapTopFilterBar.tsx`, `marketplace/BusinessCard.tsx`, `sell/SellWizard.tsx`, `valuation/{UpgradeCard,ValuationHero,ValuationSuccess}.tsx`.
+Fonte: `api_usage_daily_by_provider` + `api_usage_logs` (top funções) + `api_settings`.
 
-**Procedimento por componente:** grep duplo → se zero refs reais (descontando definição) move para `_archive/`. Suspeitos → reporta antes.
+### 5. Alerta passivo (sem cron novo)
 
-Smoke test a cada batch de 3-4.
+A `mari-generate-insights` (cron diário 06h já existe) ganha um check extra: se `cost_usd MTD ≥ threshold_pct * budget` para qualquer provider, cria 1 linha em `mari_insights` com `severity='warning'` e texto pronto ("Anthropic atingiu 80% do orçamento mensal: $40.12 / $50"). Aparece automaticamente em `/equity-brain/hoje` e no `/painel` para admin.
 
----
+Sem novo cron, sem novo edge function, sem webhook externo (Fase 4 — escopo enxuto).
 
-## Bloco 5 — 9 Shadcn UI + colisão InfoHint (30min)
+### 6. Smoke test
 
-**Mover para `_archive/ui/`:** `aspect-ratio`, `breadcrumb`, `context-menu`, `hover-card`, `input-otp`, `menubar`, `navigation-menu`, `pagination`, `resizable`.
+`supabase/functions/claude-classify-thesis/index_test.ts` (ou ajuste do existente): chama a função com `anthropic_enabled=false` em `api_settings` e valida 503; restaura true e valida 200.
 
-**Consolidar InfoHint:**
-1. Diff entre `admin/analytics/InfoHint.tsx` e `equity-brain/InfoHint.tsx`
-2. Mesclar features faltantes no canônico (`equity-brain/InfoHint`)
-3. Substituir todos os imports
-4. Arquivar `admin/analytics/InfoHint.tsx`
+## Detalhes técnicos
 
----
+**Arquivos novos:**
+- `supabase/migrations/<ts>_anthropic_observability.sql` — view + RPCs `set_provider_enabled`/`set_provider_budget` (admin-only) + 3 rows em `api_settings`.
+- `src/components/admin/analytics/ApiCostSection.tsx`
+- `src/hooks/useApiCostDaily.ts`
 
-## Bloco 6 — Índices em ~26 tabelas (30-60min)
+**Arquivos alterados:**
+- `supabase/functions/_shared/apiTrack.ts` — adiciona `assertProviderAllowed()` + cache.
+- `supabase/functions/claude-generate-pitch/index.ts`
+- `supabase/functions/claude-classify-thesis/index.ts`
+- `supabase/functions/claude-analyze-call/index.ts`
+- `supabase/functions/mari-generate-insights/index.ts` — append budget warning.
+- `src/pages/admin/AdminAnalytics.tsx` — monta `<ApiCostSection />`.
 
-Cada índice = uma migration separada (CONCURRENTLY não roda em transaction). Padrão `idx_<tabela>_<coluna>`.
+**Não escopo (deixar para fase futura se quiser):**
+- Estender o guard para BrasilAPI, Nominatim, RFB/Anatel pg direct (mesmo padrão, mas user pediu Anthropic agora).
+- Webhook Slack/email — alerta vive em `mari_insights` por enquanto.
+- Rate limit por usuário — só budget global mensal.
 
-Tabelas-alvo (FKs comuns `user_id`, `request_id`, `listing_id`, etc.):
-- `public`: `valuation_history.user_id`, `valuation_purchases.user_id`, `capital_requests.(user_id,status)`, `capital_matches.request_id`, `capital_messages.request_id`, `capital_timeline.request_id`, `capital_providers.user_id`, `interest_logs.listing_id`, `messages.listing_id`, `partner_activities.partner_user_id`, `franchisee_regions.user_id`, `franchisee_requests.user_id`, `advisor_requests.user_id`
-- `equity_brain`: `isp_anatel_imports.created_at`, `buyer_revealed_thetas.buyer_id`, `signal_catalog.*` (validar coluna)
+## Resultado esperado
 
-Para cada: confirmar coluna usada em queries reais; verificar índice pré-existente em `pg_indexes`; rodar `EXPLAIN ANALYZE` antes/depois em 3-5 queries representativas.
-
----
-
-## Bloco 7 — REVOKE EXECUTE + edge function órfã (1-2h)
-
-**7.1 Listar 117 funções DEFINER** chamáveis por anon/auth via `pg_proc` + `has_function_privilege`.
-
-**7.2 Classificar cada uma:**
-- **A** Pública por design (manter) — `has_role`, `is_company_visible_in_crm`, `analyze_cnpj_public`, helpers de RLS
-- **B** Authenticated apenas → `REVOKE ... FROM anon`
-- **C** Advisor/admin apenas → `REVOKE ... FROM anon, authenticated`
-- **D** Service_role apenas → `REVOKE ... FROM anon, authenticated`
-
-Priorizar nomes sensíveis: `*_admin_*`, `*_recompute_*`, `*_internal_*`, `*_bulk_*`, `delete_*`, `drop_*`. Casos duvidosos → reportar, não revogar.
-
-Aplicar em batches de ~10 funções com smoke entre cada batch.
-
-**7.3 Edge function órfã `crm-log-activity`:** grep no projeto + cron jobs + outras edge functions. Se zero refs → mover código para `_archive/edge-functions/` (manter deploy Supabase intocado).
-
----
-
-## Regras globais
-
-1. **Validação dupla** antes de remover qualquer arquivo (grep amplo).
-2. **Diff reportado** antes de aplicar batches >10 arquivos.
-3. **Pausa entre blocos** — Pablo valida.
-4. **Smoke test obrigatório** após cada bloco: login, `/painel`, `/marketplace`, `/mari`, `/equity-brain`, `/equity-brain/crm`.
-5. **Dúvida = não remover.** Reportar.
-6. Nenhuma correção criativa fora do escopo listado.
-
----
-
-## Checkpoint Final
-
-Tabela comparativa antes/depois: bundle KB, componentes ativos, rotas declaradas, funções DEFINER abertas a anon, índices, linter Supabase issues, erros TS. Smoke geral. Aí libera Seção 4 da auditoria.
-
-## Decisões necessárias antes de iniciar
-
-1. **`/privacidade`** → opção A, B ou C? (default: A — placeholder interno)
-2. **Órfãos** → mover para `_archive/` ou deletar definitivo? (default: `_archive/`)
-3. **Funções DEFINER duvidosas** → quero te chamar antes ou seguir conservador (não revogar)? (default: conservador)
+- Qualquer chamada Anthropic passa a aparecer em `api_usage_logs` com custo (já passaria; agora com guard fica garantido que **nunca** roda sem o registro).
+- Admin vê custo realtime em `/admin/analytics` e pode desligar a chave Anthropic em 1 clique.
+- Aviso automático em `/painel` quando custo passa 80% do teto.
+- Risco de fatura-surpresa reduzido a, no máximo, o budget configurado.

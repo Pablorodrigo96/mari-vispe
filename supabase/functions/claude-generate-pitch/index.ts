@@ -5,6 +5,11 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import {
+  assertProviderAllowed,
+  ProviderBudgetExceededError,
+  ProviderDisabledError,
+} from "../_shared/apiTrack.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -73,6 +78,19 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: auth.error }), {
       status: auth.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
+
+  // Provider guard: kill switch + monthly budget
+  try {
+    await assertProviderAllowed("anthropic");
+  } catch (e) {
+    if (e instanceof ProviderDisabledError || e instanceof ProviderBudgetExceededError) {
+      return new Response(JSON.stringify({ error: e.message, code: e.name }), {
+        status: e.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    throw e;
   }
 
   try {

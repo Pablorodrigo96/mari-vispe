@@ -118,6 +118,94 @@ export function extractUsage(usage: any): {
   };
 }
 
+// ===== Provider guard (kill switch + monthly budget) =====
+
+export class ProviderDisabledError extends Error {
+  status = 503;
+  constructor(public provider: string) {
+    super(`Provider ${provider} is disabled by admin kill switch`);
+    this.name = "ProviderDisabledError";
+  }
+}
+
+export class ProviderBudgetExceededError extends Error {
+  status = 402;
+  constructor(public provider: string, public spentUsd: number, public budgetUsd: number) {
+    super(
+      `Provider ${provider} exceeded monthly budget: $${spentUsd.toFixed(4)} >= $${budgetUsd.toFixed(2)}`,
+    );
+    this.name = "ProviderBudgetExceededError";
+  }
+}
+
+// settings cache (5min)
+const settingsCache = new Map<string, { value: string; at: number }>();
+async function getSetting(key: string): Promise<string | null> {
+  const cached = settingsCache.get(key);
+  const now = Date.now();
+  if (cached && now - cached.at < 5 * 60_000) return cached.value;
+  const { data } = await getAdmin()
+    .from("api_settings")
+    .select("value")
+    .eq("key", key)
+    .maybeSingle();
+  const value = (data as any)?.value ?? null;
+  if (value != null) settingsCache.set(key, { value, at: now });
+  return value;
+}
+
+// MTD cost cache (60s, per provider)
+const mtdCache = new Map<string, { cost: number; at: number }>();
+async function getMonthToDateCostUsd(provider: string): Promise<number> {
+  const cached = mtdCache.get(provider);
+  const now = Date.now();
+  if (cached && now - cached.at < 60_000) return cached.cost;
+  const startOfMonth = new Date();
+  startOfMonth.setUTCDate(1);
+  startOfMonth.setUTCHours(0, 0, 0, 0);
+  const { data } = await getAdmin()
+    .from("api_usage_logs")
+    .select("cost_usd")
+    .eq("provider", provider)
+    .gte("created_at", startOfMonth.toISOString());
+  const cost = (data ?? []).reduce(
+    (s: number, r: any) => s + Number(r.cost_usd ?? 0),
+    0,
+  );
+  mtdCache.set(provider, { cost, at: now });
+  return cost;
+}
+
+/**
+ * Guard a provider call: throws if killed or over budget. Logs warning at threshold.
+ * Call this BEFORE making the outbound fetch.
+ */
+export async function assertProviderAllowed(provider: string): Promise<void> {
+  // 1) kill switch
+  const enabled = await getSetting(`${provider}_enabled`);
+  if (enabled === "false") throw new ProviderDisabledError(provider);
+
+  // 2) budget
+  const budgetStr = await getSetting(`${provider}_monthly_budget_usd`);
+  if (!budgetStr) return;
+  const budget = Number(budgetStr);
+  if (!Number.isFinite(budget) || budget <= 0) return;
+
+  const spent = await getMonthToDateCostUsd(provider);
+  if (spent >= budget) {
+    throw new ProviderBudgetExceededError(provider, spent, budget);
+  }
+
+  // 3) threshold warning
+  const thrStr = await getSetting(`${provider}_alert_threshold_pct`);
+  const thr = Number(thrStr ?? 0.8);
+  if (Number.isFinite(thr) && thr > 0 && spent >= thr * budget) {
+    console.warn(
+      `[apiTrack] ${provider} reached ${((spent / budget) * 100).toFixed(1)}% of monthly budget ($${spent.toFixed(4)} / $${budget.toFixed(2)})`,
+    );
+  }
+}
+
 interface LogParams {
   provider: string;
   category?: string;

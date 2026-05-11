@@ -9,6 +9,7 @@ import {
 import { Users, Eye, UserPlus, Target, Loader2, TrendingUp, Globe, Clock, Activity, MousePointerClick, LogOut, Smartphone, Repeat, Layers } from "lucide-react";
 import { TrackingHealthCard } from "@/components/admin/analytics/TrackingHealthCard";
 import { VisitorsSection } from "@/components/admin/analytics/VisitorsSection";
+import { ApiCostSection } from "@/components/admin/analytics/ApiCostSection";
 import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { analyticsTooltips as T } from "@/lib/analyticsTooltips";
 
@@ -111,6 +112,9 @@ export default function AdminAnalytics() {
 
         {/* Saúde do tracking */}
         <TrackingHealthCard />
+
+        {/* Custo de APIs externas */}
+        <ApiCostSection />
 
         {/* Visitantes — Novos vs Recorrentes */}
         <VisitorsSection
