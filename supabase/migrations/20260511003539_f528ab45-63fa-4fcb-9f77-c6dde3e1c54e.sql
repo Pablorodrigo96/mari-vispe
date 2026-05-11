@@ -1,0 +1,16 @@
+ALTER VIEW public.eb_companies SET (security_invoker = on);
+ALTER VIEW public.eb_companies_enriched SET (security_invoker = on);
+ALTER VIEW public.eb_companies_scored SET (security_invoker = on);
+ALTER VIEW public.eb_mandates SET (security_invoker = on);
+ALTER VIEW public.eb_opportunities_ready SET (security_invoker = on);
+ALTER VIEW public.eb_v_deal_metrics SET (security_invoker = on);
+ALTER VIEW public.eb_crm_audit_v2 SET (security_invoker = on);
+ALTER VIEW public.v_analytics_browsers SET (security_invoker = on);
+ALTER VIEW public.v_analytics_cta SET (security_invoker = on);
+ALTER VIEW public.v_analytics_devices SET (security_invoker = on);
+ALTER VIEW public.v_analytics_exit_pages SET (security_invoker = on);
+ALTER VIEW public.v_analytics_funnel SET (security_invoker = on);
+ALTER VIEW public.v_analytics_hourly_heatmap SET (security_invoker = on);
+ALTER VIEW public.v_analytics_retention SET (security_invoker = on);
+ALTER VIEW public.api_usage_daily_summary SET (security_invoker = on);
+ALTER VIEW public.mari_insights SET (security_invoker = on);
