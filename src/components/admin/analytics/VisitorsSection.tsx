@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from "recharts";
 import { UserPlus, Repeat, Globe, Sparkles } from "lucide-react";
-import { InfoHint } from "./InfoHint";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
 
 const fmt = (n: number | null | undefined) => new Intl.NumberFormat("pt-BR").format(Number(n ?? 0));
 const pct = (a: number, b: number) => (b > 0 ? `${((a / b) * 100).toFixed(1)}%` : "—");

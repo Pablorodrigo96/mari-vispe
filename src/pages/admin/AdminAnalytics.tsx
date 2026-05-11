@@ -9,7 +9,7 @@ import {
 import { Users, Eye, UserPlus, Target, Loader2, TrendingUp, Globe, Clock, Activity, MousePointerClick, LogOut, Smartphone, Repeat, Layers } from "lucide-react";
 import { TrackingHealthCard } from "@/components/admin/analytics/TrackingHealthCard";
 import { VisitorsSection } from "@/components/admin/analytics/VisitorsSection";
-import { InfoHint } from "@/components/admin/analytics/InfoHint";
+import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { analyticsTooltips as T } from "@/lib/analyticsTooltips";
 
 const fmt = (n: number | null | undefined) => new Intl.NumberFormat("pt-BR").format(Number(n ?? 0));
