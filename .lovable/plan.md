@@ -1,125 +1,129 @@
 
-# Inteligência de Mercado v2 — Plano de implementação
+## Diagnóstico
 
-Aba nova `/inteligencia` que entrega análise setorial profissional em 5 lentes (Tamanho, Eficiência, Velocidade, Head-to-head, M&A), via Perplexity, com cache 7 dias **por setor** (não por usuário) e visual Mari.
+O HTML que você anexou (`relatorio_isp_brasil_2025.html`) entrega:
+- **15 players** no ranking com share %, delta absoluto em texto (“+106 mil em 2025”) e cor por bucket.
+- **Eficiência** com 4 cards grandes mostrando valor + denominador (“Lucro 2025: R$ 6,17 bi · HC ~30 mi”), não só uma frase solta.
+- **Velocidade** com 10 players, net adds/dia + /ano e classificação orgânico/inorgânico/tecnologia em texto.
+- **Head-to-head** com 4 métricas, cada uma com label + número grande + sub-explicação.
+- **M&A** com ~10 deals, valor + delta string com contexto (clientes, regiões, status CADE).
+- **Conclusão** editorial em 3 parágrafos longos com bold inline + assinatura.
+- Tipografia editorial (Bricolage Grotesque + JetBrains Mono), grid sutil ao fundo, cores quentes (teal/violet/amber/coral).
 
-## Bloco 0 — Decisões já apuradas
+O que a Mari está entregando hoje:
+- Schema só pede **4-6 players** no ranking (vs 15) → resposta rasa.
+- Eficiência sem denominador, velocidade só com %, head-to-head sem `sub`, M&A sem texto de contexto, conclusão em 3 frases curtas.
+- UI usa `bg-card`/`text-foreground` genérico sem hierarquia editorial. Sem grid, sem gradientes, sem buckets de cor por posição.
 
-**Menu lateral** (`src/components/layout/AppSidebar.tsx`):
-- Inserir grupo novo **"Inteligência"** logo após "Visão Geral" e antes de "Marketplace".
-- Item único: "Inteligência de Mercado" → `/inteligencia`, badge "NOVO" por 14d.
-- Rota oficial: **`/inteligencia`** (curta, sem hífens, alinhada com `/painel`, `/matching`, `/valuation`).
+A solução não é mudar de modelo (Perplexity sonar-pro é o correto para grounding + citações). É **pedir muito mais coisa, com mais estrutura, e pedir profundidade explícita** — e expandir os componentes pra renderizar o que vier.
 
-**Detecção de setor do usuário** — cascata:
-1. `listings.cnae` da empresa mais recente do user → join em `cnae_to_sector_mapping`.
-2. Se buyer puro: `buyer_profiles.categories[0]` → mapeamento heurístico.
-3. Fallback: `isp-banda-larga` (90% da base Vispe).
+## O que muda
 
-**Tabelas existentes reutilizáveis**:
-- `public.sector_market_trends` (painel executivo) → mantemos; **não** substituir. Inteligência de Mercado é separada.
-- `public.eb_isp_market_entries` → não reutilizar (é específica ISP/cold).
-- Schema `equity_brain` existe → criaremos novas tabelas lá.
-- `api_usage_logs` já existe → cobre telemetria de custo.
+### 1. Prompt do Perplexity (`supabase/functions/research-sector/index.ts`)
 
-**Secrets**: `PERPLEXITY_API_KEY` e `LOVABLE_API_KEY` já configurados. Sem add_secret.
+Reescrever o `SYSTEM_PROMPT` com:
+- **Mínimos quantitativos obrigatórios**: 10-15 players no ranking, 4 cards no eficiência, 8-10 no velocidade, 6-10 deals no M&A. Se faltar fonte, marcar `estimativa: true` em vez de cortar.
+- **Profundidade editorial obrigatória**: cada `comentario` precisa ter 60-120 palavras, com 2-4 frases analíticas e 3-5 bullets curtos (estrutura já usada no HTML de referência). `punch_line` final em cada painel.
+- **Conclusão setorial estendida**: além de `vencedores/consolidadores/alvos/punch_line`, adicionar `paragrafos: string[]` (3 parágrafos editoriais) e `tres_blocos: { executam, consolidam, atrasados }`.
+- **Regras anti-rasura**: explicitar “não retorne menos de 10 players”, “se um campo não tem fonte, devolva valor + `fonte: 'estimativa'`”, “use Anatel, B3 releases, TELETIME, Brazil Journal, Pipeline, NeoFeed, sites oficiais como fontes preferidas”.
+- Aumentar `max_tokens` de 8000 → 16000 e definir `search_recency_filter: 'year'`, com fallback de modelo opcional para `sonar-deep-research` quando `force_refresh` for true (mais caro, mais profundo).
 
-## Bloco 1 — Schema
+Schema JSON expandido — campos novos:
+- `painel_1_ranking.players[]`: adicionar `variacao_absoluta_label` (string “+106 mil em 2025”), `cor_bucket` (`top|positivo|negativo|neutro`), `subtitulo` (string “Líder de mercado”).
+- `painel_2_eficiencia.cards[]`: adicionar `denominador` (string “Lucro 2025: R$ 6,17 bi · HC ~30 mi”) e `cor` (1-4).
+- `painel_3_velocidade.players[]`: adicionar `net_adds_ano_label`, `net_adds_dia_label`, `classificacao` (`organico|inorganico|tecnologia|hibrido`).
+- `painel_4_head_to_head.metricas[]`: trocar `valor_a|valor_b` por `{ label, valor_a: { num, sub }, valor_b: { num, sub } }`. Manter retrocompat: aceitar ambos no front.
+- `painel_5_mna.deals[]`: adicionar `contexto` (string com clientes/regiões/status) e `status` (`concluido|anunciado|pendente_cade`).
+- `conclusao_setorial`: adicionar `paragrafos: string[]` e `tres_blocos`.
 
-Migration única criando:
+Validação no edge: aceitar `partial` se faltar até 2 painéis, mas log explícito em `geracao_erro` listando quantos itens vieram em cada painel — pra termos métrica de qualidade.
 
-- `equity_brain.sector_research` (cache por setor, unique em `setor_slug`, `expires_at` = +7d, `payload_json jsonb`, status/erro/custo/duration).
-- `equity_brain.cnae_to_sector_mapping` (PK `cnae`, FK `setor_slug`). Seed 10 CNAEs principais (ISP 61.90-6-01 incluído além de 61.10-8-01, telecom, SaaS, hospital, varejo, energia, banco, logística, educação).
-- Índices em `setor_slug` e `expires_at`.
-- RLS: SELECT para todo `authenticated`; INSERT/UPDATE/DELETE apenas `admin`/`advisor` via `has_role()`.
-- RPC `get_sector_for_user(uid uuid) returns text` (SECURITY DEFINER) implementando a cascata acima — usado pelo hook React.
+### 2. Fallback de qualidade com segunda IA (Lovable AI Gateway / Gemini)
 
-## Bloco 2 — Edge function `research-sector`
+Se Perplexity retornar `< 8 players` no ranking OU `< 5 deals` no M&A OU algum painel ausente, fazer **uma segunda chamada de enriquecimento** com `google/gemini-2.5-pro` via Lovable AI Gateway, mandando o JSON parcial + lista de citações do Perplexity como contexto e pedindo apenas para **expandir/completar** os painéis fracos (sem reinventar números). A Gemini não pesquisa, mas ajuda a estruturar texto editorial dos `comentario` e `conclusao_setorial.paragrafos` — onde o Perplexity costuma ficar telegráfico. Log do enriquecimento em `geracao_erro` (“enriched_by_gemini: painel_5_mna”).
 
-Arquivo: `supabase/functions/research-sector/index.ts` (CORS padrão, sem `verify_jwt` custom).
+### 3. Redesenho dos componentes
 
-Fluxo:
-1. Valida body com Zod: `{ setor_slug: string, force_refresh?: boolean }`.
-2. Lê cache `sector_research` por `setor_slug` válido (`expires_at > now()`); retorna se hit e `!force_refresh`.
-3. Chama Perplexity `sonar-pro` direto via `fetch` em `https://api.perplexity.ai/chat/completions` (já temos `PERPLEXITY_API_KEY`), com `temperature=0.2`, `max_tokens=8000`. System prompt = texto completo do framework (5 lentes + regras de qualidade + schema JSON exigido).
-4. Parse + validação Zod do payload (schema com 5 painéis + conclusão + limitações + fontes).
-5. Upsert em `sector_research` com expires_at = now + 7d, custo, tokens, duração, status.
-6. Log em `api_usage_logs` (provider=`perplexity`, feature=`research-sector`, custo_brl/usd).
-7. Erros: 429 → retry 1x com backoff 2s; 402 → status `failed` + retorna `{ error:'credits_exhausted' }`; parse fail → status `partial` + persiste o que conseguiu; custo > $5 → log warn.
+Mantém os tokens Mari (`bg-background`, `bg-card`, `accent` = Volt, `text-foreground`/`muted-foreground`), mas adiciona hierarquia editorial:
 
-## Bloco 3 — Identidade visual Mari
+**Página `Inteligencia.tsx`**:
+- Container max-w-6xl, padding generoso (py-16), grid sutil de fundo (`bg-[linear-gradient(...)]` com `mask-image` radial — só CSS Tailwind, sem nova dep).
+- Espaçamento entre painéis aumentado pra `mb-24`.
 
-Sem CSS variables novas globais — usar tokens Mari já existentes em `src/index.css` / `tailwind.config.ts` (`bg-background`, `bg-card`, `text-foreground`, `accent` = volt, `muted-foreground`).
+**`InteligenciaHero`**:
+- Eyebrow “Análise consolidada do setor” com bolinha pulsante Volt.
+- Headline com `text-5xl lg:text-7xl`, peso 800, tracking-tight, com palavra em destaque envolvida por gradiente Volt→Bone.
+- Lead em 18px, max-w-720.
+- Metadata em barra de baixo (período, fontes, data).
 
-Mapa de conversão do HTML de referência:
-- bg-1/2/3 → `bg-background`, `bg-card`, `bg-muted/40`
-- teal/violet → `accent` (volt)
-- amber/coral → manter via `text-amber-400` / `text-rose-400` (tailwind direto, OK para alertas semânticos)
-- Tipografia: usar a stack atual (Bricolage não é necessária); adicionar `font-mono` (já mapeado) para números/fontes.
+**`PainelRanking`** (mais editorial):
+- Header de seção: número “01 — PARTICIPAÇÃO DE MERCADO” + título grande + fonte alinhada à direita.
+- Linhas grid `50px 240px 1fr 140px` com cor de barra rotativa por bucket (Volt, Volt-dim, amber, rose, violet).
+- Renderiza `variacao_absoluta_label` quando vier (e cai pra YoY % senão).
+- Mostra `subtitulo` abaixo do nome.
+- Hover sutil + animação de barra.
 
-## Bloco 4 — Componentes React
+**`PainelEficiencia`** (4 cards grandes):
+- Layout `repeat(auto-fit, minmax(240px, 1fr))`.
+- Valor em `text-5xl font-bold` com cor rotativa (4 buckets).
+- Denominador em mono pequeno.
+- Círculo decorativo no canto inferior direito (CSS).
 
-Estrutura:
-```
-src/components/inteligencia/
-  InteligenciaHero.tsx
-  PainelRanking.tsx
-  PainelEficiencia.tsx
-  PainelVelocidade.tsx
-  PainelHeadToHead.tsx
-  PainelMnA.tsx
-  ConclusaoSetorial.tsx
-  shared/{SectionHeader, CommentaryBox, FootnoteSource, EmptyState, GeneratingState}.tsx
+**`PainelVelocidade`**:
+- Tabela visual com 10 linhas, mostra `net_adds_dia_label` em destaque (“+1.970/dia”) e `net_adds_ano_label` em mono pequeno (“+719 mil/ano”).
+- Chip de classificação ao lado do nome (Orgânico / M&A / Tech).
 
-src/pages/Inteligencia.tsx
-src/hooks/useUserSector.ts
-src/hooks/useSectorResearch.ts
-```
+**`PainelHeadToHead`** (layout vs editorial):
+- Grid `1fr 200px 1fr` com divisores verticais.
+- Coluna esquerda nome rosé+, direita violet, círculo central “VS” grande.
+- Cada métrica: label uppercase pequeno + número grande (28px) + sub mono pequeno.
+- Em mobile, vira stack vertical com divisores horizontais.
 
-Página `/inteligencia`:
-- `useUserSector()` (chama RPC `get_sector_for_user`).
-- `useSectorResearch(slug)` → React Query: tenta `select` direto na tabela; se vazio, chama edge function via `supabase.functions.invoke('research-sector')`.
+**`PainelMnA`**:
+- Mesma linguagem do Ranking (linhas com barra de tamanho relativa ao valor), mas com ★ no lugar da posição quando `destaque: true`.
+- `contexto` aparece abaixo do nome do deal (subtítulo).
+- Delta string mostra `valor`+contexto inline.
 
-Estados:
-- Sem cache → `GeneratingState` (botão "Gerar análise" + spinner ~30-60s).
-- `partial` → renderiza painéis OK, mostra "em construção" nos faltantes.
-- Expirado → renderiza última versão + refresh em background (não bloqueia UI).
-- Erro → `EmptyState` com retry.
+**`ConclusaoSetorial`**:
+- Card grande com gradient radial (Volt no canto, amber no oposto).
+- H2 grande com palavra em destaque.
+- Renderiza `paragrafos[]` (3 parágrafos editoriais) se vier; senão cai pro layout atual (3 cards).
+- Assinatura em mono no rodapé.
 
-Anims: stagger fade-in (já temos `framer-motion` no projeto), count-up via `react-countup` se já instalado, senão CSS.
+**`shared/CommentaryBox`**:
+- Adicionar barra Volt vertical à esquerda + suporte a `<strong>` inline (renderizando `comentario` com `dangerouslySetInnerHTML` só se vier marcado — ou parsear `**bold**` markdown simples com regex). E renderizar `punch_line` em destaque final quando vier separado.
 
-## Bloco 5 — Integração no menu + AppRoutes
+### 4. Cache invalidation
 
-- `src/App.tsx`: rota `/inteligencia` dentro do `AppShell` (mesmo nível de `/painel`).
-- `AppSidebar.tsx`: inserir grupo `intelligence` entre `overview` e `marketplace`, ícone `Sparkles` ou `Compass`, badge "NOVO" 14d via localStorage `mari_intel_seen_at`.
+Como o schema muda, todas as entradas em `equity_brain.sector_research` ficam desatualizadas (campos faltando). Solução:
+- Bumpar uma constante `PAYLOAD_SCHEMA_VERSION = 2` no edge e gravar em coluna nova `schema_version int default 1`.
+- Hook `useSectorResearch` ignora cache (`isMissing = true`) se `schema_version < 2` → força regeração na primeira visita.
+- Migration: `ALTER TABLE equity_brain.sector_research ADD COLUMN schema_version int default 1;`.
 
-## Bloco 6 — Seed + cron
+### 5. Smoke
 
-- Seed manual via `supabase--curl_edge_functions` para 5 slugs: `isp-banda-larga`, `telecom-movel`, `tech-saas`, `cybersecurity`, `saude-clinicas`.
-- Cron diário 04h (via `supabase--insert` com `pg_cron`/`pg_net`, **não** migration — contém keys) que faz `net.http_post` na edge function para cada `sector_research` com `expires_at < now()`, LIMIT 5/dia para conter custo.
-- Smoke: validar payload ISP em desktop/mobile, cache hit no 2º acesso.
+Depois de aprovar, rodar `force_refresh: true` no setor `isp-banda-larga` e validar:
+- ≥ 10 players no ranking.
+- 4 cards em eficiência com denominador.
+- ≥ 8 players em velocidade com classificação.
+- Head-to-head com sub em cada métrica.
+- ≥ 6 deals com contexto.
+- Conclusão com 3 parágrafos.
 
-## Detalhes técnicos relevantes
+Se a Perplexity sozinha não entregar isso, o fallback Gemini cobre.
 
-- **Schema equity_brain** já existe e o front consome via `src/integrations/supabase/types.ts` (autogerado pós-migration).
-- Edge function usa `fetch` direto Perplexity (mais barato/simples que ir via Lovable Gateway aqui, e mantém citations no payload — vital pro framework). Mesmo assim, gravamos custo em `api_usage_logs` para o `/admin/analytics`.
-- RPC `get_sector_for_user` evita acoplar o front em joins entre `listings` e `cnae_to_sector_mapping`.
-- Cache **por setor** (não por usuário): chave única `setor_slug`, beneficia escala (50 ISPs = 1 pesquisa).
+## Arquivos afetados
 
-## Fora de escopo nesta rodada
+- **edit** `supabase/functions/research-sector/index.ts` — prompt v2, schema novo, fallback Gemini, schema_version.
+- **migration** — adiciona `schema_version` em `equity_brain.sector_research`.
+- **edit** `src/hooks/useSectorResearch.ts` — invalidar quando `schema_version < 2`.
+- **edit** todos os componentes em `src/components/inteligencia/*` — redesenho.
+- **edit** `src/pages/Inteligencia.tsx` — container + grid de fundo.
 
-- Comparação multi-setor.
-- Pesquisa livre (apenas modo automático).
-- Exportação PDF.
-- Acesso pago/gated — todos autenticados leem.
-- Mudanças no `/painel` ou `sector_market_trends`.
+## Fora de escopo
 
-## Entregáveis
+- Não estamos trocando Perplexity por outro provedor primário.
+- Não estamos adicionando export PDF / comparação multi-setor / acesso pago.
+- Mantemos cache 7d e cron diário como está.
 
-1. 1 migration (schema + RLS + RPC + seed CNAE).
-2. 1 edge function `research-sector`.
-3. 1 página + 11 componentes React + 2 hooks.
-4. Atualização em `App.tsx` (rota) e `AppSidebar.tsx` (item).
-5. 1 cron job via `supabase--insert`.
-6. 5 setores seedados.
-
-Pronto pra implementar quando aprovado.
+Posso executar?
