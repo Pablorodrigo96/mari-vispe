@@ -130,10 +130,10 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
     groups.push({
       id: 'dashboards', name: '📊 Dashboards', icon: BarChart3,
       children: [
-        { name: 'Executivo M&A', href: '/dashboard/executivo', icon: BarChart3 },
-        { name: 'Mandato', href: '/dashboard/mandato', icon: FileSignature },
-        { name: 'Match', href: '/dashboard/match', icon: Handshake },
-        { name: 'NBO', href: '/dashboard/nbo', icon: FileBarChart },
+        { name: 'Executivo M&A', href: '/equity-brain/dashboards/executivo', icon: BarChart3 },
+        { name: 'Mandato', href: '/equity-brain/dashboards/mandatos', icon: FileSignature },
+        { name: 'Match', href: '/equity-brain/dashboards/match', icon: Handshake },
+        { name: 'NBO', href: '/equity-brain/dashboards/propostas', icon: FileBarChart },
       ],
     });
   }
