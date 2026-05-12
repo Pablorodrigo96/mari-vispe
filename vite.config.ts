@@ -50,7 +50,10 @@ export default defineConfig(({ mode }) => ({
             id.includes("node_modules/three-render-objects") ||
             id.includes("node_modules/three-forcegraph") ||
             id.includes("node_modules/react-force-graph-3d") ||
-            id.includes("node_modules/d3-force-3d")
+            id.includes("node_modules/d3-force-3d") ||
+            id.includes("node_modules/@deck.gl") ||
+            id.includes("node_modules/maplibre-gl") ||
+            id.includes("node_modules/react-map-gl")
           ) {
             return "equity-brain-3d";
           }

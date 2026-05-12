@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Network } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BrasilMap, type BrasilMapFilters } from "@/components/equity-brain/BrasilMap";
-import { MandateMap } from "@/components/equity-brain/MandateMap";
+import { MandateMapSwitcher } from "@/components/equity-brain/MandateMapSwitcher";
 import { DealCard } from "@/components/equity-brain/DealCard";
 import { UFS } from "@/lib/equityBrain";
 import { useMandatePins } from "@/hooks/useMandatePins";
@@ -216,7 +216,7 @@ export default function MapaPage() {
                   <p className="text-[11px] text-zinc-500">A geocodificação está rodando em background. Volte em alguns minutos.</p>
                 </div>
               ) : (
-                <MandateMap mandates={mandatePinsQ.data ?? []} height="calc(100vh - 220px)" />
+                <MandateMapSwitcher mandates={mandatePinsQ.data ?? []} height="calc(100vh - 220px)" />
               )}
             </div>
           ) : (
