@@ -35,7 +35,7 @@ export function MandateMapSwitcher({ mandates, height = "calc(100vh - 220px)" }:
         <div className="w-full h-full relative">
           <MandateMap
             mandates={mandates}
-            height="100%"
+            height={height}
             initialView={sharedView}
             onViewChange={setSharedView}
           />
