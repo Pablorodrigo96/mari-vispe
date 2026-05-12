@@ -1,92 +1,80 @@
-# Mapa 3D Deck.gl em `/equity-brain/pipeline`
+# Auditoria — Mapa 3D (MandateMap3D + Switcher)
 
-Objetivo: adicionar visualização 3D opcional ao mapa de Mandatos da página Pipeline, sem mexer no Leaflet existente, mantendo dados, filtros e legendas.
+Revisão técnica do que foi entregue na última iteração. Encontrei **3 bugs reais** que vão impactar UX/perf, **5 melhorias importantes** e alguns refinamentos. Nada bloqueia o uso, mas vale corrigir antes de demo.
 
-## Bloco 0 — Inspeção + decisões
+## 🔴 Bugs reais (corrigir)
 
-Resultado da inspeção do mapa atual:
+### 1. Pulsação recria TODAS as camadas a cada 60ms
+Em `MandateMap3D.tsx:139-240` o `useMemo` de `layers` tem `pulseScale` como dependência. Resultado: a cada tick (60ms) **HexagonLayer e ScatterplotLayer também são recriadas**, mesmo elas não pulsando. HexagonLayer re-agrega 366 pontos em hex bins toda vez — mata o FPS quando o usuário liga hexágonos.
 
-| Item | Detalhe |
-|---|---|
-| Página | `src/pages/equity-brain/PipelinePage.tsx` (tab "Mandatos" → view "Mapa") |
-| Componente de mapa | `src/pages/equity-brain/MapaPage.tsx` com 3 modos (`heat`, `mandates`, `anatel`) |
-| Mapa de mandatos | `src/components/equity-brain/MandateMap.tsx` (Leaflet + leaflet.markercluster + CARTO dark) |
-| Hook de dados | `useMandatePins` → view `eb_v_mandate_pins` (id, fase, cnpj, razão, municipio, uf, lat, lng), limite 2000 |
-| Estrutura dado | `MandatePin { id, fase, company_cnpj, razao_social, municipio, uf, faturamento_estimado, latitude, longitude }` |
-| Filtros existentes | Toggle de modo + filtros de vertical herdados; legenda por `fase` (match/cold/nbo/spa/closed/cancelado) |
-| Cobertura geográfica | Todos os mandatos retornados pela view já têm lat/lng (filtro server-side) |
+**Fix:** mover `pulseScale` para fora do `useMemo` de layers; aplicar via `updateTriggers.getFillColor` no ColumnLayer apenas, com `pulseScaleRef.current` lido dentro do accessor.
 
-Decisões propostas (a confirmar antes do Bloco 1):
+### 2. `transitionDuration` / `transitionInterpolator` ficam grudados no state
+Em `MandateMap3D.tsx:115-117` o flyto seta `transitionDuration: 2500` no viewState. Como `onViewStateChange` substitui o objeto inteiro a cada movimento, esses campos **persistem indefinidamente**. Toda movimentação do usuário fica com transição artificial de 2.5s — sensação de "input com lag".
 
-1. Toggle 2D/3D = botão flutuante no canto superior direito **apenas dentro do modo "Mandatos"**, não na barra "VISUALIZAÇÃO:" (essa barra é semântica diferente: tipo de dado, não tipo de render).
-2. 2D continua sendo `MandateMap` (Leaflet). 3D será um novo `MandateMap3D` (Deck.gl). Coexistência via switcher.
-3. Basemap 3D: CARTO Dark Matter (mesmo do Leaflet) via MapLibre, para identidade visual idêntica.
-4. Pacotes: `@deck.gl/core @deck.gl/layers @deck.gl/aggregation-layers @deck.gl/geo-layers @deck.gl/react maplibre-gl react-map-gl@^7`.
-5. Lazy load do bundle 3D: `React.lazy` no switcher para não pesar a rota quando o usuário fica em 2D.
+**Fix:** no callback `onViewStateChange`, descartar `transitionDuration` e `transitionInterpolator` antes de salvar.
 
-## Bloco 1 — Deck.gl básico
+### 3. `views` é instanciado a cada render
+Em `MandateMap3D.tsx:283-287`, `new GlobeView()` / `new MapView()` rodam em todo render. Deck.gl detecta mudança de identidade do view e descarta/recria o WebGL context em transições zoom 2.5 → vira preto por 1-2 frames + memory leak ao trocar várias vezes.
 
-- Instalar pacotes.
-- Criar `src/components/equity-brain/MandateMap3D.tsx`:
-  - `DeckGL` + `Map` (MapLibre, CARTO dark style).
-  - `INITIAL_VIEW_STATE`: centro Brasil (-51.92, -14.23), zoom 4, pitch 45, bearing 0, minZoom 2, maxZoom 18.
-  - `ScatterplotLayer` lendo `MandatePin[]` com cor por `fase` (mapa RGB que espelha `PHASE_COLORS` do `MandateMap`), default Volt #D9F564.
-  - Tooltip básico (razão social + município/UF + fase).
-  - Click → mesma navegação atual (`/equity-brain/crm/mandate/:id`).
-- Estados: loading skeleton, vazio ("Nenhum mandato geocodificado ainda"), erro silencioso (fallback 2D).
-- Smoke: 60fps desktop, 30+fps mobile com os ~366 pontos atuais.
+**Fix:** memoizar `const mapView = useMemo(() => new MapView({id:"map"}), [])` e `globeView` idem.
 
-## Bloco 2 — Toggle 2D/3D + estado
+## 🟡 Melhorias importantes
 
-- Criar `src/components/equity-brain/MandateMapSwitcher.tsx` que recebe `mandates` e mantém:
-  - `mode: '2d' | '3d'` (default `2d`, persistido em `localStorage` `eb.mapa.mandates.mode`).
-  - `sharedView: { center: [lng,lat], zoom }` propagado entre os dois mapas (handlers `onMoveEnd` / `onViewStateChange`).
-- Substituir o render direto de `<MandateMap />` em `MapaPage.tsx` por `<MandateMapSwitcher />`.
-- Criar `Toggle3D` (botão flutuante top-right, fundo zinc-900/80, border zinc-800, font-mono uppercase, ativo = bg Volt + texto preto).
-- Transição: fade-out 100ms / fade-in 100ms (sem morfar engines).
-- Smoke: trocar modos preserva centro/zoom; filtros e seleção permanecem.
+### 4. Pan no 2D não atualiza `sharedView`
+`MandateMapSwitcher.tsx`: só o 3D dispara `onViewChange`. Quando o usuário panoramiza em 2D (Leaflet) e troca pra 3D, volta pro centro do Brasil. O plano prometia sincronização.
 
-## Bloco 3 — Visualizações 3D avançadas
+**Fix:** expor `onMoveEnd` no `MandateMap.tsx` (Leaflet) → propagar centro/zoom pro switcher.
 
-Adicionar 3 camadas, controladas por painel de toggles (canto inferior esquerdo):
+### 5. Pontos com lat/lng inválidos quebram Deck.gl
+`useMandatePins` faz `Number(m.latitude)`. Se a view devolver `null` ou string vazia, vira `NaN` → ScatterplotLayer renderiza ponto em (NaN,NaN) e pode crashar o GPU pipeline em alguns drivers.
 
-1. `ColumnLayer` (ativo por padrão): clusteriza por UF (ou município quando zoom > 6) usando agregação client-side a partir de `MandatePin[]`. Altura proporcional a `count`, cor predominante por `fase`.
-2. `HexagonLayer` (off por padrão): densidade hexagonal com `colorRange` em gradiente Volt (zinc → Volt).
-3. `ArcLayer` (off por padrão, ativa ao clicar cluster): arcos da empresa selecionada até buyers compatíveis. Fonte inicial = lista vazia até integrarmos matches; nesta fase deixar **stub preparado** que aceita `arcs: { from:[lng,lat], to:[lng,lat] }[]` via prop, sem buscar dados novos.
+**Fix:** `.filter(m => Number.isFinite(m.latitude) && Number.isFinite(m.longitude))` antes de retornar.
 
-Cores idênticas à legenda do 2D (reaproveitar `PHASE_COLORS` em `rgb`).
+### 6. Centroide UF = média simples das coordenadas
+`aggregateByUF` faz média aritmética das lat/lng. Para um mandato em Pelotas + um em Porto Alegre, a coluna RS aparece no meio (Camaquã). Visualmente parece dado errado.
 
-## Bloco 4 — Animações + globo + polimento
+**Fix:** usar capital da UF (`stateCapitals` já existe em `src/lib/brazilCoordinates.ts`).
 
-- Pulsação sutil (alpha senoidal, 50ms tick) **apenas** para colunas com `fase ∈ {match, nbo}`.
-- `GlobeView` quando `viewState.zoom <= 2.5`; volta para `MapView` acima disso. Brasil destacado com leve halo Volt.
-- Tooltip estilo Bloomberg (zinc-900/95, border zinc-700, monospace) com: cidade/UF, total de mandatos, fase dominante, último update (já existe? se não, omitir campo).
-- Flyto cinematográfico no **primeiro** acesso ao modo 3D na sessão (zoom 2 → 4, pitch 0 → 45, 2.5s, `FlyToInterpolator`). Flag em `sessionStorage`.
-- Mobile (`useIsMobile`): pitch 30°, pulsação off, globo off (minZoom 3), prop `enableHighFidelity=false`.
-- `useMemo` em layers, lazy load do switcher 3D via `React.lazy`, limite client-side de 1000 pontos antes de degradar para hexágonos automaticamente.
+### 7. ArcLayer com dados fake (stub) está habilitável pelo usuário
+Toggle "Arcos" mostra arcos entre as 5 maiores UFs como **demo visual**. Em uma demo pro investidor isso é mentira gráfica.
 
-## Regras de escopo
+**Fix:** ou desabilitar o toggle (disabled + tooltip "em breve"), ou plugar de fato em matches reais. Se mantiver stub, deixar bem claro com label "Arcos (demo)".
 
-- Não tocar em backend, queries ou view `eb_v_mandate_pins`.
-- Não mexer nos modos `heat` e `anatel` da página (só `mandates`).
-- Não alterar legendas/filtros existentes — apenas espelhar no 3D.
-- Pausa para validação ao fim de cada bloco.
+### 8. Toggle3D não-acessível
+Botões sem `aria-label` nem `aria-pressed`. Canvas Deck.gl sem fallback a11y.
 
-## Detalhes técnicos
+**Fix:** `aria-pressed={active}` nos botões + `role="group"` no wrapper.
 
-```text
-src/
-  components/equity-brain/
-    MandateMap.tsx           (Leaflet — inalterado)
-    MandateMap3D.tsx         (novo — Deck.gl + MapLibre)
-    MandateMapSwitcher.tsx   (novo — toggle + estado compartilhado)
-    map3d/
-      Toggle3D.tsx
-      LayerToggles.tsx
-      Tooltip3D.tsx
-      colors.ts              (PHASE_COLORS_RGB compartilhado)
-  pages/equity-brain/
-    MapaPage.tsx             (troca <MandateMap/> por <MandateMapSwitcher/>)
-```
+## 🟢 Refinamentos opcionais
 
-Bundle splitting: o `MandateMap3D` é importado via `React.lazy` dentro do switcher; o chunk `equity-brain-3d` já existe em `vite.config.ts` (atualizar regex para incluir `@deck.gl` e `maplibre-gl`).
+| # | Item | Detalhe |
+|---|------|---------|
+| 9 | Bundle 3D pesado (~1.5MB gz) | Já tá em chunk separado via vite.config; OK |
+| 10 | Tooltip HTML inline | Funciona mas vaza estilos; idealmente extrair `Tooltip3D` |
+| 11 | Sem indicador de quantos pontos | UF com 109 mandatos vs UF com 2 não tem label numérico visível no globo |
+| 12 | `useIsMobile` retorna `undefined` no primeiro render | Pode mostrar pitch 45 num frame e cair pra 30 — flash mínimo |
+| 13 | `reuseMaps` no MapLibre exige que só haja UM Map por vez | Atualmente OK; documentar |
+| 14 | Legenda fixa no canto inferior-direito | No mobile (440px) sobrepõe os toggles de camada (canto inferior-esquerdo é OK, mas legenda pode quebrar layout) |
+
+## 🟢 O que está bom
+
+- ✅ Lazy-load via `React.lazy` funcionando, bundle 2D não carrega Deck.gl
+- ✅ localStorage persiste preferência 2D/3D
+- ✅ Paleta espelha exatamente `PHASE_COLORS` do 2D
+- ✅ Modo `heat` e `anatel` da página intactos (zero regressão)
+- ✅ Backend, RLS, queries: nada tocado
+- ✅ Mobile com pitch reduzido e pulsação off
+- ✅ Vite chunk `equity-brain-3d` cobrindo deck.gl/maplibre
+
+## Plano de correção sugerido (~45min)
+
+1. Memoizar `mapView`/`globeView` + limpar transição no callback (bugs 2 e 3) — 10min
+2. Refactor da pulsação com ref + updateTriggers (bug 1) — 15min
+3. Filtro NaN no `useMandatePins` (bug 5) — 5min
+4. Centroide via capital UF (bug 6) — 5min
+5. Sync 2D→3D ouvindo `moveend` do Leaflet (bug 4) — 10min
+6. Decidir destino do toggle Arcos (bug 7) — definir com Pablo
+7. a11y básico (bug 8) — 5min
+
+Quer que eu execute esse pacote agora? Se sim, aprove o plano que eu já saio implementando.

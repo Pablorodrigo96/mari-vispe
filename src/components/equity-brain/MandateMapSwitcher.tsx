@@ -33,7 +33,12 @@ export function MandateMapSwitcher({ mandates, height = "calc(100vh - 220px)" }:
     <div className="relative w-full" style={{ height }}>
       {mode === "2d" ? (
         <div className="w-full h-full relative">
-          <MandateMap mandates={mandates} height="100%" />
+          <MandateMap
+            mandates={mandates}
+            height={height}
+            initialView={sharedView}
+            onViewChange={setSharedView}
+          />
           <Toggle3D mode="2d" onChange={changeMode} />
         </div>
       ) : (

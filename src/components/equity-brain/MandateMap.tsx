@@ -52,18 +52,25 @@ function fmtBRL(v: number | null): string {
 interface Props {
   mandates: MandatePin[];
   height?: string;
+  initialView?: { center: [number, number]; zoom: number };
+  onViewChange?: (v: { center: [number, number]; zoom: number }) => void;
 }
 
-export function MandateMap({ mandates, height = "70vh" }: Props) {
+export function MandateMap({ mandates, height = "70vh", initialView, onViewChange }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const clusterRef = useRef<any>(null);
+  const onViewChangeRef = useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const center: [number, number] = initialView
+      ? [initialView.center[1], initialView.center[0]]
+      : [-15.78, -47.93];
     const map = L.map(containerRef.current, {
-      center: [-15.78, -47.93],
-      zoom: 4,
+      center,
+      zoom: initialView?.zoom ?? 4,
       minZoom: 4,
       maxZoom: 16,
       preferCanvas: true,
@@ -72,6 +79,10 @@ export function MandateMap({ mandates, height = "70vh" }: Props) {
       attribution: "&copy; CARTO &copy; OSM",
       subdomains: "abcd",
     }).addTo(map);
+    map.on("moveend", () => {
+      const c = map.getCenter();
+      onViewChangeRef.current?.({ center: [c.lng, c.lat], zoom: map.getZoom() });
+    });
     mapRef.current = map;
     const t = setTimeout(() => map.invalidateSize(), 150);
     return () => {
@@ -79,6 +90,7 @@ export function MandateMap({ mandates, height = "70vh" }: Props) {
       map.remove();
       mapRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
