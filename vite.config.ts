@@ -42,7 +42,6 @@ export default defineConfig(({ mode }) => ({
       "@deck.gl/aggregation-layers",
       "@deck.gl/geo-layers",
       "maplibre-gl",
-      "react-map-gl",
       "react-map-gl/maplibre",
     ],
     exclude: [],
