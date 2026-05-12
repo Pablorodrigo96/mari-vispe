@@ -280,9 +280,13 @@ export default function MandateMap3D({
   return (
     <div className="relative w-full h-full">
       <DeckGL
-        views={usesGlobe ? (new GlobeView({ id: "globe" }) as any) : (new MapView({ id: "map" }) as any)}
-        viewState={viewState as any}
-        controller={{ minZoom, maxZoom: 18, doubleClickZoom: true }}
+        views={
+          usesGlobe
+            ? (new GlobeView({ id: "globe" }) as any)
+            : (new MapView({ id: "map" }) as any)
+        }
+        viewState={{ ...viewState, minZoom, maxZoom: 18 } as any}
+        controller={true}
         onViewStateChange={({ viewState: vs }: any) => {
           setViewState(vs);
           onViewChange?.({ center: [vs.longitude, vs.latitude], zoom: vs.zoom });
