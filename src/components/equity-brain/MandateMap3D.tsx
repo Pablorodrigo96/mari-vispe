@@ -12,6 +12,7 @@ import { colorByPhase, VOLT_RGB } from "./map3d/colors";
 import { Toggle3D } from "./map3d/Toggle3D";
 import { LayerToggles, type LayerFlags } from "./map3d/LayerToggles";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { stateCapitals } from "@/lib/brazilCoordinates";
 
 const CARTO_DARK = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
@@ -41,27 +42,22 @@ interface UFCluster {
 }
 
 function aggregateByUF(mandates: MandatePin[]): UFCluster[] {
-  const map = new Map<string, { lng: number; lat: number; n: number; phases: Record<string, number> }>();
+  const map = new Map<string, { n: number; phases: Record<string, number> }>();
   for (const m of mandates) {
-    const uf = m.uf || "??";
-    const cur = map.get(uf) ?? { lng: 0, lat: 0, n: 0, phases: {} };
-    cur.lng += m.longitude;
-    cur.lat += m.latitude;
+    const uf = (m.uf || "").toUpperCase();
+    if (!uf) continue;
+    const cur = map.get(uf) ?? { n: 0, phases: {} };
     cur.n += 1;
     if (m.fase) cur.phases[m.fase] = (cur.phases[m.fase] ?? 0) + 1;
     map.set(uf, cur);
   }
   const out: UFCluster[] = [];
   for (const [uf, v] of map.entries()) {
+    const cap = stateCapitals[uf];
+    if (!cap) continue; // sem capital conhecida, ignora
     const topPhase =
       Object.entries(v.phases).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    out.push({
-      uf,
-      longitude: v.lng / v.n,
-      latitude: v.lat / v.n,
-      count: v.n,
-      topPhase,
-    });
+    out.push({ uf, longitude: cap.lng, latitude: cap.lat, count: v.n, topPhase });
   }
   return out;
 }
@@ -75,6 +71,7 @@ export default function MandateMap3D({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const flownRef = useRef(false);
+  const pulseRef = useRef(1);
 
   const basePitch = isMobile ? 30 : 45;
 
@@ -92,7 +89,12 @@ export default function MandateMap3D({
     arcs: false,
   });
 
-  const [pulsePhase, setPulsePhase] = useState(0);
+  // Tick para forçar re-render de updateTriggers (NÃO recria o array de layers).
+  const [pulseTick, setPulseTick] = useState(0);
+
+  // Views memoizados — evita recriar WebGL context.
+  const mapView = useMemo(() => new MapView({ id: "map" }), []);
+  const globeView = useMemo(() => new GlobeView({ id: "globe" }), []);
 
   // Flyto cinematográfico no primeiro acesso da sessão.
   useEffect(() => {
@@ -120,12 +122,15 @@ export default function MandateMap3D({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pulsação (desktop only).
+  // Pulsação: atualiza ref + tick leve (apenas ColumnLayer reage via updateTriggers).
   useEffect(() => {
     if (isMobile) return;
+    let phase = 0;
     const id = setInterval(() => {
-      setPulsePhase((p) => (p + 0.08) % (2 * Math.PI));
-    }, 60);
+      phase = (phase + 0.08) % (2 * Math.PI);
+      pulseRef.current = 0.7 + 0.3 * Math.sin(phase);
+      setPulseTick((t) => (t + 1) % 1_000_000);
+    }, 80);
     return () => clearInterval(id);
   }, [isMobile]);
 
@@ -133,8 +138,6 @@ export default function MandateMap3D({
 
   const usesGlobe = !isMobile && viewState.zoom <= 2.5;
   const minZoom = isMobile ? 3 : 2;
-
-  const pulseScale = 0.7 + 0.3 * Math.sin(pulsePhase);
 
   const layers = useMemo(() => {
     const arr: any[] = [];
@@ -155,12 +158,12 @@ export default function MandateMap3D({
             const c = colorByPhase(d.topPhase, 220);
             const hot = d.topPhase === "match" || d.topPhase === "nbo";
             if (hot && !isMobile) {
-              return [c[0], c[1], c[2], Math.floor(c[3] * pulseScale)];
+              return [c[0], c[1], c[2], Math.floor(c[3] * pulseRef.current)];
             }
             return c;
           },
           updateTriggers: {
-            getFillColor: [pulseScale, isMobile],
+            getFillColor: [pulseTick, isMobile],
           },
           material: { ambient: 0.6, diffuse: 0.6, shininess: 32, specularColor: [60, 64, 70] },
         }),
@@ -190,7 +193,6 @@ export default function MandateMap3D({
       );
     }
 
-    // Sempre renderiza pontos finos por cima para detalhamento.
     arr.push(
       new ScatterplotLayer<MandatePin>({
         id: "mandate-points",
@@ -210,7 +212,6 @@ export default function MandateMap3D({
     );
 
     if (flags.arcs) {
-      // Stub: sem dados reais ainda. Mostra arcos entre as 5 maiores UFs (visual demo).
       const top = [...clusters].sort((a, b) => b.count - a.count).slice(0, 5);
       const arcs: { from: [number, number]; to: [number, number] }[] = [];
       for (let i = 0; i < top.length; i++) {
@@ -237,7 +238,8 @@ export default function MandateMap3D({
     }
 
     return arr;
-  }, [flags, clusters, mandates, pulseScale, isMobile, navigate]);
+    // Note: pulseTick is in updateTriggers, not array deps — só recria quando flags/clusters/mandates mudam.
+  }, [flags, clusters, mandates, isMobile, navigate, pulseTick]);
 
   const getTooltip = ({ object, layer }: any) => {
     if (!object) return null;
@@ -280,16 +282,20 @@ export default function MandateMap3D({
   return (
     <div className="relative w-full h-full">
       <DeckGL
-        views={
-          usesGlobe
-            ? (new GlobeView({ id: "globe" }) as any)
-            : (new MapView({ id: "map" }) as any)
-        }
+        views={(usesGlobe ? globeView : mapView) as any}
         viewState={{ ...viewState, minZoom, maxZoom: 18 } as any}
         controller={true}
         onViewStateChange={({ viewState: vs }: any) => {
-          setViewState(vs);
-          onViewChange?.({ center: [vs.longitude, vs.latitude], zoom: vs.zoom });
+          // Descarta campos de transição para não "grudar" o flyto.
+          const {
+            transitionDuration: _td,
+            transitionInterpolator: _ti,
+            transitionEasing: _te,
+            transitionInterruption: _tn,
+            ...clean
+          } = vs;
+          setViewState(clean as ViewState);
+          onViewChange?.({ center: [clean.longitude, clean.latitude], zoom: clean.zoom });
         }}
         layers={layers}
         getTooltip={getTooltip}
@@ -302,21 +308,23 @@ export default function MandateMap3D({
       <Toggle3D mode="3d" onChange={(m) => m === "2d" && onMode2D()} />
       <LayerToggles flags={flags} onChange={setFlags} />
 
-      {/* Legenda compacta */}
-      <div className="absolute bottom-3 right-3 z-[600] flex flex-wrap gap-2 p-2 rounded-md bg-zinc-900/80 backdrop-blur-md border border-zinc-800 text-[10px] text-zinc-400 font-mono uppercase">
-        {(["match", "cold", "nbo", "spa", "closed", "cancelado"] as const).map((p) => {
-          const c = colorByPhase(p, 255);
-          return (
-            <div key={p} className="flex items-center gap-1">
-              <span
-                className="inline-block w-2 h-2 rounded-full"
-                style={{ background: `rgb(${c[0]},${c[1]},${c[2]})` }}
-              />
-              {p}
-            </div>
-          );
-        })}
-      </div>
+      {/* Legenda compacta (esconde no mobile pra não colidir com LayerToggles) */}
+      {!isMobile && (
+        <div className="absolute bottom-3 right-3 z-[600] flex flex-wrap gap-2 p-2 rounded-md bg-zinc-900/80 backdrop-blur-md border border-zinc-800 text-[10px] text-zinc-400 font-mono uppercase">
+          {(["match", "cold", "nbo", "spa", "closed", "cancelado"] as const).map((p) => {
+            const c = colorByPhase(p, 255);
+            return (
+              <div key={p} className="flex items-center gap-1">
+                <span
+                  className="inline-block w-2 h-2 rounded-full"
+                  style={{ background: `rgb(${c[0]},${c[1]},${c[2]})` }}
+                />
+                {p}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
