@@ -10,6 +10,7 @@ import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkele
 import { FilterSidebar, FilterState, defaultFilters } from '@/components/marketplace/FilterSidebar';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { Seo } from '@/components/seo/Seo';
 
 type Listing = Tables<'public_listings'>;
 
