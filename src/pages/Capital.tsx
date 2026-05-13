@@ -30,6 +30,11 @@ export default function Capital() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Captação de Capital para PMEs — mari"
+        description="Dívida, equity ou socio estratégico para sua empresa. Simule em 60 segundos e fale com um especialista."
+        path="/capital"
+      />
       <Header />
       <main>
         {/* Hero + Simulator */}
