@@ -4,6 +4,7 @@ import { CnpjInput } from "@/components/mari-calc/CnpjInput";
 import { MariResult, MariResultData } from "@/components/mari-calc/MariResult";
 import { computeWindow } from "@/lib/mariWindowHeuristic";
 import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
+import { Seo } from "@/components/seo/Seo";
 
 interface BrasilApiCnpj {
   razao_social?: string;
