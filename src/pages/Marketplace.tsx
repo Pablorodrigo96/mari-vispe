@@ -10,6 +10,7 @@ import { BusinessCardSkeleton } from '@/components/marketplace/BusinessCardSkele
 import { FilterSidebar, FilterState, defaultFilters } from '@/components/marketplace/FilterSidebar';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { Seo } from '@/components/seo/Seo';
 
 type Listing = Tables<'public_listings'>;
 
@@ -97,6 +98,11 @@ const Marketplace = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Marketplace de Empresas à Venda — mari"
+        description="Empresas em janela de venda nos próximos 12 meses. Filtre por setor, valor e localização. Anônimo e exclusivo."
+        path="/marketplace"
+      />
       <Header />
       
       <main className="pt-20 pb-16">

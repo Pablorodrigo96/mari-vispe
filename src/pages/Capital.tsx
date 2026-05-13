@@ -14,6 +14,7 @@ import { FileText, MessageCircle } from 'lucide-react';
 import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
 import type { SimulatorInputs, ScoringResult } from '@/lib/capitalScoring';
+import { Seo } from '@/components/seo/Seo';
 
 export type CapitalObjective = 'giro' | 'expansao' | 'refinanciamento' | 'socio';
 
@@ -29,6 +30,11 @@ export default function Capital() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Captação de Capital para PMEs — mari"
+        description="Dívida, equity ou socio estratégico para sua empresa. Simule em 60 segundos e fale com um especialista."
+        path="/capital"
+      />
       <Header />
       <main>
         {/* Hero + Simulator */}

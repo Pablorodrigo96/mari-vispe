@@ -4,6 +4,7 @@ import { CnpjInput } from "@/components/mari-calc/CnpjInput";
 import { MariResult, MariResultData } from "@/components/mari-calc/MariResult";
 import { computeWindow } from "@/lib/mariWindowHeuristic";
 import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
+import { Seo } from "@/components/seo/Seo";
 
 interface BrasilApiCnpj {
   razao_social?: string;
@@ -69,6 +70,11 @@ export default function MariCalculator() {
 
   return (
     <>
+      <Seo
+        title="mari · Calculadora de Janela de Venda (CNPJ)"
+        description="Descubra em 60 segundos se sua empresa está em janela de venda nos próximos 12 meses. Basta o CNPJ — sem cadastro."
+        path="/mari"
+      />
 
       <main className="min-h-[100dvh] bg-background">
         <section className="px-4 py-12 md:py-20">

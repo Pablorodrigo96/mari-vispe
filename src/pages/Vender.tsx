@@ -7,6 +7,7 @@ import { AnonymityDisclaimer } from '@/components/sell/AnonymityDisclaimer';
 import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
+import { Seo } from '@/components/seo/Seo';
 
 const Vender = () => {
   const { user, loading } = useAuth();
@@ -32,6 +33,11 @@ const Vender = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Cadastrar Empresa para Venda — mari"
+        description="Cadastre seu negócio em 4 passos com sigilo total. Codinome, NDA e compradores qualificados."
+        path="/vender"
+      />
       <Header />
 
       <main className="pt-24 pb-16 relative overflow-hidden">

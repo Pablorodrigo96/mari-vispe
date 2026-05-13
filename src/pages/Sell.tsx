@@ -9,6 +9,7 @@ import { Testimonials } from '@/components/sell/Testimonials';
 import { FinalCTA } from '@/components/sell/FinalCTA';
 import { ParticlesBackground } from '@/components/ui/particles-background';
 import { motion } from 'framer-motion';
+import { Seo } from '@/components/seo/Seo';
 
 const benefits = [
   {
@@ -43,6 +44,11 @@ const stats = [
 const Sell = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Venda sua Empresa com Sigilo — mari"
+        description="Cadastre sua empresa em 4 passos, com codinome e NDA. Compradores qualificados e avaliação gratuita."
+        path="/sell"
+      />
       <Header />
 
       {/* Hero Section - Dark */}

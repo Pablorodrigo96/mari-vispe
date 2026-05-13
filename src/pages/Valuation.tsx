@@ -5,6 +5,7 @@ import { ValuationTypeSelector } from '@/components/valuation/ValuationTypeSelec
 import { useAuth } from '@/contexts/AuthContext';
 import { useValuationAccess } from '@/hooks/useValuationAccess';
 import { toast } from 'sonner';
+import { Seo } from '@/components/seo/Seo';
 
 // Heavy below-the-fold sections — lazy
 const ValuationWhySection = lazy(() => import('@/components/valuation/ValuationWhySection').then(m => ({ default: m.ValuationWhySection })));
@@ -82,6 +83,11 @@ const Valuation = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Valuation de Empresas — Diagnóstico Real e Potencial"
+        description="Calcule o valor real, estimado e potencial da sua empresa com 3 metodologias (múltiplos, DCF e diagnóstico)."
+        path="/valuation"
+      />
       <Header />
       <ValuationTypeSelector
         onSelectFree={handleSelectFree}
