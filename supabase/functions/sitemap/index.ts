@@ -16,7 +16,12 @@ const staticRoutes = [
   { loc: "/capital", priority: "0.9", changefreq: "weekly" },
   { loc: "/valuation", priority: "0.85", changefreq: "weekly" },
   { loc: "/vender", priority: "0.8", changefreq: "weekly" },
-  { loc: "/auth", priority: "0.6", changefreq: "monthly" },
+  { loc: "/investors", priority: "0.7", changefreq: "monthly" },
+  { loc: "/auth", priority: "0.5", changefreq: "monthly" },
+  { loc: "/terms", priority: "0.3", changefreq: "yearly" },
+  { loc: "/reset-password", priority: "0.2", changefreq: "yearly" },
+  { loc: "/payment-success", priority: "0.2", changefreq: "yearly" },
+  { loc: "/aguardando-aprovacao", priority: "0.2", changefreq: "yearly" },
 ];
 
 const capitalSectors = ["tech", "saude", "varejo", "industria"];
