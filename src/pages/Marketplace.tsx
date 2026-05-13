@@ -98,6 +98,11 @@ const Marketplace = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Marketplace de Empresas à Venda — mari"
+        description="Empresas em janela de venda nos próximos 12 meses. Filtre por setor, valor e localização. Anônimo e exclusivo."
+        path="/marketplace"
+      />
       <Header />
       
       <main className="pt-20 pb-16">
