@@ -44,6 +44,11 @@ const stats = [
 const Sell = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Venda sua Empresa com Sigilo — mari"
+        description="Cadastre sua empresa em 4 passos, com codinome e NDA. Compradores qualificados e avaliação gratuita."
+        path="/sell"
+      />
       <Header />
 
       {/* Hero Section - Dark */}
