@@ -1,0 +1,21 @@
+# mari — designed forward
+
+> Marketplace de M&A no Brasil: avalie sua empresa em 60s, encontre compradores ou compre negócios em janela de venda nos próximos 12 meses.
+
+mari conecta donos de PMEs, investidores e advisors em um marketplace anônimo de fusões e aquisições. Calculadora pública de valuation, captação de capital (debt/equity) e oportunidades exclusivas filtradas por setor, valor e localização.
+
+## Pages
+
+- [Home](/): visão geral do marketplace e CTA principal.
+- [mari Calculadora](/mari): calculadora pública CNPJ → janela de venda 12m e estimativa de valor.
+- [Marketplace](/marketplace): empresas em janela de venda, filtráveis por setor, valor e UF.
+- [Capital](/capital): captação de dívida e equity para PMEs.
+- [Valuation](/valuation): diagnóstico de valor com 3 metodologias (estimado, real, potencial).
+- [Vender minha empresa](/vender): cadastro anônimo de oportunidade de venda em 4 passos.
+- [Investidores](/investors): tipos de investimento e benefícios para compradores.
+- [Termos de Uso](/terms): política de privacidade e termos.
+
+## Optional
+
+- [Login / Cadastro](/auth)
+- [Reset de senha](/reset-password)
