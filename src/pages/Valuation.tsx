@@ -83,6 +83,11 @@ const Valuation = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Valuation de Empresas — Diagnóstico Real e Potencial"
+        description="Calcule o valor real, estimado e potencial da sua empresa com 3 metodologias (múltiplos, DCF e diagnóstico)."
+        path="/valuation"
+      />
       <Header />
       <ValuationTypeSelector
         onSelectFree={handleSelectFree}
