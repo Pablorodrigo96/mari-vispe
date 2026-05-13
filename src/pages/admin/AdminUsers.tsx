@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock, MessageSquare, Pencil, AlertTriangle, KeyRound } from 'lucide-react';
+import { Users, Shield, ShoppingBag, Briefcase, UserCog, Search, MoreHorizontal, Plus, Trash2, Store, CheckCircle, XCircle, Clock, MessageSquare, Pencil, AlertTriangle, KeyRound, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdvisorWhatsAppStatus } from '@/hooks/useAdvisorWhatsAppStatus';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -548,14 +548,17 @@ export default function AdminUsers() {
                     {filteredUsers.map((user) => (
                       <TableRow key={user.user_id}>
                         <TableCell>
-                          <div>
+                          <button
+                            onClick={() => navigate(`/admin/users/${user.user_id}`)}
+                            className="text-left hover:underline"
+                          >
                             <p className="font-medium text-foreground">
                               {user.full_name || 'Sem nome'}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {user.phone || 'Sem telefone'}
                             </p>
-                          </div>
+                          </button>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
@@ -642,6 +645,10 @@ export default function AdminUsers() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => navigate(`/admin/users/${user.user_id}`)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver detalhes
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openEdit(user)}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar dados

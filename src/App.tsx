@@ -73,6 +73,7 @@ const DashboardNboPage = lazy(() => import("./pages/dashboards/DashboardNboPage"
 // Admin
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
 const AdvisorWhatsAppSetup = lazy(() => import("./pages/admin/AdvisorWhatsAppSetup"));
 const AdminWhatsAppMonitor = lazy(() => import("./pages/admin/AdminWhatsAppMonitor"));
 const AdminListings = lazy(() => import("./pages/admin/AdminListings"));
@@ -210,6 +211,7 @@ const App = () => (
               <Route path="/admin" element={<RequireRole roles={["admin"]}><AdminDashboard /></RequireRole>} />
               <Route path="/admin/crm" element={<RequireRole roles={["admin"]}><AdminCRM /></RequireRole>} />
               <Route path="/admin/users" element={<RequireRole roles={["admin"]}><AdminUsers /></RequireRole>} />
+              <Route path="/admin/users/:userId" element={<RequireRole roles={["admin"]}><AdminUserDetail /></RequireRole>} />
               <Route path="/admin/aprovacoes" element={<RequireRole roles={["admin"]}><AdminApprovals /></RequireRole>} />
               <Route path="/admin/advisors/:advisorId/whatsapp-setup" element={<RequireRole roles={["admin"]}><AdvisorWhatsAppSetup /></RequireRole>} />
               <Route path="/admin/whatsapp-monitor" element={<RequireRole roles={["admin"]}><AdminWhatsAppMonitor /></RequireRole>} />
