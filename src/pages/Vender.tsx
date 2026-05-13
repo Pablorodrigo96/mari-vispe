@@ -7,6 +7,7 @@ import { AnonymityDisclaimer } from '@/components/sell/AnonymityDisclaimer';
 import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
+import { Seo } from '@/components/seo/Seo';
 
 const Vender = () => {
   const { user, loading } = useAuth();
