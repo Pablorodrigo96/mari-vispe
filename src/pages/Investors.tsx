@@ -5,6 +5,7 @@ import { InvestorBenefits } from '@/components/investors/InvestorBenefits';
 import { InvestmentTypes } from '@/components/investors/InvestmentTypes';
 import { InvestorTestimonials } from '@/components/investors/InvestorTestimonials';
 import { InvestorCTA } from '@/components/investors/InvestorCTA';
+import { Seo } from '@/components/seo/Seo';
 
 export default function Investors() {
   return (
