@@ -73,6 +73,7 @@ const DashboardNboPage = lazy(() => import("./pages/dashboards/DashboardNboPage"
 // Admin
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
 const AdvisorWhatsAppSetup = lazy(() => import("./pages/admin/AdvisorWhatsAppSetup"));
 const AdminWhatsAppMonitor = lazy(() => import("./pages/admin/AdminWhatsAppMonitor"));
 const AdminListings = lazy(() => import("./pages/admin/AdminListings"));
