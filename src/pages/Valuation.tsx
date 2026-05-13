@@ -5,6 +5,7 @@ import { ValuationTypeSelector } from '@/components/valuation/ValuationTypeSelec
 import { useAuth } from '@/contexts/AuthContext';
 import { useValuationAccess } from '@/hooks/useValuationAccess';
 import { toast } from 'sonner';
+import { Seo } from '@/components/seo/Seo';
 
 // Heavy below-the-fold sections — lazy
 const ValuationWhySection = lazy(() => import('@/components/valuation/ValuationWhySection').then(m => ({ default: m.ValuationWhySection })));
