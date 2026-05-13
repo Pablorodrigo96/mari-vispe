@@ -548,14 +548,17 @@ export default function AdminUsers() {
                     {filteredUsers.map((user) => (
                       <TableRow key={user.user_id}>
                         <TableCell>
-                          <div>
+                          <button
+                            onClick={() => navigate(`/admin/users/${user.user_id}`)}
+                            className="text-left hover:underline"
+                          >
                             <p className="font-medium text-foreground">
                               {user.full_name || 'Sem nome'}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {user.phone || 'Sem telefone'}
                             </p>
-                          </div>
+                          </button>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
