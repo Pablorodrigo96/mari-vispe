@@ -14,6 +14,7 @@ import { FileText, MessageCircle } from 'lucide-react';
 import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { PageHeaderHint } from '@/components/ui/PageHeaderHint';
 import type { SimulatorInputs, ScoringResult } from '@/lib/capitalScoring';
+import { Seo } from '@/components/seo/Seo';
 
 export type CapitalObjective = 'giro' | 'expansao' | 'refinanciamento' | 'socio';
 
