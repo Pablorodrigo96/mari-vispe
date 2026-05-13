@@ -1,4 +1,4 @@
-const WHATSAPP_PHONE = "5551992338258";
+const WHATSAPP_PHONE = "5551993382756";
 
 /**
  * Normalize a Brazilian phone number to E.164 (digits only, with country code).
