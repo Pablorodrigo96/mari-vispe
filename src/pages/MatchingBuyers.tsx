@@ -70,13 +70,13 @@ const MatchingBuyers = () => {
           .contains('categories', [listingData.category]);
 
         if (buyerData) {
-          const scored = buyerData.map((b) => {
+          const scored = (buyerData as any[]).map((b: any) => {
             let score = 50; // base for category match
             if (b.state === listingData.state) score += 25;
             if (b.city === listingData.city) score += 15;
             if (listingData.asking_price && b.max_budget && b.max_budget >= listingData.asking_price) score += 10;
             return { ...b, score };
-          }).sort((a, b) => b.score - a.score);
+          }).sort((a: any, b: any) => b.score - a.score);
 
           setBuyers(scored);
         }
