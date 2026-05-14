@@ -1,5 +1,10 @@
 import { useUserSector } from "@/hooks/useUserSector";
 import { useSectorResearch } from "@/hooks/useSectorResearch";
+import { useEffectiveRoles } from "@/hooks/useEffectiveRoles";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { InteligenciaHero } from "@/components/inteligencia/InteligenciaHero";
 import { PainelRanking } from "@/components/inteligencia/PainelRanking";
 import { PainelEficiencia } from "@/components/inteligencia/PainelEficiencia";
