@@ -70,15 +70,15 @@ export function PartnerHome() {
       const cnpjs = listings.map(l => l.cnpj).filter(Boolean);
       const valByCnpj = new Map<string, { value: number; type: string }>();
       if (cnpjs.length > 0) {
-        const { data: vals } = await supabase
+        const { data: vals } = await (supabase as any)
           .from('valuation_history')
           .select('cnpj, valuation_type, result, created_at')
           .eq('user_id', user.id)
           .in('cnpj', cnpjs)
           .order('created_at', { ascending: false });
-        (vals ?? []).forEach((v: any) => {
+        ((vals ?? []) as any[]).forEach((v: any) => {
           if (!v.cnpj) return;
-          if (valByCnpj.has(v.cnpj)) return; // mantém o mais recente
+          if (valByCnpj.has(v.cnpj)) return;
           const r: any = v.result ?? {};
           const value = Number(r.mashupValue ?? r.estimatedValue ?? r.value ?? 0);
           valByCnpj.set(v.cnpj, { value, type: v.valuation_type });
