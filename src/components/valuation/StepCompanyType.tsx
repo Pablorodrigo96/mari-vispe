@@ -1,4 +1,4 @@
-import { Building2, Rocket, Zap } from 'lucide-react';
+import { Building2, Rocket, Store, Zap } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { companyTypeConfig, CompanyType } from '@/lib/dcfCalculator';
@@ -14,6 +14,7 @@ const companyTypeIcons = {
   tradicional: Building2,
   nova_economia: Zap,
   startup: Rocket,
+  franqueadora: Store,
 };
 
 export const StepCompanyType = ({ data, onChange }: StepCompanyTypeProps) => {
