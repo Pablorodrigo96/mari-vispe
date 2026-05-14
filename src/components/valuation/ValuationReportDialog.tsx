@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle, ArrowUpRight, BarChart2 } from 'lucide-react';
+import { Download, ArrowLeft, TrendingUp, Building2, Calculator, BarChart3, MessageCircle, ArrowUpRight, BarChart2, TrendingDown, Target, Rocket, Info, Zap } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Tooltip as RechartsTooltip, Cell } from 'recharts';
 import { ValuationResult, calculateEquityGap } from '@/lib/valuationCalculator';
 import { formatFullCurrency } from '@/lib/formatters';
