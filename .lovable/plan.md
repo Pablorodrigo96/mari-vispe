@@ -1,107 +1,121 @@
-## Diagnóstico
+# Plano — Parceiro/Indicador: experiência enxuta e escopada
 
-O relatório (`ValuationReportDialog`, `DCFReportDialog`, `ValuationNarrativeReport`) foi escrito antes do rebrand para **mari** e usa cores hardcoded: `emerald-500/600/700`, `red-500/600`, `amber-50/200`, `slate-400`, `[#0F172A]`, `[#1E293B]`, gradientes verde-azulado etc.
+Hoje o parceiro contábil (`is_partner_accountant=true` + role `advisor`) herda **todos** os privilégios de advisor interno Vispe: vê base inteira, mercado ISP fixo, pipeline global, dashboards executivos. Vamos separar em duas personas distintas:
 
-Como o `index.css` aliasou tokens legados, **`bg-emerald-*` na prática vira Volt (#D9F564 — verde-limão)**. Isso causa:
+- **Advisor interno Vispe** (`advisor` sem `is_partner_accountant`): mantém tudo como hoje.
+- **Parceiro externo / indicador** (`advisor` + `is_partner_accountant=true`): visão restrita, focada em indicar empresa → fazer valuation → ver compradores anônimos → ganhar comissão.
 
-1. **Texto branco em fundo Volt invisível** (imagem 166 — card "Quer fechar esse gap" e card "Mashup Value").
-2. **Mistura caótica**: Volt + navy + vermelho-tomate diagnóstico + amarelo-aviso + cinza-azulado de gráfico — sem hierarquia visual.
-3. **Contraste quebrado**: badges `bg-emerald-500/20 text-emerald-400` no header escuro ficam Volt-pálido sobre Carbon.
-4. **PDF idem**: cores hardcoded RGB (16,185,129) verde-Vispe antigo, fora da identidade atual.
+## 1. Sidebar drasticamente reduzida para o parceiro
 
-## Princípios do redesign
+Em `src/components/layout/AppSidebar.tsx`, quando `eff.isPartnerAccountant && !eff.isAdmin`, mostrar **apenas**:
 
-- **Paleta única mari**: Carbon (#0A0A0A) + Graphite (#2A2A2A) + Volt (#D9F564) + Bone (#FAFAF7) + 1 acento de alerta neutro (vermelho carmim sóbrio só para "perda/risco" no diagnóstico, sem laranja/âmbar).
-- **Volt nunca recebe texto branco** — sempre Carbon (`text-foreground` em fundo Volt).
-- **Hierarquia em 3 níveis**: (1) hero do valor — superfície escura Carbon com número Volt; (2) cards de dado — Bone/card neutro com filete Volt fino; (3) CTA — Carbon com botão Volt OU Volt com texto Carbon.
-- **Glassmorphism leve** (já é padrão do app): `bg-card/60 backdrop-blur-md border border-border`.
-- **Tipografia financeira**: número grande em tabular-nums, label em uppercase tracking-wider muted.
-- **Zero gradientes coloridos arco-íris** — só gradiente Carbon→Graphite (fundo) e Volt→Volt-light (acento pontual).
-
-## Mudanças por arquivo
-
-### 1. `src/components/valuation/ValuationReportDialog.tsx`
-
-**Header (linha 441):** trocar `bg-[#0F172A]` por `bg-gradient-carbon-deep`; badge passa a `bg-volt/15 text-volt border-volt/30`.
-
-**Hero "Mashup Value" (459-469):** sai gradiente emerald, entra card Carbon com número Volt grande:
+```text
+PARCERIA
+  └ Painel do parceiro      (/parceiro)   ← home
+  └ Cadastrar empresa       (/vender)
+  └ Minhas indicações       (/meus-anuncios — filtrado)
+VALUATION
+  └ Novo valuation múltiplos (/valuation/multiplos)
+  └ Meus valuations          (/meus-valuations — filtrado)
+COMPRADORES (anônimos)
+  └ Possíveis compradores    (/parceiro/compradores — novo, anonimizado)
 ```
-bg-card border border-border + filete Volt à esquerda
-label: text-muted-foreground uppercase tracking-wider text-xs
-valor: text-5xl font-bold text-volt tabular-nums
-sublinha: text-muted-foreground
-```
-Remove `text-shadow` (gambiarra para esconder contraste ruim).
 
-**Card "Antes de continuar" (471-504):** elimina vermelho-laranja. Vira card Carbon glass com:
-- ícone ⚡ em chip Volt
-- texto em `text-foreground` / `text-muted-foreground`
-- 3 micro-cards uniformes (sem emoji colorido — usar `lucide-react` TrendingDown/Target/Rocket em Volt)
-- CTA: `bg-volt text-carbon hover:bg-volt-light` (botão de ação principal — destaque sem violência)
+Esconder: Visão Geral (Painel/Inteligência genérica), Marketplace, Mapa, Comprar, Capital, DCF, Certificador, Mandatos (tabela), Dashboards, Equity Brain, Cockpit Interno, Head de Parcerias, Migração Monday.
 
-**Cards Empresa/Financeiro/Múltiplos (507-587):** padronizar:
-- ícone-chip `bg-volt/10 text-volt`
-- removido emerald de tudo
-- divisores `border-border/50` entre linhas para ritmo
+Continua aparecendo o "Seu advisor pessoal — Rafael" no rodapé.
 
-**Tabela Valuation por Método (590-635):** header `bg-secondary text-foreground` (não navy hardcoded); linha "Mashup" `bg-volt/10 text-volt` borda superior Volt.
+## 2. Painel do Parceiro = central de indicações + comissão
 
-**Múltiplos Implícitos (638-654):** já é Carbon — só trocar `text-emerald-400` por `text-volt`.
+Refatorar `src/pages/PartnerDashboard.tsx` (rota `/parceiro`) para virar a **home** do parceiro com 4 blocos verticais:
 
-**Gap de Equity (704-802):** harmonizar — remover `border-emerald-500/30` e o card "accent" laranja. 3 sumários:
-- Atual: `bg-muted/40` (neutro)
-- Vispe: `bg-volt/10 border-volt/30 text-volt-dark`
-- Gap: também Volt mas com filete (sem 3ª cor accent)
-Recharts: barra "atual" `hsl(var(--muted-foreground))`, barra "potencial" `hsl(var(--volt))`. Tooltip já usa tokens.
-Botão "Falar com especialista" → `bg-volt text-carbon`.
+1. **Header status do cadastro** — banner Volt se perfil ou empresa indicada estão incompletos: "Complete seu cadastro para destravar pesquisa de mercado, valuation e matches" + CTA.
+2. **Minhas indicações** (tabela/cards): nome empresa, setor, status (cadastrada · valuation feito · anúncio publicado · em negociação · fechada), valuation estimado (se rodado), compradores compatíveis (contagem anônima), **comissão potencial** (5% indicação · 10% reunião BANT · 15% valuation+anúncio).
+3. **Potencial da carteira** — incorporar resumo de `/potencial-carteira` (somatório comissão potencial × probabilidade).
+4. **Próximos passos sugeridos por empresa** — "Faça o valuation da Gummy", "Publique o anúncio para receber matches", etc.
 
-**Disclaimer amber (817-824):** trocar para `bg-muted/30 border-border` com texto `text-muted-foreground` e ícone Info — sem amarelo gritante.
+Remover da rota `/potencial-carteira` separada — passa a ser uma seção dentro de `/parceiro`.
 
-**CTA WhatsApp final (829-848):** mesmo padrão Carbon-com-Volt-button.
+Pós-login, parceiro cai direto em `/parceiro` (já é o `ROLE_HOME` correto, validar em `src/lib/authRedirects.ts`).
 
-**Botões ação (851-867):** "Baixar PDF" → `bg-volt text-carbon`; "Novo Valuation" → `variant="outline"` com `bg-transparent`.
+## 3. Filtrar Oportunidades / Pipeline / Mandatos por escopo do parceiro
 
-### 2. `handleDownloadPDF` (62-435) — PDF gerado
+Hoje o parceiro abre Equity Brain inteiro. Ele **não deve ver Equity Brain** — toda informação de match dele vive dentro de `/parceiro/compradores`.
 
-Reescrever paleta:
-- Header: `#0A0A0A` Carbon (não navy 15,23,42)
-- Acento: Volt `#D9F564` com texto Carbon `#0A0A0A` (nunca branco em Volt)
-- Texto corpo: `#0A0A0A` em Bone `#FAFAF7`
-- Tabela header: Carbon + texto Bone
-- Linha total: Volt + texto Carbon bold
-- Cards 3-valores diagnóstico: Estimado=Graphite/Bone, True Value=carmim sóbrio `#7A1F1F` em fundo `#FBEAEA`, Potencial=Volt+Carbon
-- Disclaimer: faixa neutra `#EEEEEC` com texto Graphite (não amarelo)
-- Footer: Carbon + Volt accent
-- Logo: "mari" em Volt
+- Remover acesso a `/equity-brain/*` no menu para `isPartnerAccountant && !isAdmin`.
+- Bloquear nas próprias páginas (`OportunidadesPage`, `PipelinePage`, `MandatosTablePage`, `CompradoresPage`, `IspMarketPage`, `ExecutiveDashboardPage`, dashboards `/equity-brain/dashboards/*`): se `isPartnerAccountant && !isAdmin && !isAdvisorInterno`, redirecionar para `/parceiro` com toast "Esta área é exclusiva do time interno Vispe".
+- Criar nova `/parceiro/compradores` que consulta `equity_brain.matches` **filtrado por** `cnpj IN (empresas indicadas pelo parceiro via partner_lead_reservations + listings.user_id = parceiro)` e **anonimiza** o buyer (mostra só: arquétipo, UF, ticket range, score) — sem nome, sem contato. CTA "Quero apresentar" → cria pedido para advisor interno.
 
-### 3. `src/components/valuation/ValuationNarrativeReport.tsx`
+## 4. Inteligência de mercado contextual ao setor da empresa indicada
 
-**Bloco 9 CTA (334-358):** o problema da imagem 166 — texto branco em fundo Volt invisível.
-- Trocar `bg-gradient-to-br from-emerald-500 to-emerald-600 text-white` por `bg-gradient-volt` (Volt→Volt-light) com **texto Carbon** (`text-carbon`).
-- Subtexto: `text-carbon/80` (não `text-emerald-100`).
-- Botão primário: `bg-carbon text-volt hover:bg-graphite` (inversão elegante).
-- Botão secundário: `variant="outline" bg-transparent border-carbon/30 text-carbon hover:bg-carbon/5`.
+Hoje `/inteligencia` (e tudo que chama `useUserSector`/IspMarketPage) assume telecom/ISP. Para o parceiro:
 
-**Demais blocos (139-312):** trocar `emerald-*` por `volt`-tokens; manter `red-*` apenas nos 2 blocos de "perda" (3 e 4) — já é semântica de alerta legítima — mas suavizar para `red-700/red-50` e `dark:red-950/30` (sem `red-300` agressivo nas bordas; usar `border-border`).
+- Esconder `/inteligencia` da sidebar do parceiro até ele ter **pelo menos 1 empresa indicada com setor preenchido**.
+- Quando habilitada, a página recebe `?sector=` baseado no setor da última indicação (ex.: Gummy → moda) e os blocos de notícias/benchmark passam a usar esse setor. Se `sector` não estiver no catálogo de setores cobertos, mostrar empty state: "Estamos preparando inteligência para o setor X. Enquanto isso veja: [valuation, matches]".
+- ISP/Anatel só aparece se setor da empresa = telecom.
 
-**Badges:** padronizar `bg-volt/15 text-volt-dark border-volt/30` para "ganho/positivo" e `bg-destructive/10 text-destructive border-destructive/30` para "perda".
+## 5. Matches/compradores não aparecem antes do cadastro real
 
-### 4. `src/components/valuation/DCFReportDialog.tsx`
+A tela de "8 possíveis compradores" hoje aparece zerada com qualquer perfil novo porque `useMatchInbox` busca matches globais. Para parceiro:
 
-Aplicar exatamente o mesmo tratamento (mesma estrutura visual, header Carbon, hero Volt-on-Carbon, tabelas neutras, CTA Volt). Sem novas seções.
+- `useMatchInbox` (ou wrapper específico do parceiro) **só retorna linhas** onde `cnpj` pertence a empresas indicadas pelo parceiro. Sem indicação = lista vazia + empty state "Cadastre sua primeira empresa para Mari calcular compradores compatíveis".
+- O card "8 possíveis compradores" do `/parceiro` desaparece quando `count = 0` e vira CTA "Cadastrar primeira empresa".
 
-## O que NÃO muda
+## 6. Janela de venda só após valuation + setor
 
-- Lógica de cálculo, dados, props, estrutura de seções.
-- Diagnóstico de 12 perguntas e edge functions.
-- `ValuationDiagnostic.tsx` (página) — só o relatório.
-- Páginas `Valuation.tsx`, wizards, e `MyValuations.tsx`.
-- Recharts data structure — só cores.
+O bloco "Janela de venda · ideal 2027" no `/painel` hoje vem do `painelExecutive.ts` rodando sobre dados agregados — sem empresa, sem sentido.
 
-## Verificação
+- Para parceiro: substituir esse bloco pela tabela de indicações. A janela de venda passa a ser **por empresa indicada** dentro do card da empresa (só renderiza quando empresa tem setor preenchido + valuation rodado).
 
-Após aplicar, rodar build e abrir `ValuationReportDialog` mentalmente:
-- Nenhum texto branco sobre Volt.
-- Máximo 4 cores na tela: Carbon, Bone/card, Volt, 1 carmim só em perda.
-- Hero Volt aparece **uma única vez** no relatório (não 3x).
-- PDF gerado segue mesma paleta.
+## 7. Gates de "cadastro incompleto"
+
+Adicionar componente `<PartnerOnboardingChecklist />` no topo de `/parceiro` com 4 missões:
+
+- ☐ Completar perfil (nome, telefone, empresa)
+- ☐ Cadastrar primeira empresa indicada (`/vender`)
+- ☐ Rodar valuation por múltiplos da empresa
+- ☐ Publicar anúncio (libera matches reais)
+
+Cada item completo vira ✅ verde Volt. O checklist some quando todos os 4 estão ✅.
+
+Botões "Pesquisa de mercado", "Ver matches", "Janela de venda" ficam disabled com tooltip "Complete passo X" enquanto pendentes.
+
+## 8. Transição de página fluida (flash branco)
+
+A tela branca de ~1s ao trocar de rota é o `Suspense` fallback dos `lazy()` sem fallback estilizado.
+
+- Em `src/App.tsx`, envolver as rotas autenticadas com `<Suspense fallback={<AppShellSkeleton />}>` que renderiza sidebar+topbar estáticos com skeleton no main, em vez de tela branca. Nada de código split por rota dentro de `AppShell`.
+
+## 9. Comissão — schema mínimo
+
+Para mostrar "comissão potencial" precisamos do valor estimado da empresa × % do estágio. Sem migration nova:
+
+- Calcular client-side: `valuation_history.result.mashupValue` (última do parceiro p/ aquele CNPJ) × {0.05, 0.10, 0.15} conforme: indicou / agendou BANT / fez valuation+anúncio.
+- O estágio BANT já existe em `eb_mandates.stage` ou `partner_opportunity_interests.status`. Mapear: `indicado` → 5%, `qualificado_bant` → 10%, `valuation_publicado` → 15%, `fechado` → realizado.
+
+(Se faltar campo `bant_qualified_at` em `partner_opportunity_interests`, adicionar em migration separada — confirmar antes.)
+
+## Arquivos afetados (resumo)
+
+- `src/components/layout/AppSidebar.tsx` — branch dedicada para `isPartnerAccountant && !isAdmin`.
+- `src/pages/PartnerDashboard.tsx` — reescrever como home com 4 blocos + checklist.
+- `src/pages/PortfolioPotential.tsx` — virar componente `<PortfolioPotentialSection />` consumido em `/parceiro`; manter rota como redirect.
+- `src/pages/Painel.tsx` — para parceiro, redirect para `/parceiro`.
+- `src/pages/Inteligencia.tsx` — receber sector dinâmico, gate por indicação.
+- `src/pages/equity-brain/*` (Oportunidades, Pipeline, MandatosTable, Compradores, IspMarket, Executive, dashboards) — guard que redireciona parceiro para `/parceiro`.
+- `src/hooks/useMatchInbox.ts` — novo hook `usePartnerMatches()` que filtra por CNPJs do parceiro e anonimiza.
+- `src/pages/parceiro/PartnerBuyersPage.tsx` (novo) — `/parceiro/compradores` anonimizado.
+- `src/components/parceiro/PartnerOnboardingChecklist.tsx` (novo).
+- `src/components/parceiro/IndicacoesTable.tsx` (novo) — colunas: empresa, setor, status, valuation, compradores, comissão potencial.
+- `src/lib/authRedirects.ts` — confirmar `partner` → `/parceiro`.
+- `src/App.tsx` — Suspense fallback estilizado com sidebar+skeleton.
+
+## Não faz parte deste plano
+
+- Mudar advisor interno Vispe (continua vendo tudo).
+- Mudar admin/franqueado.
+- Mudar fluxo de seller/buyer puros.
+- Mexer em valuation, capital, DCF — só esconder da sidebar do parceiro.
+- Migration de schema (se precisar de `bant_qualified_at`, confirmo antes em fase separada).
+
+Aprovando, implemento na ordem: §1 sidebar → §8 transição → §2/§7 painel+checklist → §3 guards EB → §5/§9 matches+comissão → §4 inteligência por setor.
