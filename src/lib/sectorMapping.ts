@@ -83,6 +83,8 @@ export const SECTOR_OPTIONS: SectorOption[] = [
   { label: 'Jurídico / Contábil', benchmarkKey: 'Serviços' },
   { label: 'Recursos Humanos / Recrutamento', benchmarkKey: 'Serviços' },
   { label: 'Turismo / Hospitalidade / Hotelaria', benchmarkKey: 'Serviços' },
+  { label: 'Serviços de Lazer / Asset-Light (clubes, esportes, experiências)', benchmarkKey: 'Lazer Asset-Light' },
+  { label: 'Lazer / Entretenimento (parques, cinemas, eventos)', benchmarkKey: 'Serviços' },
   { label: 'Mídia / Entretenimento / Eventos', benchmarkKey: 'Serviços' },
   { label: 'Limpeza / Facilities / Segurança', benchmarkKey: 'Serviços' },
 
