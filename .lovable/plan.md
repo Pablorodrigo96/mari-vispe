@@ -1,100 +1,61 @@
+# Plano: novos setores e modelo de valuation
 
-# Plano — Security Advisor (Rodada 2)
+## 1. Novo setor: "Serviços de Lazer / Ativos Leves (Asset-Light)"
 
-Já rodei o linter + queries de inventário. Abaixo o plano por fase com tudo que será tocado, **antes** de qualquer migration.
+Negócios de lazer com baixa imobilização (clubes de assinatura, esportes, eventos recorrentes, lazer infantil, espaços compartilhados, experiências). Asset-light = margem alta + caixa rápido + múltiplos próximos de Serviços/SaaS.
 
----
+**`src/lib/valuationCalculator.ts`** — adicionar em `sectorMultiples`:
+```
+"Lazer Asset-Light": { rev: 2.0, ebitda: 8.5, profit: 14.0 }
+```
+(entre Serviços e Telecom; benchmark calibrado entre Serviços `1.5/7.5/12.5` e SaaS, refletindo recorrência + ativos leves).
 
-## FASE 1 — Correções de baixo risco (1 migration)
+**`src/lib/sectorMapping.ts`** — adicionar `'Lazer Asset-Light'` ao type `BenchmarkKey` e duas opções no `SECTOR_OPTIONS` (bloco "Serviços B2B / B2C"):
+- `{ label: 'Serviços de Lazer / Asset-Light (clubes, esportes, experiências)', benchmarkKey: 'Lazer Asset-Light' }`
+- `{ label: 'Lazer / Entretenimento (parques, cinemas, eventos)', benchmarkKey: 'Serviços' }` (asset-heavy → proxy Serviços)
 
-### 1.1 Function Search Path Mutable (21 funções)
+## 2. Novo tipo de empresa: "Franqueadora" (DCF)
 
-Todas serão alteradas via `ALTER FUNCTION ... SET search_path = ...` (sem recriar, sem mudar lógica).
+Franqueadora = receita de royalties/taxas, capex baixíssimo, margem alta, crescimento moderado-alto via expansão de unidades, risco menor que startup (modelo provado) mas maior que tradicional (depende de rede).
 
-**`equity_brain.*` (17 funções)** → `SET search_path = equity_brain, public, pg_temp`
-- `bucket_employees`, `bucket_revenue`, `category_to_cnae`, `category_to_setor`, `cnpj_for_listing`, `derive_codename_prefix`, `entity_notes_touch`, `margin_score`, `next_codename`, `porte_from_revenue`, `revenue_tier_score`, `set_company_codename`, `set_updated_at`, `tg_bump_mandate_last_activity`, `tg_sector_research_updated_at`, `tg_set_updated_at`, `touch_deals_updated_at`
+**`src/lib/dcfCalculator.ts`** — adicionar em `companyTypeConfig`:
+```
+franqueadora: {
+  label: 'Franqueadora',
+  description: 'Receita recorrente de royalties + taxa de franquia. CapEx baixo, margem alta, crescimento via expansão de unidades. Premissa: rede consolidada com pipeline de novos franqueados.',
+  growthRate: 0.25,        // 25% — entre nova economia (22%) e startup (35%)
+  riskPremium: 0.0650,     // 6.5% — abaixo de nova economia (7.23%) por modelo provado
+  wacc: 0.2150,            // 21.5% (Selic 15% + 6.5%)
+  marginGrowth: true,      // +1 p.p./ano (alavancagem operacional via novas unidades)
+}
+```
 
-**`public.*` (3 funções)** → `SET search_path = public, pg_temp`
-- `buyer_neutral_description`, `buyer_pseudonym`, `eb_pipeline_stages_set_updated_at`
+**`src/components/valuation/StepCompanyType.tsx`** — adicionar ícone:
+```
+import { Store } from 'lucide-react';
+const companyTypeIcons = { tradicional: Building2, nova_economia: Zap, startup: Rocket, franqueadora: Store };
+```
+O grid passa de 3 para 4 cards (`md:grid-cols-2 lg:grid-cols-4` ou manter 2 colunas em md).
 
-**Nenhuma referencia `vector` diretamente** — não preciso incluir `extensions`.
+**`src/components/valuation/StepCompanyProfile.tsx`** — adicionar 4ª opção `franqueadora` no array `companyTypes` (usado no wizard de Múltiplos), com ícone `Store` e copy curta ("Receita de royalties + expansão de rede").
 
-> Os ~150 warnings restantes de "Function Search Path Mutable" no linter são funções **C da extension `vector`** em `public` (operadores `vector_*`, `halfvec_*`, `sparsevec_*`). Esses só desaparecem movendo a extension de schema — fora do escopo desta rodada (já documentado como pendência).
+## 3. Pontos que NÃO mudam
 
-### 1.2 Public Bucket Allows Listing
+- Fórmula de DCF, fórmula de Múltiplos, Selic 15%, terminal growth 4.5%, range ±6% — intactos.
+- `valuation_history` schema — `company_type` já é `text`, aceita `'franqueadora'` sem migration.
+- `ValuationReportDialog`/`DCFReportDialog` — leem `companyTypeLabel` dinamicamente, não precisam mudar.
+- `CertifierWizard` (usa `'Outros'` fixo) e `diagnosticCalculator` — sem impacto.
+- Memórias, RLS, edge functions — nenhuma mudança.
 
-Buckets `public=true`: **`avatars`** e **`listing-images`**.
+## 4. Validação
 
-Ambos têm policy correta de leitura por nome (`Public read … by name`), e adicionalmente têm policies frouxas que permitem `list()` autenticado:
+- Smoke manual: `/valuation` (Múltiplos) e `/valuation-dcf` selecionando os 4 tipos + novo setor.
+- Conferir que select de setor em `Valuation.tsx`/`ValuationMultiplos.tsx` lista as duas novas entradas.
 
-- `Avatars readable by authenticated (list)` — `bucket_id = 'avatars'`
-- `Listing images readable by authenticated (list)` — `bucket_id = 'listing-images'`
+## Resumo de arquivos
 
-**Ação:** `DROP` dessas duas policies. Acesso direto via URL pública continua funcionando (bucket público bypassa RLS no endpoint `/object/public/...`). O que deixa de funcionar é `supabase.storage.from('avatars').list()` no front.
-
-> Preciso confirmar com você: **algum lugar do front chama `.list()` em `avatars` ou `listing-images`?** Se sim, eu mantenho a policy mas restrinjo a admin/owner. Vou fazer um `rg` antes de aplicar.
-
-### 1.3 RLS Enabled No Policy
-
-Apenas **1 tabela** se enquadra: `private.cron_secrets`.
-
-**Ação:** documentar como aceito (acesso só via service_role / `bootstrap_cron_secrets_internal`). Sem policy = ninguém com JWT acessa, que é o comportamento desejado. Atualizo `@security-memory`.
-
-> Os "RLS Enabled No Policy" do linter (185 entradas?) são quase todos falsos-positivos sobre views/MVs em `equity_brain`. Vou confirmar contando, mas não preciso criar policies "vazias" pra silenciar.
-
----
-
-## FASE 2 — SECURITY DEFINER (auditoria primeiro, sem migration)
-
-Inventário: **~85 funções SECURITY DEFINER** com EXECUTE pra `anon` + `authenticated` em `public`/`equity_brain`/`mari_ops`.
-
-### Entrega da Fase 2 (antes de qualquer mudança)
-
-Vou gerar **um relatório markdown** (`docs/SECURITY_DEFINER_AUDIT.md`) com tabela:
-
-| Schema | Função | Resumo (1 linha) | Chamada por | Precisa SEC DEFINER? | Ação proposta (A/B/C) |
-
-Classificação preliminar (para você revisar):
-
-**(A) Converter para SECURITY INVOKER** — funções que só leem dados que o usuário já enxerga via RLS:
-- `public.profile_completion`, `public.buyer_neutral_description`, `public.buyer_pseudonym`, helpers `equity_brain.bucket_*`, `category_to_*`, `margin_score`, `revenue_tier_score`, `porte_from_revenue` (puras, sem acesso a tabela).
-
-**(B) Manter SEC DEFINER + REVOKE de anon/authenticated** — funções de trigger/job/admin:
-- Todas as `tg_*`, `trg_*`, `sync_*`, `notify_*`, `update_lead_score_on_doc`, `sla_deadline_setter` (triggers — chamadas pelo Postgres, não pelo cliente).
-- `bootstrap_*`, `backfill_*`, `rebuild_*`, `refresh_mandate_priorities`, `run_safe_dedupe`, `merge_*`, `auto_*`, `generate_mari_insights_*`, `eb_refresh_outcomes`, `daily_smoke_tests` — chamadas só por edge functions (service_role) ou admin. Manter EXECUTE só pra `service_role` + roles específicas via `has_role` interno.
-- `cleanup_old_rate_limits`, `mari_ops_record_smoke` — service_role only.
-
-**(C) Manter como está + documentar** — chamadas legítimas do front:
-- `has_role`, `eb_can_view_identity`, `is_company_visible_in_crm` (gates de RLS — precisam ser executáveis por authenticated).
-- `get_dashboard_*`, `get_health_summary_24h`, `eb_dedupe_audit_recent`, `eb_get_drain_job` (já validam role internamente via `has_role(auth.uid(), 'admin')`).
-- `recalculate_sv`, `qualify_lead`, `eb_resolve_advisor_mapping`, `approve_advisor_request`, `approve_franchisee_request`, `eb_dismiss_today_card` (validam role/owner internamente).
-- `increment_capital_view`, `get_teaser_view_count`, `find_user_by_meta_name` (públicas por design — confirmar caso a caso).
-- `profile_completion` (chamada no MyProfile — pode ser INVOKER se RLS permite).
-- `create_*_notification`, `notify_*_response` (triggers — vão pra (B), não C).
-
-### Aplicação faseada (após sua aprovação do relatório)
-
-- **Migration 2A:** REVOKEs do grupo (B). Risco: zero pro front. Triggers continuam funcionando porque rodam com privilégio do owner da tabela.
-- **Migration 2B:** Conversão (A) → SECURITY INVOKER. Vou listar os pontos do front/edge que chamam cada uma e validar que RLS permite.
-- **Documentação (C)** vai pra `@security-memory`.
-
----
-
-## Pontos a confirmar antes de eu rodar a Fase 1
-
-1. **Posso dropar as duas policies `… readable by authenticated (list)` em `storage.objects`?** Vou rodar `rg "\.list\(" src` antes pra checar se algum hook depende disso.
-2. **`private.cron_secrets` sem policy = aceito?** (Confirma que ninguém deveria acessar fora de edge function service_role.)
-3. **OK eu seguir gerando o relatório de Fase 2 (`docs/SECURITY_DEFINER_AUDIT.md`) sem aplicar nenhuma mudança ainda?**
-
-## Não-mudanças confirmadas
-
-- Extension `vector` continua em `public` (janela dedicada).
-- `eb_pipeline_stages` aberto (config UI).
-- `whatsapp_messages` realtime (revisão futura).
-
-## Entregáveis após aprovação
-
-1. **Migration Fase 1** (search_path + drop 2 policies de bucket).
-2. **`docs/SECURITY_DEFINER_AUDIT.md`** com classificação completa (A/B/C) — você aprova antes de Migration 2A/2B.
-3. Update `@security-memory` ao final de cada fase.
-4. Rodar Security Advisor depois e mostrar o diff.
+- `src/lib/valuationCalculator.ts` — +1 entrada em `sectorMultiples`
+- `src/lib/sectorMapping.ts` — +1 chave em `BenchmarkKey`, +2 em `SECTOR_OPTIONS`
+- `src/lib/dcfCalculator.ts` — +1 entrada em `companyTypeConfig`
+- `src/components/valuation/StepCompanyType.tsx` — +1 ícone, grid responsivo
+- `src/components/valuation/StepCompanyProfile.tsx` — +1 opção
