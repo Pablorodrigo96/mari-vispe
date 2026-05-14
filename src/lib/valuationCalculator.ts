@@ -12,6 +12,8 @@ export const sectorMultiples: Record<string, { rev: number; ebitda: number; prof
   "Serviços": { rev: 1.5, ebitda: 7.5, profit: 12.5 },
   // Telecom/ISP: ~R$ 1.300-2.500 por assinante (13x-25x receita mensal ≈ 1.1x-2.1x receita anual)
   "Telecom": { rev: 1.6, ebitda: 6.5, profit: 10.0 },
+  // Lazer Asset-Light: clubes, esportes, experiências recorrentes — recorrência + capex baixo
+  "Lazer Asset-Light": { rev: 2.0, ebitda: 8.5, profit: 14.0 },
   "Outros": { rev: 1.2, ebitda: 6.2, profit: 8.2 }
 };
 
