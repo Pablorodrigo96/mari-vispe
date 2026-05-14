@@ -45,7 +45,20 @@ Deno.serve(async (req) => {
     const utm_medium = body.utm_medium ? String(body.utm_medium).slice(0, 100) : null;
     const utm_campaign = body.utm_campaign ? String(body.utm_campaign).slice(0, 100) : null;
     const duration_ms = Number.isFinite(Number(body.duration_ms)) ? Math.min(Number(body.duration_ms), 60 * 60 * 1000) : null;
-    const user_id = body.user_id ? String(body.user_id) : null;
+
+    // Derive user_id server-side from JWT, ignore body's user_id
+    let user_id: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const sbUser = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData } = await sbUser.auth.getClaims(token);
+      if (claimsData?.claims?.sub) user_id = claimsData.claims.sub as string;
+    }
     const visitor_id = body.visitor_id ? String(body.visitor_id).slice(0, 80) : null;
     const metadata = body.metadata ?? null;
 

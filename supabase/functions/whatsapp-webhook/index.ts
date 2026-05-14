@@ -157,8 +157,9 @@ serve(withObservability(async (req: Request) => {
 
   const rawBody = await req.text();
 
-  // Optional signature validation
+  // Signature validation — required in production
   const appSecret = Deno.env.get("META_APP_SECRET");
+  const allowMock = Deno.env.get("WA_ALLOW_MOCK") === "1";
   if (appSecret) {
     const ok = await verifyMetaSignature(
       rawBody,
@@ -169,9 +170,14 @@ serve(withObservability(async (req: Request) => {
       console.warn("[whatsapp-webhook] invalid signature");
       return new Response("invalid signature", { status: 403 });
     }
+  } else if (!allowMock) {
+    console.error(
+      "[whatsapp-webhook] META_APP_SECRET not set — rejecting (set WA_ALLOW_MOCK=1 to allow mock mode)",
+    );
+    return new Response("misconfigured", { status: 403 });
   } else {
     console.warn(
-      "[whatsapp-webhook] META_APP_SECRET not set — running in MOCK mode without signature validation",
+      "[whatsapp-webhook] MOCK mode active (WA_ALLOW_MOCK=1) — signature NOT validated",
     );
   }
 
