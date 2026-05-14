@@ -1,73 +1,100 @@
-## Plano de correção — Security Advisor
 
-Validei o schema antes de planejar. Pontos de fato relevantes:
+# Plano — Security Advisor (Rodada 2)
 
-- A view `public.public_buyer_profiles` **já existe** e expõe apenas campos não-sensíveis (sem email/whatsapp). Não precisa criar VIEW nova — basta apontar o front pra ela.
-- `buyer_profiles` **não tem coluna `advisor_id`** — o dono é `user_id`. Já existe policy "Owners can view own buyer profiles" (`user_id = auth.uid()`) e admin policy. Logo a remoção da policy pública é segura.
-- Em `whatsapp_messages` o dono é `advisor_id` (confirmado nos hooks). Vamos restringir Realtime via `realtime.messages` por topic = `wa:{advisor_id}`.
-- `analytics_sessions.session_key` já é único e gerado client-side — vou trocar UPDATE público por UPDATE via service-role no edge `track-event` (que já faz upsert) e remover a policy aberta.
-- A maioria das funções SECURITY DEFINER já tem `SET search_path` — os warnings da Supabase são genéricos (1 entry por categoria). Vou aplicar `REVOKE EXECUTE ... FROM anon` em funções sensíveis (ex.: `eb_read_advisor_token`, `eb_store_advisor_token`, `bootstrap_cron_secrets_internal`) e garantir `search_path` nas que faltam (auditarei na migration).
-- Buckets públicos: `listing-images` e `avatars`. Vou limitar SELECT em `storage.objects` desses buckets a leitura por nome (sem `list`).
+Já rodei o linter + queries de inventário. Abaixo o plano por fase com tudo que será tocado, **antes** de qualquer migration.
 
 ---
 
-### 🔴 Fase 1 — Erros críticos
+## FASE 1 — Correções de baixo risco (1 migration)
 
-**1. `buyer_profiles` — PII pública**
-- DROP policy `Public can view active buyer profiles`.
-- Garantir `GRANT SELECT ON public.public_buyer_profiles TO anon, authenticated` (já existe a view).
-- Front: trocar `MatchingBuyers.tsx` (linha 67) pra usar `public_buyer_profiles`. `AdminCRM.tsx` e `RegisterBuyer.tsx` continuam na tabela (admin/owner já têm policy).
+### 1.1 Function Search Path Mutable (21 funções)
 
-**2. `api_settings` — leitura aberta a todo logado**
-- DROP policy `Anyone authenticated can read api settings`.
-- Manter apenas a admin policy existente (`Admins manage api settings`).
-- Auditar usos no front: `rg "api_settings"` — se houver leitura cliente-side, mover pra edge function.
+Todas serão alteradas via `ALTER FUNCTION ... SET search_path = ...` (sem recriar, sem mudar lógica).
 
-**3. `whatsapp_messages` Realtime sem RLS no canal**
-- ENABLE RLS em `realtime.messages`.
-- Policy: `SELECT` permitido se `topic` casa com `wa:{advisor_id}` onde `advisor_id = auth.uid()` OU `has_role(auth.uid(),'admin')`.
-- Conferir/ajustar nome do canal no hook `useAdvisorWhatsAppStatus` para padrão `wa:<advisor_id>`.
+**`equity_brain.*` (17 funções)** → `SET search_path = equity_brain, public, pg_temp`
+- `bucket_employees`, `bucket_revenue`, `category_to_cnae`, `category_to_setor`, `cnpj_for_listing`, `derive_codename_prefix`, `entity_notes_touch`, `margin_score`, `next_codename`, `porte_from_revenue`, `revenue_tier_score`, `set_company_codename`, `set_updated_at`, `tg_bump_mandate_last_activity`, `tg_sector_research_updated_at`, `tg_set_updated_at`, `touch_deals_updated_at`
 
-**4. `fire-webhook` edge sem auth** (agent_security)
-- Adicionar check `auth.getUser()` + `has_role(...,'admin')` no topo do handler. Validar `request_id` pertence ao caller.
+**`public.*` (3 funções)** → `SET search_path = public, pg_temp`
+- `buyer_neutral_description`, `buyer_pseudonym`, `eb_pipeline_stages_set_updated_at`
 
-**5. `cnpj-db-inspect` edge sem auth** (agent_security)
-- Adicionar mesmo gate admin no topo do handler.
+**Nenhuma referencia `vector` diretamente** — não preciso incluir `extensions`.
 
-### 🟡 Fase 2 — Warnings
+> Os ~150 warnings restantes de "Function Search Path Mutable" no linter são funções **C da extension `vector`** em `public` (operadores `vector_*`, `halfvec_*`, `sparsevec_*`). Esses só desaparecem movendo a extension de schema — fora do escopo desta rodada (já documentado como pendência).
 
-**6. `eb_pipeline_transitions`** — DROP policy aberta; criar SELECT só admin/advisor.
-**7. `eb_pipeline_stages`** — manter SELECT autenticado (é config de UI sem PII), documentar no security-memory como aceito.
-**8. `analytics_sessions` UPDATE aberto** — DROP policy; deixar apenas insert/upsert via edge `track-event` (service role).
-**9. `track-event` user_id spoof** — derivar `user_id` de `auth.getUser()` quando houver Authorization; ignorar body.
-**10. `whatsapp-webhook` mock sem assinatura** — em produção, retornar 403 se `META_APP_SECRET` ausente.
-**11. SECURITY DEFINER executável por anon/authenticated** — `REVOKE EXECUTE ... FROM anon, authenticated` nas funções internas (lista na migration); manter apenas as chamadas pelo front.
-**12. Function search_path mutable** — adicionar `SET search_path = public, pg_temp` nas funções que ainda não têm.
-**13. Extension in public** — mover extensões de `public` para schema `extensions` (vou listar quais existem na migration; geralmente `pg_trgm`, `unaccent`, `vector`).
-**14. Public bucket allows listing** — restringir SELECT em `storage.objects` para `listing-images` e `avatars` exigindo `name IS NOT NULL` e bloqueando `list` (policies separadas por bucket).
+### 1.2 Public Bucket Allows Listing
 
-### 🔵 Fase 3 — Info
+Buckets `public=true`: **`avatars`** e **`listing-images`**.
 
-**15. RLS enabled no policy** — listar tabelas e ou criar policy mínima ou documentar como service-role only.
+Ambos têm policy correta de leitura por nome (`Public read … by name`), e adicionalmente têm policies frouxas que permitem `list()` autenticado:
+
+- `Avatars readable by authenticated (list)` — `bucket_id = 'avatars'`
+- `Listing images readable by authenticated (list)` — `bucket_id = 'listing-images'`
+
+**Ação:** `DROP` dessas duas policies. Acesso direto via URL pública continua funcionando (bucket público bypassa RLS no endpoint `/object/public/...`). O que deixa de funcionar é `supabase.storage.from('avatars').list()` no front.
+
+> Preciso confirmar com você: **algum lugar do front chama `.list()` em `avatars` ou `listing-images`?** Se sim, eu mantenho a policy mas restrinjo a admin/owner. Vou fazer um `rg` antes de aplicar.
+
+### 1.3 RLS Enabled No Policy
+
+Apenas **1 tabela** se enquadra: `private.cron_secrets`.
+
+**Ação:** documentar como aceito (acesso só via service_role / `bootstrap_cron_secrets_internal`). Sem policy = ninguém com JWT acessa, que é o comportamento desejado. Atualizo `@security-memory`.
+
+> Os "RLS Enabled No Policy" do linter (185 entradas?) são quase todos falsos-positivos sobre views/MVs em `equity_brain`. Vou confirmar contando, mas não preciso criar policies "vazias" pra silenciar.
 
 ---
 
-### Entregáveis
+## FASE 2 — SECURITY DEFINER (auditoria primeiro, sem migration)
 
-1. **1 migration SQL** consolidada com todas as mudanças (ordem: Fase 1 → 2 → 3).
-2. Edits front:
-   - `src/pages/MatchingBuyers.tsx` → usar `public_buyer_profiles`.
-   - `supabase/functions/fire-webhook/index.ts` → gate admin.
-   - `supabase/functions/cnpj-db-inspect/index.ts` → gate admin.
-   - `supabase/functions/track-event/index.ts` → derivar `user_id` do JWT.
-   - `supabase/functions/whatsapp-webhook/index.ts` → 403 se `META_APP_SECRET` ausente.
-3. Update `@security-memory` com decisões aceitas (ex.: `eb_pipeline_stages` aberto, `public_buyer_profiles` view pública).
-4. Rodar Security Advisor de novo após aplicar e reportar diff.
+Inventário: **~85 funções SECURITY DEFINER** com EXECUTE pra `anon` + `authenticated` em `public`/`equity_brain`/`mari_ops`.
 
-### Riscos / pontos a confirmar com você antes de codar
+### Entrega da Fase 2 (antes de qualquer mudança)
 
-- **(a)** Confirmar que posso restringir `eb_pipeline_transitions` a admin+advisor (sem expor pra seller comum). OK?
-- **(b)** Em `whatsapp-webhook`: posso assumir que produção sempre terá `META_APP_SECRET`? Se hoje está rodando em mock, vai parar de aceitar inbound até você setar o secret.
-- **(c)** Mover extensions de `public` pra `extensions` pode quebrar funções que referenciam tipos sem schema qualificado (ex.: `vector`). Vou auditar antes — se houver risco, mantenho e marco como aceito na security-memory.
+Vou gerar **um relatório markdown** (`docs/SECURITY_DEFINER_AUDIT.md`) com tabela:
 
-Aprovando, sigo direto pra migration + edits.
+| Schema | Função | Resumo (1 linha) | Chamada por | Precisa SEC DEFINER? | Ação proposta (A/B/C) |
+
+Classificação preliminar (para você revisar):
+
+**(A) Converter para SECURITY INVOKER** — funções que só leem dados que o usuário já enxerga via RLS:
+- `public.profile_completion`, `public.buyer_neutral_description`, `public.buyer_pseudonym`, helpers `equity_brain.bucket_*`, `category_to_*`, `margin_score`, `revenue_tier_score`, `porte_from_revenue` (puras, sem acesso a tabela).
+
+**(B) Manter SEC DEFINER + REVOKE de anon/authenticated** — funções de trigger/job/admin:
+- Todas as `tg_*`, `trg_*`, `sync_*`, `notify_*`, `update_lead_score_on_doc`, `sla_deadline_setter` (triggers — chamadas pelo Postgres, não pelo cliente).
+- `bootstrap_*`, `backfill_*`, `rebuild_*`, `refresh_mandate_priorities`, `run_safe_dedupe`, `merge_*`, `auto_*`, `generate_mari_insights_*`, `eb_refresh_outcomes`, `daily_smoke_tests` — chamadas só por edge functions (service_role) ou admin. Manter EXECUTE só pra `service_role` + roles específicas via `has_role` interno.
+- `cleanup_old_rate_limits`, `mari_ops_record_smoke` — service_role only.
+
+**(C) Manter como está + documentar** — chamadas legítimas do front:
+- `has_role`, `eb_can_view_identity`, `is_company_visible_in_crm` (gates de RLS — precisam ser executáveis por authenticated).
+- `get_dashboard_*`, `get_health_summary_24h`, `eb_dedupe_audit_recent`, `eb_get_drain_job` (já validam role internamente via `has_role(auth.uid(), 'admin')`).
+- `recalculate_sv`, `qualify_lead`, `eb_resolve_advisor_mapping`, `approve_advisor_request`, `approve_franchisee_request`, `eb_dismiss_today_card` (validam role/owner internamente).
+- `increment_capital_view`, `get_teaser_view_count`, `find_user_by_meta_name` (públicas por design — confirmar caso a caso).
+- `profile_completion` (chamada no MyProfile — pode ser INVOKER se RLS permite).
+- `create_*_notification`, `notify_*_response` (triggers — vão pra (B), não C).
+
+### Aplicação faseada (após sua aprovação do relatório)
+
+- **Migration 2A:** REVOKEs do grupo (B). Risco: zero pro front. Triggers continuam funcionando porque rodam com privilégio do owner da tabela.
+- **Migration 2B:** Conversão (A) → SECURITY INVOKER. Vou listar os pontos do front/edge que chamam cada uma e validar que RLS permite.
+- **Documentação (C)** vai pra `@security-memory`.
+
+---
+
+## Pontos a confirmar antes de eu rodar a Fase 1
+
+1. **Posso dropar as duas policies `… readable by authenticated (list)` em `storage.objects`?** Vou rodar `rg "\.list\(" src` antes pra checar se algum hook depende disso.
+2. **`private.cron_secrets` sem policy = aceito?** (Confirma que ninguém deveria acessar fora de edge function service_role.)
+3. **OK eu seguir gerando o relatório de Fase 2 (`docs/SECURITY_DEFINER_AUDIT.md`) sem aplicar nenhuma mudança ainda?**
+
+## Não-mudanças confirmadas
+
+- Extension `vector` continua em `public` (janela dedicada).
+- `eb_pipeline_stages` aberto (config UI).
+- `whatsapp_messages` realtime (revisão futura).
+
+## Entregáveis após aprovação
+
+1. **Migration Fase 1** (search_path + drop 2 policies de bucket).
+2. **`docs/SECURITY_DEFINER_AUDIT.md`** com classificação completa (A/B/C) — você aprova antes de Migration 2A/2B.
+3. Update `@security-memory` ao final de cada fase.
+4. Rodar Security Advisor depois e mostrar o diff.
