@@ -196,7 +196,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
     >
       {/* Brand */}
       <div className="h-20 px-4 border-b border-sidebar-border flex items-center justify-between shrink-0">
-        <Link to="/painel" className="flex items-center min-w-0">
+        <Link to={isPartnerExternal ? "/parceiro" : "/painel"} className="flex items-center min-w-0">
           <MariLogo variant={collapsed ? 'symbol-dark' : 'dark'} size={collapsed ? 48 : 80} />
         </Link>
         <button
@@ -274,7 +274,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         })}
 
         {/* Cockpit Interno (admin/advisor) */}
-        {(eff.isAdmin || eff.isAdvisor) && !collapsed && (
+        {(eff.isAdmin || (eff.isAdvisor && !eff.isPartnerAccountant)) && !collapsed && (
           <div className="mt-4 pt-3 border-t border-sidebar-border">
             <div className="flex items-center gap-2 px-3 mb-1">
               <Sparkles className="h-3 w-3 text-emerald-500" />
@@ -306,7 +306,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
             </ul>
           </div>
         )}
-        {(eff.isAdmin || eff.isAdvisor) && collapsed && (
+        {(eff.isAdmin || (eff.isAdvisor && !eff.isPartnerAccountant)) && collapsed && (
           <div className="mt-3 pt-3 border-t border-sidebar-border space-y-1">
             {eff.isAdmin && (
               <Link to="/admin" title="Admin" className="flex items-center justify-center h-10 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground">
