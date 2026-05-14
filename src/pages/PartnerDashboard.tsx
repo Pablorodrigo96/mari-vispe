@@ -43,10 +43,17 @@ interface ReservationRow {
   interest_count?: number;
 }
 
+import { PartnerHome } from '@/components/parceiro/PartnerHome';
+
 export default function PartnerDashboard() {
   const { user, loading: authLoading } = useAuth();
   const eff = useEffectiveRoles();
   const navigate = useNavigate();
+
+  // Parceiro externo (contador/indicador) → home enxuta focada em indicações + comissão.
+  if (eff.isPartnerAccountant && !eff.isAdmin) {
+    return <PartnerHome />;
+  }
 
   const hasAccess = eff.isPartnerAccountant || eff.isAdvisor || eff.isFranchisee || eff.isAdmin;
 

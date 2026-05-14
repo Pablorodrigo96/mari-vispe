@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Building2, ChartBar, ClipboardList, UserSearch, DollarSign, Briefcase,
@@ -52,6 +52,11 @@ export default function Painel() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const eff = useEffectiveRoles();
+
+  // Parceiro externo: /painel não faz sentido — leva direto pro painel do parceiro.
+  if (!eff.loading && eff.isPartnerAccountant && !eff.isAdmin) {
+    return <Navigate to="/parceiro" replace />;
+  }
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
