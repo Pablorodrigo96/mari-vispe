@@ -403,16 +403,16 @@ export const ValuationReportDialog = ({
     <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="bg-[#0F172A] text-white -m-6 mb-0 p-6 rounded-t-lg">
+        <DialogHeader className="bg-carbon text-bone -m-6 mb-0 p-6 rounded-t-lg border-b border-volt/20">
           <div className="flex items-center justify-between">
             <div>
-              <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 mb-2">
-                Market Approach - Valuation Relativo
+              <Badge variant="secondary" className="bg-volt/15 text-volt border-volt/30 hover:bg-volt/20 mb-2">
+                Market Approach — Valuation Relativo
               </Badge>
-              <DialogTitle className="text-2xl font-bold text-white">
+              <DialogTitle className="text-2xl font-bold text-bone">
                 {result.inputs.companyName}
               </DialogTitle>
-              <p className="text-white/70 text-sm mt-1">
+              <p className="text-bone/60 text-sm mt-1">
                 Emitido em {formatDate(result.calculatedAt)}
               </p>
             </div>
@@ -420,51 +420,57 @@ export const ValuationReportDialog = ({
         </DialogHeader>
 
         <div ref={reportRef} className="space-y-6 pt-6">
-          {/* Main Valuation - Mashup Value */}
-          <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-xl p-6 text-center text-white shadow-lg">
-            <p className="text-white/95 text-sm mb-2 font-medium" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}>
-              Mashup Value (Valor de Mercado Estimado)
+          {/* Hero — Mashup Value (Carbon + Volt accent) */}
+          <div className="relative overflow-hidden rounded-xl bg-carbon text-bone p-6 border border-volt/20">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-volt" />
+            <p className="text-bone/60 text-[11px] uppercase tracking-[0.18em] font-medium mb-2">
+              Mashup Value · Valor de Mercado Estimado
             </p>
-            <p className="text-4xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+            <p className="text-4xl md:text-5xl font-bold text-volt tabular-nums tracking-tight">
               {formatFullCurrency(result.mashupValue)}
             </p>
-            <p className="text-white/95 text-sm mt-3" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}>
-              Implícito: {formatMultiple(result.impliedMultiples.impliedRevMultiple)} Receita | {formatMultiple(result.impliedMultiples.impliedEbitdaMultiple)} EBITDA
+            <p className="text-bone/70 text-sm mt-3">
+              Implícito: <span className="text-bone font-medium">{formatMultiple(result.impliedMultiples.impliedRevMultiple)}</span> Receita
+              <span className="text-bone/30 mx-2">·</span>
+              <span className="text-bone font-medium">{formatMultiple(result.impliedMultiples.impliedEbitdaMultiple)}</span> EBITDA
             </p>
           </div>
 
-          {/* Análise de Impacto Financeiro - DESTAQUE NO TOPO */}
-          <div className="bg-gradient-to-br from-red-500/15 via-orange-500/10 to-red-500/5 border-2 border-red-400/40 dark:border-red-700/40 rounded-xl p-6 shadow-lg animate-fade-in">
-            <div className="text-center mb-4">
-              <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2">
-                ⚡ Antes de continuar: descubra seu valor real
-              </h3>
-              <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto">
-                O Mashup Value acima é apenas o <strong>ponto de partida</strong>. Em 90 segundos, respondendo 12 perguntas sobre fiscal, governança e operação, você descobre <strong className="text-red-600 dark:text-red-400">quanto a sua empresa está valendo de menos hoje</strong> — e o que precisa mudar para destravar o valor potencial.
-              </p>
+          {/* Diagnóstico — convite sóbrio */}
+          <div className="rounded-xl bg-card border border-border p-6">
+            <div className="flex items-start gap-4 mb-5">
+              <div className="w-10 h-10 rounded-lg bg-volt/15 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-5 h-5 text-volt-dark" />
+              </div>
+              <div>
+                <h3 className="text-lg md:text-xl font-bold text-foreground mb-1">
+                  Antes de continuar: descubra seu valor real
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  O Mashup Value acima é o <strong className="text-foreground">ponto de partida</strong>. Em 90 segundos, 12 perguntas sobre fiscal, governança e operação revelam <strong className="text-foreground">quanto sua empresa vale a menos hoje</strong> — e como destravar o potencial.
+                </p>
+              </div>
             </div>
-            <div className="grid sm:grid-cols-3 gap-3 mb-5 text-center">
-              <div className="bg-background/60 rounded-lg p-3 border border-border/50">
-                <p className="text-2xl mb-1">📉</p>
-                <p className="text-xs font-medium text-foreground">Quanto você perde por mês</p>
-              </div>
-              <div className="bg-background/60 rounded-lg p-3 border border-border/50">
-                <p className="text-2xl mb-1">🎯</p>
-                <p className="text-xs font-medium text-foreground">Itens que mais derrubam seu valor</p>
-              </div>
-              <div className="bg-background/60 rounded-lg p-3 border border-border/50">
-                <p className="text-2xl mb-1">🚀</p>
-                <p className="text-xs font-medium text-foreground">Plano de ação personalizado</p>
-              </div>
+            <div className="grid sm:grid-cols-3 gap-3 mb-5">
+              {[
+                { Icon: TrendingDown, label: 'Quanto você perde por mês' },
+                { Icon: Target, label: 'Itens que mais derrubam seu valor' },
+                { Icon: Rocket, label: 'Plano de ação personalizado' },
+              ].map(({ Icon, label }) => (
+                <div key={label} className="rounded-lg border border-border bg-background/40 px-4 py-3 flex items-center gap-3">
+                  <Icon className="w-4 h-4 text-volt-dark flex-shrink-0" />
+                  <p className="text-xs font-medium text-foreground leading-snug">{label}</p>
+                </div>
+              ))}
             </div>
             <Button
               onClick={() => setDiagnosticOpen(true)}
               size="lg"
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-base shadow-md group"
+              className="w-full bg-volt text-carbon hover:bg-volt-light font-semibold text-base group"
             >
               <BarChart2 className="w-5 h-5 mr-2" />
               Iniciar Diagnóstico de Valor
-              <ArrowUpRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              <ArrowUpRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Button>
           </div>
 
