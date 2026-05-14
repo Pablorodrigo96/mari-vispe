@@ -12,11 +12,49 @@ serve(async (req) => {
   }
 
   try {
-    const { request_id, lead_data } = await req.json();
+    // ── Auth gate (admin-only)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, serviceKey);
+    const userId = claimsData.claims.sub as string;
+
+    const { data: roleRow } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!roleRow) {
+      return new Response(JSON.stringify({ error: "forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { request_id, lead_data } = await req.json();
 
     // Get webhook URL from integrations_config
     const { data: config } = await supabase
@@ -47,15 +85,22 @@ serve(async (req) => {
 
     const success = webhookResponse.ok;
 
-    // Log in timeline
+    // Log in timeline (validate request exists)
     if (request_id) {
-      await supabase.from("capital_timeline").insert({
-        request_id,
-        event_type: "webhook_fired",
-        description: success
-          ? "Lead enviado para sequência de nutrição"
-          : `Falha no webhook: ${webhookResponse.status}`,
-      });
+      const { data: reqRow } = await supabase
+        .from("capital_requests")
+        .select("id")
+        .eq("id", request_id)
+        .maybeSingle();
+      if (reqRow) {
+        await supabase.from("capital_timeline").insert({
+          request_id,
+          event_type: "webhook_fired",
+          description: success
+            ? "Lead enviado para sequência de nutrição"
+            : `Falha no webhook: ${webhookResponse.status}`,
+        });
+      }
     }
 
     return new Response(
