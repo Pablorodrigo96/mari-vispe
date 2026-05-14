@@ -333,23 +333,23 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
 
       {/* BLOCO 9 — CTA FINAL */}
       <motion.div custom={8} variants={blockVariants} initial="hidden" animate="visible"
-        className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-center text-white"
+        className="rounded-xl p-6 text-center bg-volt border border-volt-dark/20"
       >
-        <h3 className="text-xl md:text-2xl font-bold mb-2">
+        <h3 className="text-xl md:text-2xl font-bold mb-2 text-carbon">
           Quer fechar esse gap e capturar o valor potencial?
         </h3>
-        <p className="text-emerald-100 text-sm mb-6 max-w-lg mx-auto">
-          A mari já gerou em média +35% de valorização nos clientes atendidos. Comece agora.
+        <p className="text-carbon/75 text-sm mb-6 max-w-lg mx-auto">
+          A mari já gerou em média <strong className="text-carbon">+35% de valorização</strong> nos clientes atendidos. Comece agora.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button size="lg" onClick={handleDiagnostic} disabled={loading}
-            className="bg-white text-emerald-700 hover:bg-emerald-50 font-semibold"
+            className="bg-carbon text-volt hover:bg-graphite font-semibold"
           >
             <ArrowRight className="w-4 h-4 mr-2" />
             Iniciar Processo Consultivo
           </Button>
           <Button size="lg" variant="outline" onClick={handleSpecialist} disabled={loading}
-            className="border-white/40 text-white hover:bg-white/10"
+            className="bg-transparent border-carbon/30 text-carbon hover:bg-carbon/5 hover:text-carbon"
           >
             <MessageCircle className="w-4 h-4 mr-2" />
             Falar com um especialista
