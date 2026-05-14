@@ -1,5 +1,10 @@
 import { useUserSector } from "@/hooks/useUserSector";
 import { useSectorResearch } from "@/hooks/useSectorResearch";
+import { useEffectiveRoles } from "@/hooks/useEffectiveRoles";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { InteligenciaHero } from "@/components/inteligencia/InteligenciaHero";
 import { PainelRanking } from "@/components/inteligencia/PainelRanking";
 import { PainelEficiencia } from "@/components/inteligencia/PainelEficiencia";
@@ -15,6 +20,27 @@ import { useEffect } from "react";
 
 export default function Inteligencia() {
   const { sectorSlug, isLoading: sectorLoading } = useUserSector();
+  const eff = useEffectiveRoles();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isPartnerExternal = eff.isPartnerAccountant && !eff.isAdmin;
+
+  // Para parceiro externo: só libera Inteligência se houver pelo menos 1 indicação com setor.
+  const { data: partnerListings, isLoading: listingsLoading } = useQuery({
+    queryKey: ["partner-inteligencia-gate", user?.id],
+    enabled: !!user?.id && isPartnerExternal,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("listings")
+        .select("id, category")
+        .eq("user_id", user!.id)
+        .not("category", "is", null)
+        .limit(1);
+      return data ?? [];
+    },
+  });
+  const partnerBlocked = isPartnerExternal && (partnerListings?.length ?? 0) === 0;
+
   const { data, isLoading, isMissing, isExpired, generate, isGenerating, generateError } =
     useSectorResearch(sectorSlug);
 
@@ -42,13 +68,25 @@ export default function Inteligencia() {
       />
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
-        {sectorLoading || isLoading ? (
+        {sectorLoading || isLoading || (isPartnerExternal && listingsLoading) ? (
           <div className="space-y-4">
             <Skeleton className="h-14 w-2/3" />
             <Skeleton className="h-5 w-1/2" />
             <Skeleton className="mt-10 h-40 w-full" />
             <Skeleton className="h-40 w-full" />
           </div>
+        ) : partnerBlocked ? (
+          <>
+            <InteligenciaHero setorNome="seu setor" />
+            <div className="mt-8">
+              <EmptyState
+                title="Cadastre sua primeira indicação para liberar a inteligência setorial"
+                description="A pesquisa de mercado é gerada com base no setor da empresa indicada. Cadastre uma empresa em /vender e voltamos com benchmark, ranking e múltiplos do setor dela."
+                cta="Cadastrar empresa"
+                onAction={() => navigate("/vender")}
+              />
+            </div>
+          </>
         ) : isMissing || generateError ? (
           <>
             <InteligenciaHero setorNome={setorNome} />
