@@ -479,27 +479,27 @@ export const ValuationReportDialog = ({
             {/* Company Info */}
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <Building2 className="w-4 h-4 text-emerald-500" />
+                <div className="w-8 h-8 rounded-lg bg-volt/10 flex items-center justify-center">
+                  <Building2 className="w-4 h-4 text-volt-dark" />
                 </div>
                 <h3 className="font-semibold text-foreground">Dados da Empresa</h3>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Empresa</span>
-                  <span className="font-medium">{result.inputs.companyName}</span>
+                  <span className="font-medium text-foreground">{result.inputs.companyName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tipo</span>
-                  <span className="font-medium capitalize">{result.inputs.companyType}</span>
+                  <span className="font-medium text-foreground capitalize">{result.inputs.companyType}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Segmento</span>
-                  <span className="font-medium">{result.multiplesUsed.segment}</span>
+                  <span className="font-medium text-foreground">{result.multiplesUsed.segment}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Responsável</span>
-                  <span className="font-medium">{result.inputs.fullName}</span>
+                  <span className="font-medium text-foreground">{result.inputs.fullName}</span>
                 </div>
               </div>
             </div>
@@ -507,27 +507,27 @@ export const ValuationReportDialog = ({
             {/* Financial Data */}
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <Calculator className="w-4 h-4 text-emerald-500" />
+                <div className="w-8 h-8 rounded-lg bg-volt/10 flex items-center justify-center">
+                  <Calculator className="w-4 h-4 text-volt-dark" />
                 </div>
                 <h3 className="font-semibold text-foreground">Dados Financeiros</h3>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Faturamento Anual</span>
-                  <span className="font-medium">{formatFullCurrency(result.metrics.revenue)}</span>
+                  <span className="font-medium text-foreground tabular-nums">{formatFullCurrency(result.metrics.revenue)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Margem EBITDA</span>
-                  <span className="font-medium">{result.metrics.ebitdaMargin}%</span>
+                  <span className="font-medium text-foreground tabular-nums">{result.metrics.ebitdaMargin}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">EBITDA Calculado</span>
-                  <span className="font-medium">{formatFullCurrency(result.metrics.ebitda)}</span>
+                  <span className="font-medium text-foreground tabular-nums">{formatFullCurrency(result.metrics.ebitda)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Lucro Líquido</span>
-                  <span className="font-medium">{formatFullCurrency(result.metrics.netProfit)}</span>
+                  <span className="font-medium text-foreground tabular-nums">{formatFullCurrency(result.metrics.netProfit)}</span>
                 </div>
               </div>
             </div>
@@ -536,69 +536,67 @@ export const ValuationReportDialog = ({
           {/* Multiples Used */}
           <div className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-emerald-500" />
+              <div className="w-8 h-8 rounded-lg bg-volt/10 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-volt-dark" />
               </div>
-              <h3 className="font-semibold text-foreground">Múltiplos do Setor: {result.multiplesUsed.segment}</h3>
+              <h3 className="font-semibold text-foreground">Múltiplos do Setor · {result.multiplesUsed.segment}</h3>
             </div>
-            <div className="grid sm:grid-cols-3 gap-4 text-sm">
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-muted-foreground text-xs">EV/Receita</p>
-                <p className="font-semibold text-lg">{formatMultiple(result.multiplesUsed.rev)}</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-muted-foreground text-xs">EV/EBITDA</p>
-                <p className="font-semibold text-lg">{formatMultiple(result.multiplesUsed.ebitda)}</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-muted-foreground text-xs">P/Lucro</p>
-                <p className="font-semibold text-lg">{formatMultiple(result.multiplesUsed.profit)}</p>
-              </div>
+            <div className="grid sm:grid-cols-3 gap-3 text-sm">
+              {[
+                { label: 'EV/Receita', value: result.multiplesUsed.rev },
+                { label: 'EV/EBITDA', value: result.multiplesUsed.ebitda },
+                { label: 'P/Lucro', value: result.multiplesUsed.profit },
+              ].map((m) => (
+                <div key={m.label} className="bg-muted/40 rounded-lg p-3 border border-border/50">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider">{m.label}</p>
+                  <p className="font-bold text-xl text-foreground tabular-nums mt-1">{formatMultiple(m.value)}</p>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Valuation Breakdown Table */}
           <div className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <BarChart3 className="w-4 h-4 text-emerald-500" />
+              <div className="w-8 h-8 rounded-lg bg-volt/10 flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-volt-dark" />
               </div>
               <h3 className="font-semibold text-foreground">Valuation por Método</h3>
             </div>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-[#0F172A]">
-                    <TableHead className="text-white">Método</TableHead>
-                    <TableHead className="text-white">Múltiplo</TableHead>
-                    <TableHead className="text-white text-right">Base</TableHead>
-                    <TableHead className="text-white text-right">Valuation</TableHead>
+                  <TableRow className="bg-carbon hover:bg-carbon border-b-0">
+                    <TableHead className="text-bone font-semibold">Método</TableHead>
+                    <TableHead className="text-bone font-semibold">Múltiplo</TableHead>
+                    <TableHead className="text-bone font-semibold text-right">Base</TableHead>
+                    <TableHead className="text-bone font-semibold text-right">Valuation</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="font-medium">EV/Receita</TableCell>
-                    <TableCell>{formatMultiple(result.multiplesUsed.rev)}</TableCell>
-                    <TableCell className="text-right">{formatFullCurrency(result.metrics.revenue)}</TableCell>
-                    <TableCell className="text-right font-medium">{formatFullCurrency(result.revenueValuation)}</TableCell>
+                    <TableCell className="font-medium text-foreground">EV/Receita</TableCell>
+                    <TableCell className="tabular-nums">{formatMultiple(result.multiplesUsed.rev)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatFullCurrency(result.metrics.revenue)}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{formatFullCurrency(result.revenueValuation)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium">EV/EBITDA</TableCell>
-                    <TableCell>{formatMultiple(result.multiplesUsed.ebitda)}</TableCell>
-                    <TableCell className="text-right">{formatFullCurrency(result.metrics.ebitda)}</TableCell>
-                    <TableCell className="text-right font-medium">{formatFullCurrency(result.ebitdaValuation)}</TableCell>
+                    <TableCell className="font-medium text-foreground">EV/EBITDA</TableCell>
+                    <TableCell className="tabular-nums">{formatMultiple(result.multiplesUsed.ebitda)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatFullCurrency(result.metrics.ebitda)}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{formatFullCurrency(result.ebitdaValuation)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium">P/Lucro</TableCell>
-                    <TableCell>{formatMultiple(result.multiplesUsed.profit)}</TableCell>
-                    <TableCell className="text-right">{formatFullCurrency(result.metrics.netProfit)}</TableCell>
-                    <TableCell className="text-right font-medium">{formatFullCurrency(result.profitValuation)}</TableCell>
+                    <TableCell className="font-medium text-foreground">P/Lucro</TableCell>
+                    <TableCell className="tabular-nums">{formatMultiple(result.multiplesUsed.profit)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatFullCurrency(result.metrics.netProfit)}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{formatFullCurrency(result.profitValuation)}</TableCell>
                   </TableRow>
-                  <TableRow className="bg-emerald-500/10">
-                    <TableCell className="font-bold text-emerald-600">Mashup Value (Média)</TableCell>
-                    <TableCell className="text-emerald-600">{result.validMethods} métodos</TableCell>
+                  <TableRow className="bg-volt/15 border-t-2 border-volt hover:bg-volt/15">
+                    <TableCell className="font-bold text-foreground">Mashup Value (Média)</TableCell>
+                    <TableCell className="text-foreground/80 tabular-nums">{result.validMethods} métodos</TableCell>
                     <TableCell></TableCell>
-                    <TableCell className="text-right font-bold text-emerald-600">{formatFullCurrency(result.mashupValue)}</TableCell>
+                    <TableCell className="text-right font-bold text-foreground tabular-nums">{formatFullCurrency(result.mashupValue)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -606,20 +604,20 @@ export const ValuationReportDialog = ({
           </div>
 
           {/* Implied Multiples Card */}
-          <div className="bg-gradient-to-r from-[#0F172A] to-[#1E293B] rounded-xl p-5 text-white">
-            <h3 className="font-semibold mb-3">Múltiplos Implícitos (baseados no Mashup Value)</h3>
+          <div className="bg-carbon rounded-xl p-5 text-bone border border-volt/20">
+            <h3 className="font-semibold mb-3 text-bone">Múltiplos Implícitos <span className="text-bone/50 font-normal text-sm">(baseados no Mashup Value)</span></h3>
             <div className="grid sm:grid-cols-3 gap-4 text-sm">
               <div>
-                <p className="text-white/60 text-xs">Implícito EV/Receita</p>
-                <p className="font-semibold text-lg text-emerald-400">{formatMultiple(result.impliedMultiples.impliedRevMultiple)}</p>
+                <p className="text-bone/50 text-[10px] uppercase tracking-wider">EV/Receita</p>
+                <p className="font-bold text-2xl text-volt tabular-nums mt-1">{formatMultiple(result.impliedMultiples.impliedRevMultiple)}</p>
               </div>
               <div>
-                <p className="text-white/60 text-xs">Implícito EV/EBITDA</p>
-                <p className="font-semibold text-lg text-emerald-400">{formatMultiple(result.impliedMultiples.impliedEbitdaMultiple)}</p>
+                <p className="text-bone/50 text-[10px] uppercase tracking-wider">EV/EBITDA</p>
+                <p className="font-bold text-2xl text-volt tabular-nums mt-1">{formatMultiple(result.impliedMultiples.impliedEbitdaMultiple)}</p>
               </div>
               <div>
-                <p className="text-white/60 text-xs">Implícito P/Lucro</p>
-                <p className="font-semibold text-lg text-emerald-400">{formatMultiple(result.impliedMultiples.impliedProfitMultiple)}</p>
+                <p className="text-bone/50 text-[10px] uppercase tracking-wider">P/Lucro</p>
+                <p className="font-bold text-2xl text-volt tabular-nums mt-1">{formatMultiple(result.impliedMultiples.impliedProfitMultiple)}</p>
               </div>
             </div>
           </div>
