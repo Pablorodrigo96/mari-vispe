@@ -66,371 +66,336 @@ export const ValuationReportDialog = ({
     const margin = 20;
     let yPos = margin;
 
+    // Mari brand palette
+    const CARBON: [number, number, number] = [10, 10, 10];
+    const GRAPHITE: [number, number, number] = [42, 42, 42];
+    const VOLT: [number, number, number] = [217, 245, 100];
+    const BONE: [number, number, number] = [250, 250, 247];
+    const NEUTRAL: [number, number, number] = [238, 238, 236];
+    const MUTED: [number, number, number] = [115, 115, 115];
+    const LOSS_BG: [number, number, number] = [251, 234, 234];
+    const LOSS_FG: [number, number, number] = [122, 31, 31];
+
     const addText = (text: string, x: number, y: number, options?: { fontSize?: number; fontStyle?: 'normal' | 'bold'; color?: [number, number, number] }) => {
-      const { fontSize = 10, fontStyle = 'normal', color = [0, 0, 0] } = options || {};
+      const { fontSize = 10, fontStyle = 'normal', color = CARBON } = options || {};
       doc.setFontSize(fontSize);
       doc.setFont('helvetica', fontStyle);
       doc.setTextColor(...color);
       doc.text(text, x, y);
     };
 
-    // Header background
-    doc.setFillColor(15, 23, 42); // Navy (#0F172A)
-    doc.rect(0, 0, pageWidth, 50, 'F');
+    // Bone background
+    doc.setFillColor(...BONE);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-    // Header text
-    addText('mari', margin, 20, { fontSize: 24, fontStyle: 'bold', color: [16, 185, 129] }); // Emerald
-    addText('Market Approach - Valuation Relativo', margin, 32, { fontSize: 14, color: [255, 255, 255] });
-    addText(`Emitido em ${formatDate(result.calculatedAt)}`, margin, 42, { fontSize: 10, color: [200, 200, 200] });
+    // Header — Carbon
+    doc.setFillColor(...CARBON);
+    doc.rect(0, 0, pageWidth, 50, 'F');
+    addText('mari', margin, 20, { fontSize: 24, fontStyle: 'bold', color: VOLT });
+    addText('Market Approach — Valuation Relativo', margin, 32, { fontSize: 13, color: BONE });
+    addText(`Emitido em ${formatDate(result.calculatedAt)}`, margin, 42, { fontSize: 9, color: [180, 180, 175] });
 
     yPos = 70;
 
-    // Main Valuation - Mashup Value
-    doc.setFillColor(16, 185, 129); // Emerald
-    doc.roundedRect(margin, yPos - 5, pageWidth - 2 * margin, 40, 3, 3, 'F');
-    addText('MASHUP VALUE (Valor de Mercado Estimado)', margin + 5, yPos + 5, { fontSize: 12, fontStyle: 'bold', color: [255, 255, 255] });
-    addText(formatFullCurrency(result.mashupValue), margin + 5, yPos + 22, { fontSize: 26, fontStyle: 'bold', color: [255, 255, 255] });
-    addText(`Implícito: ${formatMultiple(result.impliedMultiples.impliedRevMultiple)} Receita | ${formatMultiple(result.impliedMultiples.impliedEbitdaMultiple)} EBITDA`, margin + 5, yPos + 32, { fontSize: 9, color: [220, 255, 240] });
+    // Hero — Mashup Value (Carbon card with Volt accent line)
+    doc.setFillColor(...CARBON);
+    doc.roundedRect(margin, yPos - 5, pageWidth - 2 * margin, 42, 3, 3, 'F');
+    doc.setFillColor(...VOLT);
+    doc.rect(margin, yPos - 5, 3, 42, 'F');
+    addText('MASHUP VALUE — VALOR DE MERCADO ESTIMADO', margin + 8, yPos + 4, { fontSize: 9, fontStyle: 'bold', color: [180, 180, 175] });
+    addText(formatFullCurrency(result.mashupValue), margin + 8, yPos + 22, { fontSize: 26, fontStyle: 'bold', color: VOLT });
+    addText(`Implícito: ${formatMultiple(result.impliedMultiples.impliedRevMultiple)} Receita · ${formatMultiple(result.impliedMultiples.impliedEbitdaMultiple)} EBITDA`, margin + 8, yPos + 32, { fontSize: 9, color: BONE });
 
-    yPos += 55;
+    yPos += 60;
 
-    // Company Info Section
-    addText('DADOS DA EMPRESA', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
-    yPos += 8;
-    doc.setDrawColor(16, 185, 129);
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPos, margin + 45, yPos);
-    yPos += 10;
+    // Section helper
+    const sectionTitle = (title: string) => {
+      addText(title, margin, yPos, { fontSize: 11, fontStyle: 'bold', color: CARBON });
+      yPos += 6;
+      doc.setDrawColor(...VOLT);
+      doc.setLineWidth(0.8);
+      doc.line(margin, yPos, margin + 24, yPos);
+      yPos += 8;
+    };
 
+    // Company Info
+    sectionTitle('DADOS DA EMPRESA');
     const companyInfo = [
-      ['Empresa:', result.inputs.companyName],
-      ['Tipo:', result.inputs.companyType],
-      ['Segmento:', result.multiplesUsed.segment],
-      ['Responsável:', result.inputs.fullName],
-      ['Email:', result.inputs.email],
+      ['Empresa', result.inputs.companyName],
+      ['Tipo', result.inputs.companyType],
+      ['Segmento', result.multiplesUsed.segment],
+      ['Responsável', result.inputs.fullName],
+      ['Email', result.inputs.email],
     ];
-
     companyInfo.forEach(([label, value]) => {
-      addText(label, margin, yPos, { fontSize: 10, fontStyle: 'bold' });
-      addText(value, margin + 35, yPos, { fontSize: 10 });
+      addText(label, margin, yPos, { fontSize: 9, color: MUTED });
+      addText(value, margin + 40, yPos, { fontSize: 9, fontStyle: 'bold', color: CARBON });
       yPos += 6;
     });
 
-    yPos += 10;
-
-    // Financial Data Section
-    addText('DADOS FINANCEIROS', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
     yPos += 8;
-    doc.line(margin, yPos, margin + 50, yPos);
-    yPos += 10;
 
+    // Financial
+    sectionTitle('DADOS FINANCEIROS');
     const financialInfo = [
-      ['Faturamento Anual:', formatFullCurrency(result.metrics.revenue)],
-      ['Margem EBITDA:', `${result.metrics.ebitdaMargin}%`],
-      ['EBITDA Calculado:', formatFullCurrency(result.metrics.ebitda)],
-      ['Lucro Líquido:', formatFullCurrency(result.metrics.netProfit)],
+      ['Faturamento Anual', formatFullCurrency(result.metrics.revenue)],
+      ['Margem EBITDA', `${result.metrics.ebitdaMargin}%`],
+      ['EBITDA Calculado', formatFullCurrency(result.metrics.ebitda)],
+      ['Lucro Líquido', formatFullCurrency(result.metrics.netProfit)],
     ];
-
     financialInfo.forEach(([label, value]) => {
-      addText(label, margin, yPos, { fontSize: 10, fontStyle: 'bold' });
-      addText(value, margin + 45, yPos, { fontSize: 10 });
+      addText(label, margin, yPos, { fontSize: 9, color: MUTED });
+      addText(value, margin + 50, yPos, { fontSize: 9, fontStyle: 'bold', color: CARBON });
       yPos += 6;
     });
 
-    yPos += 10;
-
-    // Multiples Used Section
-    addText(`MÚLTIPLOS DO SETOR: ${result.multiplesUsed.segment}`, margin, yPos, { fontSize: 12, fontStyle: 'bold' });
     yPos += 8;
-    doc.line(margin, yPos, margin + 60, yPos);
-    yPos += 10;
 
+    // Multiples
+    sectionTitle(`MÚLTIPLOS DO SETOR — ${result.multiplesUsed.segment.toUpperCase()}`);
     const multiplesInfo = [
-      ['Múltiplo EV/Receita:', formatMultiple(result.multiplesUsed.rev)],
-      ['Múltiplo EV/EBITDA:', formatMultiple(result.multiplesUsed.ebitda)],
-      ['Múltiplo P/Lucro:', formatMultiple(result.multiplesUsed.profit)],
+      ['EV/Receita', formatMultiple(result.multiplesUsed.rev)],
+      ['EV/EBITDA', formatMultiple(result.multiplesUsed.ebitda)],
+      ['P/Lucro', formatMultiple(result.multiplesUsed.profit)],
     ];
-
     multiplesInfo.forEach(([label, value]) => {
-      addText(label, margin, yPos, { fontSize: 10, fontStyle: 'bold' });
-      addText(value, margin + 50, yPos, { fontSize: 10 });
+      addText(label, margin, yPos, { fontSize: 9, color: MUTED });
+      addText(value, margin + 50, yPos, { fontSize: 9, fontStyle: 'bold', color: CARBON });
       yPos += 6;
     });
 
-    // New page for breakdown
+    // Page 2 — breakdown
     doc.addPage();
+    doc.setFillColor(...BONE);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
     yPos = margin;
 
-    // Valuation Breakdown Table
-    addText('VALUATION POR MÉTODO', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
-    yPos += 8;
-    doc.line(margin, yPos, margin + 55, yPos);
-    yPos += 10;
+    sectionTitle('VALUATION POR MÉTODO');
 
-    // Table header
     const colWidths = [50, 35, 40, 45];
     const headers = ['Método', 'Múltiplo', 'Base', 'Valuation'];
     let xPos = margin;
 
-    doc.setFillColor(15, 23, 42);
+    doc.setFillColor(...CARBON);
     doc.rect(margin, yPos - 4, pageWidth - 2 * margin, 8, 'F');
-
     headers.forEach((header, i) => {
-      addText(header, xPos + 2, yPos, { fontSize: 9, fontStyle: 'bold', color: [255, 255, 255] });
+      addText(header, xPos + 2, yPos, { fontSize: 9, fontStyle: 'bold', color: BONE });
       xPos += colWidths[i];
     });
-
     yPos += 8;
 
-    // Table rows
     const breakdownRows = [
       ['EV/Receita', formatMultiple(result.multiplesUsed.rev), formatFullCurrency(result.metrics.revenue), formatFullCurrency(result.revenueValuation)],
       ['EV/EBITDA', formatMultiple(result.multiplesUsed.ebitda), formatFullCurrency(result.metrics.ebitda), formatFullCurrency(result.ebitdaValuation)],
       ['P/Lucro', formatMultiple(result.multiplesUsed.profit), formatFullCurrency(result.metrics.netProfit), formatFullCurrency(result.profitValuation)],
     ];
 
-    breakdownRows.forEach((row) => {
+    breakdownRows.forEach((row, idx) => {
+      if (idx % 2 === 1) {
+        doc.setFillColor(...NEUTRAL);
+        doc.rect(margin, yPos - 4, pageWidth - 2 * margin, 7, 'F');
+      }
       xPos = margin;
       row.forEach((cell, i) => {
-        addText(cell, xPos + 2, yPos, { fontSize: 9 });
+        addText(cell, xPos + 2, yPos, { fontSize: 9, color: CARBON });
         xPos += colWidths[i];
       });
       yPos += 7;
     });
 
-    // Average row
+    // Mashup row — Volt
     xPos = margin;
-    doc.setFillColor(16, 185, 129);
+    doc.setFillColor(...VOLT);
     doc.rect(margin, yPos - 4, pageWidth - 2 * margin, 8, 'F');
     const avgRow = ['Mashup Value (Média)', `${result.validMethods} métodos`, '', formatFullCurrency(result.mashupValue)];
     avgRow.forEach((cell, i) => {
-      addText(cell, xPos + 2, yPos, { fontSize: 9, fontStyle: 'bold', color: [255, 255, 255] });
+      addText(cell, xPos + 2, yPos, { fontSize: 9, fontStyle: 'bold', color: CARBON });
       xPos += colWidths[i];
     });
 
-    yPos += 20;
+    yPos += 18;
 
-    // Implied Multiples
-    addText('MÚLTIPLOS IMPLÍCITOS', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
-    yPos += 8;
-    doc.line(margin, yPos, margin + 45, yPos);
-    yPos += 10;
-
-    const impliedInfo = [
-      [`Implícito EV/Receita: ${formatMultiple(result.impliedMultiples.impliedRevMultiple)}`],
-      [`Implícito EV/EBITDA: ${formatMultiple(result.impliedMultiples.impliedEbitdaMultiple)}`],
-      [`Implícito P/Lucro: ${formatMultiple(result.impliedMultiples.impliedProfitMultiple)}`],
-    ];
-
-    impliedInfo.forEach(([text]) => {
-      addText(text, margin, yPos, { fontSize: 10 });
+    sectionTitle('MÚLTIPLOS IMPLÍCITOS');
+    [
+      `EV/Receita: ${formatMultiple(result.impliedMultiples.impliedRevMultiple)}`,
+      `EV/EBITDA: ${formatMultiple(result.impliedMultiples.impliedEbitdaMultiple)}`,
+      `P/Lucro: ${formatMultiple(result.impliedMultiples.impliedProfitMultiple)}`,
+    ].forEach((text) => {
+      addText(text, margin, yPos, { fontSize: 10, color: CARBON });
       yPos += 6;
     });
 
-    yPos += 10;
-
-    // Methodology
-    addText('METODOLOGIA', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
     yPos += 8;
-    doc.line(margin, yPos, margin + 35, yPos);
-    yPos += 10;
 
-    const methodologyText = `Este laudo utiliza o método de Valuation por Múltiplos de Mercado (Market Approach), comparando métricas financeiras da empresa com benchmarks do setor de ${result.multiplesUsed.segment} no mercado brasileiro (2024/2025). O Mashup Value é calculado como a média dos métodos válidos (EV/Receita, EV/EBITDA e P/Lucro).`;
-
+    sectionTitle('METODOLOGIA');
+    const methodologyText = `Este laudo utiliza Valuation por Múltiplos de Mercado (Market Approach), comparando métricas financeiras com benchmarks do setor de ${result.multiplesUsed.segment} no mercado brasileiro (2024/2025). O Mashup Value é calculado como a média dos métodos válidos: EV/Receita, EV/EBITDA e P/Lucro.`;
     const splitText = doc.splitTextToSize(methodologyText, pageWidth - 2 * margin);
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(...GRAPHITE);
     doc.text(splitText, margin, yPos);
+    yPos += splitText.length * 5 + 12;
 
-    yPos += splitText.length * 5 + 15;
-
-    // Gap de Equity Section
-    addText('GAP DE EQUITY', margin, yPos, { fontSize: 12, fontStyle: 'bold' });
-    yPos += 8;
-    doc.line(margin, yPos, margin + 35, yPos);
-    yPos += 10;
-
+    // Gap de Equity
+    sectionTitle('GAP DE EQUITY');
     const halfWidth = (pageWidth - 2 * margin - 10) / 2;
 
-    // Current Value box
-    doc.setFillColor(229, 231, 235);
+    // Atual
+    doc.setFillColor(...NEUTRAL);
     doc.roundedRect(margin, yPos - 3, halfWidth, 25, 2, 2, 'F');
-    addText('Valor Atual', margin + 5, yPos + 3, { fontSize: 9, fontStyle: 'bold', color: [100, 100, 100] });
-    addText(formatFullCurrency(equityGap.currentValue), margin + 5, yPos + 14, { fontSize: 14, fontStyle: 'bold', color: [50, 50, 50] });
+    addText('VALOR ATUAL', margin + 5, yPos + 3, { fontSize: 8, fontStyle: 'bold', color: MUTED });
+    addText(formatFullCurrency(equityGap.currentValue), margin + 5, yPos + 14, { fontSize: 13, fontStyle: 'bold', color: CARBON });
 
-    // Potential Value box
-    doc.setFillColor(16, 185, 129);
+    // Potencial — Volt
+    doc.setFillColor(...VOLT);
     doc.roundedRect(margin + halfWidth + 10, yPos - 3, halfWidth, 25, 2, 2, 'F');
-    addText('Valor Vispe (Potencial)', margin + halfWidth + 15, yPos + 3, { fontSize: 9, fontStyle: 'bold', color: [255, 255, 255] });
-    addText(formatFullCurrency(equityGap.potentialValue), margin + halfWidth + 15, yPos + 14, { fontSize: 14, fontStyle: 'bold', color: [255, 255, 255] });
+    addText('VALOR POTENCIAL', margin + halfWidth + 15, yPos + 3, { fontSize: 8, fontStyle: 'bold', color: CARBON });
+    addText(formatFullCurrency(equityGap.potentialValue), margin + halfWidth + 15, yPos + 14, { fontSize: 13, fontStyle: 'bold', color: CARBON });
 
     yPos += 30;
 
-    addText(`Gap: ${formatFullCurrency(equityGap.gapValue)} (+${equityGap.gapPercent.toFixed(1)}%)`, margin, yPos, { fontSize: 11, fontStyle: 'bold', color: [16, 185, 129] });
-    yPos += 8;
-    const gapExplanation = `Este é o seu Gap de Equity hoje. Empresas atendidas pela mari conseguiram destravar este upside com um trabalho estruturado de governança, fiscal e comercial.`;
+    addText(`Gap: ${formatFullCurrency(equityGap.gapValue)}  (+${equityGap.gapPercent.toFixed(1)}%)`, margin, yPos, { fontSize: 11, fontStyle: 'bold', color: CARBON });
+    yPos += 7;
+    const gapExplanation = `Empresas atendidas pela mari conseguiram destravar este upside com trabalho estruturado de governança, fiscal e comercial.`;
     const splitGap = doc.splitTextToSize(gapExplanation, pageWidth - 2 * margin);
     doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
+    doc.setTextColor(...MUTED);
     doc.text(splitGap, margin, yPos);
+    yPos += splitGap.length * 5 + 12;
 
-    yPos += splitGap.length * 5 + 15;
-
-    // Disclaimer
-    doc.setFillColor(255, 250, 230);
-    doc.roundedRect(margin, yPos - 3, pageWidth - 2 * margin, 25, 2, 2, 'F');
-    addText('AVISO LEGAL', margin + 5, yPos + 3, { fontSize: 9, fontStyle: 'bold', color: [150, 100, 0] });
-    const disclaimerText = 'Este documento é uma estimativa de valor baseada nas informações fornecidas e múltiplos de mercado. Não constitui oferta ou garantia de valor. Recomendamos auditoria profissional para transações.';
+    // Disclaimer (neutro)
+    doc.setFillColor(...NEUTRAL);
+    doc.roundedRect(margin, yPos - 3, pageWidth - 2 * margin, 22, 2, 2, 'F');
+    addText('AVISO LEGAL', margin + 5, yPos + 3, { fontSize: 8, fontStyle: 'bold', color: GRAPHITE });
+    const disclaimerText = 'Estimativa baseada nas informações fornecidas e múltiplos de mercado. Não constitui oferta ou garantia de valor. Recomendamos auditoria profissional para transações.';
     const splitDisclaimer = doc.splitTextToSize(disclaimerText, pageWidth - 2 * margin - 10);
     doc.setFontSize(8);
-    doc.setTextColor(100, 80, 0);
-    doc.text(splitDisclaimer, margin + 5, yPos + 10);
+    doc.setTextColor(...MUTED);
+    doc.text(splitDisclaimer, margin + 5, yPos + 9);
 
     // Footer
-    doc.setFillColor(15, 23, 42);
+    doc.setFillColor(...CARBON);
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-    addText('© mari - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
-    addText('mari.vispe.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: [16, 185, 129] });
+    addText('© mari — Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [180, 180, 175] });
+    addText('mari.vispe.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: VOLT });
 
-    // === PAGE 3: Diagnostic (conditional) ===
+    // PAGE 3 — Diagnostic
     if (diagnosticAnswers) {
       const degradation = calculateTrueValue(result, diagnosticAnswers);
       const lossMetrics = calculateTrueValueLossMetrics(result, degradation);
 
       doc.addPage();
-      yPos = margin;
+      doc.setFillColor(...BONE);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
       // Header
-      doc.setFillColor(15, 23, 42);
+      doc.setFillColor(...CARBON);
       doc.rect(0, 0, pageWidth, 40, 'F');
-      addText('mari', margin, 18, { fontSize: 20, fontStyle: 'bold', color: [16, 185, 129] });
-      addText('DIAGNÓSTICO DE VALOR — True Value', margin, 30, { fontSize: 13, color: [255, 255, 255] });
+      addText('mari', margin, 18, { fontSize: 20, fontStyle: 'bold', color: VOLT });
+      addText('DIAGNÓSTICO DE VALOR — True Value', margin, 30, { fontSize: 12, color: BONE });
 
       yPos = 55;
 
       // 3 Value Boxes
       const boxWidth = (pageWidth - 2 * margin - 10) / 3;
 
-      // Estimated
-      doc.setFillColor(229, 231, 235);
+      // Estimado
+      doc.setFillColor(...NEUTRAL);
       doc.roundedRect(margin, yPos, boxWidth, 28, 2, 2, 'F');
-      addText('Valor Estimado', margin + 3, yPos + 8, { fontSize: 8, fontStyle: 'bold', color: [100, 100, 100] });
-      addText(formatFullCurrency(degradation.estimatedValue), margin + 3, yPos + 20, { fontSize: 12, fontStyle: 'bold', color: [50, 50, 50] });
+      addText('VALOR ESTIMADO', margin + 3, yPos + 8, { fontSize: 7, fontStyle: 'bold', color: MUTED });
+      addText(formatFullCurrency(degradation.estimatedValue), margin + 3, yPos + 20, { fontSize: 11, fontStyle: 'bold', color: CARBON });
 
-      // True Value (red)
-      doc.setFillColor(254, 226, 226);
+      // True Value (loss)
+      doc.setFillColor(...LOSS_BG);
       doc.roundedRect(margin + boxWidth + 5, yPos, boxWidth, 28, 2, 2, 'F');
-      addText('True Value (Hoje)', margin + boxWidth + 8, yPos + 8, { fontSize: 8, fontStyle: 'bold', color: [185, 28, 28] });
-      addText(formatFullCurrency(degradation.trueValue), margin + boxWidth + 8, yPos + 20, { fontSize: 12, fontStyle: 'bold', color: [185, 28, 28] });
+      addText('TRUE VALUE — HOJE', margin + boxWidth + 8, yPos + 8, { fontSize: 7, fontStyle: 'bold', color: LOSS_FG });
+      addText(formatFullCurrency(degradation.trueValue), margin + boxWidth + 8, yPos + 20, { fontSize: 11, fontStyle: 'bold', color: LOSS_FG });
 
-      // Potential (green)
-      doc.setFillColor(16, 185, 129);
+      // Potencial — Volt
+      doc.setFillColor(...VOLT);
       doc.roundedRect(margin + (boxWidth + 5) * 2, yPos, boxWidth, 28, 2, 2, 'F');
-      addText('Valor Potencial', margin + (boxWidth + 5) * 2 + 3, yPos + 8, { fontSize: 8, fontStyle: 'bold', color: [255, 255, 255] });
-      addText(formatFullCurrency(degradation.potentialValue), margin + (boxWidth + 5) * 2 + 3, yPos + 20, { fontSize: 12, fontStyle: 'bold', color: [255, 255, 255] });
+      addText('VALOR POTENCIAL', margin + (boxWidth + 5) * 2 + 3, yPos + 8, { fontSize: 7, fontStyle: 'bold', color: CARBON });
+      addText(formatFullCurrency(degradation.potentialValue), margin + (boxWidth + 5) * 2 + 3, yPos + 20, { fontSize: 11, fontStyle: 'bold', color: CARBON });
 
       yPos += 38;
 
-      // Total Degradation
       const totalPct = (degradation.totalDegradation * 100).toFixed(1);
       const totalLoss = degradation.estimatedValue - degradation.trueValue;
-      addText(`Degradação Total: -${totalPct}% (${formatFullCurrency(totalLoss)} perdidos)`, margin, yPos, { fontSize: 10, fontStyle: 'bold', color: [185, 28, 28] });
-      yPos += 12;
+      addText(`Degradação Total: -${totalPct}%  (${formatFullCurrency(totalLoss)} perdidos)`, margin, yPos, { fontSize: 10, fontStyle: 'bold', color: LOSS_FG });
+      yPos += 10;
 
-      // Diagnostic Items Table
-      addText('DETALHAMENTO POR ITEM', margin, yPos, { fontSize: 11, fontStyle: 'bold' });
-      yPos += 8;
-      doc.setDrawColor(16, 185, 129);
-      doc.setLineWidth(0.5);
-      doc.line(margin, yPos, margin + 55, yPos);
-      yPos += 6;
+      sectionTitle('DETALHAMENTO POR ITEM');
 
-      // Table header
       const dColWidths = [65, 30, 20, 30];
-      doc.setFillColor(15, 23, 42);
+      doc.setFillColor(...CARBON);
       doc.rect(margin, yPos - 3, pageWidth - 2 * margin, 7, 'F');
       let dxPos = margin;
       ['Item', 'Categoria', 'Resp.', 'Impacto'].forEach((h, i) => {
-        addText(h, dxPos + 2, yPos + 1, { fontSize: 8, fontStyle: 'bold', color: [255, 255, 255] });
+        addText(h, dxPos + 2, yPos + 1, { fontSize: 8, fontStyle: 'bold', color: BONE });
         dxPos += dColWidths[i];
       });
       yPos += 8;
 
-      // Table rows
-      degradation.itemBreakdown.forEach((row) => {
+      degradation.itemBreakdown.forEach((row, idx) => {
         if (yPos > pageHeight - 40) {
           doc.addPage();
+          doc.setFillColor(...BONE);
+          doc.rect(0, 0, pageWidth, pageHeight, 'F');
           yPos = margin;
         }
-
+        if (idx % 2 === 1) {
+          doc.setFillColor(...NEUTRAL);
+          doc.rect(margin, yPos - 4, pageWidth - 2 * margin, 6, 'F');
+        }
         const isNo = !row.answer;
-        const textColor: [number, number, number] = isNo ? [185, 28, 28] : [0, 0, 0];
-
-        // Truncate label for PDF
+        const textColor: [number, number, number] = isNo ? LOSS_FG : CARBON;
         const shortLabel = row.item.label.length > 55 ? row.item.label.substring(0, 52) + '...' : row.item.label;
 
         dxPos = margin;
         addText(shortLabel, dxPos + 2, yPos, { fontSize: 7.5, color: textColor });
         dxPos += dColWidths[0];
-        addText(categoryLabels[row.item.category] || row.item.category, dxPos + 2, yPos, { fontSize: 7.5, color: textColor });
+        addText(categoryLabels[row.item.category] || row.item.category, dxPos + 2, yPos, { fontSize: 7.5, color: MUTED });
         dxPos += dColWidths[1];
         addText(row.answer ? 'Sim' : 'Não', dxPos + 2, yPos, { fontSize: 7.5, fontStyle: 'bold', color: textColor });
         dxPos += dColWidths[2];
         addText(row.impact > 0 ? `-${formatFullCurrency(row.impact)}` : '—', dxPos + 2, yPos, { fontSize: 7.5, color: textColor });
-
         yPos += 6;
       });
 
       yPos += 8;
 
-      // Lead Score
-      const scoreColors: Record<string, [number, number, number]> = {
-        hot: [185, 28, 28],
-        warm: [217, 119, 6],
-        cold: [100, 116, 139],
-      };
-      const scoreLabels: Record<string, string> = { hot: 'HOT 🔥', warm: 'WARM ⚡', cold: 'COLD ❄️' };
-
-      addText('LEAD SCORE', margin, yPos, { fontSize: 11, fontStyle: 'bold' });
-      yPos += 8;
-      addText(scoreLabels[lossMetrics.leadScore] || lossMetrics.leadScore.toUpperCase(), margin, yPos, { fontSize: 14, fontStyle: 'bold', color: scoreColors[lossMetrics.leadScore] || [0, 0, 0] });
-      addText(lossMetrics.leadScoreReason, margin + 35, yPos, { fontSize: 9, color: [100, 100, 100] });
-
+      const scoreLabels: Record<string, string> = { hot: 'HOT', warm: 'WARM', cold: 'COLD' };
+      sectionTitle('LEAD SCORE');
+      addText(scoreLabels[lossMetrics.leadScore] || lossMetrics.leadScore.toUpperCase(), margin, yPos, { fontSize: 14, fontStyle: 'bold', color: CARBON });
+      addText(lossMetrics.leadScoreReason, margin + 30, yPos, { fontSize: 9, color: MUTED });
       yPos += 12;
 
-      // Gap bar
-      addText('GAP: TRUE VALUE → POTENCIAL', margin, yPos, { fontSize: 11, fontStyle: 'bold' });
-      yPos += 8;
-
+      sectionTitle('GAP: TRUE VALUE → POTENCIAL');
       const barFullWidth = pageWidth - 2 * margin;
       const trueRatio = degradation.potentialValue > 0 ? degradation.trueValue / degradation.potentialValue : 0.5;
       const trueBarWidth = barFullWidth * trueRatio;
       const gapBarWidth = barFullWidth - trueBarWidth;
 
-      // True value bar (red)
-      doc.setFillColor(254, 202, 202);
+      doc.setFillColor(...LOSS_BG);
       doc.roundedRect(margin, yPos, trueBarWidth, 10, 1, 1, 'F');
-      addText('True Value', margin + 2, yPos + 7, { fontSize: 7, fontStyle: 'bold', color: [185, 28, 28] });
+      addText('True Value', margin + 2, yPos + 7, { fontSize: 7, fontStyle: 'bold', color: LOSS_FG });
 
-      // Gap bar (green)
-      doc.setFillColor(16, 185, 129);
+      doc.setFillColor(...VOLT);
       doc.roundedRect(margin + trueBarWidth, yPos, gapBarWidth, 10, 1, 1, 'F');
       if (gapBarWidth > 30) {
-        addText(`Gap: ${formatFullCurrency(degradation.gap)}`, margin + trueBarWidth + 2, yPos + 7, { fontSize: 7, fontStyle: 'bold', color: [255, 255, 255] });
+        addText(`Gap: ${formatFullCurrency(degradation.gap)}`, margin + trueBarWidth + 2, yPos + 7, { fontSize: 7, fontStyle: 'bold', color: CARBON });
       }
 
       yPos += 18;
-      addText(`True Value: ${formatFullCurrency(degradation.trueValue)}  →  Potencial: ${formatFullCurrency(degradation.potentialValue)}  (Gap: +${degradation.gapPercent.toFixed(1)}%)`, margin, yPos, { fontSize: 9, color: [80, 80, 80] });
+      addText(`True: ${formatFullCurrency(degradation.trueValue)}  →  Potencial: ${formatFullCurrency(degradation.potentialValue)}  (Gap: +${degradation.gapPercent.toFixed(1)}%)`, margin, yPos, { fontSize: 9, color: MUTED });
 
       // Footer
-      doc.setFillColor(15, 23, 42);
+      doc.setFillColor(...CARBON);
       doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-      addText('© mari - Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [200, 200, 200] });
-      addText('mari.vispe.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: [16, 185, 129] });
+      addText('© mari — Marketplace M&A', margin, pageHeight - 6, { fontSize: 8, color: [180, 180, 175] });
+      addText('mari.vispe.com.br', pageWidth - margin - 35, pageHeight - 6, { fontSize: 8, color: VOLT });
     }
 
-    // Save
     doc.save(`valuation-${result.inputs.companyName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
