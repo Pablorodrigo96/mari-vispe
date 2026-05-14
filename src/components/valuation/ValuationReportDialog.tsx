@@ -670,81 +670,77 @@ export const ValuationReportDialog = ({
             };
 
             return (
-              <div className="bg-card border-2 border-emerald-500/30 rounded-xl p-5 animate-fade-in">
+              <div className="bg-card border border-volt/30 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                    <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+                  <div className="w-8 h-8 rounded-lg bg-volt/15 flex items-center justify-center">
+                    <ArrowUpRight className="w-4 h-4 text-volt-dark" />
                   </div>
                   <h3 className="font-semibold text-foreground">Gap de Equity</h3>
-                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs animate-pulse">
-                    +{equityGap.gapPercent.toFixed(1)}%
+                  <Badge className="bg-volt/15 text-volt-dark border-volt/30 text-xs ml-auto">
+                    +{equityGap.gapPercent.toFixed(1)}% upside
                   </Badge>
                 </div>
 
                 {/* Summary cards */}
                 <div className="grid sm:grid-cols-3 gap-3 mb-5">
-                  <div className="bg-muted/50 rounded-lg p-3 text-center">
+                  <div className="bg-muted/40 rounded-lg p-4 border border-border/50">
                     <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Valor Atual</p>
-                    <p className="text-xl font-bold text-foreground">{formatFullCurrency(equityGap.currentValue)}</p>
+                    <p className="text-xl font-bold text-foreground tabular-nums">{formatFullCurrency(equityGap.currentValue)}</p>
                     <p className="text-muted-foreground text-xs mt-1">EBITDA: {equityGap.currentMargin.toFixed(1)}%</p>
                   </div>
-                  <div className="bg-emerald-500/10 rounded-lg p-3 text-center border border-emerald-500/20">
-                    <p className="text-emerald-600 text-[10px] uppercase tracking-wider mb-1">Valor Vispe</p>
-                    <p className="text-xl font-bold text-emerald-600">{formatFullCurrency(equityGap.potentialValue)}</p>
-                    <p className="text-emerald-600/70 text-xs mt-1">EBITDA: {equityGap.boostedMargin.toFixed(1)}%</p>
+                  <div className="bg-volt/10 rounded-lg p-4 border border-volt/30">
+                    <p className="text-volt-dark text-[10px] uppercase tracking-wider mb-1">Valor Potencial</p>
+                    <p className="text-xl font-bold text-foreground tabular-nums">{formatFullCurrency(equityGap.potentialValue)}</p>
+                    <p className="text-muted-foreground text-xs mt-1">EBITDA: {equityGap.boostedMargin.toFixed(1)}%</p>
                   </div>
-                  <div className="bg-accent/10 rounded-lg p-3 text-center border border-accent/20">
-                    <p className="text-accent text-[10px] uppercase tracking-wider mb-1">Gap</p>
-                    <p className="text-xl font-bold text-accent">{formatFullCurrency(equityGap.gapValue)}</p>
-                    <p className="text-accent/70 text-xs mt-1">+{equityGap.gapPercent.toFixed(1)}% de upside</p>
+                  <div className="bg-carbon text-bone rounded-lg p-4 border border-volt/20">
+                    <p className="text-bone/60 text-[10px] uppercase tracking-wider mb-1">Gap</p>
+                    <p className="text-xl font-bold text-volt tabular-nums">{formatFullCurrency(equityGap.gapValue)}</p>
+                    <p className="text-bone/60 text-xs mt-1">+{equityGap.gapPercent.toFixed(1)}% de upside</p>
                   </div>
                 </div>
 
                 {/* Recharts bar chart */}
-                <div className="bg-muted/30 rounded-lg p-3 mb-4">
+                <div className="bg-muted/30 rounded-lg p-3 mb-4 border border-border/50">
                   <p className="text-xs font-medium text-muted-foreground mb-2 text-center">Comparativo por Método</p>
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={chartData} barGap={2} barCategoryGap="20%">
                       <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
                       <YAxis hide />
                       <RechartsTooltip
-                        formatter={(value: number, name: string) => [formatFullCurrency(value), name === 'atual' ? 'Valor Atual' : 'Valor Vispe']}
+                        formatter={(value: number, name: string) => [formatFullCurrency(value), name === 'atual' ? 'Valor Atual' : 'Valor Potencial']}
                         contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
                       />
-                      <Bar dataKey="atual" fill="#94a3b8" radius={[4, 4, 0, 0]} animationDuration={800} animationBegin={200}>
+                      <Bar dataKey="atual" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} animationDuration={800} animationBegin={200}>
                         <LabelList dataKey="atual" content={renderLabel} />
                       </Bar>
-                      <Bar dataKey="potencial" fill="#10b981" radius={[4, 4, 0, 0]} animationDuration={800} animationBegin={500}>
+                      <Bar dataKey="potencial" fill="hsl(var(--volt))" radius={[4, 4, 0, 0]} animationDuration={800} animationBegin={500}>
                         <LabelList dataKey="potencial" content={renderLabel} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                   <div className="flex items-center justify-center gap-4 mt-1">
                     <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#94a3b8' }} />
+                      <div className="w-3 h-3 rounded-sm bg-muted-foreground" />
                       <span className="text-[10px] text-muted-foreground">Atual</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#10b981' }} />
-                      <span className="text-[10px] text-muted-foreground">Vispe (Potencial)</span>
+                      <div className="w-3 h-3 rounded-sm bg-volt" />
+                      <span className="text-[10px] text-muted-foreground">Potencial</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Animated progress bar */}
+                {/* Progress bar */}
                 <div className="mb-4">
-                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                    <span>Valor Atual</span>
-                    <span>Valor Vispe</span>
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                    <span>Atual</span>
+                    <span>Potencial</span>
                   </div>
-                  <div className="relative h-5 bg-muted rounded-full overflow-hidden">
+                  <div className="relative h-5 bg-muted rounded-full overflow-hidden border border-border/50">
                     <div
-                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-slate-400 to-emerald-500 rounded-full transition-all duration-1000 ease-out"
+                      className="absolute inset-y-0 left-0 bg-volt rounded-full transition-all duration-1000 ease-out"
                       style={{ width: `${Math.min((equityGap.currentValue / equityGap.potentialValue) * 100, 100)}%` }}
-                    />
-                    <div
-                      className="absolute inset-y-0 left-0 bg-emerald-500/20 rounded-full"
-                      style={{ width: '100%' }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-foreground">
                       Gap: {formatFullCurrency(equityGap.gapValue)}
@@ -753,11 +749,11 @@ export const ValuationReportDialog = ({
                 </div>
 
                 <p className="text-sm text-muted-foreground mb-4">
-                  Este é o seu <strong>Gap de Equity</strong> hoje. Empresas atendidas pela mari conseguiram destravar este upside com um trabalho estruturado de governança, fiscal e comercial. <strong className="text-foreground">Quer entender o que falta na sua?</strong>
+                  Este é o seu <strong className="text-foreground">Gap de Equity</strong> hoje. Empresas atendidas pela mari destravam este upside com trabalho estruturado de governança, fiscal e comercial.
                 </p>
 
                 <Button
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                  className="w-full bg-volt text-carbon hover:bg-volt-light font-semibold"
                   onClick={async () => {
                     const opened = await openWhatsApp(`Olá! Vi meu Gap de Equity de ${formatFullCurrency(equityGap.gapValue)} e gostaria de falar com um especialista mari.`);
                     if (!opened) {
@@ -773,37 +769,36 @@ export const ValuationReportDialog = ({
           })()}
 
           {/* Methodology */}
-          <div className="bg-muted/30 rounded-xl p-5">
+          <div className="bg-muted/30 border border-border/50 rounded-xl p-5">
             <h3 className="font-semibold text-foreground mb-2">Metodologia</h3>
             <p className="text-sm text-muted-foreground">
-              Este laudo utiliza o método de Valuation por Múltiplos de Mercado (Market Approach), 
-              comparando métricas financeiras da empresa com benchmarks do setor de {result.multiplesUsed.segment} 
-              no mercado brasileiro (2024/2025). O <strong>Mashup Value</strong> é calculado como a média 
+              Este laudo utiliza Valuation por Múltiplos de Mercado (Market Approach),
+              comparando métricas financeiras com benchmarks do setor de {result.multiplesUsed.segment}
+              no mercado brasileiro (2024/2025). O <strong className="text-foreground">Mashup Value</strong> é a média
               dos métodos válidos: EV/Receita, EV/EBITDA e P/Lucro.
             </p>
           </div>
 
-          {/* Disclaimer */}
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-            <p className="text-xs text-amber-800 dark:text-amber-200">
-              <strong>Aviso Legal:</strong> Este documento é uma estimativa de valor baseada nas 
-              informações fornecidas e múltiplos de mercado. Não constitui oferta ou garantia de valor. 
+          {/* Disclaimer — neutro */}
+          <div className="bg-muted/30 border border-border/50 rounded-xl p-4 flex gap-3">
+            <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">Aviso Legal:</strong> Estimativa baseada nas
+              informações fornecidas e múltiplos de mercado. Não constitui oferta ou garantia de valor.
               Recomendamos auditoria profissional para transações.
             </p>
           </div>
 
-          {/* Análise de Impacto agora aparece no topo, abaixo do Mashup Value */}
-
-          {/* CTA WhatsApp */}
-          <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border border-emerald-500/30 rounded-xl p-5 text-center">
-            <h3 className="font-semibold text-foreground mb-2">
+          {/* CTA WhatsApp final — Carbon com Volt button */}
+          <div className="bg-carbon border border-volt/20 rounded-xl p-6 text-center">
+            <h3 className="font-semibold text-bone mb-2 text-lg">
               Quer um Valuation mais preciso?
             </h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-bone/70 mb-5 max-w-md mx-auto">
               Fale com nossos especialistas para um projeto consultivo exclusivo com análise aprofundada do seu negócio.
             </p>
-            <Button 
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            <Button
+              className="bg-volt text-carbon hover:bg-volt-light font-semibold"
               onClick={async () => {
                 const opened = await openWhatsApp('Olá! Gostaria de saber mais sobre um Valuation consultivo para minha empresa.');
                 if (!opened) {
@@ -820,7 +815,7 @@ export const ValuationReportDialog = ({
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button
               onClick={handleDownloadPDF}
-              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
+              className="flex-1 bg-volt text-carbon hover:bg-volt-light font-semibold"
             >
               <Download className="w-4 h-4 mr-2" />
               Baixar PDF
@@ -828,7 +823,7 @@ export const ValuationReportDialog = ({
             <Button
               onClick={onBackToStart}
               variant="outline"
-              className="flex-1"
+              className="flex-1 bg-transparent"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Novo Valuation
