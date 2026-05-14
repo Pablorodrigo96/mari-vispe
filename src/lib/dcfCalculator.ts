@@ -34,6 +34,14 @@ export const companyTypeConfig = {
     wacc: 0.2557, // 25.57%
     marginGrowth: true, // +1 p.p./ano
   },
+  franqueadora: {
+    label: 'Franqueadora',
+    description: 'Receita recorrente de royalties + taxa de franquia. CapEx baixo, margem alta, crescimento via expansão de unidades. Premissa: rede consolidada com pipeline de novos franqueados.',
+    growthRate: 0.25, // 25%
+    riskPremium: 0.0650, // 6.50%
+    wacc: 0.2150, // 21.50%
+    marginGrowth: true, // +1 p.p./ano (alavancagem operacional)
+  },
 } as const;
 
 export type CompanyType = keyof typeof companyTypeConfig;
