@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, Rocket, Zap } from 'lucide-react';
+import { Building2, Rocket, Store, Zap } from 'lucide-react';
 import { SECTOR_OPTIONS } from '@/lib/sectorMapping';
 
 interface StepCompanyProfileProps {
@@ -36,6 +36,12 @@ const companyTypes = [
     label: 'Startup',
     description: 'Fase de teste e escala acelerada. Para negócios inovadores focados em validar hipóteses e crescer exponencialmente, assumindo maior risco.',
     icon: Rocket,
+  },
+  {
+    value: 'franqueadora',
+    label: 'Franqueadora',
+    description: 'Receita recorrente de royalties + taxa de franquia. CapEx baixo, margem alta e crescimento via expansão de unidades.',
+    icon: Store,
   },
 ];
 
