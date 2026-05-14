@@ -134,31 +134,31 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto px-4 py-6">
-      {/* BLOCO 1 — VALOR POTENCIAL (Sonho) */}
+      {/* BLOCO 1 — VALOR POTENCIAL */}
       <motion.div custom={0} variants={blockVariants} initial="hidden" animate="visible"
-        className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-6"
+        className="bg-card border border-volt/30 rounded-xl p-6"
       >
-        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 mb-3">
+        <Badge className="bg-volt/15 text-volt-dark border-volt/30 mb-3 hover:bg-volt/20">
           VALOR POTENCIAL
         </Badge>
-        <p className="text-muted-foreground text-sm mb-2">Após consultoria Vispe, sua empresa poderia valer:</p>
-        <p className="text-4xl md:text-5xl font-bold text-emerald-600 dark:text-emerald-400">
+        <p className="text-muted-foreground text-sm mb-2">Após consultoria mari, sua empresa poderia valer:</p>
+        <p className="text-4xl md:text-5xl font-bold text-foreground tabular-nums">
           {formatFullCurrency(degradation.potentialValue)}
         </p>
         <p className="text-muted-foreground text-sm mt-2">
-          Média de <strong>+35% de valorização</strong> em clientes atendidos pela mari
+          Média de <strong className="text-foreground">+35% de valorização</strong> em clientes atendidos pela mari
         </p>
       </motion.div>
 
       {/* BLOCO 2 — VALOR ESTIMADO */}
       <motion.div custom={1} variants={blockVariants} initial="hidden" animate="visible"
-        className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-6"
+        className="bg-card border border-border rounded-xl p-6"
       >
-        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-300 dark:border-blue-700 mb-3">
+        <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border mb-3">
           ESTIMATIVA DE MERCADO
         </Badge>
-        <p className="text-muted-foreground text-sm mb-2">Pelos múltiplos do setor <strong>{segment}</strong>:</p>
-        <p className="text-3xl md:text-4xl font-bold text-blue-600 dark:text-blue-400">
+        <p className="text-muted-foreground text-sm mb-2">Pelos múltiplos do setor <strong className="text-foreground">{segment}</strong>:</p>
+        <p className="text-3xl md:text-4xl font-bold text-foreground tabular-nums">
           {formatFullCurrency(degradation.estimatedValue)}
         </p>
         <p className="text-muted-foreground text-sm mt-2">
@@ -166,11 +166,11 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
         </p>
       </motion.div>
 
-      {/* BLOCO 3 — DIAGNÓSTICO (Breakdown) */}
+      {/* BLOCO 3 — DIAGNÓSTICO */}
       <motion.div custom={2} variants={blockVariants} initial="hidden" animate="visible"
         className="bg-card border border-border rounded-xl p-6"
       >
-        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700 mb-3">
+        <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border mb-3">
           RESULTADO DO DIAGNÓSTICO
         </Badge>
         <p className="text-muted-foreground text-sm mb-4">
@@ -190,16 +190,16 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
                     <div key={b.item.key} className="flex items-center justify-between text-sm gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         {b.answer ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                          <CheckCircle2 className="w-4 h-4 text-volt-dark flex-shrink-0" />
                         ) : (
-                          <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                          <XCircle className="w-4 h-4 text-destructive flex-shrink-0" />
                         )}
-                        <span className={`truncate ${b.answer ? 'text-foreground' : 'text-red-600 dark:text-red-400 font-medium'}`}>
+                        <span className={`truncate ${b.answer ? 'text-foreground' : 'text-destructive font-medium'}`}>
                           {b.item.label}
                         </span>
                       </div>
                       {!b.answer && (
-                        <span className="text-red-500 text-xs font-semibold flex-shrink-0">
+                        <span className="text-destructive text-xs font-semibold flex-shrink-0 tabular-nums">
                           -{formatCurrency(b.impact)}
                         </span>
                       )}
@@ -220,18 +220,18 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
         )}
       </motion.div>
 
-      {/* BLOCO 4 — VALOR VERDADEIRO (True Value) */}
+      {/* BLOCO 4 — VALOR VERDADEIRO */}
       <motion.div custom={3} variants={blockVariants} initial="hidden" animate="visible"
-        className="bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-800 rounded-xl p-6 text-center"
+        className="bg-destructive/5 border border-destructive/30 rounded-xl p-6 text-center"
       >
-        <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border-red-300 dark:border-red-700 mb-3">
+        <Badge variant="destructive" className="mb-3">
           <AlertTriangle className="w-3 h-3 mr-1" />
           VALOR VERDADEIRO
         </Badge>
         <p className="text-muted-foreground text-sm mb-2">
           Considerando as lacunas identificadas, o valor real da sua empresa hoje é:
         </p>
-        <p className="text-4xl md:text-5xl font-bold text-red-600 dark:text-red-400">
+        <p className="text-4xl md:text-5xl font-bold text-destructive tabular-nums">
           {formatFullCurrency(degradation.trueValue)}
         </p>
         <p className="text-muted-foreground text-sm mt-2">
@@ -241,18 +241,18 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
 
       {/* BLOCO 5 — O GAP */}
       <motion.div custom={4} variants={blockVariants} initial="hidden" animate="visible"
-        className="bg-orange-50 dark:bg-orange-950/30 border border-orange-300 dark:border-orange-800 rounded-xl p-6"
+        className="bg-card border border-border rounded-xl p-6"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
           <div>
             <p className="text-muted-foreground text-sm mb-1">Gap entre True Value e Potencial:</p>
-            <p className="text-3xl md:text-4xl font-bold text-orange-600 dark:text-orange-400">
+            <p className="text-3xl md:text-4xl font-bold text-foreground tabular-nums">
               {formatFullCurrency(lossMetrics.gap)}
             </p>
           </div>
           <div className="flex items-center sm:justify-end">
-            <Badge variant="destructive" className="text-lg px-4 py-1.5 bg-orange-500 hover:bg-orange-600">
-              {lossMetrics.gapPercent.toFixed(0)}% de upside
+            <Badge className="bg-volt text-carbon hover:bg-volt-light text-base px-4 py-1.5 font-semibold">
+              +{lossMetrics.gapPercent.toFixed(0)}% de upside
             </Badge>
           </div>
         </div>
@@ -262,9 +262,9 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
             <span>Valor Potencial</span>
           </div>
           <Progress value={progressPercent} className="h-3" />
-          <div className="flex justify-between text-xs font-medium">
-            <span className="text-red-600">{formatCurrency(degradation.trueValue)}</span>
-            <span className="text-emerald-600">{formatCurrency(degradation.potentialValue)}</span>
+          <div className="flex justify-between text-xs font-medium tabular-nums">
+            <span className="text-destructive">{formatCurrency(degradation.trueValue)}</span>
+            <span className="text-foreground">{formatCurrency(degradation.potentialValue)}</span>
           </div>
         </div>
       </motion.div>
@@ -333,23 +333,23 @@ export const ValuationNarrativeReport = ({ result, valuationId, diagnosticAnswer
 
       {/* BLOCO 9 — CTA FINAL */}
       <motion.div custom={8} variants={blockVariants} initial="hidden" animate="visible"
-        className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-center text-white"
+        className="rounded-xl p-6 text-center bg-volt border border-volt-dark/20"
       >
-        <h3 className="text-xl md:text-2xl font-bold mb-2">
+        <h3 className="text-xl md:text-2xl font-bold mb-2 text-carbon">
           Quer fechar esse gap e capturar o valor potencial?
         </h3>
-        <p className="text-emerald-100 text-sm mb-6 max-w-lg mx-auto">
-          A mari já gerou em média +35% de valorização nos clientes atendidos. Comece agora.
+        <p className="text-carbon/75 text-sm mb-6 max-w-lg mx-auto">
+          A mari já gerou em média <strong className="text-carbon">+35% de valorização</strong> nos clientes atendidos. Comece agora.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button size="lg" onClick={handleDiagnostic} disabled={loading}
-            className="bg-white text-emerald-700 hover:bg-emerald-50 font-semibold"
+            className="bg-carbon text-volt hover:bg-graphite font-semibold"
           >
             <ArrowRight className="w-4 h-4 mr-2" />
             Iniciar Processo Consultivo
           </Button>
           <Button size="lg" variant="outline" onClick={handleSpecialist} disabled={loading}
-            className="border-white/40 text-white hover:bg-white/10"
+            className="bg-transparent border-carbon/30 text-carbon hover:bg-carbon/5 hover:text-carbon"
           >
             <MessageCircle className="w-4 h-4 mr-2" />
             Falar com um especialista
