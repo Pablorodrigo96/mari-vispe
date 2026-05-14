@@ -32,114 +32,146 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
   // Vendedor "puro" = só seller, sem outras roles operacionais.
   const isInsider = eff.isAdmin || eff.isAdvisor || eff.isPartnerAccountant || eff.isFranchisee;
   const isSellerOnly = eff.isSeller && !eff.isBuyer && !isInsider;
+  // Parceiro externo (contador/indicador): isPartnerAccountant=true e NÃO é admin.
+  // Recebe menu enxuto, sem EB/cockpit interno.
+  const isPartnerExternal = eff.isPartnerAccountant && !eff.isAdmin;
 
-  const sellChildren: NavChild[] = [
-    { name: 'Meus anúncios', href: '/meus-anuncios', icon: ClipboardList },
-    { name: 'Anunciar empresa', href: '/vender', icon: Plus },
-    { name: 'Simulador Investidor', href: '/vender/simulador-investidor', icon: TrendingUp },
-    { name: 'Simulador Due Diligence', href: '/vender/due-diligence', icon: CheckSquare },
-  ];
-  if (isSellerOnly) {
-    sellChildren.push({ name: 'Compradores compatíveis', href: '/matching', icon: Target });
-    sellChildren.push({ name: 'Cadastrar como comprador', href: '/cadastrar-comprador', icon: UserSearch });
-  }
+  let groups: NavGroup[] = [];
 
-  const groups: NavGroup[] = [
-    {
-      id: 'overview', name: 'Visão Geral', icon: LayoutDashboard,
-      children: [
-        { name: 'Painel', href: '/painel', icon: LayoutDashboard },
-        { name: 'Inteligência de Mercado', href: '/inteligencia', icon: Sparkles },
-      ],
-    },
-    {
-      id: 'marketplace', name: 'Marketplace', icon: Store,
-      children: [
-        { name: 'Buscar empresas', href: '/marketplace', icon: Search },
-        { name: 'Mapa de oportunidades', href: '/mapa', icon: MapPin },
-      ],
-    },
-    {
-      id: 'sell', name: 'Vender', icon: Building2,
-      children: sellChildren,
-    },
-  ];
+  if (isPartnerExternal) {
+    // === Sidebar do parceiro externo ===
+    groups = [
+      {
+        id: 'partner', name: 'Parceria', icon: Briefcase,
+        children: [
+          { name: 'Painel do parceiro', href: '/parceiro', icon: Briefcase },
+          { name: 'Cadastrar empresa', href: '/vender', icon: Plus },
+          { name: 'Minhas indicações', href: '/meus-anuncios', icon: ClipboardList },
+        ],
+      },
+      {
+        id: 'valuation', name: 'Valuation', icon: ChartBar,
+        children: [
+          { name: 'Novo valuation', href: '/valuation/multiplos', icon: Plus },
+          { name: 'Meus valuations', href: '/meus-valuations', icon: FileText },
+        ],
+      },
+      {
+        id: 'buyers', name: 'Compradores', icon: UserSearch,
+        children: [
+          { name: 'Possíveis compradores', href: '/parceiro/compradores', icon: Target },
+        ],
+      },
+    ];
+  } else {
+    // === Sidebar padrão (seller / buyer / advisor interno / admin / franqueado) ===
+    const sellChildren: NavChild[] = [
+      { name: 'Meus anúncios', href: '/meus-anuncios', icon: ClipboardList },
+      { name: 'Anunciar empresa', href: '/vender', icon: Plus },
+      { name: 'Simulador Investidor', href: '/vender/simulador-investidor', icon: TrendingUp },
+      { name: 'Simulador Due Diligence', href: '/vender/due-diligence', icon: CheckSquare },
+    ];
+    if (isSellerOnly) {
+      sellChildren.push({ name: 'Compradores compatíveis', href: '/matching', icon: Target });
+      sellChildren.push({ name: 'Cadastrar como comprador', href: '/cadastrar-comprador', icon: UserSearch });
+    }
 
-  // Grupo "Comprar" só pra quem já é buyer (ou insider que opera o produto).
-  if (eff.isBuyer || isInsider) {
-    groups.push({
-      id: 'buy', name: 'Comprar', icon: UserSearch,
-      children: [
-        { name: 'Cadastrar comprador', href: '/cadastrar-comprador', icon: UserSearch },
-        { name: 'Compradores compatíveis', href: '/matching', icon: Target },
-        { name: 'Resultados', href: '/matching/resultados', icon: ChartBar },
-      ],
-    });
-  }
+    groups = [
+      {
+        id: 'overview', name: 'Visão Geral', icon: LayoutDashboard,
+        children: [
+          { name: 'Painel', href: '/painel', icon: LayoutDashboard },
+          { name: 'Inteligência de Mercado', href: '/inteligencia', icon: Sparkles },
+        ],
+      },
+      {
+        id: 'marketplace', name: 'Marketplace', icon: Store,
+        children: [
+          { name: 'Buscar empresas', href: '/marketplace', icon: Search },
+          { name: 'Mapa de oportunidades', href: '/mapa', icon: MapPin },
+        ],
+      },
+      {
+        id: 'sell', name: 'Vender', icon: Building2,
+        children: sellChildren,
+      },
+    ];
 
-  groups.push(
-    {
-      id: 'valuation', name: 'Valuation', icon: ChartBar,
-      children: [
-        { name: 'Novo valuation', href: '/valuation', icon: Plus },
-        { name: 'Meus valuations', href: '/meus-valuations', icon: FileText },
-        { name: 'Múltiplos', href: '/valuation/multiplos', icon: Calculator },
-        { name: 'DCF', href: '/valuation/dcf', icon: ChartBar },
-        { name: 'Certificador', href: '/valuation/certificador', icon: Award },
-      ],
-    },
-    {
-      id: 'capital', name: 'Capital', icon: DollarSign,
-      children: [
-        { name: 'Solicitar capital', href: '/capital', icon: Plus },
-        { name: 'Minhas captações', href: '/minhas-captacoes', icon: DollarSign },
-      ],
-    },
-  );
+    if (eff.isBuyer || isInsider) {
+      groups.push({
+        id: 'buy', name: 'Comprar', icon: UserSearch,
+        children: [
+          { name: 'Cadastrar comprador', href: '/cadastrar-comprador', icon: UserSearch },
+          { name: 'Compradores compatíveis', href: '/matching', icon: Target },
+          { name: 'Resultados', href: '/matching/resultados', icon: ChartBar },
+        ],
+      });
+    }
 
-  if (eff.isAdvisor || eff.isPartnerAccountant || eff.isFranchisee || eff.isAdmin) {
-    groups.push({
-      id: 'partners', name: 'Parcerias', icon: Briefcase,
-      children: [
-        { name: 'Painel do parceiro', href: '/parceiro', icon: Briefcase },
-        { name: 'Potencial da carteira', href: '/potencial-carteira', icon: ChartBar },
-        ...(eff.isAdmin
-          ? [{ name: 'Head de Parcerias', href: '/admin/parcerias', icon: Shield }]
-          : []),
-      ],
-    });
-  }
+    groups.push(
+      {
+        id: 'valuation', name: 'Valuation', icon: ChartBar,
+        children: [
+          { name: 'Novo valuation', href: '/valuation', icon: Plus },
+          { name: 'Meus valuations', href: '/meus-valuations', icon: FileText },
+          { name: 'Múltiplos', href: '/valuation/multiplos', icon: Calculator },
+          { name: 'DCF', href: '/valuation/dcf', icon: ChartBar },
+          { name: 'Certificador', href: '/valuation/certificador', icon: Award },
+        ],
+      },
+      {
+        id: 'capital', name: 'Capital', icon: DollarSign,
+        children: [
+          { name: 'Solicitar capital', href: '/capital', icon: Plus },
+          { name: 'Minhas captações', href: '/minhas-captacoes', icon: DollarSign },
+        ],
+      },
+    );
 
-  if (eff.isAdmin) {
-    groups.push({
-      id: 'monday', name: '🔄 Migração Monday', icon: Shield,
-      children: [
-        { name: 'Importar Monday', href: '/admin/monday-import', icon: Plus },
-        { name: 'Paridade Monday', href: '/admin/monday-parity', icon: ChartBar },
-        { name: 'Mapeamento de advisors', href: '/admin/advisors-mapping', icon: UserSearch },
-        { name: 'Health check', href: '/equity-brain/admin/health', icon: Sparkles },
-      ],
-    });
-  }
+    if (eff.isAdvisor || eff.isFranchisee || eff.isAdmin) {
+      groups.push({
+        id: 'partners', name: 'Parcerias', icon: Briefcase,
+        children: [
+          { name: 'Painel do parceiro', href: '/parceiro', icon: Briefcase },
+          { name: 'Potencial da carteira', href: '/potencial-carteira', icon: ChartBar },
+          ...(eff.isAdmin
+            ? [{ name: 'Head de Parcerias', href: '/admin/parcerias', icon: Shield }]
+            : []),
+        ],
+      });
+    }
 
-  if (eff.isAdmin || eff.isAdvisor) {
-    groups.push({
-      id: 'mandatos_tabela', name: '🗂 Mandatos (tabela)', icon: ClipboardList,
-      children: [
-        { name: 'Tabela mestre (editar)', href: '/equity-brain/mandatos/tabela', icon: ClipboardList },
-        { name: 'Cobertura dashboards', href: '/equity-brain/admin/dashboard-coverage', icon: ChartBar },
-        { name: 'Novo mandato', href: '/equity-brain/crm/mandate/new', icon: Plus },
-      ],
-    });
-    groups.push({
-      id: 'dashboards', name: '📊 Dashboards', icon: BarChart3,
-      children: [
-        { name: 'Executivo M&A', href: '/equity-brain/dashboards/executivo', icon: BarChart3 },
-        { name: 'Mandato', href: '/equity-brain/dashboards/mandatos', icon: FileSignature },
-        { name: 'Match', href: '/equity-brain/dashboards/match', icon: Handshake },
-        { name: 'NBO', href: '/equity-brain/dashboards/propostas', icon: FileBarChart },
-      ],
-    });
+    if (eff.isAdmin) {
+      groups.push({
+        id: 'monday', name: '🔄 Migração Monday', icon: Shield,
+        children: [
+          { name: 'Importar Monday', href: '/admin/monday-import', icon: Plus },
+          { name: 'Paridade Monday', href: '/admin/monday-parity', icon: ChartBar },
+          { name: 'Mapeamento de advisors', href: '/admin/advisors-mapping', icon: UserSearch },
+          { name: 'Health check', href: '/equity-brain/admin/health', icon: Sparkles },
+        ],
+      });
+    }
+
+    if (eff.isAdmin || (eff.isAdvisor && !eff.isPartnerAccountant)) {
+      groups.push({
+        id: 'mandatos_tabela', name: '🗂 Mandatos (tabela)', icon: ClipboardList,
+        children: [
+          { name: 'Tabela mestre (editar)', href: '/equity-brain/mandatos/tabela', icon: ClipboardList },
+          { name: 'Cobertura dashboards', href: '/equity-brain/admin/dashboard-coverage', icon: ChartBar },
+          { name: 'Novo mandato', href: '/equity-brain/crm/mandate/new', icon: Plus },
+        ],
+      });
+      groups.push({
+        id: 'dashboards', name: '📊 Dashboards', icon: BarChart3,
+        children: [
+          { name: 'Executivo M&A', href: '/equity-brain/dashboards/executivo', icon: BarChart3 },
+          { name: 'Mandato', href: '/equity-brain/dashboards/mandatos', icon: FileSignature },
+          { name: 'Match', href: '/equity-brain/dashboards/match', icon: Handshake },
+          { name: 'NBO', href: '/equity-brain/dashboards/propostas', icon: FileBarChart },
+        ],
+      });
+    }
   }
 
   // Determine which groups should start open (the one containing active route)
