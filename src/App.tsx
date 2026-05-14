@@ -58,6 +58,7 @@ const MatchingResults = lazy(() => import("./pages/MatchingResults"));
 const MatchingBuyers = lazy(() => import("./pages/MatchingBuyers"));
 const PortfolioPotential = lazy(() => import("./pages/PortfolioPotential"));
 const PartnerDashboard = lazy(() => import("./pages/PartnerDashboard"));
+const PartnerBuyersPage = lazy(() => import("./pages/parceiro/PartnerBuyersPage"));
 
 // Capital SEO
 const CapitalCase = lazy(() => import("./pages/CapitalCase"));
@@ -138,8 +139,9 @@ const queryClient = new QueryClient({
 });
 
 const RouteFallback = () => (
-  <div className="min-h-[40vh] flex items-center justify-center text-sm text-muted-foreground">
-    Carregando…
+  <div className="min-h-[40vh] flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+    <div className="h-6 w-6 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
+    <span className="text-xs">Carregando…</span>
   </div>
 );
 
@@ -200,6 +202,7 @@ const App = () => (
               <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />
               <Route path="/potencial-carteira" element={<RequireRole roles={["advisor","admin","franchisee"]} allowPartnerAccountant><PortfolioPotential /></RequireRole>} />
               <Route path="/parceiro" element={<RequireRole roles={["advisor","admin","franchisee"]} allowPartnerAccountant><PartnerDashboard /></RequireRole>} />
+              <Route path="/parceiro/compradores" element={<RequireRole roles={["advisor","admin","franchisee"]} allowPartnerAccountant><PartnerBuyersPage /></RequireRole>} />
 
               {/* Top-level dashboards (admin/advisor) */}
               <Route path="/dashboard/executivo" element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
@@ -239,7 +242,7 @@ const App = () => (
             <Route
               path="/equity-brain"
               element={
-                <RequireRole roles={["admin", "advisor"]}>
+                <RequireRole roles={["admin", "advisor"]} denyPartnerAccountant>
                   <EquityBrainLayout />
                 </RequireRole>
               }
