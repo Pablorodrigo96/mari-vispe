@@ -19,6 +19,7 @@ export type BenchmarkKey =
   | 'Varejo'
   | 'Serviços'
   | 'Telecom'
+  | 'Lazer Asset-Light'
   | 'Outros';
 
 export interface SectorOption {
