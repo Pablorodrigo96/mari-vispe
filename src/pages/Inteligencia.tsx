@@ -20,6 +20,27 @@ import { useEffect } from "react";
 
 export default function Inteligencia() {
   const { sectorSlug, isLoading: sectorLoading } = useUserSector();
+  const eff = useEffectiveRoles();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isPartnerExternal = eff.isPartnerAccountant && !eff.isAdmin;
+
+  // Para parceiro externo: só libera Inteligência se houver pelo menos 1 indicação com setor.
+  const { data: partnerListings, isLoading: listingsLoading } = useQuery({
+    queryKey: ["partner-inteligencia-gate", user?.id],
+    enabled: !!user?.id && isPartnerExternal,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("listings")
+        .select("id, category")
+        .eq("user_id", user!.id)
+        .not("category", "is", null)
+        .limit(1);
+      return data ?? [];
+    },
+  });
+  const partnerBlocked = isPartnerExternal && (partnerListings?.length ?? 0) === 0;
+
   const { data, isLoading, isMissing, isExpired, generate, isGenerating, generateError } =
     useSectorResearch(sectorSlug);
 
