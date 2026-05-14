@@ -68,13 +68,25 @@ export default function Inteligencia() {
       />
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
-        {sectorLoading || isLoading ? (
+        {sectorLoading || isLoading || (isPartnerExternal && listingsLoading) ? (
           <div className="space-y-4">
             <Skeleton className="h-14 w-2/3" />
             <Skeleton className="h-5 w-1/2" />
             <Skeleton className="mt-10 h-40 w-full" />
             <Skeleton className="h-40 w-full" />
           </div>
+        ) : partnerBlocked ? (
+          <>
+            <InteligenciaHero setorNome="seu setor" />
+            <div className="mt-8">
+              <EmptyState
+                title="Cadastre sua primeira indicação para liberar a inteligência setorial"
+                description="A pesquisa de mercado é gerada com base no setor da empresa indicada. Cadastre uma empresa em /vender e voltamos com benchmark, ranking e múltiplos do setor dela."
+                cta="Cadastrar empresa"
+                onAction={() => navigate("/vender")}
+              />
+            </div>
+          </>
         ) : isMissing || generateError ? (
           <>
             <InteligenciaHero setorNome={setorNome} />
