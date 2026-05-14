@@ -64,7 +64,7 @@ const MatchingBuyers = () => {
 
         // Fetch matching buyers
         const { data: buyerData } = await supabase
-          .from('buyer_profiles')
+          .from('public_buyer_profiles' as any)
           .select('*')
           .eq('status', 'active')
           .contains('categories', [listingData.category]);
