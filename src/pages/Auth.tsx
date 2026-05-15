@@ -8,6 +8,7 @@ import { Building2, Mail, Lock, ArrowLeft, User, Phone, Check, Store, ShieldChec
 import { MariLogo } from '@/components/brand/MariLogo';
 import { MariBrandStamp } from '@/components/brand/MariBrandStamp';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
+import type { SignupProfile } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -29,12 +30,21 @@ const formatPhone = (value: string) => {
   return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
 };
 
-const roleOptions: { id: UserRole; label: string; description: string }[] = [
+const profileOptions: { id: SignupProfile; label: string; description: string }[] = [
   { id: 'seller', label: 'Empreendedor', description: 'Quero avaliar, captar investimento ou vender minha empresa' },
-  { id: 'buyer', label: 'Comprador/Investidor', description: 'Quero comprar ou investir' },
-  { id: 'advisor', label: 'Assessor/Representante', description: 'Represento empresas' },
-  { id: 'franchisee', label: 'Franqueado', description: 'Sou franqueado da rede' },
+  { id: 'buyer', label: 'Comprador/Investidor', description: 'Quero comprar ou investir em empresas' },
+  { id: 'advisor', label: 'Assessor interno (Vispe)', description: 'Sou assessor/representante interno da Vispe' },
+  { id: 'franchisee', label: 'Franqueado', description: 'Sou franqueado da rede Vispe' },
+  { id: 'partner', label: 'Parceiro externo / Contador indicador', description: 'Indico empresas e clientes para a Vispe (sem vínculo interno)' },
 ];
+
+const PROFILE_HOME: Record<SignupProfile, string> = {
+  seller: '/painel',
+  buyer: '/painel',
+  advisor: '/equity-brain/hoje',
+  franchisee: '/painel',
+  partner: '/painel',
+};
 
 const ROLE_HOME: Record<UserRole, string> = {
   seller: '/painel',
@@ -61,14 +71,14 @@ export default function Auth() {
   const redirectParam = searchParams.get('redirect');
   const tabParam = searchParams.get('tab');
   const interestParam = searchParams.get('interest');
-  const roleParam = searchParams.get('role') as UserRole | null;
+  const roleParam = searchParams.get('role') as SignupProfile | null;
   const { user, signIn, signUp, loading } = useAuth();
 
-  // Pre-select role from query (?role=seller|buyer|advisor|franchisee) or interest flow
-  const validRoles: UserRole[] = ['seller', 'buyer', 'advisor', 'franchisee'];
-  const defaultRoles: UserRole[] =
-    roleParam && validRoles.includes(roleParam) ? [roleParam] :
-    interestParam === 'true' ? ['buyer'] : [];
+  // Pre-select profile from query (?role=seller|buyer|advisor|franchisee|partner) or interest flow
+  const validProfiles: SignupProfile[] = ['seller', 'buyer', 'advisor', 'franchisee', 'partner'];
+  const defaultProfile: SignupProfile | null =
+    roleParam && validProfiles.includes(roleParam) ? roleParam :
+    interestParam === 'true' ? 'buyer' : null;
 
   // Login state
   const [loginEmail, setLoginEmail] = useState('');
@@ -80,7 +90,7 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
-  const [signupRoles, setSignupRoles] = useState<UserRole[]>(defaultRoles);
+  const [signupProfile, setSignupProfile] = useState<SignupProfile | null>(defaultProfile);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
@@ -120,12 +130,9 @@ export default function Auth() {
     }
   };
 
-  const toggleRole = (role: UserRole) => {
-    setSignupRoles(prev => 
-      prev.includes(role) 
-        ? prev.filter(r => r !== role)
-        : [...prev, role]
-    );
+  // Radio único — substitui multi-select. Mantém função para compat com handlers existentes.
+  const selectProfile = (profile: SignupProfile) => {
+    setSignupProfile(profile);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -194,10 +201,15 @@ export default function Auth() {
       return;
     }
 
-    if (signupRoles.length === 0) {
-      toast.error('Selecione pelo menos um perfil');
+    if (!signupProfile) {
+      toast.error('Selecione seu perfil');
       return;
     }
+
+    // Mapeia perfil único → roles do banco.
+    // 'partner' = buyer + flag is_partner_accountant=true (setada em AuthContext.signUp).
+    const rolesForDb: UserRole[] =
+      signupProfile === 'partner' ? ['buyer'] : [signupProfile as UserRole];
 
     setIsSubmitting(true);
     const { error } = await signUp({
@@ -205,7 +217,8 @@ export default function Auth() {
       password: signupPassword,
       fullName: signupFullName,
       phone: signupPhone,
-      roles: signupRoles,
+      roles: rolesForDb,
+      profile: signupProfile,
     });
     setIsSubmitting(false);
 
@@ -216,18 +229,11 @@ export default function Auth() {
         toast.error('Erro ao criar conta. Tente novamente.');
       }
     } else {
-      // Roles que dependem de aprovação admin (request criado via trigger handle_new_user)
-      const needsApproval =
-        signupRoles.includes('advisor') || signupRoles.includes('franchisee');
-      const autoRoles = signupRoles.filter((r) => r === 'seller' || r === 'buyer') as UserRole[];
+      const needsApproval = signupProfile === 'advisor' || signupProfile === 'franchisee';
 
       if (needsApproval) {
-        const labels: string[] = [];
-        if (signupRoles.includes('advisor')) labels.push('Assessor');
-        if (signupRoles.includes('franchisee')) labels.push('Franqueado');
-        toast.success(
-          `Conta criada! Acesso de ${labels.join(' e ')} aguardando aprovação do admin.`
-        );
+        const label = signupProfile === 'advisor' ? 'Assessor' : 'Franqueado';
+        toast.success(`Conta criada! Acesso de ${label} aguardando aprovação do admin.`);
       } else {
         toast.success('Conta criada com sucesso!');
       }
@@ -235,7 +241,7 @@ export default function Auth() {
       // Determine destination
       const prefill = getMariPrefill();
       const hasMariPrefill = !!prefill;
-      if (hasMariPrefill && signupRoles.includes('seller')) {
+      if (hasMariPrefill && signupProfile === 'seller') {
         try {
           const { data: { user: newUser } } = await supabase.auth.getUser();
           if (newUser) await logMariLead(prefill!, newUser.id);
@@ -243,13 +249,12 @@ export default function Auth() {
           console.error('logMariLead error', err);
         }
       }
-      const firstAutoRole = autoRoles[0];
       const dest = redirectParam
-        ?? (hasMariPrefill && signupRoles.includes('seller')
+        ?? (hasMariPrefill && signupProfile === 'seller'
               ? '/vender'
-              : firstAutoRole
-                  ? ROLE_HOME[firstAutoRole]
-                  : (needsApproval ? '/aguardando-aprovacao' : '/painel'));
+              : needsApproval
+                  ? '/aguardando-aprovacao'
+                  : PROFILE_HOME[signupProfile]);
       navigate(dest);
     }
   };
@@ -426,40 +431,50 @@ export default function Auth() {
                   </div>
                 </div>
 
-                {/* Roles */}
+                {/* Perfil (radio único) */}
                 <div className="space-y-3">
                   <Label>Eu sou:</Label>
-                  <div className="space-y-2">
-                    {roleOptions.map((role) => (
-                      <div
-                        key={role.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          signupRoles.includes(role.id)
-                            ? 'border-accent bg-accent/5'
-                            : 'border-border hover:border-muted-foreground/50'
-                        }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          toggleRole(role.id);
-                        }}
-                      >
-                        <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${
-                          signupRoles.includes(role.id)
-                            ? 'bg-primary border-primary text-primary-foreground'
-                            : 'border-primary'
-                        }`}>
-                          {signupRoles.includes(role.id) && (
-                            <Check className="h-3 w-3" />
-                          )}
+                  <div className="space-y-2" role="radiogroup" aria-label="Selecione seu perfil">
+                    {profileOptions.map((option) => {
+                      const selected = signupProfile === option.id;
+                      return (
+                        <div
+                          key={option.id}
+                          role="radio"
+                          aria-checked={selected}
+                          tabIndex={0}
+                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            selected
+                              ? 'border-accent bg-accent/5'
+                              : 'border-border hover:border-muted-foreground/50'
+                          }`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            selectProfile(option.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === ' ' || e.key === 'Enter') {
+                              e.preventDefault();
+                              selectProfile(option.id);
+                            }
+                          }}
+                        >
+                          <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border flex items-center justify-center transition-colors ${
+                            selected
+                              ? 'bg-primary border-primary text-primary-foreground'
+                              : 'border-primary'
+                          }`}>
+                            {selected && <div className="h-2 w-2 rounded-full bg-primary-foreground" />}
+                          </div>
+                          <div className="flex-1">
+                            <span className="text-sm font-medium cursor-pointer">
+                              {option.label}
+                            </span>
+                            <p className="text-xs text-muted-foreground">{option.description}</p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <span className="text-sm font-medium cursor-pointer">
-                            {role.label}
-                          </span>
-                          <p className="text-xs text-muted-foreground">{role.description}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 

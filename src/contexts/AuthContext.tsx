@@ -4,12 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'seller' | 'buyer' | 'advisor' | 'franchisee';
 
+export type SignupProfile = 'seller' | 'buyer' | 'advisor' | 'franchisee' | 'partner';
+
 interface SignUpData {
   email: string;
   password: string;
   fullName: string;
   phone: string;
   roles: UserRole[];
+  /** Perfil único selecionado no signup (radio). 'partner' = buyer + is_partner_accountant=true */
+  profile?: SignupProfile;
 }
 
 interface AuthContextType {
@@ -69,14 +73,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) return { error };
 
-    // Update profile with phone (trigger already creates profile + roles)
+    // Update profile with phone (trigger already creates profile + roles).
+    // For perfil=partner, also marca is_partner_accountant=true (gate de parceiro externo).
     if (authData.user) {
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      await supabase.from('profiles').update({
+
+      const profileUpdate: Record<string, unknown> = {
         full_name: data.fullName,
         phone: data.phone,
-      }).eq('user_id', authData.user.id);
+      };
+      if (data.profile === 'partner') {
+        profileUpdate.is_partner_accountant = true;
+      }
+
+      await supabase.from('profiles').update(profileUpdate).eq('user_id', authData.user.id);
     }
 
     return { error: null };
