@@ -130,12 +130,9 @@ export default function Auth() {
     }
   };
 
-  const toggleRole = (role: UserRole) => {
-    setSignupRoles(prev => 
-      prev.includes(role) 
-        ? prev.filter(r => r !== role)
-        : [...prev, role]
-    );
+  // Radio único — substitui multi-select. Mantém função para compat com handlers existentes.
+  const selectProfile = (profile: SignupProfile) => {
+    setSignupProfile(profile);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
