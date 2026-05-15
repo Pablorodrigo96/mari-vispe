@@ -4,12 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'seller' | 'buyer' | 'advisor' | 'franchisee';
 
+export type SignupProfile = 'seller' | 'buyer' | 'advisor' | 'franchisee' | 'partner';
+
 interface SignUpData {
   email: string;
   password: string;
   fullName: string;
   phone: string;
   roles: UserRole[];
+  /** Perfil único selecionado no signup (radio). 'partner' = buyer + is_partner_accountant=true */
+  profile?: SignupProfile;
 }
 
 interface AuthContextType {
