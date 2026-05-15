@@ -431,40 +431,50 @@ export default function Auth() {
                   </div>
                 </div>
 
-                {/* Roles */}
+                {/* Perfil (radio único) */}
                 <div className="space-y-3">
                   <Label>Eu sou:</Label>
-                  <div className="space-y-2">
-                    {roleOptions.map((role) => (
-                      <div
-                        key={role.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          signupRoles.includes(role.id)
-                            ? 'border-accent bg-accent/5'
-                            : 'border-border hover:border-muted-foreground/50'
-                        }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          toggleRole(role.id);
-                        }}
-                      >
-                        <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${
-                          signupRoles.includes(role.id)
-                            ? 'bg-primary border-primary text-primary-foreground'
-                            : 'border-primary'
-                        }`}>
-                          {signupRoles.includes(role.id) && (
-                            <Check className="h-3 w-3" />
-                          )}
+                  <div className="space-y-2" role="radiogroup" aria-label="Selecione seu perfil">
+                    {profileOptions.map((option) => {
+                      const selected = signupProfile === option.id;
+                      return (
+                        <div
+                          key={option.id}
+                          role="radio"
+                          aria-checked={selected}
+                          tabIndex={0}
+                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            selected
+                              ? 'border-accent bg-accent/5'
+                              : 'border-border hover:border-muted-foreground/50'
+                          }`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            selectProfile(option.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === ' ' || e.key === 'Enter') {
+                              e.preventDefault();
+                              selectProfile(option.id);
+                            }
+                          }}
+                        >
+                          <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border flex items-center justify-center transition-colors ${
+                            selected
+                              ? 'bg-primary border-primary text-primary-foreground'
+                              : 'border-primary'
+                          }`}>
+                            {selected && <div className="h-2 w-2 rounded-full bg-primary-foreground" />}
+                          </div>
+                          <div className="flex-1">
+                            <span className="text-sm font-medium cursor-pointer">
+                              {option.label}
+                            </span>
+                            <p className="text-xs text-muted-foreground">{option.description}</p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <span className="text-sm font-medium cursor-pointer">
-                            {role.label}
-                          </span>
-                          <p className="text-xs text-muted-foreground">{role.description}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
