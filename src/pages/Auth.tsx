@@ -41,9 +41,11 @@ const profileOptions: { id: SignupProfile; label: string; description: string }[
 const PROFILE_HOME: Record<SignupProfile, string> = {
   seller: '/painel',
   buyer: '/painel',
-  advisor: '/equity-brain/hoje',
-  franchisee: '/painel',
-  partner: '/painel',
+  // advisor/franchisee precisam de aprovação admin → tela de espera.
+  advisor: '/aguardando-aprovacao',
+  franchisee: '/aguardando-aprovacao',
+  // partner = auto-grant (buyer + flag) → home do hub do parceiro.
+  partner: '/parceiro',
 };
 
 const ROLE_HOME: Record<UserRole, string> = {
