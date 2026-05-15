@@ -73,14 +73,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) return { error };
 
-    // Update profile with phone (trigger already creates profile + roles)
+    // Update profile with phone (trigger already creates profile + roles).
+    // For perfil=partner, also marca is_partner_accountant=true (gate de parceiro externo).
     if (authData.user) {
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      await supabase.from('profiles').update({
+
+      const profileUpdate: Record<string, unknown> = {
         full_name: data.fullName,
         phone: data.phone,
-      }).eq('user_id', authData.user.id);
+      };
+      if (data.profile === 'partner') {
+        profileUpdate.is_partner_accountant = true;
+      }
+
+      await supabase.from('profiles').update(profileUpdate).eq('user_id', authData.user.id);
     }
 
     return { error: null };
