@@ -71,14 +71,14 @@ export default function Auth() {
   const redirectParam = searchParams.get('redirect');
   const tabParam = searchParams.get('tab');
   const interestParam = searchParams.get('interest');
-  const roleParam = searchParams.get('role') as UserRole | null;
+  const roleParam = searchParams.get('role') as SignupProfile | null;
   const { user, signIn, signUp, loading } = useAuth();
 
-  // Pre-select role from query (?role=seller|buyer|advisor|franchisee) or interest flow
-  const validRoles: UserRole[] = ['seller', 'buyer', 'advisor', 'franchisee'];
-  const defaultRoles: UserRole[] =
-    roleParam && validRoles.includes(roleParam) ? [roleParam] :
-    interestParam === 'true' ? ['buyer'] : [];
+  // Pre-select profile from query (?role=seller|buyer|advisor|franchisee|partner) or interest flow
+  const validProfiles: SignupProfile[] = ['seller', 'buyer', 'advisor', 'franchisee', 'partner'];
+  const defaultProfile: SignupProfile | null =
+    roleParam && validProfiles.includes(roleParam) ? roleParam :
+    interestParam === 'true' ? 'buyer' : null;
 
   // Login state
   const [loginEmail, setLoginEmail] = useState('');
