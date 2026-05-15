@@ -90,7 +90,7 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
-  const [signupRoles, setSignupRoles] = useState<UserRole[]>(defaultRoles);
+  const [signupProfile, setSignupProfile] = useState<SignupProfile | null>(defaultProfile);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
