@@ -1,121 +1,50 @@
-# Plano — Parceiro/Indicador: experiência enxuta e escopada
+# Bloco 0 — Inspeção do signup atual
 
-Hoje o parceiro contábil (`is_partner_accountant=true` + role `advisor`) herda **todos** os privilégios de advisor interno Vispe: vê base inteira, mercado ISP fixo, pipeline global, dashboards executivos. Vamos separar em duas personas distintas:
+Sem mudança de código nesta etapa. Só relatório do estado atual + GAPs, conforme o doc `PROMPT_REFORMA_SIGNUP_ROLES.md`. Confirmação sua antes de seguir para Bloco 1.
 
-- **Advisor interno Vispe** (`advisor` sem `is_partner_accountant`): mantém tudo como hoje.
-- **Parceiro externo / indicador** (`advisor` + `is_partner_accountant=true`): visão restrita, focada em indicar empresa → fazer valuation → ver compradores anônimos → ganhar comissão.
+## Arquivo principal
 
-## 1. Sidebar drasticamente reduzida para o parceiro
+- **`src/pages/Auth.tsx`** — 510 linhas. Single file com tabs Login/Criar Conta.
+- Componente de seleção de perfil: **botões customizados (`<button>`) com state `signupRoles: UserRole[]`** — visualmente parecem cards/checkboxes, mas tecnicamente são toggles de array (multi-select). Função `toggleRole` (linha 123) adiciona/remove do array.
+- Roles oferecidos (linhas 32-37): `seller` (Empreendedor), `buyer` (Comprador), `advisor` (Assessor), `franchisee` (Franqueado).
 
-Em `src/components/layout/AppSidebar.tsx`, quando `eff.isPartnerAccountant && !eff.isAdmin`, mostrar **apenas**:
+## Fluxo de submit
 
-```text
-PARCERIA
-  └ Painel do parceiro      (/parceiro)   ← home
-  └ Cadastrar empresa       (/vender)
-  └ Minhas indicações       (/meus-anuncios — filtrado)
-VALUATION
-  └ Novo valuation múltiplos (/valuation/multiplos)
-  └ Meus valuations          (/meus-valuations — filtrado)
-COMPRADORES (anônimos)
-  └ Possíveis compradores    (/parceiro/compradores — novo, anonimizado)
-```
+1. `handleSignUp` (linha 160) valida nome/telefone/email/senha e exige `signupRoles.length > 0`.
+2. Chama `signUp({ email, password, fullName, phone, roles })` do `AuthContext`.
+3. `AuthContext.signUp` passa `roles` no `options.data` (raw_user_meta_data).
+4. **Trigger `handle_new_user`** (migration `20260504204941`) lê `raw_user_meta_data.roles` e:
+   - `seller` / `buyer` → INSERT direto em `public.user_roles`.
+   - `advisor` → INSERT em `public.advisor_requests` (status `pending`), **NÃO concede role**.
+   - `franchisee` → INSERT em `public.franchisee_requests` (status `pending`), **NÃO concede role**.
+   - Sempre cria `profiles` row com nome/telefone.
+5. Redirect (`useEffect` linha 89): se admin/advisor → `/equity-brain/hoje`; senão → `/painel`.
+6. Para `advisor`/`franchisee` puros sem aprovação, toast informa "aguardando aprovação", mas a sessão fica logada (sem role útil → cai no `/painel` genérico).
 
-Esconder: Visão Geral (Painel/Inteligência genérica), Marketplace, Mapa, Comprar, Capital, DCF, Certificador, Mandatos (tabela), Dashboards, Equity Brain, Cockpit Interno, Head de Parcerias, Migração Monday.
+## Tabelas / objetos envolvidos
 
-Continua aparecendo o "Seu advisor pessoal — Rafael" no rodapé.
+- `auth.users` (Supabase) — criada pelo `signUp`.
+- `public.profiles` — criada pelo trigger; **tem `is_partner_accountant boolean`**.
+- `public.user_roles` — `(user_id, role app_role)` enum `seller|buyer|advisor|admin|franchisee`.
+- `public.advisor_requests`, `public.franchisee_requests` — fila de aprovação admin.
+- Edge functions de signup: nenhuma chamada direta. Toda a lógica está no trigger SQL.
 
-## 2. Painel do Parceiro = central de indicações + comissão
+## GAPs identificados (vs. objetivo do doc)
 
-Refatorar `src/pages/PartnerDashboard.tsx` (rota `/parceiro`) para virar a **home** do parceiro com 4 blocos verticais:
+1. **Multi-select em vez de seleção única**: `signupRoles` é array, `toggleRole` adiciona/remove → usuário pode marcar 4 perfis ao mesmo tempo.
+2. **Não existe perfil "Assessor externo / contador parceiro"**: a opção `advisor` cobre tanto BDR/consultor interno quanto parceiro externo. Por isso `is_partner_accountant` **nunca é setado pelo signup** — é flag manual no banco. **Esta é a raiz do bug confirmado na auditoria.**
+3. **Sem campo no signup que distinga parceiro externo de advisor interno** → impossível setar a flag automaticamente hoje.
+4. **Microcopy genérica**: mesma copy/labels para qualquer perfil. Sem campos extras (CNPJ pra parceiro, região pra franqueado, ticket pra buyer).
+5. **Redirect não-contextualizado por perfil escolhido**: `resolveRoleHome` só diferencia advisor/admin (`/equity-brain/hoje`) vs. resto (`/painel`). Não considera o perfil que o usuário acabou de marcar; lê do banco. Para parceiro externo, deveria ir pra `/parceiro`, mas como flag não foi setada, vai pra `/equity-brain/hoje` (advisor genérico).
+6. **Sem onboarding sequencial pós-signup** (CNPJ da empresa pro empreendedor, tese pro comprador, regiões pro franqueado, etc.).
 
-1. **Header status do cadastro** — banner Volt se perfil ou empresa indicada estão incompletos: "Complete seu cadastro para destravar pesquisa de mercado, valuation e matches" + CTA.
-2. **Minhas indicações** (tabela/cards): nome empresa, setor, status (cadastrada · valuation feito · anúncio publicado · em negociação · fechada), valuation estimado (se rodado), compradores compatíveis (contagem anônima), **comissão potencial** (5% indicação · 10% reunião BANT · 15% valuation+anúncio).
-3. **Potencial da carteira** — incorporar resumo de `/potencial-carteira` (somatório comissão potencial × probabilidade).
-4. **Próximos passos sugeridos por empresa** — "Faça o valuation da Gummy", "Publique o anúncio para receber matches", etc.
+## O que vem no Bloco 1 (próximo, depende do seu OK)
 
-Remover da rota `/potencial-carteira` separada — passa a ser uma seção dentro de `/parceiro`.
+- Trocar a lógica de `signupRoles: UserRole[]` por **`perfilSelecionado: TipoPerfil | null`** (radio único) — mantém visual de cards.
+- Adicionar opção **"Assessor externo / contador parceiro"** separada de "Assessor interno (Vispe)" — necessária para Bloco 2 setar `is_partner_accountant` corretamente.
+- Botão "Criar Conta" gated por perfil selecionado.
+- Smoke test: 4 cadastros, um por perfil, validar que só 1 fica marcado.
 
-Pós-login, parceiro cai direto em `/parceiro` (já é o `ROLE_HOME` correto, validar em `src/lib/authRedirects.ts`).
+**Pronto para Bloco 1?**
 
-## 3. Filtrar Oportunidades / Pipeline / Mandatos por escopo do parceiro
-
-Hoje o parceiro abre Equity Brain inteiro. Ele **não deve ver Equity Brain** — toda informação de match dele vive dentro de `/parceiro/compradores`.
-
-- Remover acesso a `/equity-brain/*` no menu para `isPartnerAccountant && !isAdmin`.
-- Bloquear nas próprias páginas (`OportunidadesPage`, `PipelinePage`, `MandatosTablePage`, `CompradoresPage`, `IspMarketPage`, `ExecutiveDashboardPage`, dashboards `/equity-brain/dashboards/*`): se `isPartnerAccountant && !isAdmin && !isAdvisorInterno`, redirecionar para `/parceiro` com toast "Esta área é exclusiva do time interno Vispe".
-- Criar nova `/parceiro/compradores` que consulta `equity_brain.matches` **filtrado por** `cnpj IN (empresas indicadas pelo parceiro via partner_lead_reservations + listings.user_id = parceiro)` e **anonimiza** o buyer (mostra só: arquétipo, UF, ticket range, score) — sem nome, sem contato. CTA "Quero apresentar" → cria pedido para advisor interno.
-
-## 4. Inteligência de mercado contextual ao setor da empresa indicada
-
-Hoje `/inteligencia` (e tudo que chama `useUserSector`/IspMarketPage) assume telecom/ISP. Para o parceiro:
-
-- Esconder `/inteligencia` da sidebar do parceiro até ele ter **pelo menos 1 empresa indicada com setor preenchido**.
-- Quando habilitada, a página recebe `?sector=` baseado no setor da última indicação (ex.: Gummy → moda) e os blocos de notícias/benchmark passam a usar esse setor. Se `sector` não estiver no catálogo de setores cobertos, mostrar empty state: "Estamos preparando inteligência para o setor X. Enquanto isso veja: [valuation, matches]".
-- ISP/Anatel só aparece se setor da empresa = telecom.
-
-## 5. Matches/compradores não aparecem antes do cadastro real
-
-A tela de "8 possíveis compradores" hoje aparece zerada com qualquer perfil novo porque `useMatchInbox` busca matches globais. Para parceiro:
-
-- `useMatchInbox` (ou wrapper específico do parceiro) **só retorna linhas** onde `cnpj` pertence a empresas indicadas pelo parceiro. Sem indicação = lista vazia + empty state "Cadastre sua primeira empresa para Mari calcular compradores compatíveis".
-- O card "8 possíveis compradores" do `/parceiro` desaparece quando `count = 0` e vira CTA "Cadastrar primeira empresa".
-
-## 6. Janela de venda só após valuation + setor
-
-O bloco "Janela de venda · ideal 2027" no `/painel` hoje vem do `painelExecutive.ts` rodando sobre dados agregados — sem empresa, sem sentido.
-
-- Para parceiro: substituir esse bloco pela tabela de indicações. A janela de venda passa a ser **por empresa indicada** dentro do card da empresa (só renderiza quando empresa tem setor preenchido + valuation rodado).
-
-## 7. Gates de "cadastro incompleto"
-
-Adicionar componente `<PartnerOnboardingChecklist />` no topo de `/parceiro` com 4 missões:
-
-- ☐ Completar perfil (nome, telefone, empresa)
-- ☐ Cadastrar primeira empresa indicada (`/vender`)
-- ☐ Rodar valuation por múltiplos da empresa
-- ☐ Publicar anúncio (libera matches reais)
-
-Cada item completo vira ✅ verde Volt. O checklist some quando todos os 4 estão ✅.
-
-Botões "Pesquisa de mercado", "Ver matches", "Janela de venda" ficam disabled com tooltip "Complete passo X" enquanto pendentes.
-
-## 8. Transição de página fluida (flash branco)
-
-A tela branca de ~1s ao trocar de rota é o `Suspense` fallback dos `lazy()` sem fallback estilizado.
-
-- Em `src/App.tsx`, envolver as rotas autenticadas com `<Suspense fallback={<AppShellSkeleton />}>` que renderiza sidebar+topbar estáticos com skeleton no main, em vez de tela branca. Nada de código split por rota dentro de `AppShell`.
-
-## 9. Comissão — schema mínimo
-
-Para mostrar "comissão potencial" precisamos do valor estimado da empresa × % do estágio. Sem migration nova:
-
-- Calcular client-side: `valuation_history.result.mashupValue` (última do parceiro p/ aquele CNPJ) × {0.05, 0.10, 0.15} conforme: indicou / agendou BANT / fez valuation+anúncio.
-- O estágio BANT já existe em `eb_mandates.stage` ou `partner_opportunity_interests.status`. Mapear: `indicado` → 5%, `qualificado_bant` → 10%, `valuation_publicado` → 15%, `fechado` → realizado.
-
-(Se faltar campo `bant_qualified_at` em `partner_opportunity_interests`, adicionar em migration separada — confirmar antes.)
-
-## Arquivos afetados (resumo)
-
-- `src/components/layout/AppSidebar.tsx` — branch dedicada para `isPartnerAccountant && !isAdmin`.
-- `src/pages/PartnerDashboard.tsx` — reescrever como home com 4 blocos + checklist.
-- `src/pages/PortfolioPotential.tsx` — virar componente `<PortfolioPotentialSection />` consumido em `/parceiro`; manter rota como redirect.
-- `src/pages/Painel.tsx` — para parceiro, redirect para `/parceiro`.
-- `src/pages/Inteligencia.tsx` — receber sector dinâmico, gate por indicação.
-- `src/pages/equity-brain/*` (Oportunidades, Pipeline, MandatosTable, Compradores, IspMarket, Executive, dashboards) — guard que redireciona parceiro para `/parceiro`.
-- `src/hooks/useMatchInbox.ts` — novo hook `usePartnerMatches()` que filtra por CNPJs do parceiro e anonimiza.
-- `src/pages/parceiro/PartnerBuyersPage.tsx` (novo) — `/parceiro/compradores` anonimizado.
-- `src/components/parceiro/PartnerOnboardingChecklist.tsx` (novo).
-- `src/components/parceiro/IndicacoesTable.tsx` (novo) — colunas: empresa, setor, status, valuation, compradores, comissão potencial.
-- `src/lib/authRedirects.ts` — confirmar `partner` → `/parceiro`.
-- `src/App.tsx` — Suspense fallback estilizado com sidebar+skeleton.
-
-## Não faz parte deste plano
-
-- Mudar advisor interno Vispe (continua vendo tudo).
-- Mudar admin/franqueado.
-- Mudar fluxo de seller/buyer puros.
-- Mexer em valuation, capital, DCF — só esconder da sidebar do parceiro.
-- Migration de schema (se precisar de `bant_qualified_at`, confirmo antes em fase separada).
-
-Aprovando, implemento na ordem: §1 sidebar → §8 transição → §2/§7 painel+checklist → §3 guards EB → §5/§9 matches+comissão → §4 inteligência por setor.
+Aguardando seu "go" para começar Bloco 1. Me confirma também se a opção "Assessor externo (parceiro/contador)" deve aparecer **separada** de "Assessor/Representante" (interno), ou se prefere manter 4 perfis e adicionar uma sub-pergunta "você é parceiro externo da Vispe?" só quando "Assessor" for marcado.
