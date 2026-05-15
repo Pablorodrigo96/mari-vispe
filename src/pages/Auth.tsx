@@ -30,12 +30,21 @@ const formatPhone = (value: string) => {
   return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
 };
 
-const roleOptions: { id: UserRole; label: string; description: string }[] = [
+const profileOptions: { id: SignupProfile; label: string; description: string }[] = [
   { id: 'seller', label: 'Empreendedor', description: 'Quero avaliar, captar investimento ou vender minha empresa' },
-  { id: 'buyer', label: 'Comprador/Investidor', description: 'Quero comprar ou investir' },
-  { id: 'advisor', label: 'Assessor/Representante', description: 'Represento empresas' },
-  { id: 'franchisee', label: 'Franqueado', description: 'Sou franqueado da rede' },
+  { id: 'buyer', label: 'Comprador/Investidor', description: 'Quero comprar ou investir em empresas' },
+  { id: 'advisor', label: 'Assessor interno (Vispe)', description: 'Sou assessor/representante interno da Vispe' },
+  { id: 'franchisee', label: 'Franqueado', description: 'Sou franqueado da rede Vispe' },
+  { id: 'partner', label: 'Parceiro externo / Contador indicador', description: 'Indico empresas e clientes para a Vispe (sem vínculo interno)' },
 ];
+
+const PROFILE_HOME: Record<SignupProfile, string> = {
+  seller: '/painel',
+  buyer: '/painel',
+  advisor: '/equity-brain/hoje',
+  franchisee: '/painel',
+  partner: '/painel',
+};
 
 const ROLE_HOME: Record<UserRole, string> = {
   seller: '/painel',
