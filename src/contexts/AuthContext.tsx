@@ -54,11 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (data: SignUpData) => {
     const redirectUrl = `${window.location.origin}/`;
-    
-    // Pass roles via user_metadata — the handle_new_user trigger
-    // will insert them securely (excluding 'admin')
+
+    // Bloco 2: pass `profile` (radio único) — handle_new_user trigger reads it
+    // and applies the correct role/flag atomically (auto-grant or approval request).
+    // `roles` is kept for backwards compat with any legacy caller.
     const safeRoles = data.roles.filter(r => (r as string) !== 'admin');
-    
+
     const { data: authData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -67,26 +68,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           full_name: data.fullName,
           roles: safeRoles,
+          profile: data.profile ?? null,
+          signup_perfil: data.profile ?? null, // alias p/ auditoria (Bloco 2 spec)
         }
       }
     });
-    
+
     if (error) return { error };
 
-    // Update profile with phone (trigger already creates profile + roles).
-    // For perfil=partner, also marca is_partner_accountant=true (gate de parceiro externo).
-    if (authData.user) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const profileUpdate: Record<string, unknown> = {
-        full_name: data.fullName,
-        phone: data.phone,
-      };
-      if (data.profile === 'partner') {
-        profileUpdate.is_partner_accountant = true;
-      }
-
-      await supabase.from('profiles').update(profileUpdate).eq('user_id', authData.user.id);
+    // Apenas grava telefone (profile + roles + is_partner_accountant já criados pelo trigger).
+    if (authData.user && data.phone) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      await supabase.from('profiles').update({ phone: data.phone }).eq('user_id', authData.user.id);
     }
 
     return { error: null };
