@@ -201,10 +201,15 @@ export default function Auth() {
       return;
     }
 
-    if (signupRoles.length === 0) {
-      toast.error('Selecione pelo menos um perfil');
+    if (!signupProfile) {
+      toast.error('Selecione seu perfil');
       return;
     }
+
+    // Mapeia perfil único → roles do banco.
+    // 'partner' = buyer + flag is_partner_accountant=true (setada em AuthContext.signUp).
+    const rolesForDb: UserRole[] =
+      signupProfile === 'partner' ? ['buyer'] : [signupProfile as UserRole];
 
     setIsSubmitting(true);
     const { error } = await signUp({
@@ -212,7 +217,8 @@ export default function Auth() {
       password: signupPassword,
       fullName: signupFullName,
       phone: signupPhone,
-      roles: signupRoles,
+      roles: rolesForDb,
+      profile: signupProfile,
     });
     setIsSubmitting(false);
 
@@ -223,18 +229,11 @@ export default function Auth() {
         toast.error('Erro ao criar conta. Tente novamente.');
       }
     } else {
-      // Roles que dependem de aprovação admin (request criado via trigger handle_new_user)
-      const needsApproval =
-        signupRoles.includes('advisor') || signupRoles.includes('franchisee');
-      const autoRoles = signupRoles.filter((r) => r === 'seller' || r === 'buyer') as UserRole[];
+      const needsApproval = signupProfile === 'advisor' || signupProfile === 'franchisee';
 
       if (needsApproval) {
-        const labels: string[] = [];
-        if (signupRoles.includes('advisor')) labels.push('Assessor');
-        if (signupRoles.includes('franchisee')) labels.push('Franqueado');
-        toast.success(
-          `Conta criada! Acesso de ${labels.join(' e ')} aguardando aprovação do admin.`
-        );
+        const label = signupProfile === 'advisor' ? 'Assessor' : 'Franqueado';
+        toast.success(`Conta criada! Acesso de ${label} aguardando aprovação do admin.`);
       } else {
         toast.success('Conta criada com sucesso!');
       }
@@ -242,7 +241,7 @@ export default function Auth() {
       // Determine destination
       const prefill = getMariPrefill();
       const hasMariPrefill = !!prefill;
-      if (hasMariPrefill && signupRoles.includes('seller')) {
+      if (hasMariPrefill && signupProfile === 'seller') {
         try {
           const { data: { user: newUser } } = await supabase.auth.getUser();
           if (newUser) await logMariLead(prefill!, newUser.id);
@@ -250,13 +249,12 @@ export default function Auth() {
           console.error('logMariLead error', err);
         }
       }
-      const firstAutoRole = autoRoles[0];
       const dest = redirectParam
-        ?? (hasMariPrefill && signupRoles.includes('seller')
+        ?? (hasMariPrefill && signupProfile === 'seller'
               ? '/vender'
-              : firstAutoRole
-                  ? ROLE_HOME[firstAutoRole]
-                  : (needsApproval ? '/aguardando-aprovacao' : '/painel'));
+              : needsApproval
+                  ? '/aguardando-aprovacao'
+                  : PROFILE_HOME[signupProfile]);
       navigate(dest);
     }
   };
