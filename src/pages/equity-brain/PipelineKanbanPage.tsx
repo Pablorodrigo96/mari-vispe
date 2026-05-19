@@ -14,6 +14,7 @@ import { usePipelineStages, STAGE_COLOR_CLASSES } from "@/hooks/usePipelineStage
 import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { cn } from "@/lib/utils";
+import { logAuditEvent } from "@/services/audit/auditService";
 
 type Mandate = {
   id: string;
