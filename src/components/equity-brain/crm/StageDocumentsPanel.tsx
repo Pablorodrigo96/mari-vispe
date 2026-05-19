@@ -168,7 +168,7 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
                         link assinatura <ExternalLink className="size-2.5" />
                       </a>
                     )}
-                    {doc.status !== "signed" && doc.status !== "archived" && (
+                    {canEditEB && doc.status !== "signed" && doc.status !== "archived" && (
                       <button
                         type="button"
                         onClick={() => archive.mutate(doc.id)}
@@ -177,7 +177,7 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
                         <Archive className="size-2.5" /> arquivar
                       </button>
                     )}
-                    {doc.status === "draft" && r.template?.requires_signature && (
+                    {canEditEB && doc.status === "draft" && r.template?.requires_signature && (
                       <button
                         type="button"
                         disabled={requestSig.isPending}
@@ -210,7 +210,7 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
                   </div>
                 )}
               </div>
-              {!hasIt && (
+              {canEditEB && !hasIt && (
                 <Button
                   size="sm"
                   variant="outline"
