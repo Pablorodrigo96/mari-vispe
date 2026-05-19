@@ -11,6 +11,7 @@ import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { StageTasksChecklist } from "@/components/equity-brain/crm/StageTasksChecklist";
 import { useDealStageProgress } from "@/hooks/useStageTasks";
 import { StageDocumentsPanel } from "@/components/equity-brain/crm/StageDocumentsPanel";
+import { LegalDocumentGenerator } from "@/components/legal/LegalDocumentGenerator";
 import { BuyerDealAccessManager } from "@/components/equity-brain/crm/BuyerDealAccessManager";
 import { StaffQASection } from "@/components/equity-brain/crm/StaffQASection";
 import { useUserRoles } from "@/hooks/useUserRoles";
