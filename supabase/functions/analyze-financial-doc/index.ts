@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { trackedAIFetch } from "../_shared/apiTrack.ts";
+import { requireAuth, authErrorResponse } from "../_shared/authGate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,10 +11,14 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  try {
-    const { doc_id, listing_id, file_url, file_name, file_type, user_id } = await req.json();
+  // Auth gate — must be a logged-in user.
+  const auth = await requireAuth(req);
+  if (!auth.ok) return authErrorResponse(auth, corsHeaders);
 
-    if (!listing_id || !file_url || !user_id) {
+  try {
+    const { doc_id, listing_id, file_url, file_name, file_type } = await req.json();
+
+    if (!listing_id || !file_url) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -25,6 +30,30 @@ serve(async (req) => {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY")!;
 
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    // Derive user_id from JWT, never trust body.
+    const user_id = auth.userId;
+    const isAdmin = auth.roles.includes("admin");
+
+    // Verify ownership of the target listing.
+    const { data: listingRow, error: listingErr } = await supabase
+      .from("listings")
+      .select("user_id")
+      .eq("id", listing_id)
+      .maybeSingle();
+    if (listingErr || !listingRow) {
+      return new Response(JSON.stringify({ error: "Listing not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!isAdmin && listingRow.user_id !== user_id) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     // Insert doc record if not exists
     let docId = doc_id;
