@@ -4,6 +4,7 @@ import { FileText, Upload, ExternalLink, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { useLogActivity } from "@/hooks/useCrm";
 import { useCompanyListing } from "@/hooks/useCompanyListing";
+import { useAutoLogIdentityAccess } from "@/hooks/useLogIdentityAccess";
 import { relativeTime } from "@/lib/equityBrain";
 import { cn } from "@/lib/utils";
 
