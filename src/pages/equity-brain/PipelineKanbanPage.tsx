@@ -68,6 +68,7 @@ const DEAL_KIND_COLOR: Record<string, string> = {
 
 export default function PipelineKanbanPage() {
   const qc = useQueryClient();
+  const { isAdmin } = useUserRoles();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Mandate | null>(null);
   const [stagesOpen, setStagesOpen] = useState(false);
