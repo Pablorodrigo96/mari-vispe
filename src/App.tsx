@@ -23,6 +23,8 @@ import { RedirectWithParams } from "./components/equity-brain/RedirectWithParams
 // Public / hybrid pages
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const HomologacaoPublica = lazy(() => import("./pages/legal/HomologacaoPublica"));
+const AssinaturaPublica = lazy(() => import("./pages/legal/AssinaturaPublica"));
 const Terms = lazy(() => import("./pages/Terms"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const AwaitingApproval = lazy(() => import("./pages/AwaitingApproval"));
