@@ -1,10 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMandate } from "@/hooks/useCrm";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNationalSearch } from "@/hooks/useNationalSearch";
+import { maskCnpj } from "@/lib/mariWindowHeuristic";
+
+const UF_TO_REGIAO: Record<string, string> = {
+  SP: "sudeste", RJ: "sudeste", MG: "sudeste", ES: "sudeste",
+  PR: "sul", SC: "sul", RS: "sul",
+  GO: "centro-oeste", MT: "centro-oeste", MS: "centro-oeste", DF: "centro-oeste",
+  BA: "nordeste", PE: "nordeste", CE: "nordeste", MA: "nordeste", PB: "nordeste",
+  RN: "nordeste", AL: "nordeste", SE: "nordeste", PI: "nordeste",
+  AM: "norte", PA: "norte", AC: "norte", RO: "norte", RR: "norte", AP: "norte", TO: "norte",
+};
 
 type FormState = Record<string, string>;
 
@@ -131,13 +142,52 @@ export default function MandateFormPage() {
 
   const set = (k: string) => (e: any) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  // --- CNPJ lookup (auto-fill) ---
+  const { lookupCnpj } = useNationalSearch();
+  const [lookingUp, setLookingUp] = useState(false);
+  const lastLookupRef = useRef<string>("");
+
+  const handleCnpjChange = (e: any) => {
+    const masked = maskCnpj(e.target.value);
+    setForm((f) => ({ ...f, company_cnpj: masked }));
+  };
+
+  useEffect(() => {
+    const clean = form.company_cnpj.replace(/\D/g, "");
+    if (clean.length !== 14) return;
+    if (lastLookupRef.current === clean) return;
+    if (isEdit) return; // não sobrescreve em edição
+    lastLookupRef.current = clean;
+    (async () => {
+      setLookingUp(true);
+      const company = await lookupCnpj(clean);
+      setLookingUp(false);
+      if (!company) {
+        toast.warning("CNPJ não encontrado na base. Preencha manualmente.");
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        razao_social: f.razao_social || company.razao_social || "",
+        nome_fantasia: f.nome_fantasia || company.nome_fantasia || "",
+        uf: f.uf || company.uf || company.state || "",
+        setor: f.setor || company.cnae_principal_descricao || company.category || "",
+        regiao: f.regiao || UF_TO_REGIAO[(company.uf || company.state || "").toUpperCase()] || "",
+        contato_telefone: f.contato_telefone || company.phone || company.telefone || "",
+        contato_email: f.contato_email || company.email || "",
+      }));
+      toast.success("Dados preenchidos pela Receita");
+    })();
+  }, [form.company_cnpj, isEdit, lookupCnpj]);
+
   const submit = async () => {
-    if (!form.company_cnpj.trim()) {
-      toast.error("CNPJ é obrigatório");
+    const cleanCnpj = form.company_cnpj.replace(/\D/g, "");
+    if (cleanCnpj.length !== 14) {
+      toast.error("CNPJ inválido — digite os 14 dígitos");
       return;
     }
     setSaving(true);
-    const payload: any = { ...form };
+    const payload: any = { ...form, company_cnpj: cleanCnpj };
     if (isEdit) payload.id = id;
     const { data, error } = await (supabase as any).rpc("eb_upsert_mandate", { p: payload });
     setSaving(false);
@@ -180,7 +230,12 @@ export default function MandateFormPage() {
         <h2 className="text-[10px] uppercase tracking-widest text-zinc-400">Empresa</h2>
         <div className="grid grid-cols-3 gap-3">
           <Field label="CNPJ *">
-            <input className={inputCls} value={form.company_cnpj} onChange={set("company_cnpj")} placeholder="00.000.000/0000-00" />
+            <div className="relative">
+              <input className={inputCls} value={form.company_cnpj} onChange={handleCnpjChange} placeholder="00.000.000/0000-00" maxLength={18} />
+              {lookingUp && (
+                <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-[#D9F564]" />
+              )}
+            </div>
           </Field>
           <Field label="Razão social">
             <input className={inputCls} value={form.razao_social} onChange={set("razao_social")} />
