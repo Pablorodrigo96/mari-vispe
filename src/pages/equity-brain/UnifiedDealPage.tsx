@@ -12,6 +12,7 @@ import { StageTasksChecklist } from "@/components/equity-brain/crm/StageTasksChe
 import { useDealStageProgress } from "@/hooks/useStageTasks";
 import { StageDocumentsPanel } from "@/components/equity-brain/crm/StageDocumentsPanel";
 import { BuyerDealAccessManager } from "@/components/equity-brain/crm/BuyerDealAccessManager";
+import { StaffQASection } from "@/components/equity-brain/crm/StaffQASection";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { CheckSquare } from "lucide-react";
 
@@ -151,7 +152,10 @@ export default function UnifiedDealPage() {
 
           {/* Sala do comprador (admin/advisor) */}
           {(isAdmin || isAdvisor) && deal.mandate_id && (
-            <BuyerDealAccessManager dealId={deal.mandate_id} />
+            <>
+              <BuyerDealAccessManager dealId={deal.mandate_id} />
+              <StaffQASection dealId={deal.mandate_id} />
+            </>
           )}
 
 
