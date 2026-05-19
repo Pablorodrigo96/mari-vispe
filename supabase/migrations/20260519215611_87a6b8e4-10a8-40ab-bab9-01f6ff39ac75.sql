@@ -1,0 +1,1 @@
+ALTER VIEW public.deal_sla_report SET (security_invoker = on);

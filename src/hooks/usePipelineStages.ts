@@ -11,6 +11,11 @@ export type PipelineStage = {
   sla_days: number;
   is_terminal: boolean;
   archived_at: string | null;
+  is_v2_only?: boolean | null;
+  target_days?: number | null;
+  target_hours?: number | null;
+  baseline_days?: number | null;
+  baseline_hours?: number | null;
 };
 
 export const STAGE_COLOR_CLASSES: Record<string, string> = {
@@ -28,17 +33,29 @@ export const STAGE_COLOR_CLASSES: Record<string, string> = {
 
 export const STAGE_COLOR_OPTIONS = Object.keys(STAGE_COLOR_CLASSES);
 
+async function isPipelineV2FullEnabled(): Promise<boolean> {
+  const { data } = await supabase
+    .from("api_settings" as any)
+    .select("value")
+    .eq("key", "pipeline_v2_full")
+    .maybeSingle();
+  return ((data as any)?.value ?? "false").toLowerCase() === "true";
+}
+
 export function usePipelineStages() {
   return useQuery({
     queryKey: ["pipeline-stages"],
     queryFn: async () => {
+      const v2Enabled = await isPipelineV2FullEnabled();
       const { data, error } = await supabase
         .from("eb_pipeline_stages" as any)
         .select("*")
         .is("archived_at", null)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as unknown as PipelineStage[];
+      const rows = (data ?? []) as unknown as PipelineStage[];
+      // Feature flag pipeline_v2_full: quando OFF, esconde etapas marcadas como v2-only
+      return v2Enabled ? rows : rows.filter((s) => !s.is_v2_only);
     },
     staleTime: 5 * 60 * 1000,
   });
