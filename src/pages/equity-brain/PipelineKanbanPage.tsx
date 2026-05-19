@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useDealDrawer } from "@/contexts/DealDrawerContext";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, GripVertical, DollarSign, Pencil, FolderOpen, FileSignature, Settings2, Snowflake, History, RotateCcw } from "lucide-react";
+import { ArrowLeft, GripVertical, DollarSign, Pencil, FolderOpen, FileSignature, Settings2, Snowflake, History, RotateCcw, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { brl, DEAL_TYPE_LABEL } from "@/lib/dealFormatters";
 import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge";
