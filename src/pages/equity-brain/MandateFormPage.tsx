@@ -142,13 +142,52 @@ export default function MandateFormPage() {
 
   const set = (k: string) => (e: any) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  // --- CNPJ lookup (auto-fill) ---
+  const { lookupCnpj } = useNationalSearch();
+  const [lookingUp, setLookingUp] = useState(false);
+  const lastLookupRef = useRef<string>("");
+
+  const handleCnpjChange = (e: any) => {
+    const masked = maskCnpj(e.target.value);
+    setForm((f) => ({ ...f, company_cnpj: masked }));
+  };
+
+  useEffect(() => {
+    const clean = form.company_cnpj.replace(/\D/g, "");
+    if (clean.length !== 14) return;
+    if (lastLookupRef.current === clean) return;
+    if (isEdit) return; // não sobrescreve em edição
+    lastLookupRef.current = clean;
+    (async () => {
+      setLookingUp(true);
+      const company = await lookupCnpj(clean);
+      setLookingUp(false);
+      if (!company) {
+        toast.warning("CNPJ não encontrado na base. Preencha manualmente.");
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        razao_social: f.razao_social || company.razao_social || "",
+        nome_fantasia: f.nome_fantasia || company.nome_fantasia || "",
+        uf: f.uf || company.uf || company.state || "",
+        setor: f.setor || company.cnae_principal_descricao || company.category || "",
+        regiao: f.regiao || UF_TO_REGIAO[(company.uf || company.state || "").toUpperCase()] || "",
+        contato_telefone: f.contato_telefone || company.phone || company.telefone || "",
+        contato_email: f.contato_email || company.email || "",
+      }));
+      toast.success("Dados preenchidos pela Receita");
+    })();
+  }, [form.company_cnpj, isEdit, lookupCnpj]);
+
   const submit = async () => {
-    if (!form.company_cnpj.trim()) {
-      toast.error("CNPJ é obrigatório");
+    const cleanCnpj = form.company_cnpj.replace(/\D/g, "");
+    if (cleanCnpj.length !== 14) {
+      toast.error("CNPJ inválido — digite os 14 dígitos");
       return;
     }
     setSaving(true);
-    const payload: any = { ...form };
+    const payload: any = { ...form, company_cnpj: cleanCnpj };
     if (isEdit) payload.id = id;
     const { data, error } = await (supabase as any).rpc("eb_upsert_mandate", { p: payload });
     setSaving(false);
