@@ -23,6 +23,8 @@ import { RedirectWithParams } from "./components/equity-brain/RedirectWithParams
 // Public / hybrid pages
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const HomologacaoPublica = lazy(() => import("./pages/legal/HomologacaoPublica"));
+const AssinaturaPublica = lazy(() => import("./pages/legal/AssinaturaPublica"));
 const Terms = lazy(() => import("./pages/Terms"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const AwaitingApproval = lazy(() => import("./pages/AwaitingApproval"));
@@ -176,6 +178,8 @@ const App = () => (
             {/* Pure public-only routes — no shell wrapping */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/homologacao/:token" element={<HomologacaoPublica />} />
+            <Route path="/assinar/:token" element={<AssinaturaPublica />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/aguardando-aprovacao" element={<AwaitingApproval />} />
