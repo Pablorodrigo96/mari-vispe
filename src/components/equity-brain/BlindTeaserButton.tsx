@@ -3,6 +3,7 @@ import { Eye, Copy, MessageCircle, ExternalLink, ChevronDown } from "lucide-reac
 import { toast } from "sonner";
 import { useCompanyListing } from "@/hooks/useCompanyListing";
 import { useTeaserAccessLog } from "@/hooks/useTeaserAccessLog";
+import { useLogIdentityAccess } from "@/hooks/useLogIdentityAccess";
 import { getWhatsAppLink } from "@/lib/whatsapp";
 
 interface Props {
