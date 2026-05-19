@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { StageTasksChecklist } from "@/components/equity-brain/crm/StageTasksChecklist";
 import { useDealStageProgress } from "@/hooks/useStageTasks";
+import { StageDocumentsPanel } from "@/components/equity-brain/crm/StageDocumentsPanel";
 import { CheckSquare } from "lucide-react";
 
 /**
