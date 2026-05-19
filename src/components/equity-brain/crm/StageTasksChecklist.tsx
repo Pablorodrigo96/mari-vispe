@@ -43,10 +43,11 @@ export function StageTasksChecklist({ dealId, stageKey, compact }: Props) {
           >
             <button
               type="button"
-              onClick={() =>
-                toggle.mutate({ task: t, status: isDone ? "pending" : "done" })
-              }
-              disabled={toggle.isPending}
+              onClick={() => {
+                if (!canEditEB) return;
+                toggle.mutate({ task: t, status: isDone ? "pending" : "done" });
+              }}
+              disabled={toggle.isPending || !canEditEB}
               className={cn(
                 "mt-0.5 size-4 rounded-full border flex items-center justify-center shrink-0",
                 isDone
