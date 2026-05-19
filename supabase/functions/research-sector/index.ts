@@ -1,6 +1,7 @@
 // research-sector v2 — Pesquisa setorial editorial (5 lentes profundas)
 // Cache 7d por setor em equity_brain.sector_research. schema_version=2.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireAuth, authErrorResponse } from "../_shared/authGate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -327,6 +328,11 @@ async function logUsage(args: {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const auth = await requireAuth(req, { requireAnyRole: ["admin", "advisor"] });
+  if (!auth.ok) return authErrorResponse(auth, corsHeaders);
+
+
 
   try {
     const body = await req.json().catch(() => ({}));

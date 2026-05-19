@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { trackedAIFetch } from "../_shared/apiTrack.ts";
+import { requireAuth, authErrorResponse } from "../_shared/authGate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +34,9 @@ async function logHealth(admin: any, status: string, summary: string) {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const auth = await requireAuth(req);
+  if (!auth.ok) return authErrorResponse(auth, corsHeaders);
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
