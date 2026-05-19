@@ -149,6 +149,11 @@ export default function UnifiedDealPage() {
             <StageDocumentsPanel dealId={deal.mandate_id} stageKey={deal.stage} />
           )}
 
+          {/* Sala do comprador (admin/advisor) */}
+          {(isAdmin || isAdvisor) && deal.mandate_id && (
+            <BuyerDealAccessManager dealId={deal.mandate_id} />
+          )}
+
 
 
 
