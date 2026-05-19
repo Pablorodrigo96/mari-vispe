@@ -1990,6 +1990,134 @@ export type Database = {
         }
         Relationships: []
       }
+      vertical_imports: {
+        Row: {
+          category: string | null
+          cnae: string | null
+          cnpj: string
+          data_corte: string | null
+          id: string
+          imported_at: string
+          imported_by: string | null
+          metric_1: number | null
+          metric_2: number | null
+          municipio: string | null
+          promoted_at: string | null
+          promoted_company_cnpj: string | null
+          raw: Json | null
+          razao_social: string | null
+          source_url: string | null
+          uf: string | null
+          vertical_slug: string
+        }
+        Insert: {
+          category?: string | null
+          cnae?: string | null
+          cnpj: string
+          data_corte?: string | null
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          metric_1?: number | null
+          metric_2?: number | null
+          municipio?: string | null
+          promoted_at?: string | null
+          promoted_company_cnpj?: string | null
+          raw?: Json | null
+          razao_social?: string | null
+          source_url?: string | null
+          uf?: string | null
+          vertical_slug: string
+        }
+        Update: {
+          category?: string | null
+          cnae?: string | null
+          cnpj?: string
+          data_corte?: string | null
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          metric_1?: number | null
+          metric_2?: number | null
+          municipio?: string | null
+          promoted_at?: string | null
+          promoted_company_cnpj?: string | null
+          raw?: Json | null
+          razao_social?: string | null
+          source_url?: string | null
+          uf?: string | null
+          vertical_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vertical_imports_vertical_slug_fkey"
+            columns: ["vertical_slug"]
+            isOneToOne: false
+            referencedRelation: "vertical_registry"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      vertical_registry: {
+        Row: {
+          active: boolean
+          cnae_prefixes: string[]
+          color: string
+          created_at: string
+          icon: string
+          label: string
+          market_page_path: string | null
+          metric_1_label: string | null
+          metric_1_unit: string | null
+          metric_2_label: string | null
+          metric_2_unit: string | null
+          position: number
+          short_description: string | null
+          slug: string
+          source_name: string | null
+          source_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          cnae_prefixes?: string[]
+          color?: string
+          created_at?: string
+          icon?: string
+          label: string
+          market_page_path?: string | null
+          metric_1_label?: string | null
+          metric_1_unit?: string | null
+          metric_2_label?: string | null
+          metric_2_unit?: string | null
+          position?: number
+          short_description?: string | null
+          slug: string
+          source_name?: string | null
+          source_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          cnae_prefixes?: string[]
+          color?: string
+          created_at?: string
+          icon?: string
+          label?: string
+          market_page_path?: string | null
+          metric_1_label?: string | null
+          metric_1_unit?: string | null
+          metric_2_label?: string | null
+          metric_2_unit?: string | null
+          position?: number
+          short_description?: string | null
+          slug?: string
+          source_name?: string | null
+          source_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_messages: {
         Row: {
           advisor_id: string
@@ -4138,6 +4266,58 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_vertical_company_stats: {
+        Row: {
+          category: string | null
+          cnae: string | null
+          cnpj: string | null
+          data_corte: string | null
+          id: string | null
+          metric_1: number | null
+          metric_2: number | null
+          municipio: string | null
+          promoted: boolean | null
+          promoted_at: string | null
+          rank_global: number | null
+          rank_uf: number | null
+          razao_social: string | null
+          source_url: string | null
+          uf: string | null
+          vertical_slug: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vertical_imports_vertical_slug_fkey"
+            columns: ["vertical_slug"]
+            isOneToOne: false
+            referencedRelation: "vertical_registry"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      eb_vertical_uf_summary: {
+        Row: {
+          last_data_corte: string | null
+          metric_1_avg: number | null
+          metric_1_sum: number | null
+          metric_2_sum: number | null
+          n_cities: number | null
+          n_companies: number | null
+          n_promoted: number | null
+          uf: string | null
+          vertical_label: string | null
+          vertical_slug: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vertical_imports_vertical_slug_fkey"
+            columns: ["vertical_slug"]
+            isOneToOne: false
+            referencedRelation: "vertical_registry"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       listings_blind: {
         Row: {
           asking_price: number | null
@@ -4916,6 +5096,10 @@ export type Database = {
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
       expire_old_reservations: { Args: never; Returns: undefined }
       find_user_by_meta_name: { Args: { search_name: string }; Returns: string }
+      fn_promote_vertical_lead: {
+        Args: { p_import_id: string }
+        Returns: string
+      }
       get_dashboard_coverage: {
         Args: never
         Returns: {
