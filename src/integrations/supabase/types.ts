@@ -851,12 +851,23 @@ export type Database = {
       }
       deal_documents: {
         Row: {
+          ai_fallback_used: boolean
+          ai_model: string | null
+          ai_provider: string | null
           category: string
           created_at: string
+          custom_fields_snapshot: Json
           deal_id: string
+          generated_body: string | null
+          homologation_status: string
           id: string
           label: string
           metadata: Json
+          parent_version_id: string | null
+          partner_approved_at: string | null
+          partner_approved_by: string | null
+          partner_comments: string | null
+          requires_partner_approval: boolean
           signature_provider: string | null
           signature_request_id: string | null
           signed_at: string | null
@@ -869,15 +880,27 @@ export type Database = {
           updated_at: string
           uploaded_at: string
           uploaded_by: string | null
+          version_number: number
           visible_to_buyer: boolean
         }
         Insert: {
+          ai_fallback_used?: boolean
+          ai_model?: string | null
+          ai_provider?: string | null
           category?: string
           created_at?: string
+          custom_fields_snapshot?: Json
           deal_id: string
+          generated_body?: string | null
+          homologation_status?: string
           id?: string
           label: string
           metadata?: Json
+          parent_version_id?: string | null
+          partner_approved_at?: string | null
+          partner_approved_by?: string | null
+          partner_comments?: string | null
+          requires_partner_approval?: boolean
           signature_provider?: string | null
           signature_request_id?: string | null
           signed_at?: string | null
@@ -890,15 +913,27 @@ export type Database = {
           updated_at?: string
           uploaded_at?: string
           uploaded_by?: string | null
+          version_number?: number
           visible_to_buyer?: boolean
         }
         Update: {
+          ai_fallback_used?: boolean
+          ai_model?: string | null
+          ai_provider?: string | null
           category?: string
           created_at?: string
+          custom_fields_snapshot?: Json
           deal_id?: string
+          generated_body?: string | null
+          homologation_status?: string
           id?: string
           label?: string
           metadata?: Json
+          parent_version_id?: string | null
+          partner_approved_at?: string | null
+          partner_approved_by?: string | null
+          partner_comments?: string | null
+          requires_partner_approval?: boolean
           signature_provider?: string | null
           signature_request_id?: string | null
           signed_at?: string | null
@@ -911,9 +946,17 @@ export type Database = {
           updated_at?: string
           uploaded_at?: string
           uploaded_by?: string | null
+          version_number?: number
           visible_to_buyer?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "deal_documents_parent_version_id_fkey"
+            columns: ["parent_version_id"]
+            isOneToOne: false
+            referencedRelation: "deal_documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "deal_documents_template_code_fkey"
             columns: ["template_code"]
@@ -981,42 +1024,60 @@ export type Database = {
       }
       doc_templates: {
         Row: {
+          ai_instructions: string | null
           applies_to_stages: string[]
           category: string
           code: string
           created_at: string
+          customizable_fields: Json
           description: string | null
           id: string
           is_active: boolean
           label: string
+          parts: Json
+          preferred_model: string | null
           requires_signature: boolean
+          static_clauses: Json
           storage_path: string | null
+          template_body: string | null
           updated_at: string
         }
         Insert: {
+          ai_instructions?: string | null
           applies_to_stages?: string[]
           category: string
           code: string
           created_at?: string
+          customizable_fields?: Json
           description?: string | null
           id?: string
           is_active?: boolean
           label: string
+          parts?: Json
+          preferred_model?: string | null
           requires_signature?: boolean
+          static_clauses?: Json
           storage_path?: string | null
+          template_body?: string | null
           updated_at?: string
         }
         Update: {
+          ai_instructions?: string | null
           applies_to_stages?: string[]
           category?: string
           code?: string
           created_at?: string
+          customizable_fields?: Json
           description?: string | null
           id?: string
           is_active?: boolean
           label?: string
+          parts?: Json
+          preferred_model?: string | null
           requires_signature?: boolean
+          static_clauses?: Json
           storage_path?: string | null
+          template_body?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1291,6 +1352,77 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_signatures: {
+        Row: {
+          created_at: string
+          document_id: string
+          expires_at: string
+          final_pdf_path: string | null
+          id: string
+          ip: unknown
+          requested_at: string
+          requested_by: string | null
+          sign_token: string
+          signature_hash: string | null
+          signature_image_path: string | null
+          signed_at: string | null
+          signer_email: string
+          signer_name: string
+          signer_role: string
+          signer_user_id: string | null
+          user_agent: string | null
+          viewed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          expires_at?: string
+          final_pdf_path?: string | null
+          id?: string
+          ip?: unknown
+          requested_at?: string
+          requested_by?: string | null
+          sign_token?: string
+          signature_hash?: string | null
+          signature_image_path?: string | null
+          signed_at?: string | null
+          signer_email: string
+          signer_name: string
+          signer_role: string
+          signer_user_id?: string | null
+          user_agent?: string | null
+          viewed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          expires_at?: string
+          final_pdf_path?: string | null
+          id?: string
+          ip?: unknown
+          requested_at?: string
+          requested_by?: string | null
+          sign_token?: string
+          signature_hash?: string | null
+          signature_image_path?: string | null
+          signed_at?: string | null
+          signer_email?: string
+          signer_name?: string
+          signer_role?: string
+          signer_user_id?: string | null
+          user_agent?: string | null
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_signatures_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "deal_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investor_sim_attempts: {
         Row: {
           abandoned: boolean
@@ -1338,6 +1470,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      legal_homologations: {
+        Row: {
+          access_token: string
+          comments: string | null
+          created_at: string
+          decided_at: string | null
+          decision: string | null
+          document_id: string
+          expires_at: string
+          id: string
+          lawyer_email: string
+          lawyer_name: string
+          sent_at: string
+          sent_by: string | null
+          viewed_at: string | null
+        }
+        Insert: {
+          access_token?: string
+          comments?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision?: string | null
+          document_id: string
+          expires_at?: string
+          id?: string
+          lawyer_email: string
+          lawyer_name: string
+          sent_at?: string
+          sent_by?: string | null
+          viewed_at?: string | null
+        }
+        Update: {
+          access_token?: string
+          comments?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision?: string | null
+          document_id?: string
+          expires_at?: string
+          id?: string
+          lawyer_email?: string
+          lawyer_name?: string
+          sent_at?: string
+          sent_by?: string | null
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_homologations_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "deal_documents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       listing_financial_docs: {
         Row: {
@@ -5700,6 +5888,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      homologation_decide: {
+        Args: { p_comments: string; p_decision: string; p_token: string }
+        Returns: Json
+      }
+      homologation_get_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          comments: string
+          decided_at: string
+          decision: string
+          document_body: string
+          document_id: string
+          document_label: string
+          document_template_code: string
+          document_version: number
+          expires_at: string
+          id: string
+          lawyer_email: string
+          lawyer_name: string
+        }[]
+      }
+      homologation_mark_viewed: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
       increment_capital_view: {
         Args: { p_request_id: string }
         Returns: undefined
@@ -5787,6 +6000,33 @@ export type Database = {
       set_provider_enabled: {
         Args: { _enabled: boolean; _provider: string }
         Returns: undefined
+      }
+      signature_get_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          document_body: string
+          document_id: string
+          document_label: string
+          document_template_code: string
+          document_version: number
+          expires_at: string
+          id: string
+          signed_at: string
+          signer_email: string
+          signer_name: string
+          signer_role: string
+        }[]
+      }
+      signature_mark_viewed: { Args: { p_token: string }; Returns: undefined }
+      signature_sign: {
+        Args: {
+          p_ip: unknown
+          p_signature_hash: string
+          p_signature_image_path: string
+          p_token: string
+          p_user_agent: string
+        }
+        Returns: Json
       }
       update_mandate_field: {
         Args: { p_field: string; p_mandate_id: string; p_value: string }
