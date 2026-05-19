@@ -70,7 +70,7 @@ const DEAL_KIND_COLOR: Record<string, string> = {
 
 export default function PipelineKanbanPage() {
   const qc = useQueryClient();
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, canEditEB, isReadOnly } = useUserRoles();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Mandate | null>(null);
   const [stagesOpen, setStagesOpen] = useState(false);
@@ -272,8 +272,9 @@ export default function PipelineKanbanPage() {
             return (
               <div
                 key={stage.id}
-                onDragOver={(e) => e.preventDefault()}
+                onDragOver={(e) => { if (canEditEB) e.preventDefault(); }}
                 onDrop={async () => {
+                  if (!canEditEB) return;
                   const id = draggedId;
                   setDraggedId(null);
                   if (!id) return;
@@ -323,6 +324,7 @@ export default function PipelineKanbanPage() {
                       m={m}
                       slaDays={stage.sla_days}
                       isTerminal={stage.is_terminal}
+                      canDrag={canEditEB}
                       onDragStart={() => setDraggedId(m.id)}
                       onEdit={() => setEditing(m)}
                       onReanimate={() => reanimate.mutate(m.id)}
@@ -344,6 +346,7 @@ export default function PipelineKanbanPage() {
                     m={m}
                     slaDays={0}
                     isTerminal
+                    canDrag={canEditEB}
                     onDragStart={() => setDraggedId(m.id)}
                     onEdit={() => setEditing(m)}
                     onReanimate={() => reanimate.mutate(m.id)}
@@ -394,6 +397,7 @@ function DealCard({
   onDragStart,
   onEdit,
   onReanimate,
+  canDrag = true,
 }: {
   m: Mandate;
   slaDays: number;
@@ -401,16 +405,18 @@ function DealCard({
   onDragStart: () => void;
   onEdit: () => void;
   onReanimate: () => void;
+  canDrag?: boolean;
 }) {
   const { status } = getStageTimeState(m.stage_changed_at, slaDays);
   const { openDeal } = useDealDrawer();
   const onOpen = () => openDeal(m.id);
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
+      draggable={canDrag}
+      onDragStart={canDrag ? onDragStart : undefined}
       className={cn(
-        "rounded border bg-zinc-900/80 hover:border-zinc-700 p-2.5 cursor-move group",
+        "rounded border bg-zinc-900/80 hover:border-zinc-700 p-2.5 group",
+        canDrag ? "cursor-move" : "cursor-pointer",
         status === "frozen" && !isTerminal ? "border-rose-700/60" : "border-zinc-800",
       )}
     >

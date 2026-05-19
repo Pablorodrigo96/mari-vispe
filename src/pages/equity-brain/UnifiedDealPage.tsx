@@ -11,6 +11,8 @@ import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { StageTasksChecklist } from "@/components/equity-brain/crm/StageTasksChecklist";
 import { useDealStageProgress } from "@/hooks/useStageTasks";
 import { StageDocumentsPanel } from "@/components/equity-brain/crm/StageDocumentsPanel";
+import { BuyerDealAccessManager } from "@/components/equity-brain/crm/BuyerDealAccessManager";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { CheckSquare } from "lucide-react";
 
 /**
@@ -24,6 +26,7 @@ export default function UnifiedDealPage() {
   const matchQ = useMatchById(dealQ.data?.match_id);
   const updateStage = useUpdateDealStage();
   const { data: stages = [] } = usePipelineStages();
+  const { isAdmin, isAdvisor } = useUserRoles();
 
   if (dealQ.isLoading) {
     return (
@@ -144,6 +147,11 @@ export default function UnifiedDealPage() {
           {/* Documentos desta etapa */}
           {deal.mandate_id && (
             <StageDocumentsPanel dealId={deal.mandate_id} stageKey={deal.stage} />
+          )}
+
+          {/* Sala do comprador (admin/advisor) */}
+          {(isAdmin || isAdvisor) && deal.mandate_id && (
+            <BuyerDealAccessManager dealId={deal.mandate_id} />
           )}
 
 

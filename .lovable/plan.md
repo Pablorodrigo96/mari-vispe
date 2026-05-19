@@ -1,86 +1,69 @@
-# Próxima fase: Bloco 1.6 (fechamento 1.2) + Bloco 1.4 (documentos)
+# Próxima fase: Bloco 1.5 (fechamento Fase 1) + Bloco 2.1 (kickoff Fase 2)
 
-Duas frentes encadeadas. 1.6 é curto (só plugar UI já pronta); 1.4 é o bloco grande de documentos por etapa + assinatura mock.
-
----
-
-## Bloco 1.6 — Plugar StageTasksChecklist (fecha 1.2)
-
-Sem novas tabelas. Só costura de UI.
-
-1. **UnifiedDealPage** (`src/pages/equity-brain/UnifiedDealPage.tsx`)
-   - Adicionar seção "Tarefas desta etapa" na coluna central (abaixo do MatchWhyCard), usando `<StageTasksChecklist dealId={mandate.id} stageKey={mandate.pipeline_stage} />`.
-   - Mostrar contador `done/total` no header da seção.
-
-2. **PipelineKanbanPage** (`src/pages/equity-brain/PipelineKanbanPage.tsx`)
-   - Mini-badge `done/total` em cada card do Kanban via `useDealStageProgress(dealId)` (novo hook lendo `deal_stage_progress` view).
-   - Badge fica vermelho se há `is_blocking` pendente, verde se tudo pronto, cinza neutro caso contrário.
-
-3. **Novo hook** `src/hooks/useDealStageProgress.ts` — query simples na view, retorna `{ total, done, pending_blocking }`.
+Com 1.1–1.4 + 1.6 entregues (roles, tasks, docs + assinatura mock, identity reveal, audit), faltam dois passos pra fechar Fase 1 e abrir Fase 2.
 
 ---
 
-## Bloco 1.4 — Documentos por etapa + templates + Clicksign mock
+## Bloco 1.5 — NDA flow + gating de UI por role (`legal`, `observer`)
 
-### Banco (1 migration)
+Sem novas tabelas grandes. Costura de regras de acesso + fluxo NDA usando o que já existe (`deal_documents`, `clicksign-mock`, `IdentityRevealCard`).
 
-**`doc_templates`** (catálogo curado, admin-only)
-- `id`, `code` (unique, ex.: `nda_mutuo`, `loi_v1`, `spa_template`), `label`, `category` (`nda`|`loi`|`spa`|`due_diligence`|`other`), `description`, `storage_path` (template em bucket `doc-templates`), `requires_signature` (bool), `applies_to_stages` (text[]), `is_active`.
-- Seed inicial: NDA mútuo, LOI v1, SPA básico, Term Sheet, Checklist DD.
-
-**`stage_doc_requirements`** (quais docs cada etapa pede)
-- `id`, `stage_key` (FK `eb_pipeline_stages.key`), `template_code` (FK `doc_templates.code`), `is_required`, `is_blocking`, `position`.
-- Seed: Prospecção (NDA), Negociação (LOI), DD (Checklist DD), Fechamento (SPA).
-- Integra com `can_advance_stage` (Bloco 1.2): adicionar check de docs `is_blocking` faltando.
-
-**`deal_documents`** (instâncias por deal — estender a tabela existente se já houver, ou criar)
-- `id`, `deal_id`, `stage_key`, `template_code` (nullable; nem todo doc vem de template), `label`, `category`, `storage_path`, `uploaded_by`, `uploaded_at`, `status` (`draft`|`pending_signature`|`signed`|`archived`), `signature_provider` (`clicksign_mock`|`manual`|null), `signature_request_id`, `signed_at`, `signed_by`, `metadata` (jsonb).
-- RLS: admin/advisor/legal full; observer read; trigger log em `audit_events` (`doc_uploaded`, `doc_status_changed`, `doc_signed`).
-
-**Storage bucket** `deal-documents` (private) + policies por role.
-
-**View `deal_doc_progress`** (security_invoker) — `deal_id`, `stage_key`, `required_count`, `present_count`, `pending_blocking` — análoga à `deal_stage_progress`.
-
-**`can_advance_stage` atualizada** — agora bloqueia se há `stage_tasks` OU `stage_doc_requirements` `is_blocking` faltando.
-
-### Edge function — Clicksign mock
-
-`supabase/functions/clicksign-mock/index.ts`:
-- POST `/request-signature` → recebe `document_id`, retorna `{ signature_request_id, signing_url }` (URL fake `/sign/:id`).
-- POST `/webhook` → simula callback que marca `deal_documents.status = 'signed'` + log audit.
-- Tudo gated por flag `MOCK_SIGNATURE=true`; pronto pra trocar por Clicksign real depois.
+### Banco (migration enxuta)
+- Adicionar coluna `nda_signed_at timestamptz` em `eb_buyers` (ou view derivada se já houver registro em `deal_documents` com `category='nda'` + `status='signed'`).
+- RPC `public.buyer_has_signed_nda(_buyer_id uuid, _deal_id uuid) returns boolean` consultando `deal_documents`.
+- Atualizar RPC `eb_can_view_identity(deal_id)` (já existe pra advisor/admin) pra também liberar buyer **quando NDA assinado** no contexto daquele deal.
+- Trigger: ao inserir `deal_documents` `category='nda' status='signed'`, gravar `audit_events` `nda_signed` + atualizar `nda_signed_at`.
 
 ### Frontend
+1. **`useUserRole`** já existe — expor helpers `isLegal`, `isObserver` (read-only global no EB).
+2. **`StageDocumentsPanel`** — esconder botões de upload/archive/signature pra `observer`; permitir pra `legal` em qualquer stage.
+3. **`StageTasksChecklist`** — `observer` vê check disabled.
+4. **`PipelineKanbanPage`** — `observer` não arrasta cards (drag handlers no-op).
+5. **`UnifiedDealPage` (lado buyer)** — novo card `NDARequiredCard` quando buyer logado tenta ver identidade e ainda não assinou NDA do deal: botão "Assinar NDA" → gera doc via template `nda_mutuo` + dispara `clicksign-mock` → polling status; ao assinar, `IdentityRevealCard` libera sozinho.
+6. **`AdminUsers`** — badges visuais distintos pros novos roles + filtro por role.
 
-1. **`src/hooks/useDealDocuments.ts`** — lista docs por deal+stage; mutations upload/archive/request-signature.
-2. **`src/hooks/useDealDocProgress.ts`** — wrap da view.
-3. **`src/components/equity-brain/crm/StageDocumentsPanel.tsx`** — nova seção em UnifiedDealPage: lista requisitos da etapa (com check ✅/⚠️), botão "Anexar", "Gerar a partir do template", "Pedir assinatura".
-4. **`src/components/equity-brain/crm/DocumentTemplatePicker.tsx`** — modal pra escolher template do catálogo filtrado por `applies_to_stages`.
-5. **`src/components/equity-brain/crm/SignatureRequestDialog.tsx`** — confirma envio mock; mostra URL fake de assinatura + botão "Simular assinatura" (admin only, dev helper).
-6. **PipelineKanbanPage** — mini-badge de docs ao lado do badge de tarefas.
-7. **`auditService`** — novos event_types: `doc_uploaded`, `doc_template_generated`, `signature_requested`, `doc_signed`.
+### Auditoria
+- Novos `audit_events`: `nda_requested`, `nda_signed`, `observer_blocked_action` (telemetria de UI gating).
 
-### Decisões propostas (default ✅)
+---
 
-- **D8** Bucket `deal-documents` é privado, signed URLs com TTL 5min. ✅
-- **D9** Clicksign **mock** nesta fase; integração real fica para Fase 2 com secret `CLICKSIGN_API_KEY`. ✅
-- **D10** Templates são arquivos `.docx` no bucket `doc-templates`; geração "a partir do template" nesta fase = copy do .docx + preenchimento de placeholders simples (`{{empresa}}`, `{{valor}}`) via edge function. ✅
-- **D11** `legal` role pode editar docs em qualquer stage; `observer` só lê. ✅
-- **D12** `can_advance_stage` passa a checar tasks **E** docs blocking — admin pode forçar com confirm (já implementado em 1.2). ✅
+## Bloco 2.1 — Buyer Deal Room v1 (kickoff Fase 2)
 
-### Riscos
+Rota nova `/equity-brain/sala/:dealId` exclusiva pro buyer aprovado (NDA assinado + match ativo).
 
-- Tabela `deal_documents` pode já existir em forma parcial — vou auditar antes da migration e usar `ALTER` ao invés de `CREATE` se for o caso.
-- Edge function mock precisa estar claramente marcada (`*-mock`) pra não confundir com produção.
-- Backfill: docs já carregados em outros lugares (DocumentsPanel atual) ficam visíveis via UNION na view, sem migração destrutiva.
+### Banco
+- Tabela `buyer_deal_access` (`id`, `deal_id`, `buyer_id`, `granted_by`, `granted_at`, `revoked_at`, `access_level` `'teaser'|'full'`).
+- View `buyer_deal_room` (security_invoker) consolidando: teaser blind, identity (se liberada), docs visíveis pro buyer, marcos do pipeline (sem detalhes internos), checklist DD do lado buyer.
+- RLS: buyer só vê linhas onde `buyer_id = (select buyer of auth.uid())` e `revoked_at is null`.
+
+### Frontend
+1. **`src/pages/buyer/DealRoomPage.tsx`** — layout 2 colunas:
+   - **Esquerda**: visão do alvo (blind/identity conforme NDA), métricas, KPIs.
+   - **Direita**: timeline pública do deal (etapas atingidas), docs disponíveis, próximos passos, botão WhatsApp pro advisor.
+2. **`useBuyerDealRoom(dealId)`** hook.
+3. **`BuyerDealAccessManager`** dentro de `UnifiedDealPage` (lado advisor) — conceder/revogar acesso, listar buyers ativos.
+4. **`BuyerSidebar`** — novo item "Minhas salas" listando deals com acesso ativo.
+
+### Auditoria
+- `deal_room_opened`, `deal_room_doc_downloaded`, `buyer_access_granted/revoked`.
+
+---
+
+## Decisões propostas (default ✅)
+
+- **D13** NDA usa template `nda_mutuo` já seedado em 1.4; mock por padrão, real Clicksign fica pra Fase 3. ✅
+- **D14** `observer` é read-only global no EB (não só docs/tasks); `legal` é editor full em docs/NDA/SPA, sem permissão pra mover pipeline. ✅
+- **D15** Buyer Deal Room é **opt-in** por buyer — advisor concede acesso explícito; sem auto-grant em match. ✅
+- **D16** Documentos visíveis ao buyer = subset com flag `visible_to_buyer` (novo bool em `deal_documents`, default false). ✅
 
 ---
 
 ## Ordem de execução
 
-1. Bloco 1.6 (1 hook + 2 edits de UI) — rápido, fecha 1.2.
-2. Bloco 1.4 migration (templates + requirements + deal_documents + bucket + view + can_advance_stage update).
-3. Bloco 1.4 edge function clicksign-mock.
-4. Bloco 1.4 hooks + componentes + plug em UnifiedDealPage e Kanban.
+1. Migration 1.5 (NDA helpers + RLS update em `eb_can_view_identity`).
+2. Frontend 1.5 (gating + NDARequiredCard).
+3. Migration 2.1 (`buyer_deal_access` + view `buyer_deal_room` + `visible_to_buyer` em `deal_documents`).
+4. Frontend 2.1 (DealRoomPage + manager + sidebar buyer).
+5. Smoke test end-to-end: advisor concede acesso → buyer entra na sala → assina NDA → vê identity + docs liberados.
 
-Aprovar D8–D12 + ordem → executo direto.
+Aprovar D13–D16 + ordem → executo direto.

@@ -41,7 +41,7 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
   const archive = useArchiveDealDocument(dealId);
   const requestSig = useRequestSignature(dealId);
   const simulateSign = useSimulateSign(dealId);
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, canEditEB, isReadOnly } = useUserRoles();
   const [pendingTemplate, setPendingTemplate] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -91,15 +91,20 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 inline-flex items-center gap-1">
           <FileText className="h-3 w-3 text-[#D9F564]" /> Documentos desta etapa
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onPickFile(null)}
-          disabled={upload.isPending}
-          className="h-7 bg-transparent text-[11px]"
-        >
-          <Upload className="h-3 w-3 mr-1" /> Anexar livre
-        </Button>
+        {canEditEB && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onPickFile(null)}
+            disabled={upload.isPending}
+            className="h-7 bg-transparent text-[11px]"
+          >
+            <Upload className="h-3 w-3 mr-1" /> Anexar livre
+          </Button>
+        )}
+        {isReadOnly && (
+          <span className="text-[10px] text-zinc-500">somente leitura</span>
+        )}
       </div>
 
       <input ref={fileInputRef} type="file" hidden onChange={handleFile} />
@@ -163,7 +168,7 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
                         link assinatura <ExternalLink className="size-2.5" />
                       </a>
                     )}
-                    {doc.status !== "signed" && doc.status !== "archived" && (
+                    {canEditEB && doc.status !== "signed" && doc.status !== "archived" && (
                       <button
                         type="button"
                         onClick={() => archive.mutate(doc.id)}
@@ -172,7 +177,7 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
                         <Archive className="size-2.5" /> arquivar
                       </button>
                     )}
-                    {doc.status === "draft" && r.template?.requires_signature && (
+                    {canEditEB && doc.status === "draft" && r.template?.requires_signature && (
                       <button
                         type="button"
                         disabled={requestSig.isPending}
@@ -205,7 +210,7 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
                   </div>
                 )}
               </div>
-              {!hasIt && (
+              {canEditEB && !hasIt && (
                 <Button
                   size="sm"
                   variant="outline"

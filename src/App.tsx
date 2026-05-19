@@ -50,6 +50,8 @@ const MyListings = lazy(() => import("./pages/MyListings"));
 const ListingCockpit = lazy(() => import("./pages/ListingCockpit"));
 const EditListing = lazy(() => import("./pages/EditListing"));
 const MyProfile = lazy(() => import("./pages/MyProfile"));
+const DealRoomPage = lazy(() => import("./pages/buyer/DealRoomPage"));
+const MyDealRoomsPage = lazy(() => import("./pages/buyer/DealRoomPage").then(m => ({ default: m.MyDealRoomsPage })));
 const MyValuations = lazy(() => import("./pages/MyValuations"));
 const RegisterBuyer = lazy(() => import("./pages/RegisterBuyer"));
 const MyCapitalRequests = lazy(() => import("./pages/MyCapitalRequests"));
@@ -209,6 +211,8 @@ const App = () => (
               <Route path="/meus-valuations" element={<MyValuations />} />
               <Route path="/cadastrar-comprador" element={<RegisterBuyer />} />
               <Route path="/minhas-captacoes" element={<MyCapitalRequests />} />
+              <Route path="/salas" element={<MyDealRoomsPage />} />
+              <Route path="/salas/:id" element={<DealRoomPage />} />
               <Route path="/minhas-captacoes/:id" element={<CapitalRequestDetail />} />
               <Route path="/matching/resultados" element={<MatchingResults />} />
               <Route path="/matching-compradores/:listingId" element={<MatchingBuyers />} />

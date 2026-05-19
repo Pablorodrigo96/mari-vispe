@@ -461,6 +461,8 @@ export default function AdminUsers() {
                     <SelectItem value="buyer">Comprador</SelectItem>
                     <SelectItem value="advisor">Assessor</SelectItem>
                     <SelectItem value="franchisee">Franqueado</SelectItem>
+                    <SelectItem value="legal">Jurídico</SelectItem>
+                    <SelectItem value="observer">Observador</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

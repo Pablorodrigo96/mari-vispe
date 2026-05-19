@@ -2,6 +2,7 @@ import { Check, Circle, Lock, MinusCircle } from "lucide-react";
 import { useStageTasks, useToggleStageTask, type StageTask } from "@/hooks/useStageTasks";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
 interface Props {
   dealId: string;
@@ -19,6 +20,7 @@ const STATUS_LABEL: Record<StageTask["status"], string> = {
 export function StageTasksChecklist({ dealId, stageKey, compact }: Props) {
   const { data: tasks, isLoading } = useStageTasks(dealId, stageKey);
   const toggle = useToggleStageTask(dealId);
+  const { canEditEB } = useUserRoles();
 
   if (isLoading) return <div className="text-xs text-muted-foreground">Carregando tarefas…</div>;
   if (!tasks || tasks.length === 0) {
@@ -41,10 +43,11 @@ export function StageTasksChecklist({ dealId, stageKey, compact }: Props) {
           >
             <button
               type="button"
-              onClick={() =>
-                toggle.mutate({ task: t, status: isDone ? "pending" : "done" })
-              }
-              disabled={toggle.isPending}
+              onClick={() => {
+                if (!canEditEB) return;
+                toggle.mutate({ task: t, status: isDone ? "pending" : "done" });
+              }}
+              disabled={toggle.isPending || !canEditEB}
               className={cn(
                 "mt-0.5 size-4 rounded-full border flex items-center justify-center shrink-0",
                 isDone

@@ -2,7 +2,7 @@ import { useUserRoles } from '@/hooks/useUserRoles';
 import { useViewAs } from '@/contexts/ViewAsContext';
 import { usePartnerAccountant } from '@/hooks/usePartnerAccountant';
 
-type AppRole = 'seller' | 'buyer' | 'advisor' | 'admin' | 'franchisee';
+type AppRole = 'seller' | 'buyer' | 'advisor' | 'admin' | 'franchisee' | 'legal' | 'observer';
 
 interface EffectiveRoles {
   roles: AppRole[];
