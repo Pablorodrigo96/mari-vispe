@@ -7,11 +7,13 @@ import {
   Settings, Upload, Search, GitCompare, Globe, Activity, Users,
   Table as TableIcon, Gauge, Copy, Database, Tags, CalendarDays, Search as SearchIcon,
 } from "lucide-react";
+import { Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
 import { useMatchPercentiles, useMatchInbox } from "@/hooks/useMatchInbox";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useVerticalRegistry } from "@/hooks/useVerticalRegistry";
 import {
   Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
