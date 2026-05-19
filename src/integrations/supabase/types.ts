@@ -407,6 +407,42 @@ export type Database = {
         }
         Relationships: []
       }
+      buyer_deal_access: {
+        Row: {
+          access_level: string
+          buyer_user_id: string
+          deal_id: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          note: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          access_level?: string
+          buyer_user_id: string
+          deal_id: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          access_level?: string
+          buyer_user_id?: string
+          deal_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: []
+      }
       buyer_profiles: {
         Row: {
           buyer_name: string
@@ -833,6 +869,7 @@ export type Database = {
           updated_at: string
           uploaded_at: string
           uploaded_by: string | null
+          visible_to_buyer: boolean
         }
         Insert: {
           category?: string
@@ -853,6 +890,7 @@ export type Database = {
           updated_at?: string
           uploaded_at?: string
           uploaded_by?: string | null
+          visible_to_buyer?: boolean
         }
         Update: {
           category?: string
@@ -873,6 +911,7 @@ export type Database = {
           updated_at?: string
           uploaded_at?: string
           uploaded_by?: string | null
+          visible_to_buyer?: boolean
         }
         Relationships: [
           {
@@ -2546,6 +2585,22 @@ export type Database = {
           output_tokens: number | null
           provider: string | null
           total_tokens: number | null
+        }
+        Relationships: []
+      }
+      buyer_deal_room: {
+        Row: {
+          access_level: string | null
+          buyer_user_id: string | null
+          can_view_identity: boolean | null
+          cnpj: string | null
+          deal_created_at: string | null
+          deal_id: string | null
+          deal_last_moved_at: string | null
+          granted_at: string | null
+          nda_signed: boolean | null
+          outcome: string | null
+          stage: string | null
         }
         Relationships: []
       }
@@ -5209,6 +5264,7 @@ export type Database = {
         Args: { _anon_key: string; _service_role_key: string }
         Returns: undefined
       }
+      buyer_has_signed_nda: { Args: { p_deal_id: string }; Returns: boolean }
       buyer_neutral_description: {
         Args: {
           _setores: string[]
@@ -5242,10 +5298,12 @@ export type Database = {
           status: string
         }[]
       }
-      eb_can_view_identity: {
-        Args: { p_cnpj?: string; p_listing?: string }
-        Returns: boolean
-      }
+      eb_can_view_identity:
+        | { Args: { p_cnpj?: string; p_listing?: string }; Returns: boolean }
+        | {
+            Args: { p_cnpj?: string; p_deal_id?: string; p_listing?: string }
+            Returns: boolean
+          }
       eb_dashboard_kpis: { Args: never; Returns: Json }
       eb_dashboard_kpis_v2: { Args: never; Returns: Json }
       eb_decide_disclosure: {
