@@ -271,12 +271,33 @@ export default function PipelineKanbanPage() {
               <div
                 key={stage.id}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={() => {
-                  if (draggedId) {
-                    const fromStage = (mandates ?? []).find((mm) => mm.id === draggedId)?.pipeline_stage ?? null;
-                    move.mutate({ id: draggedId, stage: stage.key, from: fromStage });
-                  }
+                onDrop={async () => {
+                  const id = draggedId;
                   setDraggedId(null);
+                  if (!id) return;
+                  const fromStage = (mandates ?? []).find((mm) => mm.id === id)?.pipeline_stage ?? null;
+                  if (fromStage === stage.key) return;
+                  if (fromStage) {
+                    const ok = await canAdvanceStage(id, fromStage);
+                    if (!ok) {
+                      if (!isAdmin) {
+                        toast.error("Conclua as tarefas bloqueantes desta etapa antes de avançar.");
+                        return;
+                      }
+                      const force = window.confirm(
+                        "Há tarefas bloqueantes pendentes nesta etapa. Forçar avanço mesmo assim? (será registrado na auditoria)",
+                      );
+                      if (!force) return;
+                      logAuditEvent({
+                        dealId: id,
+                        entityType: "pipeline",
+                        entityId: id,
+                        eventType: "stage_force_advanced",
+                        payload: { from_stage: fromStage, to_stage: stage.key },
+                      });
+                    }
+                  }
+                  move.mutate({ id, stage: stage.key, from: fromStage });
                 }}
                 className={cn(
                   "rounded-lg border p-2 min-h-[400px] flex flex-col",
