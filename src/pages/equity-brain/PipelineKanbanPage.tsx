@@ -16,6 +16,7 @@ import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { cn } from "@/lib/utils";
 import { logAuditEvent } from "@/services/audit/auditService";
 import { canAdvanceStage, useDealStageProgress } from "@/hooks/useStageTasks";
+import { useDealDocProgress } from "@/hooks/useDealDocuments";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { CheckSquare } from "lucide-react";
 
