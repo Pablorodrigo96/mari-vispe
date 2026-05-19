@@ -1,40 +1,36 @@
 ## Problema
 
-100% dos signups estão falhando com erro 500 (`Database error saving new user`). Auth logs mostram:
+A tabela `public.listings` ficou sem `GRANT SELECT` para os roles `anon` e `authenticated` após um ajuste recente de segurança. Resultado: PostgREST devolve `401 permission denied for table listings` antes mesmo de avaliar as RLS policies — por isso `/marketplace`, `/painel`, `/mapa` e `/meus-anuncios` não mostram nada.
 
-```
-null value in column "is_partner_accountant" of relation "profiles" violates not-null constraint
-```
+As RLS policies continuam corretas (já filtram `status = 'active'` para o público, dono vê o seu, admin vê tudo) e os dados expostos publicamente são anônimos (codename, sem CNPJ/endereço real). O fix é só restaurar os GRANTs.
 
-## Causa
+## Plano (1 migration, 100% retrocompatível)
 
-No trigger `public.handle_new_user`, a linha:
+**Migration única:**
 
 ```sql
-INSERT INTO public.profiles (user_id, full_name, is_partner_accountant)
-VALUES (NEW.id, v_full_name, (meta_profile = 'partner'));
+-- Restaura privilégios de tabela (RLS continua sendo a barreira real)
+GRANT SELECT ON public.listings TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.listings TO authenticated;
+
+-- Tabelas auxiliares usadas pelo marketplace (caso também tenham perdido grants)
+GRANT SELECT ON public.listing_views TO anon, authenticated;
+GRANT INSERT ON public.listing_views TO anon, authenticated;
 ```
 
-Quando `raw_user_meta_data->>'profile'` é `NULL` (ex.: signups que mandam só `roles` array, ou o novo wizard que mudou o nome do campo), a expressão `NULL = 'partner'` retorna **`NULL`**, não `false` — violando o NOT NULL da coluna `is_partner_accountant`.
+Sem `DROP`, sem mudar schema, sem mexer em RLS, sem tocar em views (`public_listings` segue como está).
 
-## Fix (1 migration, mudança cirúrgica)
+## Validação pós-migration
 
-Recriar `handle_new_user` trocando a expressão por:
+1. `curl` anônimo no endpoint REST de `listings?status=eq.active` → deve voltar 200 com array.
+2. Abrir `/marketplace` deslogado → cards devem renderizar.
+3. Abrir `/meus-anuncios` logado como seller → deve ver os próprios.
+4. Confirmar que dados sensíveis seguem ocultos: CNPJ/endereço completo só aparece para admin/advisor via `eb_can_view_identity` (não foi tocado).
 
-```sql
-COALESCE(meta_profile = 'partner', false)
-```
+## O que NÃO muda
 
-Nada mais muda — fluxo de roles, advisor_requests, franchisee_requests, notifications e subscriptions seguem idênticos.
+- Nenhuma RLS policy é alterada.
+- `is_company_visible_in_crm()` e views `*_blind` ficam intactas.
+- M&A Fase 0 segue em standby até você aprovar este fix e validar o marketplace.
 
-## Verificação pós-fix
-
-1. Smoke test: criar usuário de teste via tela `/auth` com perfil "Franqueado" (caso do screenshot) → deve criar conta + `franchisee_requests` pendente.
-2. Conferir auth logs: zero erros 500 em `/signup`.
-3. Conferir que `profiles.is_partner_accountant = false` para o novo usuário.
-
-## Arquivos
-
-- `supabase/migrations/<novo>.sql` — `CREATE OR REPLACE FUNCTION public.handle_new_user` com o `COALESCE`.
-
-Sem mudanças de frontend.
+Aprova rodar a migration?
