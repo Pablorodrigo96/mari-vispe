@@ -76,11 +76,27 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
       toast.error(`Preencha: ${missing.join(", ")}`);
       return;
     }
+    const badCnpj = tpl.customizable_fields
+      .filter((f) => f.type === "cnpj" && fields[f.key])
+      .filter((f) => String(fields[f.key]).replace(/\D/g, "").length !== 14)
+      .map((f) => f.label);
+    if (badCnpj.length) {
+      toast.error(`CNPJ inválido: ${badCnpj.join(", ")}`);
+      return;
+    }
+    // Format currency values to "R$ x,xx" before sending to AI
+    const formatted: Record<string, any> = { ...fields };
+    tpl.customizable_fields.forEach((f) => {
+      if (f.type === "currency" && formatted[f.key] !== "" && formatted[f.key] != null) {
+        const n = Number(String(formatted[f.key]).replace(",", "."));
+        if (isFinite(n)) formatted[f.key] = formatBRL(n);
+      }
+    });
     try {
       const res = await generate.mutateAsync({
         deal_id: dealId,
         template_code: tpl.code,
-        custom_fields: fields,
+        custom_fields: formatted,
       });
       toast.success(`Documento gerado (v${res.document.version_number}) via ${res.ai.provider}`);
       setActiveDocId(res.document.id);
@@ -239,6 +255,24 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
   );
 }
 
+function maskCNPJ(v: string): string {
+  const d = (v ?? "").replace(/\D/g, "").slice(0, 14);
+  return d
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}
+function isValidCNPJ(v: string): boolean {
+  const d = (v ?? "").replace(/\D/g, "");
+  return d.length === 14;
+}
+function formatBRL(v: any): string {
+  const n = Number(String(v ?? "").replace(/[^\d.,-]/g, "").replace(",", "."));
+  if (!isFinite(n)) return "";
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
+}
+
 function FieldInput({ field, value, onChange }: { field: LegalTemplateField; value: any; onChange: (v: any) => void }) {
   const label = (
     <Label className="text-zinc-300 text-xs">
@@ -253,14 +287,46 @@ function FieldInput({ field, value, onChange }: { field: LegalTemplateField; val
       </div>
     );
   }
+  if (field.type === "cnpj") {
+    const masked = maskCNPJ(String(value ?? ""));
+    const ok = !value || isValidCNPJ(String(value));
+    return (
+      <div>
+        {label}
+        <Input
+          value={masked}
+          onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+          placeholder="00.000.000/0000-00"
+          className={`bg-zinc-900 border-zinc-800 text-zinc-100 ${!ok ? "border-red-500" : ""}`}
+        />
+        {!ok && <div className="text-[10px] text-red-400 mt-0.5">CNPJ deve ter 14 dígitos</div>}
+      </div>
+    );
+  }
+  if (field.type === "currency") {
+    const preview = value !== "" && value !== null && value !== undefined ? formatBRL(value) : "";
+    return (
+      <div>
+        {label}
+        <Input
+          type="number"
+          step="0.01"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="0,00"
+          className="bg-zinc-900 border-zinc-800 text-zinc-100"
+        />
+        {preview && <div className="text-[10px] text-zinc-400 mt-0.5">{preview}</div>}
+      </div>
+    );
+  }
   return (
     <div>
       {label}
       <Input
-        type={field.type === "number" || field.type === "currency" ? "number" : "text"}
+        type={field.type === "number" ? "number" : "text"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={field.type === "cnpj" ? "00.000.000/0000-00" : undefined}
         className="bg-zinc-900 border-zinc-800 text-zinc-100"
       />
     </div>

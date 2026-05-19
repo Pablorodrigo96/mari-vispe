@@ -92,33 +92,90 @@ Deno.serve(async (req) => {
       "- Retorne APENAS o documento em Markdown, sem explicações antes ou depois.",
     ].join("\n");
 
-    const userPrompt = [
-      `Refine o documento abaixo mantendo sua estrutura, cláusulas fixas e dados das partes intactos.`,
-      `Categoria: ${tpl.category} | Template: ${tpl.code} | Label: ${tpl.label}`,
-      ``,
-      `DADOS CONTEXTUAIS DO DEAL:`,
-      `- Codinome interno: ${deal.codename ?? "N/A"}`,
-      ``,
-      `DOCUMENTO PRÉ-HIDRATADO:`,
-      ``,
-      hydrated,
-    ].join("\n");
+    const parts = Array.isArray(tpl.parts) ? (tpl.parts as any[]) : [];
+    let finalText = "";
+    let provider = "";
+    let model = "";
+    let fallbackUsed = false;
+    let totalIn = 0;
+    let totalOut = 0;
+    let totalLatency = 0;
 
-    // Call Anthropic (fallback Gemini)
-    const ai = await callAnthropic({
-      model: tpl.preferred_model ?? "claude-sonnet-4-5",
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-      max_tokens: 8000,
-      temperature: 0.15,
-      function_name: "mari-generate-document",
-      feature: `legal_doc_${tpl.category}`,
-      user_id: userId,
-      metadata: {
-        deal_id: body.deal_id,
-        template_code: body.template_code,
-      },
-    });
+    if (parts.length > 0) {
+      // ===== Modular generation (SPA): run each section in parallel =====
+      const results = await Promise.all(
+        parts.map(async (p) => {
+          const sectionInstructions = hydrateTemplate(p.instructions ?? "", body.custom_fields);
+          const userPrompt = [
+            `Você gerará APENAS a seção "${p.title}" do documento ${tpl.label}.`,
+            `Categoria: ${tpl.category} | Template: ${tpl.code}`,
+            ``,
+            `DADOS CONTEXTUAIS DO DEAL:`,
+            `- Codinome interno: ${deal.codename ?? "N/A"}`,
+            ``,
+            `INSTRUÇÕES DA SEÇÃO:`,
+            sectionInstructions,
+            ``,
+            `Retorne em Markdown apenas o conteúdo desta seção (cabeçalho ## ${p.title} + cláusulas). Sem preâmbulo ou conclusão.`,
+          ].join("\n");
+          return await callAnthropic({
+            model: tpl.preferred_model ?? "claude-opus-4-1",
+            system: systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
+            max_tokens: 4000,
+            temperature: 0.15,
+            function_name: "mari-generate-document",
+            feature: `legal_doc_${tpl.category}_${p.id}`,
+            user_id: userId,
+            metadata: { deal_id: body.deal_id, template_code: body.template_code, part_id: p.id },
+          });
+        }),
+      );
+      provider = results[0]?.provider ?? "";
+      model = results[0]?.model ?? "";
+      fallbackUsed = results.some((r) => r.fallback_used);
+      totalIn = results.reduce((s, r) => s + (r.input_tokens ?? 0), 0);
+      totalOut = results.reduce((s, r) => s + (r.output_tokens ?? 0), 0);
+      totalLatency = Math.max(...results.map((r) => r.latency_ms ?? 0));
+      finalText = [
+        `# ${tpl.label}`,
+        "",
+        hydrated.replace(/^# .*$/m, "").trim(),
+        "",
+        ...results.map((r) => r.text.trim()),
+      ].join("\n\n");
+    } else {
+      // ===== Monolithic generation (NDA/NBO/TS) =====
+      const userPrompt = [
+        `Refine o documento abaixo mantendo sua estrutura, cláusulas fixas e dados das partes intactos.`,
+        `Categoria: ${tpl.category} | Template: ${tpl.code} | Label: ${tpl.label}`,
+        ``,
+        `DADOS CONTEXTUAIS DO DEAL:`,
+        `- Codinome interno: ${deal.codename ?? "N/A"}`,
+        ``,
+        `DOCUMENTO PRÉ-HIDRATADO:`,
+        ``,
+        hydrated,
+      ].join("\n");
+      const ai = await callAnthropic({
+        model: tpl.preferred_model ?? "claude-sonnet-4-5",
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
+        max_tokens: 8000,
+        temperature: 0.15,
+        function_name: "mari-generate-document",
+        feature: `legal_doc_${tpl.category}`,
+        user_id: userId,
+        metadata: { deal_id: body.deal_id, template_code: body.template_code },
+      });
+      finalText = ai.text;
+      provider = ai.provider;
+      model = ai.model;
+      fallbackUsed = ai.fallback_used;
+      totalIn = ai.input_tokens ?? 0;
+      totalOut = ai.output_tokens ?? 0;
+      totalLatency = ai.latency_ms ?? 0;
+    }
 
     // Determine version_number
     let version = 1;
@@ -149,22 +206,23 @@ Deno.serve(async (req) => {
         template_code: tpl.code,
         label: `${tpl.label} v${version}`,
         category: tpl.category,
-        generated_body: ai.text,
+        generated_body: finalText,
         custom_fields_snapshot: body.custom_fields,
         version_number: version,
         parent_version_id: body.parent_version_id ?? null,
         requires_partner_approval: true,
         homologation_status: "none",
-        ai_provider: ai.provider,
-        ai_model: ai.model,
-        ai_fallback_used: ai.fallback_used,
+        ai_provider: provider,
+        ai_model: model,
+        ai_fallback_used: fallbackUsed,
         status: "draft",
         visible_to_buyer: !!body.visible_to_buyer,
         uploaded_by: userId,
         metadata: {
-          generation_latency_ms: ai.latency_ms,
-          input_tokens: ai.input_tokens,
-          output_tokens: ai.output_tokens,
+          generation_latency_ms: totalLatency,
+          input_tokens: totalIn,
+          output_tokens: totalOut,
+          parts_count: parts.length,
         },
       })
       .select()
@@ -185,9 +243,10 @@ Deno.serve(async (req) => {
         deal_id: body.deal_id,
         template_code: body.template_code,
         version,
-        provider: ai.provider,
-        model: ai.model,
-        fallback: ai.fallback_used,
+        provider,
+        model,
+        fallback: fallbackUsed,
+        parts_count: parts.length,
       },
     });
 
@@ -195,10 +254,11 @@ Deno.serve(async (req) => {
       ok: true,
       document: doc,
       ai: {
-        provider: ai.provider,
-        model: ai.model,
-        fallback_used: ai.fallback_used,
-        latency_ms: ai.latency_ms,
+        provider,
+        model,
+        fallback_used: fallbackUsed,
+        latency_ms: totalLatency,
+        parts_count: parts.length,
       },
     });
   } catch (e: any) {
