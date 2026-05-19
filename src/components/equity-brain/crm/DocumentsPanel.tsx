@@ -7,7 +7,7 @@ import { useCompanyListing } from "@/hooks/useCompanyListing";
 import { useAutoLogIdentityAccess } from "@/hooks/useLogIdentityAccess";
 import { relativeTime } from "@/lib/equityBrain";
 import { cn } from "@/lib/utils";
-import { logAuditEvent, type AuditEntityType } from "@/services/audit/auditService";
+import { logAuditEvent } from "@/services/audit/auditService";
 
 type Source = "crm" | "vdr" | "cadastro";
 
