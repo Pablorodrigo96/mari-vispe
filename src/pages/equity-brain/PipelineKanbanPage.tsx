@@ -345,6 +345,7 @@ export default function PipelineKanbanPage() {
                     m={m}
                     slaDays={0}
                     isTerminal
+                    canDrag={canEditEB}
                     onDragStart={() => setDraggedId(m.id)}
                     onEdit={() => setEditing(m)}
                     onReanimate={() => reanimate.mutate(m.id)}
