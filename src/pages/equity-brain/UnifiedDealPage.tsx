@@ -8,6 +8,9 @@ import { usePipelineStages, STAGE_COLOR_CLASSES } from "@/hooks/usePipelineStage
 import { brl } from "@/lib/dealFormatters";
 import { cn } from "@/lib/utils";
 import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
+import { StageTasksChecklist } from "@/components/equity-brain/crm/StageTasksChecklist";
+import { useDealStageProgress } from "@/hooks/useStageTasks";
+import { CheckSquare } from "lucide-react";
 
 /**
  * Página unificada do Deal: mandato + buyer movimentados juntos no pipeline.
