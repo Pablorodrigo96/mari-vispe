@@ -57,6 +57,9 @@ export function BlindTeaserButton({ cnpj, entityType, entityId }: Props) {
 
   const handleOpen = () => {
     log("teaser_view", { entityType, entityId, listingId: listing!.id, ticker });
+    if (entityType && entityId) {
+      logIdentity({ entityType, entityId, cnpj, context: "blind_teaser_open" });
+    }
     window.open(url, "_blank", "noopener,noreferrer");
     setOpen(false);
   };
