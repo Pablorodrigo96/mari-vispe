@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { usePartnerAccountant } from "@/hooks/usePartnerAccountant";
 
-type AppRole = "seller" | "buyer" | "advisor" | "admin" | "franchisee";
+type AppRole = "seller" | "buyer" | "advisor" | "admin" | "franchisee" | "legal" | "observer";
 
 interface RequireRoleProps {
   roles: AppRole[];
