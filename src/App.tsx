@@ -50,6 +50,8 @@ const MyListings = lazy(() => import("./pages/MyListings"));
 const ListingCockpit = lazy(() => import("./pages/ListingCockpit"));
 const EditListing = lazy(() => import("./pages/EditListing"));
 const MyProfile = lazy(() => import("./pages/MyProfile"));
+const DealRoomPage = lazy(() => import("./pages/buyer/DealRoomPage"));
+const MyDealRoomsPage = lazy(() => import("./pages/buyer/DealRoomPage").then(m => ({ default: m.MyDealRoomsPage })));
 const MyValuations = lazy(() => import("./pages/MyValuations"));
 const RegisterBuyer = lazy(() => import("./pages/RegisterBuyer"));
 const MyCapitalRequests = lazy(() => import("./pages/MyCapitalRequests"));
