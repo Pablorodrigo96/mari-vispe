@@ -269,7 +269,10 @@ export default function PipelineKanbanPage() {
                 key={stage.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
-                  if (draggedId) move.mutate({ id: draggedId, stage: stage.key });
+                  if (draggedId) {
+                    const fromStage = (mandates ?? []).find((mm) => mm.id === draggedId)?.pipeline_stage ?? null;
+                    move.mutate({ id: draggedId, stage: stage.key, from: fromStage });
+                  }
                   setDraggedId(null);
                 }}
                 className={cn(
