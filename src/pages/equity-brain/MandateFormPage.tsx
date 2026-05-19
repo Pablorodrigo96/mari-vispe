@@ -1,10 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMandate } from "@/hooks/useCrm";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNationalSearch } from "@/hooks/useNationalSearch";
+import { maskCnpj } from "@/lib/mariWindowHeuristic";
+
+const UF_TO_REGIAO: Record<string, string> = {
+  SP: "sudeste", RJ: "sudeste", MG: "sudeste", ES: "sudeste",
+  PR: "sul", SC: "sul", RS: "sul",
+  GO: "centro-oeste", MT: "centro-oeste", MS: "centro-oeste", DF: "centro-oeste",
+  BA: "nordeste", PE: "nordeste", CE: "nordeste", MA: "nordeste", PB: "nordeste",
+  RN: "nordeste", AL: "nordeste", SE: "nordeste", PI: "nordeste",
+  AM: "norte", PA: "norte", AC: "norte", RO: "norte", RR: "norte", AP: "norte", TO: "norte",
+};
 
 type FormState = Record<string, string>;
 
