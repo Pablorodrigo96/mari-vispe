@@ -119,6 +119,8 @@ const ImportsPage = lazy(() => import("./pages/equity-brain/ImportsPage"));
 const IspImportPage = lazy(() => import("./pages/equity-brain/IspImportPage"));
 const IspSuggestionsPage = lazy(() => import("./pages/equity-brain/IspSuggestionsPage"));
 const IspMarketPage = lazy(() => import("./pages/equity-brain/IspMarketPage"));
+const VerticalMarketPage = lazy(() => import("./pages/equity-brain/VerticalMarketPage"));
+const VerticalImportPage = lazy(() => import("./pages/equity-brain/VerticalImportPage"));
 const DisclosuresPage = lazy(() => import("./pages/equity-brain/DisclosuresPage"));
 const UnifiedDealPage = lazy(() => import("./pages/equity-brain/UnifiedDealPage"));
 const PipelinePage = lazy(() => import("./pages/equity-brain/PipelinePage"));
