@@ -19,9 +19,29 @@ import { ForgotPasswordDialog } from '@/components/auth/ForgotPasswordDialog';
 import { MfaChallengeDialog } from '@/components/auth/MfaChallengeDialog';
 
 const emailSchema = z.string().email('Email inválido');
-const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
+const passwordSchema = z.string().min(8, 'Senha deve ter pelo menos 8 caracteres');
 const nameSchema = z.string().min(3, 'Nome deve ter pelo menos 3 caracteres');
 const phoneSchema = z.string().min(14, 'Telefone inválido');
+
+const getSignupErrorMessage = (error: Error) => {
+  const authError = error as Error & { code?: string; status?: number };
+  const message = error.message || '';
+  const normalized = message.toLowerCase();
+
+  if (authError.code === 'weak_password' || normalized.includes('weak') || normalized.includes('password should')) {
+    return 'Use uma senha mais forte, com pelo menos 8 caracteres, letras e números. Evite senhas comuns.';
+  }
+
+  if (authError.code === 'user_already_exists' || normalized.includes('user already registered')) {
+    return 'Este email já está cadastrado';
+  }
+
+  if (normalized.includes('invalid email')) {
+    return 'Informe um email válido';
+  }
+
+  return 'Erro ao criar conta. Tente novamente.';
+};
 
 const formatPhone = (value: string) => {
   const numbers = value.replace(/\D/g, '');
@@ -194,7 +214,7 @@ export default function Auth() {
     try {
       passwordSchema.parse(signupPassword);
     } catch {
-      toast.error('Senha deve ter pelo menos 6 caracteres');
+      toast.error('Senha deve ter pelo menos 8 caracteres');
       return;
     }
 
@@ -225,11 +245,7 @@ export default function Auth() {
     setIsSubmitting(false);
 
     if (error) {
-      if (error.message.includes('User already registered')) {
-        toast.error('Este email já está cadastrado');
-      } else {
-        toast.error('Erro ao criar conta. Tente novamente.');
-      }
+      toast.error(getSignupErrorMessage(error));
     } else {
       const needsApproval = signupProfile === 'advisor' || signupProfile === 'franchisee';
 
@@ -407,7 +423,7 @@ export default function Auth() {
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
                       className="pl-10"
