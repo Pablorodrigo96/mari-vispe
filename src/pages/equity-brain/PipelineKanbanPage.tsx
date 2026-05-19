@@ -272,8 +272,9 @@ export default function PipelineKanbanPage() {
             return (
               <div
                 key={stage.id}
-                onDragOver={(e) => e.preventDefault()}
+                onDragOver={(e) => { if (canEditEB) e.preventDefault(); }}
                 onDrop={async () => {
+                  if (!canEditEB) return;
                   const id = draggedId;
                   setDraggedId(null);
                   if (!id) return;
