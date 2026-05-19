@@ -230,7 +230,12 @@ export default function MandateFormPage() {
         <h2 className="text-[10px] uppercase tracking-widest text-zinc-400">Empresa</h2>
         <div className="grid grid-cols-3 gap-3">
           <Field label="CNPJ *">
-            <input className={inputCls} value={form.company_cnpj} onChange={set("company_cnpj")} placeholder="00.000.000/0000-00" />
+            <div className="relative">
+              <input className={inputCls} value={form.company_cnpj} onChange={handleCnpjChange} placeholder="00.000.000/0000-00" maxLength={18} />
+              {lookingUp && (
+                <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-[#D9F564]" />
+              )}
+            </div>
           </Field>
           <Field label="Razão social">
             <input className={inputCls} value={form.razao_social} onChange={set("razao_social")} />
