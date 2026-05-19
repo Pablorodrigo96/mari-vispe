@@ -365,6 +365,48 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_events: {
+        Row: {
+          actor_role: Database["public"]["Enums"]["app_role"] | null
+          actor_user_id: string | null
+          created_at: string
+          deal_id: string | null
+          entity_id: string | null
+          entity_type: string
+          event_type: string
+          id: string
+          ip: unknown
+          payload: Json
+          user_agent: string | null
+        }
+        Insert: {
+          actor_role?: Database["public"]["Enums"]["app_role"] | null
+          actor_user_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          entity_id?: string | null
+          entity_type: string
+          event_type: string
+          id?: string
+          ip?: unknown
+          payload?: Json
+          user_agent?: string | null
+        }
+        Update: {
+          actor_role?: Database["public"]["Enums"]["app_role"] | null
+          actor_user_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          event_type?: string
+          id?: string
+          ip?: unknown
+          payload?: Json
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       buyer_profiles: {
         Row: {
           buyer_name: string
@@ -2279,6 +2321,20 @@ export type Database = {
           time_in_previous_stage_seconds: number | null
           to_stage: string | null
           transition_id: string | null
+        }
+        Relationships: []
+      }
+      deal_timeline: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string | null
+          deal_id: string | null
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string | null
+          id: string | null
+          payload: Json | null
+          source: string | null
         }
         Relationships: []
       }
@@ -5251,6 +5307,18 @@ export type Database = {
       increment_capital_view: {
         Args: { p_request_id: string }
         Returns: undefined
+      }
+      log_audit_event: {
+        Args: {
+          _deal_id: string
+          _entity_id: string
+          _entity_type: string
+          _event_type: string
+          _ip?: unknown
+          _payload?: Json
+          _user_agent?: string
+        }
+        Returns: string
       }
       mari_ops_health_volume_recent: {
         Args: { p_minutes?: number }
