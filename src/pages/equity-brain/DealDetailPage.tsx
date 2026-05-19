@@ -7,6 +7,7 @@ import { useCompanyResolver } from "@/hooks/useCompanyResolver";
 import { EntityNotes } from "@/components/equity-brain/notes/EntityNotes";
 import { CompanyEnrichedHeader } from "@/components/equity-brain/company/CompanyEnrichedHeader";
 import { ClassifyThesisCard } from "@/components/equity-brain/company/ClassifyThesisCard";
+import { TriPosturaCard } from "@/components/equity-brain/TriPosturaCard";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "notes";
