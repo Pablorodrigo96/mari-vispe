@@ -7,11 +7,13 @@ import {
   Settings, Upload, Search, GitCompare, Globe, Activity, Users,
   Table as TableIcon, Gauge, Copy, Database, Tags, CalendarDays, Search as SearchIcon,
 } from "lucide-react";
+import { Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { MariLogo } from "@/components/brand/MariLogo";
 import { useMatchPercentiles, useMatchInbox } from "@/hooks/useMatchInbox";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useVerticalRegistry } from "@/hooks/useVerticalRegistry";
 import {
   Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
@@ -67,6 +69,9 @@ export function EBSidebar() {
   const adminActive = location.pathname.startsWith("/equity-brain/admin");
   const [dashOpen, setDashOpen] = useState(dashboardsActive);
   const [adminOpen, setAdminOpen] = useState(adminActive);
+  const verticalsActive = location.pathname.startsWith("/equity-brain/vertical/");
+  const [vertOpen, setVertOpen] = useState(verticalsActive);
+  const { data: verticals = [] } = useVerticalRegistry({ onlyActive: true });
 
   const hojeActive = location.pathname === "/equity-brain/hoje";
   const diarioActive = location.pathname.startsWith("/equity-brain/diario");
@@ -222,6 +227,77 @@ export function EBSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Verticais (multi-vertical 2026) */}
+        {verticals.length > 0 && (
+          <SidebarGroup>
+            {!collapsed && <SidebarGroupLabel className="text-zinc-600">Verticais</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setVertOpen((o) => !o)}
+                    isActive={verticalsActive}
+                    tooltip="Verticais"
+                    className={cn(
+                      verticalsActive
+                        ? "!bg-emerald-950/40 !text-emerald-300"
+                        : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                    )}
+                  >
+                    <Layers className="h-4 w-4" />
+                    <span>Verticais</span>
+                    {!collapsed && (
+                      <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", vertOpen && "rotate-180")} />
+                    )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {vertOpen && !collapsed && verticals.map((v) => {
+                  const to = v.market_page_path || `/equity-brain/vertical/${v.slug}/mercado`;
+                  return (
+                    <SidebarMenuItem key={v.slug}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(to)}
+                        className={cn(
+                          "ml-3 text-xs",
+                          isActive(to) ? "!text-[#D9F564] !bg-[#D9F564]/10" : "!text-zinc-500 hover:!text-zinc-200",
+                        )}
+                      >
+                        <NavLink to={to}>
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: v.color || "#D9F564" }}
+                          />
+                          <span>{v.label}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+                {vertOpen && !collapsed && isAdmin && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === "/equity-brain/vertical/import"}
+                      className={cn(
+                        "ml-3 text-xs",
+                        location.pathname === "/equity-brain/vertical/import"
+                          ? "!text-zinc-100 !bg-zinc-800"
+                          : "!text-zinc-500 hover:!text-zinc-200",
+                      )}
+                    >
+                      <NavLink to="/equity-brain/vertical/import">
+                        <Upload className="h-3.5 w-3.5" />
+                        <span>Importar vertical</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Admin */}
         {isAdmin && (
