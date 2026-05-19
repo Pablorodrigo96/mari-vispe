@@ -54,6 +54,15 @@ export function DocumentsPanel({ entityType, entityId, companyContext }: Props) 
   const cnpj = companyContext?.cnpj ?? null;
   const { data: listing } = useCompanyListing(cnpj);
 
+  // Auto-log: ver documentos com identidade real conta como "implicit disclosure"
+  useAutoLogIdentityAccess({
+    enabled: !!cnpj,
+    entityType,
+    entityId,
+    cnpj,
+    context: "docs_panel",
+  });
+
   async function load() {
     const out: UnifiedDoc[] = [];
 
