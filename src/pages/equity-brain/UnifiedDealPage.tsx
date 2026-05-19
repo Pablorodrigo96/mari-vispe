@@ -141,6 +141,13 @@ export default function UnifiedDealPage() {
             <StageTasksSection mandateId={deal.mandate_id} stageKey={deal.stage} />
           )}
 
+          {/* Documentos desta etapa */}
+          {deal.mandate_id && (
+            <StageDocumentsPanel dealId={deal.mandate_id} stageKey={deal.stage} />
+          )}
+
+
+
 
           {/* Notas / status */}
           <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
