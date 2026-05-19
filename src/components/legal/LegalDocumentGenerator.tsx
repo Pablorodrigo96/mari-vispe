@@ -76,11 +76,27 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
       toast.error(`Preencha: ${missing.join(", ")}`);
       return;
     }
+    const badCnpj = tpl.customizable_fields
+      .filter((f) => f.type === "cnpj" && fields[f.key])
+      .filter((f) => String(fields[f.key]).replace(/\D/g, "").length !== 14)
+      .map((f) => f.label);
+    if (badCnpj.length) {
+      toast.error(`CNPJ inválido: ${badCnpj.join(", ")}`);
+      return;
+    }
+    // Format currency values to "R$ x,xx" before sending to AI
+    const formatted: Record<string, any> = { ...fields };
+    tpl.customizable_fields.forEach((f) => {
+      if (f.type === "currency" && formatted[f.key] !== "" && formatted[f.key] != null) {
+        const n = Number(String(formatted[f.key]).replace(",", "."));
+        if (isFinite(n)) formatted[f.key] = formatBRL(n);
+      }
+    });
     try {
       const res = await generate.mutateAsync({
         deal_id: dealId,
         template_code: tpl.code,
-        custom_fields: fields,
+        custom_fields: formatted,
       });
       toast.success(`Documento gerado (v${res.document.version_number}) via ${res.ai.provider}`);
       setActiveDocId(res.document.id);
