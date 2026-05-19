@@ -1,93 +1,86 @@
-## Bloco 1.2 — Tasks por etapa + roles `legal` / `observer`
+# Próxima fase: Bloco 1.6 (fechamento 1.2) + Bloco 1.4 (documentos)
 
-Ordem da Fase 0: **1.1 ✅ → 1.3 ✅ → 1.2 → 1.4 → 1.5 → 1.6**.
+Duas frentes encadeadas. 1.6 é curto (só plugar UI já pronta); 1.4 é o bloco grande de documentos por etapa + assinatura mock.
 
-### Objetivo
-Cada etapa do pipeline passa a ter uma **checklist de tarefas obrigatórias** (ex.: Mandato exige assinatura; NDA exige template enviado; Teaser exige aprovação). Sem todos os itens críticos concluídos, advisor não consegue avançar a etapa. Também adiciona dois papéis novos (`legal` e `observer`) usados em RLS (audit, docs, qna).
+---
 
-### Migration
+## Bloco 1.6 — Plugar StageTasksChecklist (fecha 1.2)
 
-**1) Enum `app_role` — adicionar valores**
-- `ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'legal';`
-- `ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'observer';`
-- Atualiza `audit_events` RLS para incluir `has_role(uid,'legal')` no SELECT (advisor/legal/observer veem; observer só leitura).
+Sem novas tabelas. Só costura de UI.
 
-**2) Tabela `stage_task_templates`** (catálogo de tarefas por etapa)
-- `id uuid pk`
-- `stage_key text` (FK lógica → `eb_pipeline_stages.key`)
-- `code text unique` (ex: `mandate_signed`, `nda_sent`, `teaser_approved`)
-- `label text`, `description text`
-- `is_required boolean default true`
-- `is_blocking boolean default true` (se true, impede avançar de etapa)
-- `position int`
-- `applies_to text default 'all'` (`all` | `real` | `marketplace`)
-- `is_active boolean default true`
-- Seed inicial cobrindo 12 etapas (Prospecção → Closing), ~3-5 tarefas por etapa.
+1. **UnifiedDealPage** (`src/pages/equity-brain/UnifiedDealPage.tsx`)
+   - Adicionar seção "Tarefas desta etapa" na coluna central (abaixo do MatchWhyCard), usando `<StageTasksChecklist dealId={mandate.id} stageKey={mandate.pipeline_stage} />`.
+   - Mostrar contador `done/total` no header da seção.
 
-**3) Tabela `stage_tasks`** (instâncias por deal)
-- `id uuid pk`
-- `deal_id uuid not null` (= mandate_id)
-- `stage_key text not null`
-- `template_code text` (FK lógica)
-- `label text`, `is_required bool`, `is_blocking bool`
-- `status text default 'pending'` (`pending` | `done` | `skipped` | `na`)
-- `done_at timestamptz`, `done_by uuid`
-- `due_at timestamptz`
-- `note text`
-- `created_at`, `updated_at`
-- Índice: `(deal_id, stage_key, status)`
-- Unique `(deal_id, template_code)` para idempotência
+2. **PipelineKanbanPage** (`src/pages/equity-brain/PipelineKanbanPage.tsx`)
+   - Mini-badge `done/total` em cada card do Kanban via `useDealStageProgress(dealId)` (novo hook lendo `deal_stage_progress` view).
+   - Badge fica vermelho se há `is_blocking` pendente, verde se tudo pronto, cinza neutro caso contrário.
 
-**4) Trigger `instantiate_stage_tasks`**
-- AFTER INSERT em `eb_mandates`: cria tarefas das etapas iniciais (Prospecção + Mandato).
-- AFTER UPDATE de `pipeline_stage` em `eb_mandates`: cria tarefas da nova etapa (idempotente via unique).
+3. **Novo hook** `src/hooks/useDealStageProgress.ts` — query simples na view, retorna `{ total, done, pending_blocking }`.
 
-**5) Função `can_advance_stage(deal_id, target_stage)` → boolean**
-- Retorna `false` se existe `stage_tasks` com `status='pending' AND is_blocking=true` no `stage_key` da etapa **atual** (não permite sair com pendência bloqueante).
-- Usada pelo frontend para desabilitar drag-drop / botão "Avançar".
+---
 
-**6) View `deal_stage_progress`** (security_invoker)
-- Para cada `(deal_id, stage_key)`: `total`, `done`, `pending_blocking`, `pct_done`.
-- Alimenta barrinha de progresso nos cards do Kanban.
+## Bloco 1.4 — Documentos por etapa + templates + Clicksign mock
 
-**7) RLS**
-- `stage_task_templates`: SELECT autenticado; INSERT/UPDATE/DELETE admin.
-- `stage_tasks`: SELECT/UPDATE admin OR advisor OR legal OR observer (observer só SELECT); INSERT só via trigger (system).
+### Banco (1 migration)
 
-**8) Backfill**
-- Para mandatos existentes, instanciar tarefas da etapa atual (não cria histórico de etapas passadas).
+**`doc_templates`** (catálogo curado, admin-only)
+- `id`, `code` (unique, ex.: `nda_mutuo`, `loi_v1`, `spa_template`), `label`, `category` (`nda`|`loi`|`spa`|`due_diligence`|`other`), `description`, `storage_path` (template em bucket `doc-templates`), `requires_signature` (bool), `applies_to_stages` (text[]), `is_active`.
+- Seed inicial: NDA mútuo, LOI v1, SPA básico, Term Sheet, Checklist DD.
 
-### Frontend (UI mínima, integrado ao que já existe)
+**`stage_doc_requirements`** (quais docs cada etapa pede)
+- `id`, `stage_key` (FK `eb_pipeline_stages.key`), `template_code` (FK `doc_templates.code`), `is_required`, `is_blocking`, `position`.
+- Seed: Prospecção (NDA), Negociação (LOI), DD (Checklist DD), Fechamento (SPA).
+- Integra com `can_advance_stage` (Bloco 1.2): adicionar check de docs `is_blocking` faltando.
 
-- `src/hooks/useStageTasks.ts` — lista tarefas por `deal_id` + mutation `toggleTask(id, status)`.
-- `src/hooks/useCanAdvanceStage.ts` — wrap do RPC `can_advance_stage`.
-- `src/components/equity-brain/crm/StageTasksChecklist.tsx` — checklist enxuto (label + check + status). Reutilizado em:
-  - **Card do Kanban** (`PipelineKanbanPage`): mini-badge `3/5` com tooltip.
-  - **`UnifiedDealPage`** (`/equity-brain/deal/:id`): seção "Tarefas desta etapa".
-- `PipelineKanbanPage.handleDrop`: chamar `can_advance_stage` antes de mover; se `false`, toast "Conclua tarefas bloqueantes antes de avançar" e cancela. Quem é admin pode forçar (botão "Forçar avanço" → registra `stage_force_advanced` em `audit_events`).
-- Cada toggle de task chama `logAuditEvent({ entityType:'pipeline', eventType:'task_completed'|'task_reopened', payload:{ template_code } })`.
+**`deal_documents`** (instâncias por deal — estender a tabela existente se já houver, ou criar)
+- `id`, `deal_id`, `stage_key`, `template_code` (nullable; nem todo doc vem de template), `label`, `category`, `storage_path`, `uploaded_by`, `uploaded_at`, `status` (`draft`|`pending_signature`|`signed`|`archived`), `signature_provider` (`clicksign_mock`|`manual`|null), `signature_request_id`, `signed_at`, `signed_by`, `metadata` (jsonb).
+- RLS: admin/advisor/legal full; observer read; trigger log em `audit_events` (`doc_uploaded`, `doc_status_changed`, `doc_signed`).
 
-### Sem mudança visual maior
-- Não muda layout do Kanban — só adiciona uma linha de progresso e um modal de checklist quando clicar no card (reusa Sheet já existente, se houver; caso contrário, popover simples).
-- Tema mari mantido (Volt `#D9F564` como accent de progresso, Carbon de fundo).
+**Storage bucket** `deal-documents` (private) + policies por role.
 
-### Decisões implícitas (sem novas perguntas)
-- Tarefas bloqueantes: bloqueiam saída da etapa **atual**, não entrada na próxima — mais simples e cobre 100% do uso.
-- Observer = somente leitura em audit/tasks/docs. Não aparece em sidebar como role distinta agora (entrega no Bloco 1.6).
-- Legal = leitura ampla em audit/docs + edição em NDA/SPA (NDA/SPA são Bloco 1.4 — aqui só liberamos os SELECT).
-- Sem UI para editar `stage_task_templates` nesta etapa — admins editam via SQL/admin tool (UI fica para 1.6).
+**View `deal_doc_progress`** (security_invoker) — `deal_id`, `stage_key`, `required_count`, `present_count`, `pending_blocking` — análoga à `deal_stage_progress`.
+
+**`can_advance_stage` atualizada** — agora bloqueia se há `stage_tasks` OU `stage_doc_requirements` `is_blocking` faltando.
+
+### Edge function — Clicksign mock
+
+`supabase/functions/clicksign-mock/index.ts`:
+- POST `/request-signature` → recebe `document_id`, retorna `{ signature_request_id, signing_url }` (URL fake `/sign/:id`).
+- POST `/webhook` → simula callback que marca `deal_documents.status = 'signed'` + log audit.
+- Tudo gated por flag `MOCK_SIGNATURE=true`; pronto pra trocar por Clicksign real depois.
+
+### Frontend
+
+1. **`src/hooks/useDealDocuments.ts`** — lista docs por deal+stage; mutations upload/archive/request-signature.
+2. **`src/hooks/useDealDocProgress.ts`** — wrap da view.
+3. **`src/components/equity-brain/crm/StageDocumentsPanel.tsx`** — nova seção em UnifiedDealPage: lista requisitos da etapa (com check ✅/⚠️), botão "Anexar", "Gerar a partir do template", "Pedir assinatura".
+4. **`src/components/equity-brain/crm/DocumentTemplatePicker.tsx`** — modal pra escolher template do catálogo filtrado por `applies_to_stages`.
+5. **`src/components/equity-brain/crm/SignatureRequestDialog.tsx`** — confirma envio mock; mostra URL fake de assinatura + botão "Simular assinatura" (admin only, dev helper).
+6. **PipelineKanbanPage** — mini-badge de docs ao lado do badge de tarefas.
+7. **`auditService`** — novos event_types: `doc_uploaded`, `doc_template_generated`, `signature_requested`, `doc_signed`.
+
+### Decisões propostas (default ✅)
+
+- **D8** Bucket `deal-documents` é privado, signed URLs com TTL 5min. ✅
+- **D9** Clicksign **mock** nesta fase; integração real fica para Fase 2 com secret `CLICKSIGN_API_KEY`. ✅
+- **D10** Templates são arquivos `.docx` no bucket `doc-templates`; geração "a partir do template" nesta fase = copy do .docx + preenchimento de placeholders simples (`{{empresa}}`, `{{valor}}`) via edge function. ✅
+- **D11** `legal` role pode editar docs em qualquer stage; `observer` só lê. ✅
+- **D12** `can_advance_stage` passa a checar tasks **E** docs blocking — admin pode forçar com confirm (já implementado em 1.2). ✅
 
 ### Riscos
-- `ALTER TYPE ADD VALUE` não pode rodar dentro de transação com uso imediato em alguns contextos — separar `ALTER TYPE` em DDL isolada antes de policies.
-- Trigger AFTER UPDATE só dispara se `pipeline_stage` mudar — usar `WHEN (OLD.pipeline_stage IS DISTINCT FROM NEW.pipeline_stage)`.
-- Backfill de tarefas para 529 mandatos: idempotente via unique `(deal_id, template_code)`, seguro.
-- `can_advance_stage` deve degradar bem se não houver templates configurados para a etapa (retorna `true`).
 
-### Entregáveis
-1. Migration: enum + 2 tabelas + 1 trigger + 1 função + 1 view + RLS + seed templates 12 etapas + backfill
-2. 2 hooks (`useStageTasks`, `useCanAdvanceStage`)
-3. 1 componente `StageTasksChecklist` reusado em 2 lugares
-4. Wiring no Kanban (bloqueio + force-advance audit)
-5. Validação: criar deal de teste, ver tarefas, tentar avançar com pendência bloqueante, confirmar bloqueio
+- Tabela `deal_documents` pode já existir em forma parcial — vou auditar antes da migration e usar `ALTER` ao invés de `CREATE` se for o caso.
+- Edge function mock precisa estar claramente marcada (`*-mock`) pra não confundir com produção.
+- Backfill: docs já carregados em outros lugares (DocumentsPanel atual) ficam visíveis via UNION na view, sem migração destrutiva.
 
-Após aprovação executo migração + UI mínima sem refatorar Kanban.
+---
+
+## Ordem de execução
+
+1. Bloco 1.6 (1 hook + 2 edits de UI) — rápido, fecha 1.2.
+2. Bloco 1.4 migration (templates + requirements + deal_documents + bucket + view + can_advance_stage update).
+3. Bloco 1.4 edge function clicksign-mock.
+4. Bloco 1.4 hooks + componentes + plug em UnifiedDealPage e Kanban.
+
+Aprovar D8–D12 + ordem → executo direto.
