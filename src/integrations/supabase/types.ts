@@ -2096,6 +2096,23 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_access_logs_v: {
+        Row: {
+          action: string | null
+          advisor_name: string | null
+          cnpj: string | null
+          codename: string | null
+          context: string | null
+          created_at: string | null
+          disclosure_mode: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string | null
+          razao_social: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       eb_buyer_preferences_history: {
         Row: {
           after_snap: Json | null
@@ -4728,6 +4745,16 @@ export type Database = {
           p_metadata?: Json
           p_notes?: string
           p_rejection_reason?: string
+        }
+        Returns: string
+      }
+      eb_log_identity_access: {
+        Args: {
+          p_cnpj?: string
+          p_context?: string
+          p_disclosure_mode?: string
+          p_entity_id: string
+          p_entity_type: string
         }
         Returns: string
       }

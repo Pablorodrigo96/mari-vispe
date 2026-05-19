@@ -4,6 +4,7 @@ import { FileText, Upload, ExternalLink, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { useLogActivity } from "@/hooks/useCrm";
 import { useCompanyListing } from "@/hooks/useCompanyListing";
+import { useAutoLogIdentityAccess } from "@/hooks/useLogIdentityAccess";
 import { relativeTime } from "@/lib/equityBrain";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +53,15 @@ export function DocumentsPanel({ entityType, entityId, companyContext }: Props) 
 
   const cnpj = companyContext?.cnpj ?? null;
   const { data: listing } = useCompanyListing(cnpj);
+
+  // Auto-log: ver documentos com identidade real conta como "implicit disclosure"
+  useAutoLogIdentityAccess({
+    enabled: !!cnpj,
+    entityType,
+    entityId,
+    cnpj,
+    context: "docs_panel",
+  });
 
   async function load() {
     const out: UnifiedDoc[] = [];

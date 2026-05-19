@@ -3,6 +3,7 @@ import { Eye, Copy, MessageCircle, ExternalLink, ChevronDown } from "lucide-reac
 import { toast } from "sonner";
 import { useCompanyListing } from "@/hooks/useCompanyListing";
 import { useTeaserAccessLog } from "@/hooks/useTeaserAccessLog";
+import { useLogIdentityAccess } from "@/hooks/useLogIdentityAccess";
 import { getWhatsAppLink } from "@/lib/whatsapp";
 
 interface Props {
@@ -23,6 +24,7 @@ interface Props {
 export function BlindTeaserButton({ cnpj, entityType, entityId }: Props) {
   const { data: listing, isLoading } = useCompanyListing(cnpj);
   const { log } = useTeaserAccessLog();
+  const { log: logIdentity } = useLogIdentityAccess();
   const [open, setOpen] = useState(false);
 
   const ticker = listing?.ticker;
@@ -55,6 +57,9 @@ export function BlindTeaserButton({ cnpj, entityType, entityId }: Props) {
 
   const handleOpen = () => {
     log("teaser_view", { entityType, entityId, listingId: listing!.id, ticker });
+    if (entityType && entityId) {
+      logIdentity({ entityType, entityId, cnpj, context: "blind_teaser_open" });
+    }
     window.open(url, "_blank", "noopener,noreferrer");
     setOpen(false);
   };

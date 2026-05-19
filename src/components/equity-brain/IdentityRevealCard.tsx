@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, Unlock, ShieldCheck } from "lucide-react";
 import { useIdentityVisibility } from "@/hooks/useIdentityVisibility";
 import { useTeaserAccessLog } from "@/hooks/useTeaserAccessLog";
+import { useAutoLogIdentityAccess, useLogIdentityAccess } from "@/hooks/useLogIdentityAccess";
 
 interface Props {
   entityType: "mandate" | "buyer";
@@ -41,7 +42,17 @@ export function IdentityRevealCard({
 }: Props) {
   const { data: canSee } = useIdentityVisibility({ cnpj });
   const { log } = useTeaserAccessLog();
+  const { log: logIdentity } = useLogIdentityAccess();
   const [open, setOpen] = useState(false);
+
+  // Auto-log implicit disclosure quando o card é exibido (canSee=true) na tela
+  useAutoLogIdentityAccess({
+    enabled: !!canSee,
+    entityType,
+    entityId,
+    cnpj,
+    context: "identity_card",
+  });
 
   if (!canSee) return null;
 
@@ -50,6 +61,8 @@ export function IdentityRevealCard({
     setOpen(next);
     if (next) {
       log("identity_reveal", { entityType, entityId });
+      // Registra também na trilha unificada com contexto 'identity_expand'
+      logIdentity({ entityType, entityId, cnpj, context: "identity_expand" });
     }
   };
 
