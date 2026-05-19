@@ -206,3 +206,28 @@ export default function UnifiedDealPage() {
     </div>
   );
 }
+
+function StageTasksSection({ mandateId, stageKey }: { mandateId: string; stageKey: string }) {
+  const { data: progress } = useDealStageProgress(mandateId);
+  const cur = (progress ?? []).find((p) => p.stage_key === stageKey);
+  const done = cur?.done ?? 0;
+  const total = cur?.total ?? 0;
+  const blocking = cur?.pending_blocking ?? 0;
+  return (
+    <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 inline-flex items-center gap-1">
+          <CheckSquare className="h-3 w-3 text-[#D9F564]" /> Tarefas desta etapa
+        </div>
+        <div className="text-[10px] tabular-nums text-zinc-400">
+          {done}/{total}
+          {blocking > 0 && (
+            <span className="ml-1.5 text-rose-300">· {blocking} bloqueante{blocking > 1 ? "s" : ""}</span>
+          )}
+        </div>
+      </div>
+      <StageTasksChecklist dealId={mandateId} stageKey={stageKey} compact />
+    </div>
+  );
+}
+
