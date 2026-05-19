@@ -1,69 +1,118 @@
-# Próxima fase: Bloco 1.5 (fechamento Fase 1) + Bloco 2.1 (kickoff Fase 2)
 
-Com 1.1–1.4 + 1.6 entregues (roles, tasks, docs + assinatura mock, identity reveal, audit), faltam dois passos pra fechar Fase 1 e abrir Fase 2.
+# Geração Inteligente de Documentos Legais — Plano de Integração
 
----
+Integração ao Equity Brain existente. Reaproveita `deal_documents`, `doc_templates`, bucket `deal-documents`, AppShell, painéis de stage.
 
-## Bloco 1.5 — NDA flow + gating de UI por role (`legal`, `observer`)
+## Decisões consolidadas
 
-Sem novas tabelas grandes. Costura de regras de acesso + fluxo NDA usando o que já existe (`deal_documents`, `clicksign-mock`, `IdentityRevealCard`).
+| Tema | Decisão |
+|---|---|
+| Motor IA | **Anthropic direto** (Claude Sonnet 4.5 para NDA/NBO, Claude Opus 4.1 para SPA/TS) |
+| Aprovador antes do advogado | Role `admin` existente |
+| Entrega ao advogado | **Link público com token** + **e-mail Resend** (quando configurado) |
+| Assinatura | **Sistema interno próprio** (sem ClickSign) |
+| Templates | Começar com placeholders estruturados; admin substitui via UI |
 
-### Banco (migration enxuta)
-- Adicionar coluna `nda_signed_at timestamptz` em `eb_buyers` (ou view derivada se já houver registro em `deal_documents` com `category='nda'` + `status='signed'`).
-- RPC `public.buyer_has_signed_nda(_buyer_id uuid, _deal_id uuid) returns boolean` consultando `deal_documents`.
-- Atualizar RPC `eb_can_view_identity(deal_id)` (já existe pra advisor/admin) pra também liberar buyer **quando NDA assinado** no contexto daquele deal.
-- Trigger: ao inserir `deal_documents` `category='nda' status='signed'`, gravar `audit_events` `nda_signed` + atualizar `nda_signed_at`.
+## Fases (uma de cada vez, 100% funcional antes de avançar)
 
-### Frontend
-1. **`useUserRole`** já existe — expor helpers `isLegal`, `isObserver` (read-only global no EB).
-2. **`StageDocumentsPanel`** — esconder botões de upload/archive/signature pra `observer`; permitir pra `legal` em qualquer stage.
-3. **`StageTasksChecklist`** — `observer` vê check disabled.
-4. **`PipelineKanbanPage`** — `observer` não arrasta cards (drag handlers no-op).
-5. **`UnifiedDealPage` (lado buyer)** — novo card `NDARequiredCard` quando buyer logado tenta ver identidade e ainda não assinou NDA do deal: botão "Assinar NDA" → gera doc via template `nda_mutuo` + dispara `clicksign-mock` → polling status; ao assinar, `IdentityRevealCard` libera sozinho.
-6. **`AdminUsers`** — badges visuais distintos pros novos roles + filtro por role.
+### FASE 0 — Fundações (uma migration + um wrapper)
 
-### Auditoria
-- Novos `audit_events`: `nda_requested`, `nda_signed`, `observer_blocked_action` (telemetria de UI gating).
+**0.1 Secret `ANTHROPIC_API_KEY`** — pedirei via `add_secret`.
 
----
+**0.2 Wrapper `_shared/anthropicGateway.ts`** — espelha `apiTrack.ts`:
+- `callAnthropic({ model, system, messages, max_tokens })` → POST `https://api.anthropic.com/v1/messages`
+- Headers: `x-api-key`, `anthropic-version: 2023-06-01`
+- Loga em `api_usage_logs` (provider=`anthropic`, model, tokens, custo via `api_pricing`)
+- Trata 429/529/insufficient_quota com fallback ao Gemini (Lovable Gateway) para não travar fluxo
 
-## Bloco 2.1 — Buyer Deal Room v1 (kickoff Fase 2)
+**0.3 Migration de schema:**
+- `doc_templates`: + `template_body text`, + `customizable_fields jsonb`, + `static_clauses jsonb`, + `ai_instructions text`, + `parts jsonb` (para SPA modular)
+- `deal_documents`: + `generated_body text`, + `custom_fields_snapshot jsonb`, + `version_number int default 1`, + `parent_version_id uuid`, + `requires_partner_approval boolean default true`, + `partner_approved_at timestamptz`, + `partner_approved_by uuid`, + `partner_comments text`, + `homologation_status text` (`none|pending|approved|rejected`)
+- `legal_homologations` (nova): `id`, `document_id`, `lawyer_name`, `lawyer_email`, `access_token` (uuid único), `sent_at`, `viewed_at`, `decision` (`approved|rejected|changes_requested`), `comments`, `decided_at`, `expires_at`
+- `internal_signatures` (nova): `id`, `document_id`, `signer_user_id` (nullable se externo), `signer_email`, `signer_name`, `signer_role` (`seller|buyer|witness`), `sign_token`, `signed_at`, `ip`, `user_agent`, `signature_hash` (SHA-256 do PDF+timestamp+IP), `signature_image` (storage path opcional de assinatura desenhada)
+- Bucket `legal-signatures` (privado) para imagens de assinatura desenhada e PDFs finais com selo
+- Trigger `audit_events` para toda decisão de aprovação/homologação/assinatura
 
-Rota nova `/equity-brain/sala/:dealId` exclusiva pro buyer aprovado (NDA assinado + match ativo).
-
-### Banco
-- Tabela `buyer_deal_access` (`id`, `deal_id`, `buyer_id`, `granted_by`, `granted_at`, `revoked_at`, `access_level` `'teaser'|'full'`).
-- View `buyer_deal_room` (security_invoker) consolidando: teaser blind, identity (se liberada), docs visíveis pro buyer, marcos do pipeline (sem detalhes internos), checklist DD do lado buyer.
-- RLS: buyer só vê linhas onde `buyer_id = (select buyer of auth.uid())` e `revoked_at is null`.
-
-### Frontend
-1. **`src/pages/buyer/DealRoomPage.tsx`** — layout 2 colunas:
-   - **Esquerda**: visão do alvo (blind/identity conforme NDA), métricas, KPIs.
-   - **Direita**: timeline pública do deal (etapas atingidas), docs disponíveis, próximos passos, botão WhatsApp pro advisor.
-2. **`useBuyerDealRoom(dealId)`** hook.
-3. **`BuyerDealAccessManager`** dentro de `UnifiedDealPage` (lado advisor) — conceder/revogar acesso, listar buyers ativos.
-4. **`BuyerSidebar`** — novo item "Minhas salas" listando deals com acesso ativo.
-
-### Auditoria
-- `deal_room_opened`, `deal_room_doc_downloaded`, `buyer_access_granted/revoked`.
+**RLS:** seguir padrão existente (admin/advisor/legal = full; buyer só vê `visible_to_buyer=true` + `buyer_has_active_access`); homologação pública por `access_token` (RPC `homologation_get_by_token` security definer); assinatura pública por `sign_token` (RPC `signature_get_by_token`).
 
 ---
 
-## Decisões propostas (default ✅)
+### FASE 1 — NDA end-to-end (referência arquitetural)
 
-- **D13** NDA usa template `nda_mutuo` já seedado em 1.4; mock por padrão, real Clicksign fica pra Fase 3. ✅
-- **D14** `observer` é read-only global no EB (não só docs/tasks); `legal` é editor full em docs/NDA/SPA, sem permissão pra mover pipeline. ✅
-- **D15** Buyer Deal Room é **opt-in** por buyer — advisor concede acesso explícito; sem auto-grant em match. ✅
-- **D16** Documentos visíveis ao buyer = subset com flag `visible_to_buyer` (novo bool em `deal_documents`, default false). ✅
+**Edge Functions:**
+1. `mari-generate-document` — recebe `{deal_id, template_code, custom_fields, mode}` → busca template, hidrata variáveis, monta prompt, chama `callAnthropic('claude-sonnet-4-5')`, persiste em `deal_documents.generated_body`, cria versão.
+2. `document-partner-approval` — admin aprova/reprova; muda `partner_approved_at`, libera próxima etapa.
+3. `homologation-send` — gera `access_token`, salva em `legal_homologations`, retorna URL pública `/homologacao/:token` e (se Resend ativo) dispara e-mail.
+4. `homologation-decide` — pública via token, registra decisão + comentários.
+5. `internal-signature-request` — cria tokens de assinatura para cada signatário, envia (e-mail + link) ou retorna URLs.
+6. `internal-signature-sign` — pública via token; aceita `{signature_image_base64, accept_terms}`; valida IP/UA; grava hash; quando todos assinarem, gera PDF final com selo (HTML→PDF via `npm:html-pdf-node`) e sobe a `legal-signatures`.
+
+**Frontend (em `/equity-brain/deal/:id` aba "Documentos"):**
+- `<DocumentGenerationWizard />` — 3 steps: (1) escolher template, (2) preencher `customizable_fields` (gerado a partir do schema), (3) revisar + gerar.
+- `<DocumentReviewer />` — editor markdown side-by-side, versioning visual, botão "Solicitar aprovação do sócio".
+- `<PartnerApprovalPanel />` — visível só p/ admin, lista pendentes, aprova/rejeita com comentário.
+- `<LegalHomologationLauncher />` — após aprovação, abre modal "Enviar para advogado": nome, e-mail, copia link OU envia e-mail.
+- Página pública `/homologacao/:token` — visualizador read-only + 3 botões (Aprovar / Solicitar mudanças / Rejeitar) + textarea.
+- `<InternalSignatureLauncher />` — após homologação, escolhe signatários (seller user + buyer user via `buyer_deal_access` + testemunhas), dispara.
+- Página pública `/assinar/:token` — visualiza PDF, checkbox de aceite, canvas para desenhar assinatura (lib `react-signature-canvas`), confirma.
+- Badge no Kanban: status do doc (rascunho → aprov. sócio → homolog. → assinatura → assinado).
+
+**Teste manual (eu entrego o passo-a-passo):** criar deal de teste → gerar NDA → aprovar como admin → enviar homologação → abrir link anônimo → aprovar → disparar assinatura → assinar em duas sessões → conferir PDF final + audit_events.
 
 ---
 
-## Ordem de execução
+### FASE 2 — NBO
+Mesma arquitetura. Diferenças:
+- Template com cláusulas de valor, prazo, condições suspensivas (campos no `customizable_fields`).
+- Validação extra na edge function: valores em formato BR, datas futuras, CNPJ comprador válido.
+- Reusa todos os componentes da Fase 1.
 
-1. Migration 1.5 (NDA helpers + RLS update em `eb_can_view_identity`).
-2. Frontend 1.5 (gating + NDARequiredCard).
-3. Migration 2.1 (`buyer_deal_access` + view `buyer_deal_room` + `visible_to_buyer` em `deal_documents`).
-4. Frontend 2.1 (DealRoomPage + manager + sidebar buyer).
-5. Smoke test end-to-end: advisor concede acesso → buyer entra na sala → assina NDA → vê identity + docs liberados.
+### FASE 3 — Term Sheet
+- Template enxuto (1-2 páginas). Modelo Opus para garantir linguagem precisa.
+- Reusa pipeline.
 
-Aprovar D13–D16 + ordem → executo direto.
+### FASE 4 — SPA modular
+- `doc_templates.parts` define seções (Definições, Objeto, Preço, Reps&Warranties, Indenizações, Condições, etc.).
+- Wizard expandido: usuário escolhe quais partes ativar e completa fields por parte.
+- Geração em paralelo (uma chamada Claude Opus por parte) + merge final.
+- Mantém aprovação/homologação/assinatura iguais.
+
+---
+
+## Detalhes técnicos críticos
+
+**Custo Anthropic:** registrado em `api_pricing` (provider=`anthropic`, models=`claude-sonnet-4-5`, `claude-opus-4-1`). Dashboard admin de custos já existe — só ler.
+
+**Versionamento:** cada regeneração ou edição manual cria nova linha em `deal_documents` com `parent_version_id`. Aprovação fica atrelada à versão exata.
+
+**LGPD/audit:** toda visualização de doc por advogado externo + assinatura grava em `audit_events` (entity_type=`legal_document`, payload com IP/UA).
+
+**Assinatura interna — valor jurídico:** modelo "assinatura eletrônica simples" (MP 2.200-2/2001 art. 10 §2º). Coletamos: aceite expresso + IP + UA + timestamp servidor + hash SHA-256 do PDF + opcional assinatura grafotécnica desenhada. Gera "Certificado de Assinatura" anexado ao PDF com trilha completa. Não é ICP-Brasil — comunicar isso na UI.
+
+**E-mail Resend:** opcional. Se `RESEND_API_KEY` ausente, sistema funciona 100% com links copiáveis. Quando presente, dispara automaticamente.
+
+**Fallback Gemini:** se Anthropic 429/down, edge function tenta `google/gemini-2.5-pro` via Lovable Gateway e marca `generated_body_fallback=true` para revisão obrigatória.
+
+---
+
+## O que NÃO faço neste plano
+- Não toco em `clicksign-mock` (fica vivo para outros fluxos não-legais)
+- Não mudo `mari-brain` nem deals/CRM existentes
+- Não substituo `stage_documents` — adiciono camada "legal" em cima
+
+---
+
+## Ordem de entrega da Fase 1 (próximas mensagens, sequenciais)
+
+1. `add_secret` → ANTHROPIC_API_KEY (+ RESEND_API_KEY opcional)
+2. Migration única (schema + RLS + RPC + buckets) → aguardo seu OK
+3. `_shared/anthropicGateway.ts` + `mari-generate-document`
+4. UI Wizard + Reviewer
+5. Fluxo aprovação sócio
+6. Fluxo homologação + página pública
+7. Fluxo assinatura interna + página pública + PDF final
+8. Teste manual passo-a-passo entregue por escrito
+
+Cada item acima vira uma mensagem fechada com verificação antes do próximo.
+
+**Aprova esse plano para eu começar pela Fase 0/1?**
