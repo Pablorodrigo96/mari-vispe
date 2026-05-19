@@ -91,15 +91,20 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
         <div className="text-[10px] uppercase tracking-wider text-zinc-500 inline-flex items-center gap-1">
           <FileText className="h-3 w-3 text-[#D9F564]" /> Documentos desta etapa
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onPickFile(null)}
-          disabled={upload.isPending}
-          className="h-7 bg-transparent text-[11px]"
-        >
-          <Upload className="h-3 w-3 mr-1" /> Anexar livre
-        </Button>
+        {canEditEB && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onPickFile(null)}
+            disabled={upload.isPending}
+            className="h-7 bg-transparent text-[11px]"
+          >
+            <Upload className="h-3 w-3 mr-1" /> Anexar livre
+          </Button>
+        )}
+        {isReadOnly && (
+          <span className="text-[10px] text-zinc-500">somente leitura</span>
+        )}
       </div>
 
       <input ref={fileInputRef} type="file" hidden onChange={handleFile} />
