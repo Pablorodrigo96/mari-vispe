@@ -1,47 +1,65 @@
-## O que vamos resolver
+## Contexto
 
-**Bug do erro `value too long for type character varying(14)`**
-A coluna `equity_brain.mandates.company_cnpj` (e `companies.cnpj`) é `varchar(14)` — espera só os 14 dígitos. O formulário envia o CNPJ mascarado (`50.604.596/0001-07` = 18 chars) direto pra RPC `eb_upsert_mandate`, daí o estouro.
+A tabela `public.whatsapp_messages` já tem RLS que restringe SELECT a `advisor_id = auth.uid()` ou admin. O único consumer do canal Realtime é `src/pages/admin/AdminWhatsAppMonitor.tsx` (rota admin), usando `postgres_changes` — e o Postgres Changes do Realtime respeita o RLS da tabela, então payloads não vazam.
 
-**Auto-preenchimento ao digitar o CNPJ**
-Já existe `useNationalSearch().lookupCnpj()` que consulta a base RFB + BrasilAPI e devolve razão social, fantasia, UF, CNAE, setor, telefone, e-mail etc. Hoje só é usado no Sell Wizard. Vamos plugá-lo no `MandateFormPage`.
+Mesmo assim, o scanner aponta (corretamente) que **qualquer authenticated consegue abrir o canal** `whatsapp_messages_admin` ou usar `topic:whatsapp_messages:*`. A inscrição em si não retorna dados sensíveis hoje, mas é defense-in-depth fraco. A correção recomendada é usar **Realtime Authorization** (RLS na tabela `realtime.messages`) para restringir o *subscribe*.
 
-## Mudanças (somente frontend — `src/pages/equity-brain/MandateFormPage.tsx`)
+## Plano
 
-1. **Normalizar CNPJ antes de salvar**
-   - No `submit()`, mandar `company_cnpj: form.company_cnpj.replace(/\D/g, '')` no payload da RPC.
-   - Validar que tem 14 dígitos antes de chamar (`toast.error("CNPJ inválido")`).
+### 1. Migration — RLS no `realtime.messages`
 
-2. **Máscara no input de CNPJ**
-   - Reutilizar `maskCnpj` de `src/lib/mariWindowHeuristic.ts` (já usado em `CnpjInput`).
-   - Aplicar `onChange` para formatar visualmente.
+Habilitar RLS na tabela `realtime.messages` (se ainda não estiver) e adicionar policy que só deixa admin ou advisor com WhatsApp conectado se inscrever em tópicos que começam com `whatsapp_messages`.
 
-3. **Lookup automático ao completar 14 dígitos**
-   - Importar `useNationalSearch` e chamar `lookupCnpj(clean)` num `useEffect` que dispara quando `cleanDigits.length === 14`.
-   - Indicador de loading discreto ("Consultando Receita…").
-   - Toast de sucesso ("Dados preenchidos automaticamente") ou aviso ("CNPJ não encontrado na base — preencha manualmente").
+```sql
+ALTER PUBLICATION supabase_realtime SET (publish = 'insert,update,delete');
+-- garante que realtime.messages está com RLS
+ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
 
-4. **Mapear resposta → form (só preenche campos vazios, não sobrescreve o que advisor já digitou)**
-   ```text
-   razao_social      ← company.razao_social
-   nome_fantasia     ← company.nome_fantasia
-   uf                ← company.uf || company.state
-   setor             ← company.cnae_principal_descricao || company.category
-   regiao            ← derivado da UF (SP/RJ/MG/ES → sudeste, etc.)
-   contato_telefone  ← company.phone || company.telefone (se vazio)
-   contato_email     ← company.email (se vazio)
-   ```
+CREATE POLICY "wa_realtime_subscribe_admin_or_advisor"
+ON realtime.messages FOR SELECT
+TO authenticated
+USING (
+  (realtime.topic() LIKE 'whatsapp_messages%') 
+  AND (
+    public.has_role(auth.uid(), 'admin'::app_role)
+    OR EXISTS (
+      SELECT 1 FROM public.advisor_whatsapp_config
+      WHERE advisor_id = auth.uid()
+    )
+  )
+);
+```
 
-5. **Helper `ufToRegiao`** (inline no arquivo, ~10 linhas) com os 5 mapeamentos já usados nos selects.
+Observação: políticas em `realtime.messages` afetam apenas tópicos que usam o *private channel* do Realtime (`{ private: true }`). Tópicos públicos continuam abertos. Por isso o passo 2 é obrigatório.
 
-## O que **não** vamos mexer
+### 2. Frontend — usar canal privado
 
-- RPC `eb_upsert_mandate`, schema do banco, ou `varchar(14)` — o fix é no frontend (normalizar antes de enviar), evitando migração.
-- `useNationalSearch`, `national-search` edge function, BrasilAPI fallback — tudo já pronto.
-- Nenhuma outra rota / componente.
+Em `src/pages/admin/AdminWhatsAppMonitor.tsx` (linha 256), trocar:
 
-## Como vou testar
+```ts
+supabase.channel("whatsapp_messages_admin")
+```
 
-1. Abrir `/equity-brain/crm/mandate/new`, digitar `50604596000107` → ver razão social "Gummy Sevpon…", UF, setor preenchidos automaticamente.
-2. Clicar "Salvar mandato" → sem erro de varchar, redireciona pra `/equity-brain/crm/mandate/:id`.
-3. Digitar CNPJ inexistente → toast "não encontrado", formulário continua editável.
+por:
+
+```ts
+supabase.channel("whatsapp_messages_admin", { config: { private: true } })
+```
+
+Sem outras mudanças — `postgres_changes` continua funcionando igual; o que muda é que o subscribe agora exige passar pela policy de `realtime.messages`.
+
+### 3. Validação
+
+- Logar como admin → AdminWhatsAppMonitor deve continuar recebendo updates em tempo real.
+- Logar como buyer/seller comum e tentar `supabase.channel('whatsapp_messages_x', { config: { private: true } }).subscribe()` no console → deve retornar `CHANNEL_ERROR`.
+- Rodar linter Supabase para confirmar que o finding `whatsapp_messages_realtime_no_channel_policy` foi resolvido.
+
+### 4. Memória de segurança
+
+Atualizar `@security-memory` registrando que canais Realtime do `whatsapp_messages` agora usam private channel + policy em `realtime.messages`, e remover/atualizar a justificativa antiga do finding ignorado.
+
+## Arquivos afetados
+
+- Nova migration SQL (RLS em `realtime.messages`).
+- `src/pages/admin/AdminWhatsAppMonitor.tsx` (1 linha — adicionar `{ config: { private: true } }`).
+- Atualização da security memory.

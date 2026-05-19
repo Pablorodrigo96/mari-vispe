@@ -253,7 +253,7 @@ function AdminWhatsAppMonitorInner() {
   useEffect(() => {
     refreshIntents();
     const channel = supabase
-      .channel("whatsapp_messages_admin")
+      .channel("whatsapp_messages_admin", { config: { private: true } })
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "whatsapp_messages" },
