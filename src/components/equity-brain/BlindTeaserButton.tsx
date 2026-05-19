@@ -24,6 +24,7 @@ interface Props {
 export function BlindTeaserButton({ cnpj, entityType, entityId }: Props) {
   const { data: listing, isLoading } = useCompanyListing(cnpj);
   const { log } = useTeaserAccessLog();
+  const { log: logIdentity } = useLogIdentityAccess();
   const [open, setOpen] = useState(false);
 
   const ticker = listing?.ticker;
