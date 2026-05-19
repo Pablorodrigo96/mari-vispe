@@ -89,12 +89,20 @@ export default function PipelineKanbanPage() {
   });
 
   const move = useMutation({
-    mutationFn: async ({ id, stage }: { id: string; stage: string }) => {
+    mutationFn: async ({ id, stage, from }: { id: string; stage: string; from?: string | null }) => {
       const { error } = await supabase
         .from("eb_mandates" as any)
         .update({ pipeline_stage: stage })
         .eq("id", id);
       if (error) throw error;
+      // Audit trail (best-effort)
+      logAuditEvent({
+        dealId: id,
+        entityType: "pipeline",
+        entityId: id,
+        eventType: "stage_changed",
+        payload: { from_stage: from ?? null, to_stage: stage },
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pipeline-kanban-v2"] });
