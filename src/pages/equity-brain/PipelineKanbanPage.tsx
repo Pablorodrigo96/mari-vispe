@@ -15,8 +15,9 @@ import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { cn } from "@/lib/utils";
 import { logAuditEvent } from "@/services/audit/auditService";
-import { canAdvanceStage } from "@/hooks/useStageTasks";
+import { canAdvanceStage, useDealStageProgress } from "@/hooks/useStageTasks";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { CheckSquare } from "lucide-react";
 
 type Mandate = {
   id: string;
