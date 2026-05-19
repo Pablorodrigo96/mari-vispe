@@ -5308,6 +5308,12 @@ export type Database = {
       }
     }
     Functions: {
+      _notify_staff_user_ids: {
+        Args: never
+        Returns: {
+          user_id: string
+        }[]
+      }
       approve_advisor_request: {
         Args: { p_request_id: string }
         Returns: undefined
