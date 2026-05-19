@@ -1843,6 +1843,102 @@ export type Database = {
         }
         Relationships: []
       }
+      stage_task_templates: {
+        Row: {
+          applies_to: string
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_blocking: boolean
+          is_required: boolean
+          label: string
+          position: number
+          stage_key: string
+          updated_at: string
+        }
+        Insert: {
+          applies_to?: string
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_blocking?: boolean
+          is_required?: boolean
+          label: string
+          position?: number
+          stage_key: string
+          updated_at?: string
+        }
+        Update: {
+          applies_to?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_blocking?: boolean
+          is_required?: boolean
+          label?: string
+          position?: number
+          stage_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stage_tasks: {
+        Row: {
+          created_at: string
+          deal_id: string
+          done_at: string | null
+          done_by: string | null
+          due_at: string | null
+          id: string
+          is_blocking: boolean
+          is_required: boolean
+          label: string
+          note: string | null
+          stage_key: string
+          status: string
+          template_code: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deal_id: string
+          done_at?: string | null
+          done_by?: string | null
+          due_at?: string | null
+          id?: string
+          is_blocking?: boolean
+          is_required?: boolean
+          label: string
+          note?: string | null
+          stage_key: string
+          status?: string
+          template_code: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string
+          done_at?: string | null
+          done_by?: string | null
+          due_at?: string | null
+          id?: string
+          is_blocking?: boolean
+          is_required?: boolean
+          label?: string
+          note?: string | null
+          stage_key?: string
+          status?: string
+          template_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -2321,6 +2417,17 @@ export type Database = {
           time_in_previous_stage_seconds: number | null
           to_stage: string | null
           transition_id: string | null
+        }
+        Relationships: []
+      }
+      deal_stage_progress: {
+        Row: {
+          deal_id: string | null
+          done: number | null
+          pct_done: number | null
+          pending_blocking: number | null
+          stage_key: string | null
+          total: number | null
         }
         Relationships: []
       }
@@ -4955,6 +5062,10 @@ export type Database = {
         Args: { p_listing_id: string }
         Returns: number
       }
+      can_advance_stage: {
+        Args: { _deal_id: string; _from_stage: string }
+        Returns: boolean
+      }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       eb_ai_runs_by_date: {
         Args: { p_date: string }
@@ -5308,6 +5419,10 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      instantiate_stage_tasks: {
+        Args: { _deal_id: string; _stage_key: string }
+        Returns: number
+      }
       log_audit_event: {
         Args: {
           _deal_id: string
@@ -5394,7 +5509,14 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "seller" | "buyer" | "advisor" | "admin" | "franchisee"
+      app_role:
+        | "seller"
+        | "buyer"
+        | "advisor"
+        | "admin"
+        | "franchisee"
+        | "legal"
+        | "observer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5522,7 +5644,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["seller", "buyer", "advisor", "admin", "franchisee"],
+      app_role: [
+        "seller",
+        "buyer",
+        "advisor",
+        "admin",
+        "franchisee",
+        "legal",
+        "observer",
+      ],
     },
   },
 } as const
