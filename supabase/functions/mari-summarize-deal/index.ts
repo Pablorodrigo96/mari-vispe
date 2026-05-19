@@ -7,6 +7,7 @@ import { trackedAIFetch } from "../_shared/apiTrack.ts";
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { withObservability } from "../_shared/observability.ts";
+import { requireAuth, authErrorResponse } from "../_shared/authGate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,6 +88,9 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<{
 
 async function handler(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const auth = await requireAuth(req, { requireAnyRole: ["admin", "advisor"] });
+  if (!auth.ok) return authErrorResponse(auth, corsHeaders);
 
   const supa = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
   const body = await req.json().catch(() => ({}));
