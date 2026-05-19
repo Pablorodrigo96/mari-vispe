@@ -394,6 +394,7 @@ function DealCard({
   onDragStart,
   onEdit,
   onReanimate,
+  canDrag = true,
 }: {
   m: Mandate;
   slaDays: number;
@@ -401,16 +402,18 @@ function DealCard({
   onDragStart: () => void;
   onEdit: () => void;
   onReanimate: () => void;
+  canDrag?: boolean;
 }) {
   const { status } = getStageTimeState(m.stage_changed_at, slaDays);
   const { openDeal } = useDealDrawer();
   const onOpen = () => openDeal(m.id);
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
+      draggable={canDrag}
+      onDragStart={canDrag ? onDragStart : undefined}
       className={cn(
-        "rounded border bg-zinc-900/80 hover:border-zinc-700 p-2.5 cursor-move group",
+        "rounded border bg-zinc-900/80 hover:border-zinc-700 p-2.5 group",
+        canDrag ? "cursor-move" : "cursor-pointer",
         status === "frozen" && !isTerminal ? "border-rose-700/60" : "border-zinc-800",
       )}
     >
