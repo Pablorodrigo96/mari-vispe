@@ -107,6 +107,9 @@ export default function DealDetailPage() {
           {tab === "overview" && (
             <div className="space-y-3">
               <div className="px-6">
+                <TriPosturaCard cnpj={resolved.cnpj} />
+              </div>
+              <div className="px-6">
                 <ClassifyThesisCard cnpj={resolved.cnpj} />
               </div>
               <DealCard cnpj={resolved.cnpj} mode="page" />
