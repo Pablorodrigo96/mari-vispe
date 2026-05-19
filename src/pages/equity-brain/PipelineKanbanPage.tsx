@@ -500,3 +500,25 @@ function DealCard({
     </div>
   );
 }
+
+function TaskProgressBadge({ mandateId, stageKey }: { mandateId: string; stageKey: string }) {
+  const { data } = useDealStageProgress(mandateId);
+  const cur = (data ?? []).find((p) => p.stage_key === stageKey);
+  if (!cur || cur.total === 0) return null;
+  const blocking = cur.pending_blocking ?? 0;
+  const complete = cur.done >= cur.total;
+  const cls = blocking > 0
+    ? "bg-rose-500/15 text-rose-300 border-rose-700/40"
+    : complete
+      ? "bg-emerald-500/15 text-emerald-300 border-emerald-700/40"
+      : "bg-zinc-800/60 text-zinc-300 border-zinc-700";
+  return (
+    <span
+      title={blocking > 0 ? `${blocking} tarefa(s) bloqueante(s) pendente(s)` : `${cur.done}/${cur.total} tarefas`}
+      className={cn("text-[9px] uppercase px-1.5 py-0.5 rounded border font-mono tabular-nums inline-flex items-center gap-0.5", cls)}
+    >
+      <CheckSquare className="h-2.5 w-2.5" />
+      {cur.done}/{cur.total}
+    </span>
+  );
+}
