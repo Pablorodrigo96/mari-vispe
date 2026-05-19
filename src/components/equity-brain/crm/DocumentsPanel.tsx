@@ -7,6 +7,7 @@ import { useCompanyListing } from "@/hooks/useCompanyListing";
 import { useAutoLogIdentityAccess } from "@/hooks/useLogIdentityAccess";
 import { relativeTime } from "@/lib/equityBrain";
 import { cn } from "@/lib/utils";
+import { logAuditEvent } from "@/services/audit/auditService";
 
 type Source = "crm" | "vdr" | "cadastro";
 
@@ -188,6 +189,20 @@ export function DocumentsPanel({ entityType, entityId, companyContext }: Props) 
         direction: "system",
         body: `Documento ${kind.toUpperCase()} v${nextVersion} carregado: ${file.name}`,
         metadata: { doc_kind: kind, version: nextVersion },
+      });
+
+      logAuditEvent({
+        dealId: entityType === "mandate" ? entityId : null,
+        entityType: "document",
+        entityId: ins.data?.id ?? null,
+        eventType: "doc_uploaded",
+        payload: {
+          target_entity_type: entityType,
+          target_entity_id: entityId,
+          doc_kind: kind,
+          version: nextVersion,
+          file_name: file.name,
+        },
       });
 
       toast.success("Documento carregado");

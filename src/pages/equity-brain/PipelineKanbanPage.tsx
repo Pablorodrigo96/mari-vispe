@@ -14,6 +14,7 @@ import { usePipelineStages, STAGE_COLOR_CLASSES } from "@/hooks/usePipelineStage
 import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { cn } from "@/lib/utils";
+import { logAuditEvent } from "@/services/audit/auditService";
 
 type Mandate = {
   id: string;
@@ -89,12 +90,20 @@ export default function PipelineKanbanPage() {
   });
 
   const move = useMutation({
-    mutationFn: async ({ id, stage }: { id: string; stage: string }) => {
+    mutationFn: async ({ id, stage, from }: { id: string; stage: string; from?: string | null }) => {
       const { error } = await supabase
         .from("eb_mandates" as any)
         .update({ pipeline_stage: stage })
         .eq("id", id);
       if (error) throw error;
+      // Audit trail (best-effort)
+      logAuditEvent({
+        dealId: id,
+        entityType: "pipeline",
+        entityId: id,
+        eventType: "stage_changed",
+        payload: { from_stage: from ?? null, to_stage: stage },
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pipeline-kanban-v2"] });
@@ -260,7 +269,10 @@ export default function PipelineKanbanPage() {
                 key={stage.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
-                  if (draggedId) move.mutate({ id: draggedId, stage: stage.key });
+                  if (draggedId) {
+                    const fromStage = (mandates ?? []).find((mm) => mm.id === draggedId)?.pipeline_stage ?? null;
+                    move.mutate({ id: draggedId, stage: stage.key, from: fromStage });
+                  }
                   setDraggedId(null);
                 }}
                 className={cn(

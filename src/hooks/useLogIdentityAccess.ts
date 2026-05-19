@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAuditEvent, type AuditEntityType } from "@/services/audit/auditService";
 
 /**
  * Throttled client-side logger for identity reveals.
@@ -40,6 +41,14 @@ export function useLogIdentityAccess() {
         p_context: args.context,
         p_disclosure_mode: "implicit",
       } as any);
+      // Mirror to immutable audit trail (best-effort)
+      logAuditEvent({
+        dealId: args.entityType === "mandate" ? args.entityId : null,
+        entityType: args.entityType as AuditEntityType,
+        entityId: args.entityId,
+        eventType: "identity_revealed",
+        payload: { context: args.context, cnpj: args.cnpj ?? null },
+      });
     } catch (e) {
       console.warn("[useLogIdentityAccess]", e);
     }
