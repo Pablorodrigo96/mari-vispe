@@ -41,7 +41,7 @@ export function StageDocumentsPanel({ dealId, stageKey }: Props) {
   const archive = useArchiveDealDocument(dealId);
   const requestSig = useRequestSignature(dealId);
   const simulateSign = useSimulateSign(dealId);
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, canEditEB, isReadOnly } = useUserRoles();
   const [pendingTemplate, setPendingTemplate] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
