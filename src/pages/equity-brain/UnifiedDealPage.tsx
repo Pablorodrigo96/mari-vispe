@@ -26,6 +26,7 @@ export default function UnifiedDealPage() {
   const matchQ = useMatchById(dealQ.data?.match_id);
   const updateStage = useUpdateDealStage();
   const { data: stages = [] } = usePipelineStages();
+  const { isAdmin, isAdvisor } = useUserRoles();
 
   if (dealQ.isLoading) {
     return (
