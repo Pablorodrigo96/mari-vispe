@@ -69,6 +69,9 @@ export function EBSidebar() {
   const adminActive = location.pathname.startsWith("/equity-brain/admin");
   const [dashOpen, setDashOpen] = useState(dashboardsActive);
   const [adminOpen, setAdminOpen] = useState(adminActive);
+  const verticalsActive = location.pathname.startsWith("/equity-brain/vertical/");
+  const [vertOpen, setVertOpen] = useState(verticalsActive);
+  const { data: verticals = [] } = useVerticalRegistry({ onlyActive: true });
 
   const hojeActive = location.pathname === "/equity-brain/hoje";
   const diarioActive = location.pathname.startsWith("/equity-brain/diario");
