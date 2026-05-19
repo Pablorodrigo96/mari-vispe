@@ -8,6 +8,10 @@ import { usePipelineStages, STAGE_COLOR_CLASSES } from "@/hooks/usePipelineStage
 import { brl } from "@/lib/dealFormatters";
 import { cn } from "@/lib/utils";
 import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
+import { StageTasksChecklist } from "@/components/equity-brain/crm/StageTasksChecklist";
+import { useDealStageProgress } from "@/hooks/useStageTasks";
+import { StageDocumentsPanel } from "@/components/equity-brain/crm/StageDocumentsPanel";
+import { CheckSquare } from "lucide-react";
 
 /**
  * Página unificada do Deal: mandato + buyer movimentados juntos no pipeline.
@@ -132,6 +136,19 @@ export default function UnifiedDealPage() {
             </div>
           )}
 
+          {/* Tarefas desta etapa */}
+          {deal.mandate_id && (
+            <StageTasksSection mandateId={deal.mandate_id} stageKey={deal.stage} />
+          )}
+
+          {/* Documentos desta etapa */}
+          {deal.mandate_id && (
+            <StageDocumentsPanel dealId={deal.mandate_id} stageKey={deal.stage} />
+          )}
+
+
+
+
           {/* Notas / status */}
           <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
             <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Status do deal</div>
@@ -197,3 +214,28 @@ export default function UnifiedDealPage() {
     </div>
   );
 }
+
+function StageTasksSection({ mandateId, stageKey }: { mandateId: string; stageKey: string }) {
+  const { data: progress } = useDealStageProgress(mandateId);
+  const cur = (progress ?? []).find((p) => p.stage_key === stageKey);
+  const done = cur?.done ?? 0;
+  const total = cur?.total ?? 0;
+  const blocking = cur?.pending_blocking ?? 0;
+  return (
+    <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 inline-flex items-center gap-1">
+          <CheckSquare className="h-3 w-3 text-[#D9F564]" /> Tarefas desta etapa
+        </div>
+        <div className="text-[10px] tabular-nums text-zinc-400">
+          {done}/{total}
+          {blocking > 0 && (
+            <span className="ml-1.5 text-rose-300">· {blocking} bloqueante{blocking > 1 ? "s" : ""}</span>
+          )}
+        </div>
+      </div>
+      <StageTasksChecklist dealId={mandateId} stageKey={stageKey} compact />
+    </div>
+  );
+}
+

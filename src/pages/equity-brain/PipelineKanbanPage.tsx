@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useDealDrawer } from "@/contexts/DealDrawerContext";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, GripVertical, DollarSign, Pencil, FolderOpen, FileSignature, Settings2, Snowflake, History, RotateCcw } from "lucide-react";
+import { ArrowLeft, GripVertical, DollarSign, Pencil, FolderOpen, FileSignature, Settings2, Snowflake, History, RotateCcw, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { brl, DEAL_TYPE_LABEL } from "@/lib/dealFormatters";
 import { TemperatureBadge } from "@/components/equity-brain/crm/TemperatureBadge";
@@ -15,8 +15,10 @@ import { InfoHint } from "@/components/equity-brain/InfoHint";
 import { PageHeaderHint } from "@/components/ui/PageHeaderHint";
 import { cn } from "@/lib/utils";
 import { logAuditEvent } from "@/services/audit/auditService";
-import { canAdvanceStage } from "@/hooks/useStageTasks";
+import { canAdvanceStage, useDealStageProgress } from "@/hooks/useStageTasks";
+import { useDealDocProgress } from "@/hooks/useDealDocuments";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { CheckSquare } from "lucide-react";
 
 type Mandate = {
   id: string;
@@ -445,6 +447,8 @@ function DealCard({
         )}
         {m.uf && <span className="text-[9px] text-zinc-500">{m.uf}</span>}
         <StageTimeBadge stageChangedAt={m.stage_changed_at} slaDays={slaDays} isTerminal={isTerminal} compact />
+        <TaskProgressBadge mandateId={m.id} stageKey={m.pipeline_stage} />
+        <DocProgressBadge mandateId={m.id} stageKey={m.pipeline_stage} />
         {status === "frozen" && !isTerminal && (
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReanimate(); }}
@@ -496,5 +500,49 @@ function DealCard({
         </div>
       </div>
     </div>
+  );
+}
+
+function TaskProgressBadge({ mandateId, stageKey }: { mandateId: string; stageKey: string }) {
+  const { data } = useDealStageProgress(mandateId);
+  const cur = (data ?? []).find((p) => p.stage_key === stageKey);
+  if (!cur || cur.total === 0) return null;
+  const blocking = cur.pending_blocking ?? 0;
+  const complete = cur.done >= cur.total;
+  const cls = blocking > 0
+    ? "bg-rose-500/15 text-rose-300 border-rose-700/40"
+    : complete
+      ? "bg-emerald-500/15 text-emerald-300 border-emerald-700/40"
+      : "bg-zinc-800/60 text-zinc-300 border-zinc-700";
+  return (
+    <span
+      title={blocking > 0 ? `${blocking} tarefa(s) bloqueante(s) pendente(s)` : `${cur.done}/${cur.total} tarefas`}
+      className={cn("text-[9px] uppercase px-1.5 py-0.5 rounded border font-mono tabular-nums inline-flex items-center gap-0.5", cls)}
+    >
+      <CheckSquare className="h-2.5 w-2.5" />
+      {cur.done}/{cur.total}
+    </span>
+  );
+}
+
+function DocProgressBadge({ mandateId, stageKey }: { mandateId: string; stageKey: string }) {
+  const { data } = useDealDocProgress(mandateId);
+  const cur = (data ?? []).find((p) => p.stage_key === stageKey);
+  if (!cur || cur.required_count === 0) return null;
+  const blocking = cur.pending_blocking ?? 0;
+  const complete = cur.present_count >= cur.required_count;
+  const cls = blocking > 0
+    ? "bg-rose-500/15 text-rose-300 border-rose-700/40"
+    : complete
+      ? "bg-emerald-500/15 text-emerald-300 border-emerald-700/40"
+      : "bg-zinc-800/60 text-zinc-300 border-zinc-700";
+  return (
+    <span
+      title={blocking > 0 ? `${blocking} documento(s) obrigatório(s) faltando` : `${cur.present_count}/${cur.required_count} documentos`}
+      className={cn("text-[9px] uppercase px-1.5 py-0.5 rounded border font-mono tabular-nums inline-flex items-center gap-0.5", cls)}
+    >
+      <FileText className="h-2.5 w-2.5" />
+      {cur.present_count}/{cur.required_count}
+    </span>
   );
 }
