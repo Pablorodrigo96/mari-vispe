@@ -4,6 +4,7 @@ import { useDealRoom, useMyDealRooms } from "@/hooks/useBuyerDealAccess";
 import { useDealDocuments, getSignedUrl } from "@/hooks/useDealDocuments";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { DealQAPanel } from "@/components/equity-brain/crm/DealQAPanel";
 
 /**
  * Sala do comprador para um deal específico.
@@ -147,6 +148,8 @@ export default function DealRoomPage() {
                 : "Solicite ao assessor o envio do NDA para liberar identidade e materiais sensíveis."}
             </div>
           </div>
+
+          {id && <DealQAPanel dealId={id} compact />}
         </div>
       </div>
     </div>

@@ -923,6 +923,62 @@ export type Database = {
           },
         ]
       }
+      deal_qa: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          answered_by: string | null
+          author_role: string
+          author_user_id: string
+          buyer_user_id: string
+          created_at: string
+          deal_id: string
+          id: string
+          parent_id: string | null
+          question: string
+          updated_at: string
+          visible_to_buyer: boolean
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          author_role: string
+          author_user_id: string
+          buyer_user_id: string
+          created_at?: string
+          deal_id: string
+          id?: string
+          parent_id?: string | null
+          question: string
+          updated_at?: string
+          visible_to_buyer?: boolean
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          author_role?: string
+          author_user_id?: string
+          buyer_user_id?: string
+          created_at?: string
+          deal_id?: string
+          id?: string
+          parent_id?: string | null
+          question?: string
+          updated_at?: string
+          visible_to_buyer?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_qa_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "deal_qa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doc_templates: {
         Row: {
           applies_to_stages: string[]
@@ -5263,6 +5319,10 @@ export type Database = {
       bootstrap_cron_secrets_internal: {
         Args: { _anon_key: string; _service_role_key: string }
         Returns: undefined
+      }
+      buyer_has_active_access: {
+        Args: { p_deal_id: string; p_user_id: string }
+        Returns: boolean
       }
       buyer_has_signed_nda: { Args: { p_deal_id: string }; Returns: boolean }
       buyer_neutral_description: {
