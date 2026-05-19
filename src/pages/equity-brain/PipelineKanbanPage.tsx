@@ -447,6 +447,7 @@ function DealCard({
         {m.uf && <span className="text-[9px] text-zinc-500">{m.uf}</span>}
         <StageTimeBadge stageChangedAt={m.stage_changed_at} slaDays={slaDays} isTerminal={isTerminal} compact />
         <TaskProgressBadge mandateId={m.id} stageKey={m.pipeline_stage} />
+        <DocProgressBadge mandateId={m.id} stageKey={m.pipeline_stage} />
         {status === "frozen" && !isTerminal && (
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReanimate(); }}
