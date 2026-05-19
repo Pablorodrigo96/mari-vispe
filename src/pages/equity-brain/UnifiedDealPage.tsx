@@ -151,6 +151,17 @@ export default function UnifiedDealPage() {
             <StageDocumentsPanel dealId={deal.mandate_id} stageKey={deal.stage} />
           )}
 
+          {/* Gerador de documentos jurídicos (NDA/NBO/Term Sheet/SPA) via Claude */}
+          {deal.mandate_id && (
+            <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-wider text-zinc-500">Documentos jurídicos</div>
+                <div className="text-xs text-zinc-300">Gere NDA, NBO e demais peças com IA + homologação jurídica + assinatura interna.</div>
+              </div>
+              <LegalDocumentGenerator dealId={deal.mandate_id} />
+            </div>
+          )}
+
           {/* Sala do comprador (admin/advisor) */}
           {(isAdmin || isAdvisor) && deal.mandate_id && (
             <>
