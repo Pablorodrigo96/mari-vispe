@@ -1,111 +1,142 @@
+# Smoke test C3 + C4 — resultado
 
-# Plano — Alinhamento Press Release (C3 + C4)
+✅ Tudo verde no banco:
 
-## Status dos 6 pontos
+| Check | Esperado | Encontrado |
+|---|---|---|
+| Colunas novas em `access_logs` (`disclosure_mode`, `context`, `cnpj`) | 3 | **3** |
+| RPC `eb_log_identity_access` | existe | **existe** |
+| View `eb_access_logs_v` | existe | **existe** |
+| Logs migrados pra `implicit` | 51 | **51** |
+| Logs `explicit` (NDA formal) | 0 | **0** (esperado, fluxo dormente) |
 
-| Ponto | Decisão |
-|---|---|
-| C1 — Mapa Anatel | ✅ Resolvido (já temos base Anatel no Supabase via `anatel-query`) |
-| C2 — ISP mandates | ✅ Sem ação (já cumprido) |
-| C3 — Perfil bidirecional | 🔨 Construir componente Tri-Postura |
-| C4 — Darkpool/NDA | 🔨 Auto-log de acessos como "disclosure implícito" |
-| C5 — Matching consolidador | ✅ Ok |
-| C6 — Multi-vertical 2026 | ⏸ Adiado — quando chegar, listo o que precisa ser construído fora |
+UI (Tri-Postura + AuditPage) só falta QA visual, que você optou por pular. Posso seguir.
 
 ---
 
-## C3 — Componente Tri-Postura (UI)
+# C6 — Multi-vertical 2026
 
-**Onde aparece:** página de detalhe da empresa no Equity Brain (`/equity-brain/deal/:id` e perfis de company quando abertos via CRM/360).
+## Objetivo
+Replicar o que já existe pra ISP/Anatel em **N outros setores** sem reescrever pipeline. Hoje o pipeline ISP é: import cru → stats cidade/UF/empresa → match cold → promote → sugestões → mercado público (`/equity-brain/isp/mercado`).
 
-**O que é:** um card de 3 abas no topo do perfil que mostra a mesma empresa em 3 papéis simultâneos:
+A meta é abstrair isso num **framework de vertical** onde cada novo setor é uma config + 1 dataset, sem código novo de pipeline.
+
+## Diagnóstico do que já existe (reaproveitável)
+- `equity_brain.isp_anatel_imports` → tabela de staging cru
+- `isp_company_market_stats` / `isp_city_market_stats` → agregados
+- `eb_isp_uf_summary` (view pública) → consumido pelo dashboard
+- `cnae_to_sector_mapping` → **chave da abstração**, já mapeia setor
+- `sector_research` / `sector_market_trends` → base por setor existe
+- `is_company_visible_in_crm()` → gate de visibilidade já genérico
+- `match-company-v2` → já aceita direction sell/buy/partner (após C3)
+
+## Verticais candidatas (você confirma quais entram)
+Baseado nas que mais aparecem em `cnae_to_sector_mapping`, sugiro priorizar 4:
+
+1. **Healthtech / Clínicas** (CNAEs 86.x) — fonte externa: CNES (DataSUS)
+2. **Educação privada** (CNAEs 85.x) — fonte externa: e-MEC / Censo Escolar (INEP)
+3. **Energia distribuída / GD solar** (CNAEs 35.1x + 43.21) — fonte externa: ANEEL (dados.gov)
+4. **Logística / transporte rodoviário** (CNAEs 49.30) — fonte externa: ANTT (RNTRC)
+
+Cada uma tem regulador público com base aberta, igual ANATEL.
+
+## Arquitetura proposta
 
 ```text
-┌───────────────────────────────────────────────────┐
-│  [Como Vendedor] [Como Comprador] [Como Parceiro] │
-├───────────────────────────────────────────────────┤
-│  Top 5 contrapartes compatíveis nessa direção     │
-│  • Codinome · score · 1 linha do "porquê"         │
-│  • Botão "ver match completo"                     │
-└───────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│  vertical_registry (config por setor)                    │
+│  ─────────────────────────────────────                   │
+│  slug | label | cnae_prefixes[] | source_name | active   │
+│  isp  | ISP   | {61.10}         | anatel-scm  | true     │
+│  saud | Saúde | {86.10,86.30}   | cnes        | true     │
+│  ...                                                     │
+└──────────────────────────────────────────────────────────┘
+             │ (1:N)
+             ▼
+┌──────────────────────────────────────────────────────────┐
+│  vertical_imports (substitui isp_anatel_imports)         │
+│  vertical_slug | cnpj | raw_payload jsonb | ingested_at  │
+└──────────────────────────────────────────────────────────┘
+             │
+             ▼ (functions genéricas)
+┌──────────────────────────────────────────────────────────┐
+│  fn_refresh_vertical_stats(slug)                         │
+│   → preenche vertical_company_stats + vertical_uf_stats  │
+│  fn_match_cold_vertical(slug)                            │
+│   → reusa match-company-v2 com filtro CNAE da vertical   │
+│  fn_promote_to_crm(slug, cnpj)                           │
+│   → vira eb_companies + cria deal                        │
+└──────────────────────────────────────────────────────────┘
+             │
+             ▼
+┌──────────────────────────────────────────────────────────┐
+│  /equity-brain/vertical/:slug/mercado (rota dinâmica)    │
+│  reaproveita componentes do ISPMarketPage                │
+└──────────────────────────────────────────────────────────┘
 ```
 
-- **Vendedor**: top 5 compradores que dariam match (já é o fluxo atual)
-- **Comprador**: top 5 alvos que essa empresa absorveria (inverte direção do engine)
-- **Parceiro**: top 5 sinergias não-M&A (joint-venture, cliente, fornecedor estratégico)
+## Plano executável
 
-**Reuso:** `match-company-v2` já suporta direção via parâmetro — só precisa expor as 3 chamadas em paralelo no hook.
+### Fase 1 — Refactor genérico (sem mexer em ISP em produção)
+1. Migration: criar `vertical_registry` + seed com `isp` (espelhando comportamento atual).
+2. Criar `vertical_imports`, `vertical_company_stats`, `vertical_uf_stats`, `vertical_promotion_log` como **superset** das tabelas `isp_*`.
+3. Criar funções `fn_refresh_vertical_stats(slug)`, `fn_match_cold_vertical(slug)`, `fn_promote_vertical(slug, cnpj)`.
+4. Views públicas `eb_vertical_uf_summary`, `eb_vertical_company_stats` (filtrando por slug).
+5. **Dual-write temporário**: pipeline ISP continua escrevendo nas tabelas `isp_*` E nas novas tabelas `vertical_*` com `slug='isp'`. Garante zero regressão.
 
-### Detalhes técnicos
-- Novo componente `src/components/equity-brain/TriPosturaCard.tsx`
-- Novo hook `src/hooks/useTriPostura.ts` que dispara 3 queries paralelas ao edge function `match-company-v2` com `direction: "sell" | "buy" | "partner"`
-- Edge function `match-company-v2`: confirmar que aceita `direction="buy"` e `direction="partner"`; se não, adicionar branches (sem mudar a lógica de score, só inverter quem é alvo)
-- Plugar no header de `src/pages/equity-brain/DealPage.tsx` (ou equivalente) acima do MatchWhyCard atual
-- Codinome respeitado em todos os 3 lados (já é padrão)
-- Loading skeleton + empty state ("Esta empresa ainda não tem matches nessa direção")
+### Fase 2 — Frontend genérico
+6. Criar `/equity-brain/vertical/:slug/mercado` reaproveitando `ISPMarketPage` como `VerticalMarketPage` (props: slug, label, KPIs).
+7. Sidebar EB: nova seção "Verticais" listando `vertical_registry.active=true`.
+8. `/equity-brain/hoje`: cards de oportunidade ganham filtro por vertical.
+9. Manter `/equity-brain/isp/mercado` como alias permanente pra `/equity-brain/vertical/isp/mercado`.
 
----
+### Fase 3 — Datasets externos (aqui entra você + Claude)
+Pra cada nova vertical preciso de um **CSV consolidado** com schema mínimo:
 
-## C4 — Auto-log de acessos a identidade (sem fricção)
+```text
+cnpj (14 dígitos) | razao_social | uf | municipio | cnae_principal | 
+metrica_porte_1 (ex: clientes, leitos, alunos, MWh) | 
+metrica_porte_2 (opcional) | fonte_url | data_corte
+```
 
-**Problema:** o release promete "darkpool com NDA auditável". Hoje o codinome funciona, mas `access_logs` tem só 51 entradas e `disclosure_requests` está zerado — não há trilha auditável de quem viu o quê.
+**O que peço pra você produzir externamente (Claude/scraping):**
 
-**Solução escolhida:** auto-logar todo acesso a identidade real por admin/advisor como "disclosure implícito" — sem precisar request/approval. Mantém UX, gera auditoria.
+| Vertical | Fonte | Tamanho esperado | O que preciso do Claude |
+|---|---|---|---|
+| Saúde | CNES (DataSUS) | ~250k estabelecimentos | CSV com `cnpj, razao_social, uf, municipio, leitos_total, tipo_unidade, fonte_url='cnes.datasus.gov.br', data_corte` |
+| Educação | e-MEC + INEP | ~25k IES + escolas | CSV com `cnpj, razao_social, uf, municipio, qtd_alunos, modalidade, fonte_url='emec.mec.gov.br'` |
+| Energia/GD | ANEEL | ~50k geradores | CSV com `cnpj, razao_social, uf, municipio, potencia_mw, modalidade, fonte_url='dados.gov.br/aneel'` |
+| Logística | ANTT/RNTRC | ~200k transportadores | CSV com `cnpj, razao_social, uf, municipio, qtd_veiculos, categoria, fonte_url='portal.antt.gov.br'` |
 
-### Detalhes técnicos
+Você sobe via `/equity-brain/crm/imports` (já existe upload .xlsx/.csv da feature [EB Bulk Imports]), com um seletor novo de vertical.
 
-**1. Trigger automático em `equity_brain.access_logs`**
-- Hook React `useIdentityVisibility` já existe e gates o reveal. Quando ele retorna `canView=true` e o usuário **efetivamente vê** identidade (ex: monta `IdentityRevealCard`, abre detalhe da company não-cega), disparar insert em `access_logs` via RPC `eb_log_identity_access(p_target_kind, p_target_cnpj, p_target_listing_id, p_context)`.
-- Throttle no client: 1 log por (user, target, contexto) a cada 1h para não inflar.
+### Fase 4 — Switch ISP pro novo pipeline (cleanup)
+10. Após 30 dias de dual-write estável, parar de escrever em `isp_*` e deixar só `vertical_*` com slug='isp'. Manter `isp_*` como view de compatibilidade.
 
-**2. Nova RPC `eb_log_identity_access`** (SECURITY DEFINER)
-- Insere em `equity_brain.access_logs` com `accessed_by=auth.uid()`, `disclosure_mode='implicit'`, `context` (ex: `"crm_360"`, `"deal_page"`, `"docs_panel"`).
-- Não bloqueia nada — só registra.
+## Detalhes técnicos
 
-**3. Coluna `disclosure_mode`** em `access_logs`
-- `'implicit'` (auto-log de advisor interno) vs `'explicit'` (vem de `disclosure_grants` aprovados — parceiros externos no futuro).
-- Default `'implicit'`.
+- `vertical_registry` é a tabela mestre. Todo CNAE prefix vira filtro automático no `match-company-v2` quando `vertical_slug` é passado.
+- Funções DB são `SECURITY DEFINER` com `search_path=equity_brain,public` (segue padrão atual).
+- RLS: leitura pública só nas views `eb_vertical_*` filtrando `is_company_visible_in_crm()` igual ISP faz hoje (escondendo o que não foi promovido).
+- Sidebar lê `vertical_registry` em tempo real, não hardcoded.
+- Rota `/equity-brain/vertical/:slug/mercado` cai num único componente parametrizado.
+- Cron `mari-generate-insights` ganha loop por vertical ativa (gera insights por setor).
 
-**4. Pontos do código que disparam log**
-- `IdentityRevealCard` (no mount, se identidade está visível)
-- `DocumentsPanel` (ao abrir docs com dados de CNPJ/razão)
-- `DealPage` (ao montar com `canViewIdentity=true`)
-- `BlindTeaserButton` (ao revelar)
-- `CRM 360` (mandate/buyer detail)
+## O que NÃO está no escopo desta fase
+- Não vou criar novas IA/scoring por vertical agora (reusa `match-company-v2` v2).
+- Não vou refazer Mari Brain KB por vertical (fica pra fase posterior, quando houver dados).
+- Não vou tocar em Stripe/planos por vertical (precificação fica igual).
+- Não vou subir os datasets — você + Claude trazem os CSVs, eu só preparo o ingestor genérico.
 
-**5. Painel de auditoria simples**
-- Reaproveitar `/equity-brain/disclosures` adicionando uma 5ª aba **"Acessos (log)"** que lista os últimos N entries de `access_logs` filtráveis por usuário/empresa/período. Read-only.
-- Mostra: quem · quando · qual empresa (codinome + identidade) · contexto · modo (implicit/explicit).
+## Entregáveis desta fase (o que eu construo na próxima execução)
+1. Migration `vertical_registry` + tabelas `vertical_*` + funções genéricas + dual-write trigger no pipeline ISP atual.
+2. `VerticalMarketPage` componente parametrizado + rota `/equity-brain/vertical/:slug/mercado`.
+3. Update na sidebar EB pra listar verticais ativas.
+4. Update no `/equity-brain/crm/imports` adicionando seletor de vertical.
+5. Memory update: `mem://features/multi-vertical-framework`.
 
-**6. Memory update**
-- Atualizar `mem://features/eb-identity-and-docs-unification` para refletir que todo reveal já loga automaticamente.
+## Antes de começar, preciso de você:
 
-### O que NÃO muda
-- Codinome continua default em listagens
-- `disclosure_requests` continua existindo para o caso futuro de parceiros externos
-- RLS de `eb_companies*_blind` permanece igual
-
----
-
-## Ordem sugerida de execução
-
-1. **C4 backend primeiro** (migration: coluna `disclosure_mode` + RPC `eb_log_identity_access`) — 1 migration
-2. **C4 client hooks** — instrumentar os 5 pontos de reveal
-3. **C4 painel "Acessos"** — aba nova em `/equity-brain/disclosures`
-4. **C3 backend** — ajustar `match-company-v2` para aceitar `direction=buy|partner` se ainda não aceitar
-5. **C3 hook + componente** — `useTriPostura` + `TriPosturaCard`
-6. **C3 integração** — plugar no DealPage / perfil de company
-
-**Estimativa:** 1 sessão para C4 completo + 1 sessão para C3 completo.
-
----
-
-## Fora de escopo (C6 — quando chegar a hora)
-
-Quando começarmos a aterrissar saúde / varejo / indústria como verticais 2026, vou te dizer exatamente o que precisa ser construído externamente (com Claude) e trazido pra inputar:
-- Seed de 8-10 buyers reais por vertical (CSV)
-- Lista de 3+ teses verticais por setor
-- 5+ signals específicos por setor
-- 3+ deals históricos da Vispe pra backtest
-
-Por ora: nada a construir fora.
+1. **Confirmar as 4 verticais** acima ou trocar por outras (você manda).
+2. **Definir se Fase 1 sai sozinha** (eu construo só o framework genérico e o ISP migra) **ou se Fase 1+2 saem juntas** (framework + UI nova).
+3. **Definir prioridade da Fase 3**: começamos com Saúde? Educação? As 4 em paralelo? (Eu só preparo o ingestor — você traz os CSVs no seu ritmo.)
