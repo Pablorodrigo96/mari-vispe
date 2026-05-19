@@ -523,3 +523,25 @@ function TaskProgressBadge({ mandateId, stageKey }: { mandateId: string; stageKe
     </span>
   );
 }
+
+function DocProgressBadge({ mandateId, stageKey }: { mandateId: string; stageKey: string }) {
+  const { data } = useDealDocProgress(mandateId);
+  const cur = (data ?? []).find((p) => p.stage_key === stageKey);
+  if (!cur || cur.required_count === 0) return null;
+  const blocking = cur.pending_blocking ?? 0;
+  const complete = cur.present_count >= cur.required_count;
+  const cls = blocking > 0
+    ? "bg-rose-500/15 text-rose-300 border-rose-700/40"
+    : complete
+      ? "bg-emerald-500/15 text-emerald-300 border-emerald-700/40"
+      : "bg-zinc-800/60 text-zinc-300 border-zinc-700";
+  return (
+    <span
+      title={blocking > 0 ? `${blocking} documento(s) obrigatório(s) faltando` : `${cur.present_count}/${cur.required_count} documentos`}
+      className={cn("text-[9px] uppercase px-1.5 py-0.5 rounded border font-mono tabular-nums inline-flex items-center gap-0.5", cls)}
+    >
+      <FileText className="h-2.5 w-2.5" />
+      {cur.present_count}/{cur.required_count}
+    </span>
+  );
+}
