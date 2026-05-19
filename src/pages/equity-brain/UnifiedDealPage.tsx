@@ -135,6 +135,12 @@ export default function UnifiedDealPage() {
             </div>
           )}
 
+          {/* Tarefas desta etapa */}
+          {deal.mandate_id && (
+            <StageTasksSection mandateId={deal.mandate_id} stageKey={deal.stage} />
+          )}
+
+
           {/* Notas / status */}
           <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
             <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Status do deal</div>
