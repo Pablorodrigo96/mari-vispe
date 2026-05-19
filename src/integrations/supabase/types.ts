@@ -813,6 +813,119 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_documents: {
+        Row: {
+          category: string
+          created_at: string
+          deal_id: string
+          id: string
+          label: string
+          metadata: Json
+          signature_provider: string | null
+          signature_request_id: string | null
+          signed_at: string | null
+          signed_by: string | null
+          signing_url: string | null
+          stage_key: string | null
+          status: string
+          storage_path: string | null
+          template_code: string | null
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          deal_id: string
+          id?: string
+          label: string
+          metadata?: Json
+          signature_provider?: string | null
+          signature_request_id?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          signing_url?: string | null
+          stage_key?: string | null
+          status?: string
+          storage_path?: string | null
+          template_code?: string | null
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          deal_id?: string
+          id?: string
+          label?: string
+          metadata?: Json
+          signature_provider?: string | null
+          signature_request_id?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          signing_url?: string | null
+          stage_key?: string | null
+          status?: string
+          storage_path?: string | null
+          template_code?: string | null
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_documents_template_code_fkey"
+            columns: ["template_code"]
+            isOneToOne: false
+            referencedRelation: "doc_templates"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      doc_templates: {
+        Row: {
+          applies_to_stages: string[]
+          category: string
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          requires_signature: boolean
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          applies_to_stages?: string[]
+          category: string
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          requires_signature?: boolean
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          applies_to_stages?: string[]
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          requires_signature?: boolean
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       due_diligence_audits: {
         Row: {
           answers: Json
@@ -1843,6 +1956,44 @@ export type Database = {
         }
         Relationships: []
       }
+      stage_doc_requirements: {
+        Row: {
+          created_at: string
+          id: string
+          is_blocking: boolean
+          is_required: boolean
+          position: number
+          stage_key: string
+          template_code: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_blocking?: boolean
+          is_required?: boolean
+          position?: number
+          stage_key: string
+          template_code: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_blocking?: boolean
+          is_required?: boolean
+          position?: number
+          stage_key?: string
+          template_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_doc_requirements_template_code_fkey"
+            columns: ["template_code"]
+            isOneToOne: false
+            referencedRelation: "doc_templates"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       stage_task_templates: {
         Row: {
           applies_to: string
@@ -2395,6 +2546,16 @@ export type Database = {
           output_tokens: number | null
           provider: string | null
           total_tokens: number | null
+        }
+        Relationships: []
+      }
+      deal_doc_progress: {
+        Row: {
+          deal_id: string | null
+          pending_blocking: number | null
+          present_count: number | null
+          required_count: number | null
+          stage_key: string | null
         }
         Relationships: []
       }
