@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAuditEvent, type AuditEntityType } from "@/services/audit/auditService";
 
 /**
  * Throttled client-side logger for identity reveals.
