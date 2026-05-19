@@ -813,45 +813,64 @@ export type Database = {
       eb_pipeline_stages: {
         Row: {
           archived_at: string | null
+          baseline_days: number | null
+          baseline_hours: number | null
           color: string
           created_at: string
           id: string
           is_terminal: boolean
+          is_v2_only: boolean
           key: string
           label: string
           position: number
           sla_days: number
+          target_days: number | null
+          target_hours: number | null
           updated_at: string
         }
         Insert: {
           archived_at?: string | null
+          baseline_days?: number | null
+          baseline_hours?: number | null
           color?: string
           created_at?: string
           id?: string
           is_terminal?: boolean
+          is_v2_only?: boolean
           key: string
           label: string
           position?: number
           sla_days?: number
+          target_days?: number | null
+          target_hours?: number | null
           updated_at?: string
         }
         Update: {
           archived_at?: string | null
+          baseline_days?: number | null
+          baseline_hours?: number | null
           color?: string
           created_at?: string
           id?: string
           is_terminal?: boolean
+          is_v2_only?: boolean
           key?: string
           label?: string
           position?: number
           sla_days?: number
+          target_days?: number | null
+          target_hours?: number | null
           updated_at?: string
         }
         Relationships: []
       }
       eb_pipeline_transitions: {
         Row: {
+          actual_hours: number | null
           deal_id: string | null
+          delta_days: number | null
+          delta_hours: number | null
+          exit_reason: string | null
           from_outcome: string | null
           from_stage: string | null
           id: string
@@ -859,12 +878,19 @@ export type Database = {
           moved_at: string
           moved_by: string | null
           note: string | null
+          responsible_user_id: string | null
+          target_days: number | null
+          target_hours: number | null
           time_in_previous_stage_seconds: number | null
           to_outcome: string | null
           to_stage: string | null
         }
         Insert: {
+          actual_hours?: number | null
           deal_id?: string | null
+          delta_days?: number | null
+          delta_hours?: number | null
+          exit_reason?: string | null
           from_outcome?: string | null
           from_stage?: string | null
           id?: string
@@ -872,12 +898,19 @@ export type Database = {
           moved_at?: string
           moved_by?: string | null
           note?: string | null
+          responsible_user_id?: string | null
+          target_days?: number | null
+          target_hours?: number | null
           time_in_previous_stage_seconds?: number | null
           to_outcome?: string | null
           to_stage?: string | null
         }
         Update: {
+          actual_hours?: number | null
           deal_id?: string | null
+          delta_days?: number | null
+          delta_hours?: number | null
+          exit_reason?: string | null
           from_outcome?: string | null
           from_stage?: string | null
           id?: string
@@ -885,6 +918,9 @@ export type Database = {
           moved_at?: string
           moved_by?: string | null
           note?: string | null
+          responsible_user_id?: string | null
+          target_days?: number | null
+          target_hours?: number | null
           time_in_previous_stage_seconds?: number | null
           to_outcome?: string | null
           to_stage?: string | null
@@ -2221,6 +2257,28 @@ export type Database = {
           output_tokens: number | null
           provider: string | null
           total_tokens: number | null
+        }
+        Relationships: []
+      }
+      deal_sla_report: {
+        Row: {
+          actual_days: number | null
+          actual_hours_calc: number | null
+          baseline_days: number | null
+          baseline_hours: number | null
+          delta_target_days: number | null
+          delta_target_hours: number | null
+          exit_reason: string | null
+          from_stage: string | null
+          mandate_id: string | null
+          moved_at: string | null
+          moved_by: string | null
+          responsible_user_id: string | null
+          target_days: number | null
+          target_hours: number | null
+          time_in_previous_stage_seconds: number | null
+          to_stage: string | null
+          transition_id: string | null
         }
         Relationships: []
       }
