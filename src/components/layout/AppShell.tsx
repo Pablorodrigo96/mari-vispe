@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { AppShellProvider } from '@/contexts/AppShellContext';
 import { AppSidebar } from './AppSidebar';
 import { AppTopbar } from './AppTopbar';
+import { ContentLoader } from './RouteLoader';
 import { cn } from '@/lib/utils';
 
 /**
@@ -36,7 +37,9 @@ export function AppShell() {
   if (!user) {
     return (
       <AppShellProvider value={{ inAppShell: false }}>
-        <Outlet />
+        <Suspense fallback={<ContentLoader />}>
+          <Outlet />
+        </Suspense>
       </AppShellProvider>
     );
   }
