@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { EBSidebar } from "./EBSidebar";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { MariBrainFab } from "./mari/MariBrainFab";
 import { DealDrawerProvider } from "@/contexts/DealDrawerContext";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { ContentLoader } from "@/components/layout/RouteLoader";
 
 export function EquityBrainLayout() {
   const [search, setSearch] = useState("");
@@ -46,7 +47,9 @@ export function EquityBrainLayout() {
               </div>
             </header>
             <main className="flex-1 overflow-auto">
-              <Outlet />
+              <Suspense fallback={<ContentLoader dark />}>
+                <Outlet />
+              </Suspense>
             </main>
           </SidebarInset>
           <MariBrainFab />

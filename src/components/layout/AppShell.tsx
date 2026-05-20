@@ -68,7 +68,9 @@ export function AppShell() {
         <div className={cn('flex-1 min-w-0 flex flex-col')}>
           <AppTopbar onMenuClick={() => setMobileOpen(true)} />
           <main className="flex-1 bg-muted/20 overflow-x-hidden">
-            <Outlet />
+            <Suspense fallback={<ContentLoader />}>
+              <Outlet />
+            </Suspense>
           </main>
         </div>
       </div>
