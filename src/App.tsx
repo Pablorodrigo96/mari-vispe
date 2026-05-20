@@ -16,6 +16,7 @@ const PageTracker = () => { usePageTracking(); return null; };
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { AppShell } from "@/components/layout/AppShell";
+import { FullPageLoader } from "@/components/layout/RouteLoader";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { EquityBrainLayout } from "@/components/equity-brain/EquityBrainLayout";
 import { RedirectWithParams } from "./components/equity-brain/RedirectWithParams";
