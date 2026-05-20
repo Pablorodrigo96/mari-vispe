@@ -144,22 +144,9 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
 });
 
-const RouteFallback = () => (
-  <div className="min-h-[100dvh] bg-background">
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-14">
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-48 rounded-md bg-muted/60" />
-        <div className="h-4 w-72 rounded bg-muted/40" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-8">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-32 rounded-xl border border-border/50 bg-card/40" />
-          ))}
-        </div>
-        <div className="h-64 rounded-xl border border-border/50 bg-card/40 mt-6" />
-      </div>
-    </div>
-  </div>
-);
+import { FullPageLoader } from "@/components/layout/RouteLoader";
+
+const RouteFallback = () => <FullPageLoader />;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
