@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { AdminSidebar } from './AdminSidebar';
+import { ContentLoader } from '@/components/layout/RouteLoader';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -54,7 +55,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     <div className="min-h-screen flex bg-background">
       <AdminSidebar />
       <main className="flex-1 p-8 overflow-auto">
-        <AdminErrorBoundary>{children}</AdminErrorBoundary>
+        <AdminErrorBoundary>
+          <Suspense fallback={<ContentLoader />}>
+            {children}
+          </Suspense>
+        </AdminErrorBoundary>
       </main>
     </div>
   );

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRoles } from '@/hooks/useEffectiveRoles';
 import { AppShellProvider } from '@/contexts/AppShellContext';
 import { AppSidebar } from './AppSidebar';
 import { AppTopbar } from './AppTopbar';
+import { ContentLoader } from './RouteLoader';
 import { cn } from '@/lib/utils';
 
 /**
@@ -36,7 +37,9 @@ export function AppShell() {
   if (!user) {
     return (
       <AppShellProvider value={{ inAppShell: false }}>
-        <Outlet />
+        <Suspense fallback={<ContentLoader />}>
+          <Outlet />
+        </Suspense>
       </AppShellProvider>
     );
   }
@@ -65,7 +68,9 @@ export function AppShell() {
         <div className={cn('flex-1 min-w-0 flex flex-col')}>
           <AppTopbar onMenuClick={() => setMobileOpen(true)} />
           <main className="flex-1 bg-muted/20 overflow-x-hidden">
-            <Outlet />
+            <Suspense fallback={<ContentLoader />}>
+              <Outlet />
+            </Suspense>
           </main>
         </div>
       </div>
