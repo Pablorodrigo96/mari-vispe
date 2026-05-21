@@ -290,7 +290,12 @@ export default function ProspectionTab() {
                     <div className="flex items-start gap-3">
                       <input type="checkbox" checked={isSel} onChange={() => {}} className="mt-1" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-zinc-100 text-sm break-words">{r.contact_name}</div>
+                        <div className="font-medium text-zinc-100 text-sm break-words flex items-center gap-1.5 flex-wrap">
+                          <span>{r.contact_name}</span>
+                          {lastLetters?.get(r.id) && (
+                            <LetterBadge batchId={lastLetters.get(r.id)!.batch_id} sentAt={lastLetters.get(r.id)!.sent_at} />
+                          )}
+                        </div>
                         <div className="text-xs text-zinc-400 break-words">{r.company_name}</div>
                         <div className="text-[11px] text-zinc-500 mt-1 flex flex-wrap gap-2">
                           <span>{r.city}/{r.state}</span>
