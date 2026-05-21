@@ -134,12 +134,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Sessão inválida" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { contact_ids, template_id } = await req.json();
+    const { contact_ids, template_id, preview } = await req.json();
     if (!Array.isArray(contact_ids) || contact_ids.length === 0) {
       return new Response(JSON.stringify({ error: "contact_ids vazio" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    if (contact_ids.length > 200) {
+    if (!preview && contact_ids.length > 200) {
       return new Response(JSON.stringify({ error: "Máximo 200 cartas por lote" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (preview && contact_ids.length !== 1) {
+      return new Response(JSON.stringify({ error: "Preview aceita exatamente 1 contato" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Fetch template
