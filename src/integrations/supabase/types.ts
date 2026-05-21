@@ -987,6 +987,7 @@ export type Database = {
         Row: {
           buy_mandate_id: string | null
           buyer_profile_id: string | null
+          closed_at: string | null
           comissao_buy_pct: number | null
           comissao_sell_pct: number | null
           created_at: string
@@ -994,6 +995,7 @@ export type Database = {
           data_pareamento: string
           id: string
           lost_reason: string | null
+          nbo_signed_at: string | null
           notes: string | null
           responsavel_advisor_id: string
           sell_mandate_id: string
@@ -1004,6 +1006,7 @@ export type Database = {
         Insert: {
           buy_mandate_id?: string | null
           buyer_profile_id?: string | null
+          closed_at?: string | null
           comissao_buy_pct?: number | null
           comissao_sell_pct?: number | null
           created_at?: string
@@ -1011,6 +1014,7 @@ export type Database = {
           data_pareamento?: string
           id?: string
           lost_reason?: string | null
+          nbo_signed_at?: string | null
           notes?: string | null
           responsavel_advisor_id: string
           sell_mandate_id: string
@@ -1021,6 +1025,7 @@ export type Database = {
         Update: {
           buy_mandate_id?: string | null
           buyer_profile_id?: string | null
+          closed_at?: string | null
           comissao_buy_pct?: number | null
           comissao_sell_pct?: number | null
           created_at?: string
@@ -1028,6 +1033,7 @@ export type Database = {
           data_pareamento?: string
           id?: string
           lost_reason?: string | null
+          nbo_signed_at?: string | null
           notes?: string | null
           responsavel_advisor_id?: string
           sell_mandate_id?: string

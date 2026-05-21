@@ -3,6 +3,7 @@ import { useDealPair, useTransitionDealPair, PAIR_STATUS_LABEL, PAIR_STATUS_COLO
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Building2, User, Handshake, FileText } from "lucide-react";
+import { PairSignaturesTimeline } from "@/components/equity-brain/PairSignaturesTimeline";
 
 const NEXT_STATUS: Record<DealPairStatus, DealPairStatus[]> = {
   draft: ["active", "lost"],
@@ -95,9 +96,11 @@ export default function DealPairDetailPage() {
         </Column>
       </div>
 
-      <div className="px-6 pb-8">
+      <div className="px-6 pb-8 space-y-4">
+        <PairSignaturesTimeline pairId={pair.id} />
         <div className="text-xs text-zinc-500">
-          Para gerar NDA/NBO oficial Vispe, clique em <strong>Gerar NBO</strong> no topo da página.
+          Quando o NBO for assinado, o par avança automaticamente para <strong>signed</strong>.
+          SPA/closing assinado avança para <strong>closed</strong>. Vendedor, comprador e advisor recebem notificação.
         </div>
       </div>
     </div>
