@@ -252,7 +252,14 @@ export default function ProspectionTab() {
                       onClick={(e) => toggleRow(r.id, e)}
                     >
                       <td className="px-3 py-2"><input type="checkbox" checked={isSel} onChange={() => {}} /></td>
-                      <td className="px-2 py-2 text-zinc-100">{r.contact_name}</td>
+                      <td className="px-2 py-2 text-zinc-100">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{r.contact_name}</span>
+                          {lastLetters?.get(r.id) && (
+                            <LetterBadge batchId={lastLetters.get(r.id)!.batch_id} sentAt={lastLetters.get(r.id)!.sent_at} />
+                          )}
+                        </div>
+                      </td>
                       <td className="px-2 py-2 text-zinc-300">{r.company_name}</td>
                       <td className="px-2 py-2 text-zinc-400">{r.city}/{r.state}</td>
                       <td className="px-2 py-2 text-zinc-400">{r.sector}</td>
