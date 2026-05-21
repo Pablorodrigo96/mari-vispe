@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRoles } from "@/hooks/useRoles";
+import { useEffectiveRoles } from "@/hooks/useEffectiveRoles";
 import { useDealPairs, useTransitionDealPair, PAIR_STATUS_LABEL, PAIR_STATUS_COLOR, type DealPair, type DealPairStatus } from "@/hooks/useDealPairs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ const NEXT_STATUS: Record<DealPairStatus, DealPairStatus[]> = {
 
 export default function ParesTab() {
   const { user } = useAuth();
-  const { isAdmin } = useRoles();
+  const { isAdmin } = useEffectiveRoles();
   const [status, setStatus] = useState<DealPairStatus | "all">("all");
   const [onlyMine, setOnlyMine] = useState<boolean>(!isAdmin);
   const [search, setSearch] = useState("");
