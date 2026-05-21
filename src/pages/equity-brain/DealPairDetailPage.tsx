@@ -3,6 +3,7 @@ import { useDealPair, useTransitionDealPair, PAIR_STATUS_LABEL, PAIR_STATUS_COLO
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Building2, User, Handshake, FileText } from "lucide-react";
+import { PairSignaturesTimeline } from "@/components/equity-brain/PairSignaturesTimeline";
 
 const NEXT_STATUS: Record<DealPairStatus, DealPairStatus[]> = {
   draft: ["active", "lost"],
