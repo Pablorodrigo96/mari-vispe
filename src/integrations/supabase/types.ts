@@ -2194,6 +2194,93 @@ export type Database = {
         }
         Relationships: []
       }
+      prospect_contacts: {
+        Row: {
+          city: string
+          cnpj: string | null
+          company_name: string
+          contact_first_name: string | null
+          contact_name: string
+          converted_at: string | null
+          converted_to_mandate_id: string | null
+          created_at: string
+          email: string | null
+          id: string
+          last_contact_at: string | null
+          next_followup_at: string | null
+          notes: string | null
+          owner_advisor_id: string
+          phone: string | null
+          postal_address: string | null
+          postal_zipcode: string | null
+          sector: string
+          side: string
+          source: string
+          source_notes: string | null
+          state: string
+          status: string
+          tags: string[]
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          city: string
+          cnpj?: string | null
+          company_name: string
+          contact_first_name?: string | null
+          contact_name: string
+          converted_at?: string | null
+          converted_to_mandate_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_contact_at?: string | null
+          next_followup_at?: string | null
+          notes?: string | null
+          owner_advisor_id: string
+          phone?: string | null
+          postal_address?: string | null
+          postal_zipcode?: string | null
+          sector: string
+          side: string
+          source?: string
+          source_notes?: string | null
+          state: string
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          city?: string
+          cnpj?: string | null
+          company_name?: string
+          contact_first_name?: string | null
+          contact_name?: string
+          converted_at?: string | null
+          converted_to_mandate_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_contact_at?: string | null
+          next_followup_at?: string | null
+          notes?: string | null
+          owner_advisor_id?: string
+          phone?: string | null
+          postal_address?: string | null
+          postal_zipcode?: string | null
+          sector?: string
+          side?: string
+          source?: string
+          source_notes?: string | null
+          state?: string
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       rate_limits: {
         Row: {
           action: string
