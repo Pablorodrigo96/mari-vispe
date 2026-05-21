@@ -140,6 +140,8 @@ const PropostasPage = lazy(() => import("./pages/equity-brain/PropostasPage"));
 const DailyDiaryPage = lazy(() => import("./pages/equity-brain/DailyDiaryPage"));
 const TagPage = lazy(() => import("./pages/equity-brain/TagPage"));
 const NoteSearchPage = lazy(() => import("./pages/equity-brain/NoteSearchPage"));
+const LetterTemplatesPage = lazy(() => import("./pages/equity-brain/cartas/LetterTemplatesPage"));
+const LetterHistoryPage = lazy(() => import("./pages/equity-brain/cartas/LetterHistoryPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
@@ -263,6 +265,8 @@ const App = () => (
               {/* Novas páginas-wrapper */}
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
               <Route path="pipeline"      element={<PipelinePage />} />
+              <Route path="cartas/modelos" element={<RequireRole roles={["admin"]}><LetterTemplatesPage /></RequireRole>} />
+              <Route path="cartas/historico" element={<LetterHistoryPage />} />
               <Route path="compradores"   element={<CompradoresPage />} />
               <Route path="mercado"       element={<NewsPage />} />
 
