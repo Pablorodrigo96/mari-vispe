@@ -7,7 +7,8 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { callAnthropic, hydrateTemplate } from "../_shared/anthropicGateway.ts";
 
 interface ReqBody {
-  deal_id: string;
+  deal_id?: string;
+  deal_pair_id?: string;
   template_code: string;
   custom_fields: Record<string, any>;
   parent_version_id?: string;
