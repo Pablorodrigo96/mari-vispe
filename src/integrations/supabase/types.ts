@@ -966,6 +966,60 @@ export type Database = {
           },
         ]
       }
+      deal_pairs: {
+        Row: {
+          buy_mandate_id: string | null
+          buyer_profile_id: string | null
+          comissao_buy_pct: number | null
+          comissao_sell_pct: number | null
+          created_at: string
+          created_by: string | null
+          data_pareamento: string
+          id: string
+          lost_reason: string | null
+          notes: string | null
+          responsavel_advisor_id: string
+          sell_mandate_id: string
+          source_match_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          buy_mandate_id?: string | null
+          buyer_profile_id?: string | null
+          comissao_buy_pct?: number | null
+          comissao_sell_pct?: number | null
+          created_at?: string
+          created_by?: string | null
+          data_pareamento?: string
+          id?: string
+          lost_reason?: string | null
+          notes?: string | null
+          responsavel_advisor_id: string
+          sell_mandate_id: string
+          source_match_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          buy_mandate_id?: string | null
+          buyer_profile_id?: string | null
+          comissao_buy_pct?: number | null
+          comissao_sell_pct?: number | null
+          created_at?: string
+          created_by?: string | null
+          data_pareamento?: string
+          id?: string
+          lost_reason?: string | null
+          notes?: string | null
+          responsavel_advisor_id?: string
+          sell_mandate_id?: string
+          source_match_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deal_qa: {
         Row: {
           answer: string | null
@@ -3072,6 +3126,43 @@ export type Database = {
           present_count: number | null
           required_count: number | null
           stage_key: string | null
+        }
+        Relationships: []
+      }
+      deal_pairs_enriched: {
+        Row: {
+          buy_cnpj: string | null
+          buy_mandate_id: string | null
+          buy_setor: string | null
+          buy_uf: string | null
+          buyer_profile_company: string | null
+          buyer_profile_id: string | null
+          buyer_profile_name: string | null
+          comissao_buy_pct: number | null
+          comissao_sell_pct: number | null
+          created_at: string | null
+          created_by: string | null
+          data_pareamento: string | null
+          id: string | null
+          lost_reason: string | null
+          notes: string | null
+          responsavel_advisor_id: string | null
+          responsavel_name: string | null
+          sell_cnpj: string | null
+          sell_mandate_id: string | null
+          sell_setor: string | null
+          sell_stage:
+            | "match"
+            | "nbo"
+            | "due_diligence"
+            | "spa"
+            | "closing"
+            | "closed"
+            | null
+          sell_uf: string | null
+          source_match_id: string | null
+          status: string | null
+          updated_at: string | null
         }
         Relationships: []
       }
@@ -5774,6 +5865,18 @@ export type Database = {
         Returns: boolean
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      create_deal_pair_from_match: {
+        Args: {
+          _buy_mandate_id?: string
+          _buyer_profile_id?: string
+          _comissao_buy?: number
+          _comissao_sell?: number
+          _notes?: string
+          _sell_mandate_id: string
+          _source_match_id?: string
+        }
+        Returns: string
+      }
       eb_ai_runs_by_date: {
         Args: { p_date: string }
         Returns: {
@@ -6263,6 +6366,10 @@ export type Database = {
           p_user_agent: string
         }
         Returns: Json
+      }
+      transition_deal_pair: {
+        Args: { _new_status: string; _pair_id: string; _reason?: string }
+        Returns: undefined
       }
       update_mandate_field: {
         Args: { p_field: string; p_mandate_id: string; p_value: string }
