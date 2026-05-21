@@ -70,6 +70,8 @@ export default function ProspectionTab() {
   const { data, isLoading } = useProspectContacts(filters, 0);
   const rows = data?.rows ?? [];
   const updateStatus = useUpdateProspectStatus();
+  const contactIds = useMemo(() => rows.map((r) => r.id), [rows]);
+  const { data: lastLetters } = useContactLastLetter(contactIds);
 
   function toggleRow(id: string, e: React.MouseEvent) {
     setSelected((prev) => {
