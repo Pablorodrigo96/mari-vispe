@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     if (!allowed) return json({ error: "forbidden" }, 403);
 
     const body = (await req.json()) as ReqBody;
-    if (!body.deal_id || !body.template_code || !body.custom_fields) {
+    if (!body.template_code || !body.custom_fields || (!body.deal_id && !body.deal_pair_id)) {
       return json({ error: "missing_fields" }, 400);
     }
 
@@ -70,13 +70,31 @@ Deno.serve(async (req) => {
       return json({ error: "missing_required_fields", fields: missing }, 400);
     }
 
-    // Load deal for context
-    const { data: deal } = await admin
-      .from("deals")
-      .select("id, codename, mandate_id, buyer_id")
-      .eq("id", body.deal_id)
-      .maybeSingle();
-    if (!deal) return json({ error: "deal_not_found" }, 404);
+    // Load context: either deal or pair
+    let contextCodename = "N/A";
+    if (body.deal_id) {
+      const { data: deal } = await admin
+        .from("deals")
+        .select("id, codename")
+        .eq("id", body.deal_id)
+        .maybeSingle();
+      if (!deal) return json({ error: "deal_not_found" }, 404);
+      contextCodename = deal.codename ?? "N/A";
+    } else if (body.deal_pair_id) {
+      const { data: pair } = await admin
+        .from("deal_pairs")
+        .select("id, sell_mandate_id")
+        .eq("id", body.deal_pair_id)
+        .maybeSingle();
+      if (!pair) return json({ error: "pair_not_found" }, 404);
+      // Try resolve codename via sell mandate / company
+      const { data: m } = await admin
+        .from("eb_companies")
+        .select("codename")
+        .eq("id", pair.sell_mandate_id)
+        .maybeSingle();
+      contextCodename = m?.codename ?? `PAR-${body.deal_pair_id.slice(0, 8)}`;
+    }
 
     // Hydrate template body deterministically
     const hydrated = hydrateTemplate(tpl.template_body ?? "", body.custom_fields);
