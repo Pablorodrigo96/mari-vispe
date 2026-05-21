@@ -1,56 +1,50 @@
-## Bloco 2 (parcial — sem depender do e-mail)
+## Polimento do Bloco 2 — Cartas em lote
 
-Email da gráfica fica em standby até o domínio Cloudflare normalizar. Vou adiantar tudo que não depende de envio.
+Quatro melhorias focadas em UX e robustez, sem mexer no envio por e-mail (segue em standby).
 
-### 1. Wire do botão "Gerar carta em lote" no `ProspectionTab.tsx`
+### 1. Validação de endereço mais rica no `SendLettersDialog`
 
-- Importar `SendLettersDialog`.
-- Adicionar estado `lettersOpen`.
-- Trocar o `handleGenerateLetters` atual (que só dá toast e muda status) por: validar `≤200` e `missingAddress=0`, depois abrir o dialog.
-- Renderizar `<SendLettersDialog open contacts={selectedRows} onComplete={() => setSelected(new Set())} />` no final.
-- O dialog já está pronto, já chama a edge `send-letters-batch`, gera PDF+CSV no bucket e marca `letter_batches.status='sent'` mesmo sem e-mail (advisor baixa em `/equity-brain/cartas/historico`).
+Hoje a checagem é só `postal_address && postal_zipcode`. Vou:
 
-### 2. Tela admin de configuração da Gráfica
+- Detalhar quais contatos estão incompletos (lista colapsável com nome + campo faltando).
+- Validar CEP com regex `^\d{5}-?\d{3}$` e UF/cidade não vazios.
+- Adicionar botão "Remover incompletos da seleção" que chama `onComplete` filtrando.
+- Manter o bloqueio quando `missing.length > 0`.
 
-Criar `src/pages/admin/AdminLettersSettings.tsx` com 4 campos persistidos em `api_settings` (RLS já restringe a admin):
+### 2. Prévia navegável (1 → N)
 
-- `grafica_email` (obrigatório)
-- `grafica_cc` (opcional, lista por vírgula)
-- `letter_sender_name` (default: "mari · Vispe Group")
-- `letter_sender_address` (multiline, usado no cabeçalho do PDF)
+No dialog, hoje só mostra a 1ª carta. Vou adicionar:
 
-Carrega via `select * from api_settings where key in (...)`, salva via `upsert onConflict=key`. Visual mari (Carbon/Volt, glassmorphism). Aviso no rodapé: enquanto o e-mail não estiver conectado, advisor baixa PDF/CSV em Cartas → Histórico; envio automático passa a funcionar assim que o domínio for habilitado.
+- Setas `‹ Carta X de N ›` para navegar pelos contatos.
+- Indicador visual quando o template tem placeholder não resolvido (ex.: `{{cnpj}}` quando `c.cnpj` é nulo) — destacar em amarelo.
+- Botão "Baixar prévia (PDF)" que gera só a carta atual (chamada à edge com flag `preview=true`, sem persistir batch).
 
-Registrar rota em `src/App.tsx` dentro do bloco `AppShell`:
+### 3. Histórico: filtros, paginação e métricas
 
-```
-<Route path="/admin/cartas-grafica" element={<RequireRole roles={["admin"]}><AdminLettersSettings /></RequireRole>} />
-```
+Em `LetterHistoryPage.tsx`:
 
-### 3. Sidebar — entradas novas
+- Cabeçalho com 3 KPIs: **Lotes no mês**, **Cartas geradas (total)**, **Última remessa** (data).
+- Filtro por status (Todos / Gerando / Enviado / Falhou) e busca por data (últimos 7/30/90 dias).
+- Paginação client-side de 20 em 20 (`useLetterBatches` já retorna ordenado por created_at desc).
+- Mostrar nome do template usado em cada card (join com `letter_templates.name`).
 
-Em `src/components/layout/AppSidebar.tsx`:
+### 4. Card de lote no Pipeline (badge no contato)
 
-- Novo grupo para advisor/admin (acima do grupo Admin):
-  ```
-  {
-    id: 'cartas', name: '✉️ Cartas', icon: Mail,
-    children: [
-      { name: 'Histórico de lotes', href: '/equity-brain/cartas/historico', icon: ClipboardList },
-      ...(eff.isAdmin ? [
-        { name: 'Modelos', href: '/equity-brain/cartas/modelos', icon: FileText },
-        { name: 'Config. gráfica', href: '/admin/cartas-grafica', icon: Mail },
-      ] : []),
-    ],
-  }
-  ```
-- Mostrar para `eff.isAdmin || eff.isAdvisor`.
-- Importar `Mail` de `lucide-react` (ainda não está nos imports atuais).
+Quando um contato já recebeu carta:
 
-### Fora de escopo (segue pausado)
+- Mostrar badge `📮 Carta enviada · DD/MM` ao lado do nome em `ProspectionTab`.
+- Tooltip com link "Ver lote" abrindo `/equity-brain/cartas/historico?batch=<id>`.
+- Fonte: nova view `eb_contact_last_letter` (SELECT lateral do último `letter_batch_recipients` por contact_id). Sem migração nova de tabela — só a view.
 
-- Provisionar Lovable Emails / template `prospect-letters-batch` / refactor da edge para `send-transactional-email`. Tudo isso espera o domínio `notify.vispe.com.br` ser conectado ao projeto.
+### Detalhes técnicos
+
+- **Migração**: 1 view `eb_contact_last_letter` com RLS herdada das tabelas-base.
+- **Edge function**: pequena alteração em `send-letters-batch/index.ts` para aceitar `preview: true` (renderiza 1 carta, devolve PDF base64, não cria batch).
+- **Hook novo**: `useContactLastLetter(contactIds: string[])` para buscar em batch.
+- **Sem dependência de e-mail / DNS** — tudo funciona com o estado atual.
 
 ### Estimativa
+~45 min. 1 migração leve (view), 1 edit em edge function, 4 edits em frontend.
 
-~30 min. Sem migração, sem novos secrets, sem edge function nova.
+### Fora de escopo
+- Bloco 3 (tracking de resposta) e conexão do e-mail da gráfica continuam no backlog.

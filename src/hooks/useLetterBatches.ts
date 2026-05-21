@@ -45,6 +45,20 @@ export function useSendLettersBatch() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['letter-batches'] });
       qc.invalidateQueries({ queryKey: ['prospect-contacts'] });
+      qc.invalidateQueries({ queryKey: ['contact-last-letter'] });
+    },
+  });
+}
+
+export function usePreviewLetter() {
+  return useMutation({
+    mutationFn: async ({ contactId, templateId }: { contactId: string; templateId: string }) => {
+      const { data, error } = await supabase.functions.invoke('send-letters-batch', {
+        body: { contact_ids: [contactId], template_id: templateId, preview: true },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as { pdf_base64: string };
     },
   });
 }

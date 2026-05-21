@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, AlertTriangle, Loader2 } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Plus, Search, AlertTriangle, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,6 +17,8 @@ import {
 } from '@/hooks/useProspectContacts';
 import { NewProspectModal } from '@/components/pipeline/NewProspectModal';
 import { SendLettersDialog } from '@/components/pipeline/SendLettersDialog';
+import { useContactLastLetter } from '@/hooks/useContactLastLetter';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function fmtDate(s: string | null) {
   if (!s) return '—';
@@ -40,6 +42,29 @@ const STATUS_BADGE: Partial<Record<ProspectStatus, string>> = {
   declined: 'bg-red-900/40 text-red-300',
   archived: 'bg-zinc-900 text-zinc-600',
 };
+
+function LetterBadge({ batchId, sentAt }: { batchId: string; sentAt: string }) {
+  const d = new Date(sentAt);
+  const label = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            to={`/equity-brain/cartas/historico?batch=${batchId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-900/40 text-sky-300 hover:bg-sky-900/60 transition-colors"
+          >
+            <Mail className="h-2.5 w-2.5" /> {label}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          Carta enviada em {d.toLocaleDateString('pt-BR')} · clique para ver o lote
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 export default function ProspectionTab() {
   const [params, setParams] = useSearchParams();
@@ -66,6 +91,8 @@ export default function ProspectionTab() {
   const { data, isLoading } = useProspectContacts(filters, 0);
   const rows = data?.rows ?? [];
   const updateStatus = useUpdateProspectStatus();
+  const contactIds = useMemo(() => rows.map((r) => r.id), [rows]);
+  const { data: lastLetters } = useContactLastLetter(contactIds);
 
   function toggleRow(id: string, e: React.MouseEvent) {
     setSelected((prev) => {
@@ -223,7 +250,14 @@ export default function ProspectionTab() {
                       onClick={(e) => toggleRow(r.id, e)}
                     >
                       <td className="px-3 py-2"><input type="checkbox" checked={isSel} onChange={() => {}} /></td>
-                      <td className="px-2 py-2 text-zinc-100">{r.contact_name}</td>
+                      <td className="px-2 py-2 text-zinc-100">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{r.contact_name}</span>
+                          {lastLetters?.get(r.id) && (
+                            <LetterBadge batchId={lastLetters.get(r.id)!.batch_id} sentAt={lastLetters.get(r.id)!.sent_at} />
+                          )}
+                        </div>
+                      </td>
                       <td className="px-2 py-2 text-zinc-300">{r.company_name}</td>
                       <td className="px-2 py-2 text-zinc-400">{r.city}/{r.state}</td>
                       <td className="px-2 py-2 text-zinc-400">{r.sector}</td>
@@ -254,7 +288,12 @@ export default function ProspectionTab() {
                     <div className="flex items-start gap-3">
                       <input type="checkbox" checked={isSel} onChange={() => {}} className="mt-1" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-zinc-100 text-sm break-words">{r.contact_name}</div>
+                        <div className="font-medium text-zinc-100 text-sm break-words flex items-center gap-1.5 flex-wrap">
+                          <span>{r.contact_name}</span>
+                          {lastLetters?.get(r.id) && (
+                            <LetterBadge batchId={lastLetters.get(r.id)!.batch_id} sentAt={lastLetters.get(r.id)!.sent_at} />
+                          )}
+                        </div>
                         <div className="text-xs text-zinc-400 break-words">{r.company_name}</div>
                         <div className="text-[11px] text-zinc-500 mt-1 flex flex-wrap gap-2">
                           <span>{r.city}/{r.state}</span>
@@ -319,6 +358,7 @@ export default function ProspectionTab() {
         open={lettersOpen}
         onOpenChange={setLettersOpen}
         contacts={selectedRows}
+        onFilterIncomplete={(validIds) => setSelected(new Set(validIds))}
         onComplete={() => setSelected(new Set())}
       />
     </div>

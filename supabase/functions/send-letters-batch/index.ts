@@ -134,12 +134,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Sessão inválida" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { contact_ids, template_id } = await req.json();
+    const { contact_ids, template_id, preview } = await req.json();
     if (!Array.isArray(contact_ids) || contact_ids.length === 0) {
       return new Response(JSON.stringify({ error: "contact_ids vazio" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    if (contact_ids.length > 200) {
+    if (!preview && contact_ids.length > 200) {
       return new Response(JSON.stringify({ error: "Máximo 200 cartas por lote" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (preview && contact_ids.length !== 1) {
+      return new Response(JSON.stringify({ error: "Preview aceita exatamente 1 contato" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Fetch template
@@ -168,10 +171,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Validate addresses
-    const missing = contacts.filter((c: any) => !c.postal_address || !c.postal_zipcode);
-    if (missing.length > 0) {
-      return new Response(JSON.stringify({ error: `${missing.length} contato(s) sem endereço postal` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Validate addresses (skip in preview mode)
+    if (!preview) {
+      const missing = contacts.filter((c: any) => !c.postal_address || !c.postal_zipcode);
+      if (missing.length > 0) {
+        return new Response(JSON.stringify({ error: `${missing.length} contato(s) sem endereço postal` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     // Settings
@@ -189,6 +194,25 @@ Deno.serve(async (req) => {
       .from("profiles").select("full_name, phone, email").eq("id", user.id).maybeSingle();
     const advisorName = profile?.full_name || user.email || "Equipe mari";
     const advisorPhone = profile?.phone || "";
+
+    // ===== PREVIEW MODE: gera 1 carta e devolve base64, sem persistir =====
+    if (preview) {
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      const c = contacts[0];
+      const body = applyPlaceholders(tpl.body_html, c, advisorName, advisorPhone);
+      const sig = applyPlaceholders(tpl.signature_html ?? "", c, advisorName, advisorPhone);
+      renderLetter(doc, c, body, sig, senderName, senderAddress, 1, 1);
+      const pdfBytes = new Uint8Array(doc.output("arraybuffer"));
+      // base64 encode
+      let bin = "";
+      for (let i = 0; i < pdfBytes.length; i++) bin += String.fromCharCode(pdfBytes[i]);
+      const pdfBase64 = btoa(bin);
+      return new Response(JSON.stringify({ pdf_base64: pdfBase64 }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     // Create batch row
     const { data: batch, error: bErr } = await supabase
