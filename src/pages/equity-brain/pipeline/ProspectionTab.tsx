@@ -358,6 +358,7 @@ export default function ProspectionTab() {
         open={lettersOpen}
         onOpenChange={setLettersOpen}
         contacts={selectedRows}
+        onFilterIncomplete={(validIds) => setSelected(new Set(validIds))}
         onComplete={() => setSelected(new Set())}
       />
     </div>
