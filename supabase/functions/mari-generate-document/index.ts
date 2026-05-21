@@ -7,7 +7,8 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { callAnthropic, hydrateTemplate } from "../_shared/anthropicGateway.ts";
 
 interface ReqBody {
-  deal_id: string;
+  deal_id?: string;
+  deal_pair_id?: string;
   template_code: string;
   custom_fields: Record<string, any>;
   parent_version_id?: string;
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
     if (!allowed) return json({ error: "forbidden" }, 403);
 
     const body = (await req.json()) as ReqBody;
-    if (!body.deal_id || !body.template_code || !body.custom_fields) {
+    if (!body.template_code || !body.custom_fields || (!body.deal_id && !body.deal_pair_id)) {
       return json({ error: "missing_fields" }, 400);
     }
 
@@ -69,13 +70,31 @@ Deno.serve(async (req) => {
       return json({ error: "missing_required_fields", fields: missing }, 400);
     }
 
-    // Load deal for context
-    const { data: deal } = await admin
-      .from("deals")
-      .select("id, codename, mandate_id, buyer_id")
-      .eq("id", body.deal_id)
-      .maybeSingle();
-    if (!deal) return json({ error: "deal_not_found" }, 404);
+    // Load context: either deal or pair
+    let contextCodename = "N/A";
+    if (body.deal_id) {
+      const { data: deal } = await admin
+        .from("deals")
+        .select("id, codename")
+        .eq("id", body.deal_id)
+        .maybeSingle();
+      if (!deal) return json({ error: "deal_not_found" }, 404);
+      contextCodename = deal.codename ?? "N/A";
+    } else if (body.deal_pair_id) {
+      const { data: pair } = await admin
+        .from("deal_pairs")
+        .select("id, sell_mandate_id")
+        .eq("id", body.deal_pair_id)
+        .maybeSingle();
+      if (!pair) return json({ error: "pair_not_found" }, 404);
+      // Try resolve codename via sell mandate / company
+      const { data: m } = await admin
+        .from("eb_companies")
+        .select("codename")
+        .eq("id", pair.sell_mandate_id)
+        .maybeSingle();
+      contextCodename = m?.codename ?? `PAR-${body.deal_pair_id.slice(0, 8)}`;
+    }
 
     // Hydrate template body deterministically
     const hydrated = hydrateTemplate(tpl.template_body ?? "", body.custom_fields);
@@ -111,7 +130,7 @@ Deno.serve(async (req) => {
             `Categoria: ${tpl.category} | Template: ${tpl.code}`,
             ``,
             `DADOS CONTEXTUAIS DO DEAL:`,
-            `- Codinome interno: ${deal.codename ?? "N/A"}`,
+            `- Codinome interno: ${contextCodename}`,
             ``,
             `INSTRUÇÕES DA SEÇÃO:`,
             sectionInstructions,
@@ -127,7 +146,7 @@ Deno.serve(async (req) => {
             function_name: "mari-generate-document",
             feature: `legal_doc_${tpl.category}_${p.id}`,
             user_id: userId,
-            metadata: { deal_id: body.deal_id, template_code: body.template_code, part_id: p.id },
+            metadata: { deal_id: body.deal_id, deal_pair_id: body.deal_pair_id, template_code: body.template_code, part_id: p.id },
           });
         }),
       );
@@ -151,7 +170,7 @@ Deno.serve(async (req) => {
         `Categoria: ${tpl.category} | Template: ${tpl.code} | Label: ${tpl.label}`,
         ``,
         `DADOS CONTEXTUAIS DO DEAL:`,
-        `- Codinome interno: ${deal.codename ?? "N/A"}`,
+        `- Codinome interno: ${contextCodename}`,
         ``,
         `DOCUMENTO PRÉ-HIDRATADO:`,
         ``,
@@ -166,7 +185,7 @@ Deno.serve(async (req) => {
         function_name: "mari-generate-document",
         feature: `legal_doc_${tpl.category}`,
         user_id: userId,
-        metadata: { deal_id: body.deal_id, template_code: body.template_code },
+        metadata: { deal_id: body.deal_id, deal_pair_id: body.deal_pair_id, template_code: body.template_code },
       });
       finalText = ai.text;
       provider = ai.provider;
@@ -187,14 +206,16 @@ Deno.serve(async (req) => {
         .maybeSingle();
       version = (parent?.version_number ?? 0) + 1;
     } else {
-      const { data: latest } = await admin
+      let lq = admin
         .from("deal_documents")
         .select("version_number")
-        .eq("deal_id", body.deal_id)
         .eq("template_code", body.template_code)
         .order("version_number", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+      lq = body.deal_pair_id
+        ? lq.eq("deal_pair_id", body.deal_pair_id)
+        : lq.eq("deal_id", body.deal_id!);
+      const { data: latest } = await lq.maybeSingle();
       version = (latest?.version_number ?? 0) + 1;
     }
 
@@ -202,7 +223,8 @@ Deno.serve(async (req) => {
     const { data: doc, error: insErr } = await admin
       .from("deal_documents")
       .insert({
-        deal_id: body.deal_id,
+        deal_id: body.deal_id ?? null,
+        deal_pair_id: body.deal_pair_id ?? null,
         template_code: tpl.code,
         label: `${tpl.label} v${version}`,
         category: tpl.category,
@@ -241,6 +263,7 @@ Deno.serve(async (req) => {
       actor_user_id: userId,
       payload: {
         deal_id: body.deal_id,
+        deal_pair_id: body.deal_pair_id,
         template_code: body.template_code,
         version,
         provider,

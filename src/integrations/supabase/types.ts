@@ -857,7 +857,8 @@ export type Database = {
           category: string
           created_at: string
           custom_fields_snapshot: Json
-          deal_id: string
+          deal_id: string | null
+          deal_pair_id: string | null
           generated_body: string | null
           homologation_status: string
           id: string
@@ -890,7 +891,8 @@ export type Database = {
           category?: string
           created_at?: string
           custom_fields_snapshot?: Json
-          deal_id: string
+          deal_id?: string | null
+          deal_pair_id?: string | null
           generated_body?: string | null
           homologation_status?: string
           id?: string
@@ -923,7 +925,8 @@ export type Database = {
           category?: string
           created_at?: string
           custom_fields_snapshot?: Json
-          deal_id?: string
+          deal_id?: string | null
+          deal_pair_id?: string | null
           generated_body?: string | null
           homologation_status?: string
           id?: string
@@ -950,6 +953,20 @@ export type Database = {
           visible_to_buyer?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "deal_documents_deal_pair_id_fkey"
+            columns: ["deal_pair_id"]
+            isOneToOne: false
+            referencedRelation: "deal_pairs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_documents_deal_pair_id_fkey"
+            columns: ["deal_pair_id"]
+            isOneToOne: false
+            referencedRelation: "deal_pairs_enriched"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "deal_documents_parent_version_id_fkey"
             columns: ["parent_version_id"]
@@ -2088,6 +2105,54 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nbo_drafts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          current_step: number
+          deal_pair_id: string
+          id: string
+          last_saved_at: string
+          payload: Json
+          template_code: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          current_step?: number
+          deal_pair_id: string
+          id?: string
+          last_saved_at?: string
+          payload?: Json
+          template_code?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          current_step?: number
+          deal_pair_id?: string
+          id?: string
+          last_saved_at?: string
+          payload?: Json
+          template_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nbo_drafts_deal_pair_id_fkey"
+            columns: ["deal_pair_id"]
+            isOneToOne: false
+            referencedRelation: "deal_pairs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nbo_drafts_deal_pair_id_fkey"
+            columns: ["deal_pair_id"]
+            isOneToOne: false
+            referencedRelation: "deal_pairs_enriched"
             referencedColumns: ["id"]
           },
         ]

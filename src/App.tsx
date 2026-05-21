@@ -144,6 +144,7 @@ const NoteSearchPage = lazy(() => import("./pages/equity-brain/NoteSearchPage"))
 const LetterTemplatesPage = lazy(() => import("./pages/equity-brain/cartas/LetterTemplatesPage"));
 const LetterHistoryPage = lazy(() => import("./pages/equity-brain/cartas/LetterHistoryPage"));
 const DealPairDetailPage = lazy(() => import("./pages/equity-brain/DealPairDetailPage"));
+const NboWizardPage = lazy(() => import("./pages/equity-brain/NboWizardPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
@@ -271,6 +272,7 @@ const App = () => (
               <Route path="cartas/modelos" element={<RequireRole roles={["admin"]}><LetterTemplatesPage /></RequireRole>} />
               <Route path="cartas/historico" element={<LetterHistoryPage />} />
               <Route path="par/:id" element={<DealPairDetailPage />} />
+              <Route path="par/:id/nbo" element={<RequireRole roles={["admin", "advisor", "legal"]}><NboWizardPage /></RequireRole>} />
               <Route path="compradores"   element={<CompradoresPage />} />
               <Route path="mercado"       element={<NewsPage />} />
 
