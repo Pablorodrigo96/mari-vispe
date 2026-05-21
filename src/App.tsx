@@ -24,6 +24,7 @@ import { RedirectWithParams } from "./components/equity-brain/RedirectWithParams
 // Public / hybrid pages
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const HomologacaoPublica = lazy(() => import("./pages/legal/HomologacaoPublica"));
 const AssinaturaPublica = lazy(() => import("./pages/legal/AssinaturaPublica"));
 const Terms = lazy(() => import("./pages/Terms"));
@@ -169,6 +170,7 @@ const App = () => (
             {/* Pure public-only routes — no shell wrapping */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/homologacao/:token" element={<HomologacaoPublica />} />
             <Route path="/assinar/:token" element={<AssinaturaPublica />} />
             <Route path="/terms" element={<Terms />} />
