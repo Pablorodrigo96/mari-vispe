@@ -10,11 +10,13 @@ import MapaPage from "./MapaPage";
 import GrafoPage from "./GrafoPage";
 import MyCompaniesPage from "./MyCompaniesPage";
 import QuickFillPage from "./QuickFillPage";
+import ProspectionTab from "./pipeline/ProspectionTab";
 
-type Tab = "mandatos" | "empresas";
+type Tab = "prospeccao" | "mandatos" | "empresas";
 type View = "lista" | "kanban" | "mapa" | "grafo";
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: "prospeccao", label: "Prospecção" },
   { id: "mandatos", label: "Mandatos" },
   { id: "empresas", label: "Empresas" },
 ];
