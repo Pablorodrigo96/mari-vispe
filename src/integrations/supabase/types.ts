@@ -3932,6 +3932,25 @@ export type Database = {
         }
         Relationships: []
       }
+      eb_contact_last_letter: {
+        Row: {
+          advisor_id: string | null
+          batch_id: string | null
+          batch_status: string | null
+          contact_id: string | null
+          sent_at: string | null
+          template_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "letter_batch_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "letter_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eb_contacts: {
         Row: {
           cargo: string | null
