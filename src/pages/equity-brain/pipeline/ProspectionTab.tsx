@@ -18,9 +18,7 @@ import {
 import { NewProspectModal } from '@/components/pipeline/NewProspectModal';
 import { SendLettersDialog } from '@/components/pipeline/SendLettersDialog';
 import { useContactLastLetter } from '@/hooks/useContactLastLetter';
-import { Mail } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Link } from 'react-router-dom';
 
 function fmtDate(s: string | null) {
   if (!s) return '—';
