@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, AlertTriangle, Loader2 } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Plus, Search, AlertTriangle, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
