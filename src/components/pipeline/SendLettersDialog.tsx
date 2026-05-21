@@ -30,13 +30,18 @@ export function SendLettersDialog({ open, onOpenChange, contacts, onComplete }: 
   const canSend = !!effectiveTplId && contacts.length > 0 && missing.length === 0 && !tooMany;
 
   function previewFor(c: ProspectContact, html: string) {
-    return html
-      .replaceAll('{{contact_name}}', c.contact_name)
-      .replaceAll('{{company_name}}', c.company_name)
-      .replaceAll('{{cnpj}}', c.cnpj ?? '—')
-      .replaceAll('{{city}}', `${c.city}/${c.state}`)
-      .replaceAll('{{advisor_name}}', 'Equipe mari')
-      .replaceAll('{{advisor_phone}}', '');
+    const map: Record<string, string> = {
+      '{{contact_name}}': c.contact_name,
+      '{{company_name}}': c.company_name,
+      '{{cnpj}}': c.cnpj ?? '—',
+      '{{city}}': `${c.city}/${c.state}`,
+      '{{advisor_name}}': 'Equipe mari',
+      '{{advisor_phone}}': '',
+    };
+    return Object.entries(map).reduce(
+      (acc, [k, v]) => acc.split(k).join(v),
+      html,
+    );
   }
 
   async function handleSend() {
