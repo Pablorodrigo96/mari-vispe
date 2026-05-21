@@ -5,7 +5,7 @@ import {
   UserSearch, Target, ChartBar, FileText, Award, Calculator, DollarSign,
   Briefcase, Sparkles, Shield, Brain, ChevronDown, LogOut, User, ChevronLeft,
   ChevronRight, BarChart3, FileSignature, Handshake, FileBarChart,
-  TrendingUp, CheckSquare, MessageCircle,
+  TrendingUp, CheckSquare, MessageCircle, Mail,
 } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
 import { cn } from '@/lib/utils';
@@ -169,6 +169,16 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
           { name: 'Mandato', href: '/equity-brain/dashboards/mandatos', icon: FileSignature },
           { name: 'Match', href: '/equity-brain/dashboards/match', icon: Handshake },
           { name: 'NBO', href: '/equity-brain/dashboards/propostas', icon: FileBarChart },
+        ],
+      });
+      groups.push({
+        id: 'cartas', name: '✉️ Cartas', icon: Mail,
+        children: [
+          { name: 'Histórico de lotes', href: '/equity-brain/cartas/historico', icon: ClipboardList },
+          ...(eff.isAdmin ? [
+            { name: 'Modelos', href: '/equity-brain/cartas/modelos', icon: FileText },
+            { name: 'Config. gráfica', href: '/admin/cartas-grafica', icon: Mail },
+          ] : []),
         ],
       });
     }

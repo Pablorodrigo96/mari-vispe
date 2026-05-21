@@ -95,6 +95,7 @@ const AdvisorsMapping = lazy(() => import("./pages/admin/AdvisorsMapping"));
 const AdminApiMonitor = lazy(() => import("./pages/admin/AdminApiMonitor"));
 const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
 const AdminApprovals = lazy(() => import("./pages/admin/AdminApprovals"));
+const AdminLettersSettings = lazy(() => import("./pages/admin/AdminLettersSettings"));
 
 // Equity Brain
 const EBOportunidadesPage = lazy(() => import("./pages/equity-brain/OportunidadesPage"));
@@ -235,6 +236,7 @@ const App = () => (
               <Route path="/admin/monday-import" element={<RequireRole roles={["admin"]}><MondayImport /></RequireRole>} />
               <Route path="/admin/api-monitor" element={<RequireRole roles={["admin"]}><AdminApiMonitor /></RequireRole>} />
               <Route path="/admin/analytics" element={<RequireRole roles={["admin"]}><AdminAnalytics /></RequireRole>} />
+              <Route path="/admin/cartas-grafica" element={<RequireRole roles={["admin"]}><AdminLettersSettings /></RequireRole>} />
               {/* legados — agora rodam dentro do shell EB */}
               <Route path="/admin/monday-parity" element={<Navigate to="/equity-brain/admin/monday-parity" replace />} />
               <Route path="/admin/advisors-mapping" element={<Navigate to="/equity-brain/admin/advisors-mapping" replace />} />
