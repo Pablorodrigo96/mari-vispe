@@ -11,13 +11,15 @@ import GrafoPage from "./GrafoPage";
 import MyCompaniesPage from "./MyCompaniesPage";
 import QuickFillPage from "./QuickFillPage";
 import ProspectionTab from "./pipeline/ProspectionTab";
+import ParesTab from "./pipeline/ParesTab";
 
-type Tab = "prospeccao" | "mandatos" | "empresas";
+type Tab = "prospeccao" | "mandatos" | "empresas" | "pares";
 type View = "lista" | "kanban" | "mapa" | "grafo";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "prospeccao", label: "Prospecção" },
   { id: "mandatos", label: "Mandatos" },
+  { id: "pares", label: "Pares" },
   { id: "empresas", label: "Empresas" },
 ];
 
@@ -33,7 +35,9 @@ export default function PipelinePage() {
   const tabRaw = params.get("tab");
   const viewRaw = params.get("view");
   const tab: Tab =
-    tabRaw === "empresas" ? "empresas" : tabRaw === "prospeccao" ? "prospeccao" : "mandatos";
+    tabRaw === "empresas" ? "empresas" :
+    tabRaw === "prospeccao" ? "prospeccao" :
+    tabRaw === "pares" ? "pares" : "mandatos";
   const view: View =
     viewRaw === "lista" || viewRaw === "mapa" || viewRaw === "grafo" ? viewRaw : "kanban";
   const [quickFillOpen, setQuickFillOpen] = useState(false);
@@ -127,6 +131,8 @@ export default function PipelinePage() {
       <div className="flex-1 min-h-0 overflow-hidden">
         {tab === "prospeccao" ? (
           <ProspectionTab />
+        ) : tab === "pares" ? (
+          <ParesTab />
         ) : tab === "empresas" ? (
           <MyCompaniesPage />
         ) : view === "lista" ? (
