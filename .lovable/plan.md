@@ -1,42 +1,56 @@
-## Bloco 2 — Finalização (Cartas em Lote + Gráfica)
+## Bloco 2 (parcial — sem depender do e-mail)
 
-Domínio `notify.vispe.com.br` já está verificado. Vou ativar Lovable Emails e fechar os ~20% que faltam.
+Email da gráfica fica em standby até o domínio Cloudflare normalizar. Vou adiantar tudo que não depende de envio.
 
-### Passos
+### 1. Wire do botão "Gerar carta em lote" no `ProspectionTab.tsx`
 
-1. **Infra de email (Lovable Emails)**
-   - Provisionar infra de email (queue pgmq, cron, tabelas de log/suppressão).
-   - Scaffold de transactional emails (cria `send-transactional-email` + registry + página `/unsubscribe`).
+- Importar `SendLettersDialog`.
+- Adicionar estado `lettersOpen`.
+- Trocar o `handleGenerateLetters` atual (que só dá toast e muda status) por: validar `≤200` e `missingAddress=0`, depois abrir o dialog.
+- Renderizar `<SendLettersDialog open contacts={selectedRows} onComplete={() => setSelected(new Set())} />` no final.
+- O dialog já está pronto, já chama a edge `send-letters-batch`, gera PDF+CSV no bucket e marca `letter_batches.status='sent'` mesmo sem e-mail (advisor baixa em `/equity-brain/cartas/historico`).
 
-2. **Template `prospect-letters-batch`**
-   - Componente React Email em `_shared/transactional-email-templates/prospect-letters-batch.tsx`.
-   - Props: `advisorName`, `batchId`, `totalLetters`, `pdfUrl`, `csvUrl`, `expiresAt`, `graficaName`.
-   - Visual mari (Carbon/Volt, fundo branco obrigatório), 2 botões grandes (Baixar PDF / Baixar CSV), aviso de expiração 7 dias.
-   - Registrar em `registry.ts`.
+### 2. Tela admin de configuração da Gráfica
 
-3. **Edge function `send-letters-batch`**
-   - Trocar o envio inline atual por `supabase.functions.invoke('send-transactional-email', { templateName: 'prospect-letters-batch', recipientEmail: graficaEmail, idempotencyKey: \`batch-\${batch_id}\`, templateData: {...} })`.
-   - Manter geração de PDF/CSV + upload pro bucket `prospect-letters` + signed URLs (7d).
-   - CC opcional via `app_settings.grafica_cc` → segundo invoke (uma cópia para advisor).
+Criar `src/pages/admin/AdminLettersSettings.tsx` com 4 campos persistidos em `api_settings` (RLS já restringe a admin):
 
-4. **Wiring no `ProspectionTab`**
-   - Botão "Gerar carta em lote" abre `SendLettersDialog` já criado.
-   - Passa contatos selecionados (validação ≤200 e `postal_address` obrigatório já feita no dialog).
+- `grafica_email` (obrigatório)
+- `grafica_cc` (opcional, lista por vírgula)
+- `letter_sender_name` (default: "mari · Vispe Group")
+- `letter_sender_address` (multiline, usado no cabeçalho do PDF)
 
-5. **Admin Settings — Gráfica**
-   - Mini-seção em `/admin` (ou `/admin/configuracoes`) com 3 campos persistidos em `app_settings`:
-     - `grafica_email` (obrigatório)
-     - `grafica_cc` (opcional, lista separada por vírgula)
-     - `letter_sender_name` + `letter_sender_address` (rodapé do PDF)
-   - Apenas admin pode editar (RLS já existe).
+Carrega via `select * from api_settings where key in (...)`, salva via `upsert onConflict=key`. Visual mari (Carbon/Volt, glassmorphism). Aviso no rodapé: enquanto o e-mail não estiver conectado, advisor baixa PDF/CSV em Cartas → Histórico; envio automático passa a funcionar assim que o domínio for habilitado.
 
-6. **QA**
-   - Lint + deploy `send-transactional-email` e `send-letters-batch`.
-   - Curl de teste: lote de 2 contatos fake → verificar PDF gerado, CSV, email recebido na gráfica.
-   - Conferir `email_send_log` e `letter_batches.status='sent'`.
+Registrar rota em `src/App.tsx` dentro do bloco `AppShell`:
 
-### Fora de escopo (mantido)
-Tracking de entrega individual, sequências automáticas, editor visual de template, múltiplos templates por região.
+```
+<Route path="/admin/cartas-grafica" element={<RequireRole roles={["admin"]}><AdminLettersSettings /></RequireRole>} />
+```
 
-### Estimativa restante
-~3-4h. Sem novos secrets, sem connector externo.
+### 3. Sidebar — entradas novas
+
+Em `src/components/layout/AppSidebar.tsx`:
+
+- Novo grupo para advisor/admin (acima do grupo Admin):
+  ```
+  {
+    id: 'cartas', name: '✉️ Cartas', icon: Mail,
+    children: [
+      { name: 'Histórico de lotes', href: '/equity-brain/cartas/historico', icon: ClipboardList },
+      ...(eff.isAdmin ? [
+        { name: 'Modelos', href: '/equity-brain/cartas/modelos', icon: FileText },
+        { name: 'Config. gráfica', href: '/admin/cartas-grafica', icon: Mail },
+      ] : []),
+    ],
+  }
+  ```
+- Mostrar para `eff.isAdmin || eff.isAdvisor`.
+- Importar `Mail` de `lucide-react` (ainda não está nos imports atuais).
+
+### Fora de escopo (segue pausado)
+
+- Provisionar Lovable Emails / template `prospect-letters-batch` / refactor da edge para `send-transactional-email`. Tudo isso espera o domínio `notify.vispe.com.br` ser conectado ao projeto.
+
+### Estimativa
+
+~30 min. Sem migração, sem novos secrets, sem edge function nova.

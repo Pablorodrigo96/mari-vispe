@@ -16,6 +16,7 @@ import {
   type ProspectContact,
 } from '@/hooks/useProspectContacts';
 import { NewProspectModal } from '@/components/pipeline/NewProspectModal';
+import { SendLettersDialog } from '@/components/pipeline/SendLettersDialog';
 
 function fmtDate(s: string | null) {
   if (!s) return '—';
@@ -44,6 +45,7 @@ export default function ProspectionTab() {
   const [params, setParams] = useSearchParams();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
+  const [lettersOpen, setLettersOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastClicked, setLastClicked] = useState<string | null>(null);
 
@@ -96,6 +98,15 @@ export default function ProspectionTab() {
   const missingAddress = selectedRows.filter((r) => !r.postal_address || !r.postal_zipcode);
 
   function handleGenerateLetters() {
+    if (selectedRows.length === 0) return;
+    if (selectedRows.length > 200) {
+      toast({
+        title: 'Máximo 200 cartas por lote',
+        description: 'Reduza a seleção e tente novamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (missingAddress.length > 0) {
       toast({
         title: `${missingAddress.length} contato(s) sem endereço postal`,
@@ -104,12 +115,7 @@ export default function ProspectionTab() {
       });
       return;
     }
-    toast({
-      title: 'Pronto para gerar lote',
-      description: `${selectedRows.length} contato(s) marcados para fila. Geração de PDF entra no Bloco 2.`,
-    });
-    void updateStatus.mutateAsync({ ids: selectedRows.map((r) => r.id), status: 'letter_queued' });
-    setSelected(new Set());
+    setLettersOpen(true);
   }
 
   async function handleBulkStatus(s: ProspectStatus) {
@@ -309,6 +315,12 @@ export default function ProspectionTab() {
       )}
 
       <NewProspectModal open={modalOpen} onOpenChange={setModalOpen} />
+      <SendLettersDialog
+        open={lettersOpen}
+        onOpenChange={setLettersOpen}
+        contacts={selectedRows}
+        onComplete={() => setSelected(new Set())}
+      />
     </div>
   );
 }
