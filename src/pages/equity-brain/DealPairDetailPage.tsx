@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useDealPair, useTransitionDealPair, PAIR_STATUS_LABEL, PAIR_STATUS_COLOR, type DealPairStatus } from "@/hooks/useDealPairs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, User, Handshake } from "lucide-react";
+import { ArrowLeft, Building2, User, Handshake, FileText } from "lucide-react";
 
 const NEXT_STATUS: Record<DealPairStatus, DealPairStatus[]> = {
   draft: ["active", "lost"],
@@ -33,6 +33,11 @@ export default function DealPairDetailPage() {
         <h1 className="text-lg font-semibold">Par #{pair.id.slice(0, 8)}</h1>
         <Badge className={PAIR_STATUS_COLOR[pair.status]}>{PAIR_STATUS_LABEL[pair.status]}</Badge>
         <div className="ml-auto flex gap-2">
+          <Button asChild size="sm" variant="outline" className="bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800">
+            <Link to={`/equity-brain/par/${pair.id}/nbo`}>
+              <FileText className="h-4 w-4 mr-1" /> Gerar NBO
+            </Link>
+          </Button>
           {nexts.map((ns) => (
             <Button
               key={ns}
@@ -92,7 +97,7 @@ export default function DealPairDetailPage() {
 
       <div className="px-6 pb-8">
         <div className="text-xs text-zinc-500">
-          Documentos legais (NDA/NBO) serão integrados no Bloco 4 desta esteira.
+          Para gerar NDA/NBO oficial Vispe, clique em <strong>Gerar NBO</strong> no topo da página.
         </div>
       </div>
     </div>
