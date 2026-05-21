@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
             `Categoria: ${tpl.category} | Template: ${tpl.code}`,
             ``,
             `DADOS CONTEXTUAIS DO DEAL:`,
-            `- Codinome interno: ${deal.codename ?? "N/A"}`,
+            `- Codinome interno: ${contextCodename}`,
             ``,
             `INSTRUÇÕES DA SEÇÃO:`,
             sectionInstructions,
@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
             function_name: "mari-generate-document",
             feature: `legal_doc_${tpl.category}_${p.id}`,
             user_id: userId,
-            metadata: { deal_id: body.deal_id, template_code: body.template_code, part_id: p.id },
+            metadata: { deal_id: body.deal_id, deal_pair_id: body.deal_pair_id, template_code: body.template_code, part_id: p.id },
           });
         }),
       );
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
         `Categoria: ${tpl.category} | Template: ${tpl.code} | Label: ${tpl.label}`,
         ``,
         `DADOS CONTEXTUAIS DO DEAL:`,
-        `- Codinome interno: ${deal.codename ?? "N/A"}`,
+        `- Codinome interno: ${contextCodename}`,
         ``,
         `DOCUMENTO PRÉ-HIDRATADO:`,
         ``,
@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
         function_name: "mari-generate-document",
         feature: `legal_doc_${tpl.category}`,
         user_id: userId,
-        metadata: { deal_id: body.deal_id, template_code: body.template_code },
+        metadata: { deal_id: body.deal_id, deal_pair_id: body.deal_pair_id, template_code: body.template_code },
       });
       finalText = ai.text;
       provider = ai.provider;
@@ -206,14 +206,16 @@ Deno.serve(async (req) => {
         .maybeSingle();
       version = (parent?.version_number ?? 0) + 1;
     } else {
-      const { data: latest } = await admin
+      let lq = admin
         .from("deal_documents")
         .select("version_number")
-        .eq("deal_id", body.deal_id)
         .eq("template_code", body.template_code)
         .order("version_number", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+      lq = body.deal_pair_id
+        ? lq.eq("deal_pair_id", body.deal_pair_id)
+        : lq.eq("deal_id", body.deal_id!);
+      const { data: latest } = await lq.maybeSingle();
       version = (latest?.version_number ?? 0) + 1;
     }
 
@@ -221,7 +223,8 @@ Deno.serve(async (req) => {
     const { data: doc, error: insErr } = await admin
       .from("deal_documents")
       .insert({
-        deal_id: body.deal_id,
+        deal_id: body.deal_id ?? null,
+        deal_pair_id: body.deal_pair_id ?? null,
         template_code: tpl.code,
         label: `${tpl.label} v${version}`,
         category: tpl.category,
@@ -260,6 +263,7 @@ Deno.serve(async (req) => {
       actor_user_id: userId,
       payload: {
         deal_id: body.deal_id,
+        deal_pair_id: body.deal_pair_id,
         template_code: body.template_code,
         version,
         provider,
