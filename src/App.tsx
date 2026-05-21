@@ -170,6 +170,7 @@ const App = () => (
             {/* Pure public-only routes — no shell wrapping */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/homologacao/:token" element={<HomologacaoPublica />} />
             <Route path="/assinar/:token" element={<AssinaturaPublica />} />
             <Route path="/terms" element={<Terms />} />
