@@ -265,6 +265,8 @@ const App = () => (
               {/* Novas páginas-wrapper */}
               <Route path="oportunidades" element={<EBOportunidadesPage />} />
               <Route path="pipeline"      element={<PipelinePage />} />
+              <Route path="cartas/modelos" element={<RequireRole roles={["admin"]}><LetterTemplatesPage /></RequireRole>} />
+              <Route path="cartas/historico" element={<LetterHistoryPage />} />
               <Route path="compradores"   element={<CompradoresPage />} />
               <Route path="mercado"       element={<NewsPage />} />
 
