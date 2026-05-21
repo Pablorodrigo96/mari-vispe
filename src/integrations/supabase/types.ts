@@ -1527,6 +1527,136 @@ export type Database = {
           },
         ]
       }
+      letter_batch_items: {
+        Row: {
+          batch_id: string
+          created_at: string
+          id: string
+          page_number: number
+          prospect_contact_id: string | null
+          snapshot: Json
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          id?: string
+          page_number: number
+          prospect_contact_id?: string | null
+          snapshot: Json
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          id?: string
+          page_number?: number
+          prospect_contact_id?: string | null
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "letter_batch_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "letter_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      letter_batches: {
+        Row: {
+          advisor_id: string
+          created_at: string
+          csv_storage_path: string | null
+          email_message_id: string | null
+          error_message: string | null
+          grafica_email: string | null
+          id: string
+          pdf_storage_path: string | null
+          sent_at: string | null
+          status: string
+          template_id: string | null
+          total_contacts: number
+          updated_at: string
+        }
+        Insert: {
+          advisor_id: string
+          created_at?: string
+          csv_storage_path?: string | null
+          email_message_id?: string | null
+          error_message?: string | null
+          grafica_email?: string | null
+          id?: string
+          pdf_storage_path?: string | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          total_contacts?: number
+          updated_at?: string
+        }
+        Update: {
+          advisor_id?: string
+          created_at?: string
+          csv_storage_path?: string | null
+          email_message_id?: string | null
+          error_message?: string | null
+          grafica_email?: string | null
+          id?: string
+          pdf_storage_path?: string | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          total_contacts?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "letter_batches_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "letter_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      letter_templates: {
+        Row: {
+          body_html: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          signature_html: string | null
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body_html: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          signature_html?: string | null
+          subject?: string
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          signature_html?: string | null
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       listing_financial_docs: {
         Row: {
           ai_extracted_data: Json | null
