@@ -849,6 +849,64 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_closing_emails_log: {
+        Row: {
+          created_at: string
+          deal_document_id: string | null
+          deal_pair_id: string
+          error: string | null
+          id: string
+          recipient_email: string
+          recipient_type: string
+          sent_at: string | null
+          template: string
+        }
+        Insert: {
+          created_at?: string
+          deal_document_id?: string | null
+          deal_pair_id: string
+          error?: string | null
+          id?: string
+          recipient_email: string
+          recipient_type: string
+          sent_at?: string | null
+          template: string
+        }
+        Update: {
+          created_at?: string
+          deal_document_id?: string | null
+          deal_pair_id?: string
+          error?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_type?: string
+          sent_at?: string | null
+          template?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_closing_emails_log_deal_document_id_fkey"
+            columns: ["deal_document_id"]
+            isOneToOne: false
+            referencedRelation: "deal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_closing_emails_log_deal_pair_id_fkey"
+            columns: ["deal_pair_id"]
+            isOneToOne: false
+            referencedRelation: "deal_pairs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_closing_emails_log_deal_pair_id_fkey"
+            columns: ["deal_pair_id"]
+            isOneToOne: false
+            referencedRelation: "deal_pairs_enriched"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_documents: {
         Row: {
           ai_fallback_used: boolean
@@ -1312,6 +1370,93 @@ export type Database = {
           time_in_previous_stage_seconds?: number | null
           to_outcome?: string | null
           to_stage?: string | null
+        }
+        Relationships: []
+      }
+      email_send_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string
+          status?: string
+          template_name?: string
+        }
+        Relationships: []
+      }
+      email_send_state: {
+        Row: {
+          auth_email_ttl_minutes: number
+          batch_size: number
+          id: number
+          retry_after_until: string | null
+          send_delay_ms: number
+          transactional_email_ttl_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          token?: string
+          used_at?: string | null
         }
         Relationships: []
       }
@@ -2757,6 +2902,30 @@ export type Database = {
           stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      suppressed_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          metadata: Json | null
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          metadata?: Json | null
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string
         }
         Relationships: []
       }
@@ -5948,6 +6117,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_email: {
+        Args: { message_id: number; queue_name: string }
+        Returns: boolean
+      }
       eb_ai_runs_by_date: {
         Args: { p_date: string }
         Returns: {
@@ -6202,6 +6375,10 @@ export type Database = {
         }[]
       }
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
+      enqueue_email: {
+        Args: { payload: Json; queue_name: string }
+        Returns: number
+      }
       expire_old_reservations: { Args: never; Returns: undefined }
       find_user_by_meta_name: { Args: { search_name: string }; Returns: string }
       fn_promote_vertical_lead: {
@@ -6369,6 +6546,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      move_to_dlq: {
+        Args: {
+          dlq_name: string
+          message_id: number
+          payload: Json
+          source_queue: string
+        }
+        Returns: number
+      }
       profile_completion: { Args: { _user_id: string }; Returns: number }
       qualify_lead:
         | {
@@ -6393,6 +6579,14 @@ export type Database = {
             }
             Returns: Json
           }
+      read_email_batch: {
+        Args: { batch_size: number; queue_name: string; vt: number }
+        Returns: {
+          message: Json
+          msg_id: number
+          read_ct: number
+        }[]
+      }
       recalculate_sv: { Args: { p_cnpj: string }; Returns: Json }
       refresh_dashboard_views: { Args: never; Returns: undefined }
       reject_advisor_request: {
