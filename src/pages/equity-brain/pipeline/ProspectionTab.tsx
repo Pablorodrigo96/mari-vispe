@@ -45,6 +45,29 @@ const STATUS_BADGE: Partial<Record<ProspectStatus, string>> = {
   archived: 'bg-zinc-900 text-zinc-600',
 };
 
+function LetterBadge({ batchId, sentAt }: { batchId: string; sentAt: string }) {
+  const d = new Date(sentAt);
+  const label = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            to={`/equity-brain/cartas/historico?batch=${batchId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-900/40 text-sky-300 hover:bg-sky-900/60 transition-colors"
+          >
+            <Mail className="h-2.5 w-2.5" /> {label}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          Carta enviada em {d.toLocaleDateString('pt-BR')} · clique para ver o lote
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 export default function ProspectionTab() {
   const [params, setParams] = useSearchParams();
   const { toast } = useToast();
