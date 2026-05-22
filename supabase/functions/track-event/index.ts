@@ -1,15 +1,22 @@
 // Edge function: track-event (anon-allowed) — registra page_views, page_leave e CTAs.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+function buildCors(req: Request) {
+  const origin = req.headers.get("origin") ?? "*";
+  return {
+    // Eco do origin (não wildcard) pra permitir credentials: include do client
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
 const ALLOWED = new Set(["page_view", "page_leave", "signup", "lead", "cta_click"]);
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCors(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method not allowed" }), {

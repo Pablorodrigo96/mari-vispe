@@ -1,64 +1,61 @@
-## Bloco 5 (parte 2) — E-mails de fechamento via Lovable Emails
+# Auditoria front-end — resultados
 
-Boa notícia: o domínio **vispe.com.br** já está verificado no workspace. Não há dependência de DNS pendente — podemos enviar e-mails reais imediatamente.
+Rodei smoke tests visuais nas superfícies impactadas pelos últimos blocos (Pares/NBO/Assinaturas/E-mails de fechamento) e nas telas adjacentes que dependem do mesmo stack. Abaixo, o que funciona, o que está quebrado e o que proponho corrigir.
 
-### Escopo
+## ✅ Funcionando
 
-Quando um documento `deal_documents` muda para `status='signed'` (já tratado pelo trigger do Bloco 5 parte 1), além das notificações in-app, disparar **e-mails transacionais** para:
+| Superfície | Status |
+|---|---|
+| `/equity-brain/pipeline` — Kanban M&A com 393 mandatos, abas Prospecção / Mandatos / **Pares** / Empresas | OK |
+| Aba **Pares** (Bloco 3) | Empty state correto com CTA para Matches |
+| `/admin/aprovacoes` | Lista 6 pedidos (3 advisors + 3 franqueados) com botões Aprovar / Rejeitar |
+| `/painel` | Tri-card valuation, score Mari, janela de venda, feed, agenda, análise executiva |
+| `/equity-brain/hoje` | 7 insights da Mari + tooltip explicativo |
+| `/unsubscribe` (novo) | Renderiza, valida token, fallback "Token ausente" |
+| Mari Brain FAB (⌘K) | Abre painel lateral com sugestões contextuais |
+| Infra de e-mail | `process-email-queue`, `send-transactional-email`, `handle-email-unsubscribe`, `handle-email-suppression`, `deal-closing-notify` deployadas |
+| Trigger `fn_deal_doc_signed_notify` com hook `pg_net` | Migração aplicada |
+| Tabelas | `deal_pairs`, `deal_documents`, `deal_closing_emails_log` criadas; 9 `doc_templates`, 6 `stage_doc_requirements` |
 
-- **Vendedor** (via `eb_companies.created_by` → `auth.users.email`)
-- **Comprador** (via `buy_mandate` ou `buyer_profile_id`)
-- **Advisor responsável** (via `deal_pairs.responsavel_advisor_id`)
-- **Admin** (cc fixo configurável)
+## ⚠️ Achados (priorizar)
 
-Tipos de e-mail por gatilho:
-- Template **NBO assinado** → "NBO firmado em {data}. Próximos passos: due diligence."
-- Template **SPA/Closing assinado** → "Deal fechado! {codename} oficializado em {data}."
+### P0 — Bloqueia o fluxo de e-mails de fechamento end-to-end
+1. **Domínio `notify.mari.vispe.com.br` ainda PENDING DNS.** E-mails entram na fila mas não saem. Precisa concluir os NS records no provedor do `vispe.com.br`.
+2. **Não há dados de teste para validar NBO→assinatura→e-mail.** 0 `deal_pairs` e 0 `deal_documents` no banco. Sem promover um match para par e disparar uma assinatura mock, não dá pra confirmar o pipeline ponta a ponta.
 
-### Componentes a criar
+### P1 — Erros que aparecem em múltiplas telas
+3. **`/rest/v1/matches?...` retorna 500** (chamado em `/painel` e `/equity-brain/pipeline`). Provavelmente RLS quebrada ou coluna `is_current` ausente/renomeada. Repete em loop.
+4. **`/functions/v1/track-event` → CORS bloqueado** com `Access-Control-Allow-Origin: *` + `credentials: include`. Headers precisam de origem específica ou o client precisa parar de mandar credentials.
+5. **`/rest/v1/buyer_revealed_thetas` → 404** (tabela ausente ou sem GRANT). Hook `useBuyerRevealedThetas` provavelmente referencia algo que foi removido/migrado.
 
-**1. Infra de e-mail (uma vez)**
-- Rodar `email_domain.setup_email_infra` para criar `pgmq`, `process-email-queue`, suppression list, etc.
-- Sender padrão: `mari@vispe.com.br`
+### P2 — UX/risco menor
+6. **`DealPairDetailPage` não testado** porque não há par válido. Vale criar guarda de "par não encontrado" antes de ir ao ar (pode quebrar com 500 em vez de 404 amigável).
+7. **Warning "Tooltip is changing from uncontrolled to controlled"** no console. Cosmético, mas suja DevTools.
 
-**2. Edge function `deal-closing-notify`**
-- Service-role
-- Input: `{ deal_document_id: uuid }`
-- Resolve o par, identifica tipo (NBO vs SPA), busca e-mails das partes via `auth.admin.listUsers` filtrado por ids
-- Renderiza 2 templates React Email (NBO / SPA) com codename, datas, link para `/equity-brain/par/:id`
-- Enfileira via `pgmq_send` em `email_outbox` (a infra cuida do envio com retry)
-- Loga em `audit_events` com `event_type='deal_closed'` (SPA) ou `'nbo_signed'` (NBO)
+## Plano de correção proposto
 
-**3. Templates React Email** em `supabase/functions/_shared/email-templates/`
-- `nbo-signed.tsx` — header Volt #D9F564 / Carbon #0A0A0A, codename em destaque, CTA "Ver par no Mari"
-- `deal-closed.tsx` — celebração + resumo financeiro + advisor + próximos passos pós-closing
+### Bloco A — Validar infra de e-mails (sem código)
+- Confirmar status DNS atual de `notify.mari.vispe.com.br` (tool `check_email_domain_status`).
+- Se ainda pendente, listar exatamente os 2 NS records que precisam estar no provedor.
+- Quando ficar **active**, rodar smoke test:
+  - SQL: criar 1 `deal_pair` mock + 1 `deal_document` NBO em `signed`.
+  - Validar que `deal-closing-notify` foi chamado, registrou em `deal_closing_emails_log` e em `audit_events` (`nbo_signed`).
 
-**4. Migração**
-- Adicionar gatilho complementar ao trigger `trg_deal_doc_signed_notify`: após inserir notificações, chamar `pg_net.http_post` para `deal-closing-notify` com o `deal_document_id`
-- Adicionar evento `'deal_closed'` em `audit_events.event_type` enum (se enum) ou apenas string
-- Tabela `deal_closing_emails_log` (id, deal_pair_id, deal_document_id, recipient_type, recipient_email, template, sent_at, error) para auditoria/reenvio
+### Bloco B — Corrigir os 3 erros P1
+- **`matches` 500**: rodar `EXPLAIN` + checar policies; provavelmente `is_current` foi para outra tabela ou virou view. Reapontar o hook.
+- **`track-event` CORS**: ajustar `corsHeaders` da edge function para ecoar `Access-Control-Allow-Origin: <origin>` (sem wildcard) **ou** remover `credentials: 'include'` do client (que parece desnecessário pra evento de tracking público).
+- **`buyer_revealed_thetas` 404**: investigar se a tabela foi renomeada para `eb_buyer_revealed_thetas` ou se virou view; ajustar hook.
 
-**5. UI**
-- Em `/equity-brain/par/:id`, abaixo de `PairSignaturesTimeline`:
-  - Card "E-mails enviados" listando destinatários + status + botão **"Reenviar"** (admin/advisor)
-- Banner verde "Deal fechado em DD/MM" quando `status='closed'`
+### Bloco C — UI de e-mails enviados no par
+- Card **"E-mails de fechamento"** abaixo de `PairSignaturesTimeline` em `/equity-brain/par/:id`:
+  - Lista entradas de `deal_closing_emails_log` por par (destinatário, template, status, timestamp).
+  - Botão **Reenviar** (admin/advisor) chamando `deal-closing-notify` com `force: true`.
+  - Banner verde "Deal fechado em DD/MM" quando `status='closed'`.
+- Guarda de 404 amigável em `DealPairDetailPage` quando o id não existe.
 
-### Critério de aceite
+### Bloco D — Limpeza
+- Resolver warning de Tooltip uncontrolled→controlled (provavelmente um `<Tooltip open={X}>` onde X começa undefined).
 
-- Assinar um doc NBO em `internal_signatures` → trigger avança `deal_pairs.status='signed'` → e-mail chega aos 4 destinatários em < 60s, render com codename correto
-- Assinar SPA → status='closed' + e-mail "Deal fechado" + entry em `audit_events`
-- Falha de envio (e-mail inválido) é logada em `deal_closing_emails_log.error` sem quebrar trigger
-- Botão "Reenviar" funciona idempotente
+## Sugestão de execução
 
-### Fora de escopo
-
-- Dossiê PDF consolidado (vai ficar para um próximo passo, se quiser)
-- E-mail de NDA assinado (templates futuros)
-
-### Estimativa: 4-6h
-
-### Dúvidas rápidas
-
-1. **Sender**: confirmo `mari@vispe.com.br` como remetente, com `reply-to` no advisor responsável? Ou prefere `closing@vispe.com.br`?
-2. **Admin cc fixo**: qual e-mail? (ex: `pablo@vispe.com.br`) ou usar todos os usuários com role `admin`?
-3. Quer que eu **inclua o dossiê PDF** nesta mesma rodada (vira ~10-12h) ou prefere fazer só os e-mails agora e dossiê em seguida?
+Vou começar pelos **erros P1 (Bloco B)** porque eles afetam várias telas em produção. Depois faço o **Bloco C (UI + guarda 404)** e por último o smoke test do **Bloco A** assim que o DNS estiver verde. Concorda com essa ordem ou prefere priorizar o card de e-mails enviados primeiro?
