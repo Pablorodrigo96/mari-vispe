@@ -32,7 +32,7 @@ const TEMPLATE_LABEL: Record<string, string> = {
 
 export function PairClosingEmailsCard({ pairId, pairStatus }: { pairId: string; pairStatus: string }) {
   const qc = useQueryClient();
-  const { isAdmin, isAdvisor } = useRoles();
+  const { isAdmin, isAdvisor } = useEffectiveRoles();
   const canResend = isAdmin || isAdvisor;
 
   const { data: logs = [], isLoading } = useQuery({
