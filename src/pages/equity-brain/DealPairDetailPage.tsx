@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Building2, User, Handshake, FileText } from "lucide-react";
 import { PairSignaturesTimeline } from "@/components/equity-brain/PairSignaturesTimeline";
+import { PairClosingEmailsCard } from "@/components/equity-brain/PairClosingEmailsCard";
 
 const NEXT_STATUS: Record<DealPairStatus, DealPairStatus[]> = {
   draft: ["active", "lost"],
