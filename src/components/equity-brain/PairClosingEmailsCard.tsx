@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mail, RefreshCw, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { useRoles } from "@/hooks/useRoles";
+import { useEffectiveRoles } from "@/hooks/useEffectiveRoles";
 
 type EmailLog = {
   id: string;
