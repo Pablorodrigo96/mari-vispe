@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
     }
 
     const recipients: Recipient[] = []
-    if (sellerEmail) recipients.push({ email: sellerEmail, role: 'seller', userId: company?.created_by })
+    if (sellerEmail) recipients.push({ email: sellerEmail, role: 'seller', userId: sellerUserId })
     if (buyerEmail) recipients.push({ email: buyerEmail, role: 'buyer', userId: pair.buyer_profile_id })
     if (advisorEmail) recipients.push({ email: advisorEmail, role: 'advisor', userId: pair.responsavel_advisor_id })
     for (const e of adminEmails) {
