@@ -113,16 +113,30 @@ Deno.serve(async (req) => {
     const templateName = isClosing ? 'deal-closed' : 'nbo-signed'
     const eventType = isClosing ? 'deal_closed' : 'nbo_signed'
 
-    // 3. enriquecer
-    const { data: company } = await admin
-      .from('eb_companies')
-      .select('id, codename, created_by, razao_social')
+    // 3. enriquecer — sell_mandate_id refere equity_brain.mandates.id
+    const { data: mandate } = await admin
+      .schema('equity_brain' as never)
+      .from('mandates')
+      .select('id, company_cnpj, responsavel_id, created_by, contato_email')
       .eq('id', pair.sell_mandate_id)
       .maybeSingle()
-    const codename = company?.codename || 'Projeto'
+
+    let codename = 'Projeto'
+    let companyRazao: string | undefined
+    if (mandate?.company_cnpj) {
+      const { data: company } = await admin
+        .schema('equity_brain' as never)
+        .from('companies')
+        .select('codename, razao_social')
+        .eq('cnpj', mandate.company_cnpj)
+        .maybeSingle()
+      codename = (company as any)?.codename || codename
+      companyRazao = (company as any)?.razao_social
+    }
 
     const advisorEmail = await getUserEmail(pair.responsavel_advisor_id)
-    const sellerEmail = await getUserEmail(company?.created_by)
+    const sellerUserId = (mandate as any)?.created_by || (mandate as any)?.responsavel_id || null
+    const sellerEmail = (await getUserEmail(sellerUserId)) || (mandate as any)?.contato_email || null
     const buyerEmail = await getUserEmail(pair.buyer_profile_id)
     const adminEmails = await getAdminEmails()
 
