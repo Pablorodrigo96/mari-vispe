@@ -3359,6 +3359,33 @@ export type Database = {
         }
         Relationships: []
       }
+      buyer_revealed_thetas: {
+        Row: {
+          buyer_id: string | null
+          feature_name: string | null
+          last_updated: string | null
+          n_observations: number | null
+          posterior_mean: number | null
+          posterior_std: number | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          feature_name?: string | null
+          last_updated?: string | null
+          n_observations?: number | null
+          posterior_mean?: number | null
+          posterior_std?: number | null
+        }
+        Update: {
+          buyer_id?: string | null
+          feature_name?: string | null
+          last_updated?: string | null
+          n_observations?: number | null
+          posterior_mean?: number | null
+          posterior_std?: number | null
+        }
+        Relationships: []
+      }
       deal_doc_progress: {
         Row: {
           deal_id: string | null
@@ -5689,6 +5716,147 @@ export type Database = {
           suggested_action?: string | null
           trigger_rule?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      matches: {
+        Row: {
+          abstain: boolean | null
+          abstain_reason: string | null
+          ai_confidence: number | null
+          ai_pitch: string | null
+          ai_thesis_summary: string | null
+          assigned_bdr: string | null
+          buyer_archetype: string | null
+          buyer_id: string | null
+          cnpj: string | null
+          comparables: Json | null
+          computed_at: string | null
+          counterfactual: string | null
+          data_confidence: number | null
+          engine_version: string | null
+          ev_p10: number | null
+          ev_p50: number | null
+          ev_p90: number | null
+          feature_contributions: Json | null
+          geografia_fit: number | null
+          id: string | null
+          is_cold_suggestion: boolean | null
+          is_current: boolean | null
+          ma_score_emp: number | null
+          match_score: number | null
+          multiple_p10: number | null
+          multiple_p50: number | null
+          multiple_p90: number | null
+          p_close_12m: number | null
+          p_close_ci_lower: number | null
+          p_close_ci_upper: number | null
+          porte_fit: number | null
+          price_per_client_p50: number | null
+          prioridade: number | null
+          reasons: Json | null
+          sav_breakdown: Json | null
+          sav_calculated_at: string | null
+          sav_score: number | null
+          sector_cycle_phase: number | null
+          setor_fit: number | null
+          status: string | null
+          tese_fit: number | null
+          thesis_generated_at: string | null
+          thesis_key: string | null
+          thesis_text: string | null
+        }
+        Insert: {
+          abstain?: boolean | null
+          abstain_reason?: string | null
+          ai_confidence?: number | null
+          ai_pitch?: string | null
+          ai_thesis_summary?: string | null
+          assigned_bdr?: string | null
+          buyer_archetype?: string | null
+          buyer_id?: string | null
+          cnpj?: string | null
+          comparables?: Json | null
+          computed_at?: string | null
+          counterfactual?: string | null
+          data_confidence?: number | null
+          engine_version?: string | null
+          ev_p10?: number | null
+          ev_p50?: number | null
+          ev_p90?: number | null
+          feature_contributions?: Json | null
+          geografia_fit?: number | null
+          id?: string | null
+          is_cold_suggestion?: boolean | null
+          is_current?: boolean | null
+          ma_score_emp?: number | null
+          match_score?: number | null
+          multiple_p10?: number | null
+          multiple_p50?: number | null
+          multiple_p90?: number | null
+          p_close_12m?: number | null
+          p_close_ci_lower?: number | null
+          p_close_ci_upper?: number | null
+          porte_fit?: number | null
+          price_per_client_p50?: number | null
+          prioridade?: number | null
+          reasons?: Json | null
+          sav_breakdown?: Json | null
+          sav_calculated_at?: string | null
+          sav_score?: number | null
+          sector_cycle_phase?: number | null
+          setor_fit?: number | null
+          status?: string | null
+          tese_fit?: number | null
+          thesis_generated_at?: string | null
+          thesis_key?: string | null
+          thesis_text?: string | null
+        }
+        Update: {
+          abstain?: boolean | null
+          abstain_reason?: string | null
+          ai_confidence?: number | null
+          ai_pitch?: string | null
+          ai_thesis_summary?: string | null
+          assigned_bdr?: string | null
+          buyer_archetype?: string | null
+          buyer_id?: string | null
+          cnpj?: string | null
+          comparables?: Json | null
+          computed_at?: string | null
+          counterfactual?: string | null
+          data_confidence?: number | null
+          engine_version?: string | null
+          ev_p10?: number | null
+          ev_p50?: number | null
+          ev_p90?: number | null
+          feature_contributions?: Json | null
+          geografia_fit?: number | null
+          id?: string | null
+          is_cold_suggestion?: boolean | null
+          is_current?: boolean | null
+          ma_score_emp?: number | null
+          match_score?: number | null
+          multiple_p10?: number | null
+          multiple_p50?: number | null
+          multiple_p90?: number | null
+          p_close_12m?: number | null
+          p_close_ci_lower?: number | null
+          p_close_ci_upper?: number | null
+          porte_fit?: number | null
+          price_per_client_p50?: number | null
+          prioridade?: number | null
+          reasons?: Json | null
+          sav_breakdown?: Json | null
+          sav_calculated_at?: string | null
+          sav_score?: number | null
+          sector_cycle_phase?: number | null
+          setor_fit?: number | null
+          status?: string | null
+          tese_fit?: number | null
+          thesis_generated_at?: string | null
+          thesis_key?: string | null
+          thesis_text?: string | null
         }
         Relationships: []
       }
