@@ -1,0 +1,1 @@
+UPDATE public.deal_documents SET status='signed', signed_at=now() WHERE id='f2a61a4a-46bd-4e45-8371-7b10a3cc1adc';
