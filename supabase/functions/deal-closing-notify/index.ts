@@ -12,6 +12,10 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+// ANON key (JWT format) used to authenticate gateway calls to other edge functions
+// that have verify_jwt=true. SERVICE_ROLE_KEY in the new signing-keys system uses
+// sb_secret_ format which the gateway rejects as INVALID_JWT_FORMAT.
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const APP_URL = 'https://mari.vispe.com.br'
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
@@ -53,7 +57,8 @@ async function enqueueEmail(args: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${SERVICE_KEY}`,
+      Authorization: `Bearer ${ANON_KEY}`,
+      apikey: ANON_KEY,
     },
     body: JSON.stringify({
       templateName: args.templateName,

@@ -52,7 +52,9 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.send-transactional-email]
-verify_jwt = true
+# verify_jwt=false: chamada via service-to-service por edge functions internas
+# (deal-closing-notify etc). Idempotency key e suppression check garantem segurança.
+verify_jwt = false
 
 [functions.preview-transactional-email]
 verify_jwt = false
