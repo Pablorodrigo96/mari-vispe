@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { callAnthropic, hydrateTemplate } from "../_shared/anthropicGateway.ts";
+import { runSelfCritique } from "../_shared/selfCritiquePass.ts";
 
 interface ReqBody {
   deal_id?: string;
@@ -13,6 +14,7 @@ interface ReqBody {
   custom_fields: Record<string, any>;
   parent_version_id?: string;
   visible_to_buyer?: boolean;
+  use_self_critique?: boolean; // Optional: validate document after generation
 }
 
 Deno.serve(async (req) => {
@@ -119,6 +121,7 @@ Deno.serve(async (req) => {
     let totalIn = 0;
     let totalOut = 0;
     let totalLatency = 0;
+    let critiqueResult: any = null;
 
     if (parts.length > 0) {
       // ===== Modular generation (SPA): run each section in parallel with retry =====
@@ -212,6 +215,12 @@ Deno.serve(async (req) => {
       totalLatency = ai.latency_ms ?? 0;
     }
 
+    // Optional: Run self-critique pass
+    if (body.use_self_critique && finalText) {
+      console.log("[mari-generate-document] Running self-critique pass...");
+      critiqueResult = await runSelfCritique(finalText, tpl.label, userId);
+    }
+
     // Determine version_number
     let version = 1;
     if (body.parent_version_id) {
@@ -299,6 +308,7 @@ Deno.serve(async (req) => {
         latency_ms: totalLatency,
         parts_count: parts.length,
       },
+      critique: critiqueResult,
     });
   } catch (e: any) {
     console.error("[mari-generate-document] error:", e);
