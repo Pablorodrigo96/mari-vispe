@@ -249,11 +249,59 @@ Deno.serve(async (req) => {
       totalLatency = ai.latency_ms ?? 0;
     }
 
-    // Optional: Run self-critique pass
-    if (body.use_self_critique && finalText) {
+    // Self-critique: sempre roda determinístico para NBO; AI roda quando flag ligada
+    const shouldCritique = body.use_self_critique || body.template_code === "legal_nbo_v1";
+    if (shouldCritique && finalText && parts.length === 0) {
       console.log("[mari-generate-document] Running self-critique pass...");
-      critiqueResult = await runSelfCritique(finalText, tpl.label, userId);
+      critiqueResult = await runSelfCritique(finalText, tpl.label, userId, body.template_code);
+
+      // Se NBO e crítica falhou → 1 tentativa de regeneração
+      if (
+        body.template_code === "legal_nbo_v1" &&
+        !critiqueResult.is_ready_for_review &&
+        critiqueResult.errors.length > 0
+      ) {
+        console.warn(`[mari-generate-document] NBO critique failed (${critiqueResult.errors.length} errors). Regenerating once...`);
+        const retryUserPrompt = [
+          `O documento gerado anteriormente FALHOU em ${critiqueResult.errors.length} checagens obrigatórias Vispe.`,
+          ``,
+          `ERROS A CORRIGIR:`,
+          ...critiqueResult.errors.map((e, i) => `${i + 1}. ${e}`),
+          ``,
+          `Gere NOVAMENTE o NBO corrigindo cada erro acima. Mantenha frases sagradas Vispe.`,
+          ``,
+          `DADOS:`,
+          `- Codinome interno: ${contextCodename}`,
+          ``,
+          `DOCUMENTO PRÉ-HIDRATADO:`,
+          hydrateTemplate(tpl.template_body ?? "", body.custom_fields),
+        ].join("\n");
+
+        const retryMsgs: { role: "user" | "assistant"; content: string }[] = [
+          { role: "user", content: FEW_SHOT_USER_EXAMPLE },
+          { role: "assistant", content: FEW_SHOT_ASSISTANT_EXAMPLE },
+          { role: "user", content: retryUserPrompt },
+        ];
+        const retry = await callAnthropic({
+          model: tpl.preferred_model ?? "claude-sonnet-4-5",
+          system: systemPrompt,
+          messages: retryMsgs,
+          max_tokens: 8000,
+          temperature: 0.1,
+          function_name: "mari-generate-document",
+          feature: `legal_doc_${tpl.category}_retry`,
+          user_id: userId,
+          metadata: { deal_id: body.deal_id, deal_pair_id: body.deal_pair_id, template_code: body.template_code, retry: true },
+        });
+        finalText = retry.text;
+        totalIn += retry.input_tokens ?? 0;
+        totalOut += retry.output_tokens ?? 0;
+        totalLatency += retry.latency_ms ?? 0;
+        critiqueResult = await runSelfCritique(finalText, tpl.label, userId, body.template_code);
+        console.log(`[mari-generate-document] After retry: score=${critiqueResult.score}, errors=${critiqueResult.errors.length}`);
+      }
     }
+
 
     // Determine version_number
     let version = 1;
