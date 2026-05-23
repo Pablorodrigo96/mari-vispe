@@ -19,6 +19,7 @@ import { canAdvanceStage, useDealStageProgress } from "@/hooks/useStageTasks";
 import { useDealDocProgress } from "@/hooks/useDealDocuments";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { CheckSquare } from "lucide-react";
+import { LegalDocsMenu } from "@/components/legal/LegalDocsMenu";
 
 type Mandate = {
   id: string;
