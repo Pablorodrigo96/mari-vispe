@@ -19,9 +19,13 @@ export default function AssinaturaPublica() {
   const [signed, setSigned] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [signedHash, setSignedHash] = useState<string>("");
+  const [signedAtIso, setSignedAtIso] = useState<string>("");
+  const [clientIp, setClientIp] = useState<string>("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
   const hasDrawnRef = useRef(false);
+
 
   useEffect(() => {
     if (!token) return;
