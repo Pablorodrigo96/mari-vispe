@@ -12,7 +12,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import {
-  useGenerateLegalDocument,
   startBackgroundGeneration,
   useHomologations,
   useInternalSignatures,
