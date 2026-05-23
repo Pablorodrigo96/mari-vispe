@@ -27,6 +27,10 @@ import {
 interface Props {
   dealId: string;
   triggerLabel?: string;
+  initialCategory?: "nda" | "nbo" | "term_sheet" | "spa";
+  open?: boolean;
+  onOpenChange?: (o: boolean) => void;
+  triggerless?: boolean;
 }
 
 const ROLES: { v: any; l: string }[] = [
