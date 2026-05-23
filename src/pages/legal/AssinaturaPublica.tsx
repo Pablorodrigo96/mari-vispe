@@ -133,32 +133,64 @@ export default function AssinaturaPublica() {
     );
   }
 
+  const validationUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/assinar/${token}`
+    : `https://mari.vispe.com.br/assinar/${token}`;
+
   return (
-    <div className="min-h-screen bg-carbon py-8 px-4">
-      <div className="max-w-4xl mx-auto space-y-4">
-        <div className="flex items-center gap-2 text-volt">
+    <div className="min-h-screen bg-carbon py-8 px-4 print:bg-white print:p-0">
+      <div className="max-w-4xl mx-auto space-y-4 print:max-w-none print:space-y-0">
+        <div className="flex items-center gap-2 text-volt print:hidden">
           <FileText className="h-5 w-5" />
-          <span className="text-sm uppercase tracking-wider">Assinatura eletrônica — Vispe</span>
+          <span className="text-sm uppercase tracking-wider">Assinatura eletrônica — Vispe Sign</span>
         </div>
-        <Card className="!bg-zinc-900/60 backdrop-blur-md border-zinc-800 p-4">
-          <div className="text-zinc-100 font-medium break-words">{data.document_label} (v{data.document_version})</div>
-          <div className="text-xs text-zinc-500 mt-1">Signatário: {data.signer_name} ({data.signer_email}) — {data.signer_role}</div>
+        <Card className="!bg-zinc-900/60 backdrop-blur-md border-zinc-800 p-4 print:hidden">
+          <div className="text-zinc-100 font-medium break-words">
+            {data.document_label} (v{data.document_version})
+          </div>
+          <div className="text-xs text-zinc-500 mt-1">
+            Signatário: {data.signer_name} ({data.signer_email}) — {data.signer_role}
+          </div>
         </Card>
 
-        <Card className="!bg-zinc-900/60 backdrop-blur-md border-zinc-800 p-4 max-h-[45vh] overflow-auto">
-          <pre className="text-[11px] text-zinc-200 whitespace-pre-wrap font-mono break-words">{data.document_body}</pre>
-        </Card>
+        {/* Word-like preview of the contract */}
+        <div className="print:hidden">
+          <WordPreview body={data.document_body} title={data.document_label} />
+        </div>
 
         {signed ? (
-          <Card className="!bg-zinc-900/60 backdrop-blur-md border-zinc-800 p-6 text-center">
-            <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto" />
-            <div className="text-zinc-100 mt-2">Assinatura registrada com sucesso.</div>
-            <div className="text-xs text-zinc-500 mt-1">
-              Conforme MP 2.200-2/2001 art. 10 §2º — assinatura eletrônica com identificação de IP, dispositivo e hash do documento.
-            </div>
-          </Card>
+          <>
+            <Card className="!bg-zinc-900/60 backdrop-blur-md border-zinc-800 p-6 text-center print:hidden">
+              <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto" />
+              <div className="text-zinc-100 mt-2">Assinatura registrada com sucesso.</div>
+              <div className="text-xs text-zinc-500 mt-1">
+                Conforme MP 2.200-2/2001 art. 10 §2º — assinatura eletrônica com identificação de IP, dispositivo e
+                hash do documento.
+              </div>
+              <Button
+                onClick={() => window.print()}
+                className="mt-4 bg-volt text-carbon hover:bg-volt/90"
+                size="sm"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Baixar comprovante (PDF)
+              </Button>
+            </Card>
+
+            {/* Certificate page (PlugSign-style) */}
+            <SignatureCertificate
+              documentLabel={data.document_label}
+              documentVersion={data.document_version}
+              documentHash={signedHash || `${data.id}`}
+              signerName={fullName || data.signer_name}
+              signerEmail={data.signer_email}
+              signerIp={clientIp}
+              signedAt={signedAtIso || new Date().toISOString()}
+              validationUrl={validationUrl}
+            />
+          </>
         ) : (
-          <Card className="!bg-zinc-900/60 backdrop-blur-md border-zinc-800 p-4 space-y-3">
+          <Card className="!bg-zinc-900/60 backdrop-blur-md border-zinc-800 p-4 space-y-3 print:hidden">
             <Input
               placeholder="Digite seu nome completo"
               value={fullName}
@@ -177,12 +209,15 @@ export default function AssinaturaPublica() {
                 onPointerUp={endDraw}
                 onPointerLeave={endDraw}
               />
-              <Button variant="ghost" size="sm" onClick={clearCanvas} className="mt-1 text-xs text-zinc-400">Limpar</Button>
+              <Button variant="ghost" size="sm" onClick={clearCanvas} className="mt-1 text-xs text-zinc-400">
+                Limpar
+              </Button>
             </div>
             <label className="flex items-start gap-2 text-xs text-zinc-300 cursor-pointer">
               <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(!!v)} />
               <span className="break-words">
-                Li o documento, concordo com seus termos e reconheço esta como minha assinatura eletrônica, válida nos termos da MP 2.200-2/2001 art. 10 §2º.
+                Li o documento, concordo com seus termos e reconheço esta como minha assinatura eletrônica, válida
+                nos termos da MP 2.200-2/2001 art. 10 §2º.
               </span>
             </label>
             <Button onClick={submitSignature} disabled={submitting} className="w-full bg-volt text-carbon hover:bg-volt/90">
