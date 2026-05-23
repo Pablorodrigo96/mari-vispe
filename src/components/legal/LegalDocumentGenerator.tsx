@@ -71,6 +71,8 @@ export function LegalDocumentGenerator({
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [useSelfCritique, setUseSelfCritique] = useState(false);
   const generate = useGenerateLegalDocument();
+  const qc = useQueryClient();
+  const tracker = useGenerationTracker();
 
   const tpl = useMemo(
     () => templates.find((t) => t.code === selectedTplCode) ?? null,
