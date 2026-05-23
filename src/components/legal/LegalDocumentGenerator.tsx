@@ -115,35 +115,22 @@ export function LegalDocumentGenerator({
         if (isFinite(n)) formatted[f.key] = formatBRL(n);
       }
     });
-    try {
-      const res = await generate.mutateAsync({
-        deal_id: dealId,
-        template_code: tpl.code,
-        custom_fields: formatted,
-        use_self_critique: useSelfCritique,
-      });
-      toast.success(`Documento gerado (v${res.document.version_number}) via ${res.ai.provider}`);
-
-      // Check for gaps in generated document
-      const gaps = detectGaps(res.document.generated_body);
-      if (gaps.apreencher > 0 || gaps.naoInformado > 0) {
-        toast.warning(`⚠️ ${gaps.apreencher + gaps.naoInformado} lacuna(s) detectada(s)`, {
-          description: `${gaps.apreencher} a preencher, ${gaps.naoInformado} não informado`,
-        });
-      }
-
-      // Show critique results if available
-      if (res.critique && res.critique.issues_found > 0) {
-        toast.warning(`🔍 Crítica: ${res.critique.issues_found} problemas encontrados`, {
-          description: res.critique.is_ready_for_review ? "Pronto para revisão" : "Revise antes de enviar",
-        });
-      }
-
-      setActiveDocId(res.document.id);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao gerar");
-    }
+    // Fire-and-forget background generation: tracker shows progress so the
+    // user can close the modal and keep working.
+    startBackgroundGeneration(qc, tracker, {
+      deal_id: dealId,
+      template_code: tpl.code,
+      custom_fields: formatted,
+      use_self_critique: useSelfCritique,
+      label: tpl.label,
+      category: tpl.category,
+    });
+    toast.success("Geração iniciada em segundo plano", {
+      description: "Você pode fechar essa janela e continuar navegando. Avisamos quando ficar pronto.",
+    });
+    setOpen(false);
   }
+
 
   useEffect(() => {
     if (open) setCategory(initialCategory);
