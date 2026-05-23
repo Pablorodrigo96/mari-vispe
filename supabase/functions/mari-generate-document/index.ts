@@ -89,15 +89,20 @@ Deno.serve(async (req) => {
         // table doesn't exist — silently fall through to mandate lookup
       }
 
-      // 2) Fallback: treat deal_id as an eb_companies (mandate) id
+      // 2) Fallback: treat deal_id as an eb_mandates id, then resolve codename via eb_companies (by CNPJ)
       if (foundCodename === null) {
-        const { data: m } = await admin
-          .from("eb_companies")
-          .select("id, codename")
+        const { data: mandate } = await admin
+          .from("eb_mandates")
+          .select("id, company_cnpj")
           .eq("id", body.deal_id)
           .maybeSingle();
-        if (!m) return json({ error: "deal_not_found" }, 404);
-        foundCodename = (m as any).codename ?? null;
+        if (!mandate) return json({ error: "deal_not_found" }, 404);
+        const { data: company } = await admin
+          .from("eb_companies")
+          .select("codename")
+          .eq("cnpj", (mandate as any).company_cnpj)
+          .maybeSingle();
+        foundCodename = (company as any)?.codename ?? null;
       }
       contextCodename = foundCodename ?? `DEAL-${body.deal_id.slice(0, 8)}`;
     } else if (body.deal_pair_id) {
