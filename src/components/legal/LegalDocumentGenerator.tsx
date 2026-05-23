@@ -43,9 +43,21 @@ const ROLES: { v: any; l: string }[] = [
   { v: "partner", l: "Parceiro" },
 ];
 
-export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento jurídico" }: Props) {
-  const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState<string>("nda");
+export function LegalDocumentGenerator({
+  dealId,
+  triggerLabel = "Gerar documento jurídico",
+  initialCategory = "nda",
+  open: openProp,
+  onOpenChange,
+  triggerless = false,
+}: Props) {
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (o: boolean) => {
+    if (onOpenChange) onOpenChange(o);
+    else setOpenState(o);
+  };
+  const [category, setCategory] = useState<string>(initialCategory);
   const { isAdmin, isAdvisor } = useUserRoles();
   const canApprove = isAdmin;
   const { data: templates = [] } = useLegalTemplates(category);
