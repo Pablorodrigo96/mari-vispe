@@ -1217,6 +1217,42 @@ export type Database = {
         }
         Relationships: []
       }
+      doc_templates_archive: {
+        Row: {
+          ai_instructions: string | null
+          archived_at: string
+          archived_reason: string | null
+          code: string
+          customizable_fields: Json | null
+          id: string
+          preferred_model: string | null
+          static_clauses: Json | null
+          template_body: string | null
+        }
+        Insert: {
+          ai_instructions?: string | null
+          archived_at?: string
+          archived_reason?: string | null
+          code: string
+          customizable_fields?: Json | null
+          id?: string
+          preferred_model?: string | null
+          static_clauses?: Json | null
+          template_body?: string | null
+        }
+        Update: {
+          ai_instructions?: string | null
+          archived_at?: string
+          archived_reason?: string | null
+          code?: string
+          customizable_fields?: Json | null
+          id?: string
+          preferred_model?: string | null
+          static_clauses?: Json | null
+          template_body?: string | null
+        }
+        Relationships: []
+      }
       due_diligence_audits: {
         Row: {
           answers: Json
