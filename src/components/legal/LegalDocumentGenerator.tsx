@@ -49,6 +49,7 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
   const [selectedTplCode, setSelectedTplCode] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, any>>({});
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
+  const [useSelfCritique, setUseSelfCritique] = useState(false);
   const generate = useGenerateLegalDocument();
 
   const tpl = useMemo(
@@ -97,8 +98,25 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
         deal_id: dealId,
         template_code: tpl.code,
         custom_fields: formatted,
+        use_self_critique: useSelfCritique,
       });
       toast.success(`Documento gerado (v${res.document.version_number}) via ${res.ai.provider}`);
+
+      // Check for gaps in generated document
+      const gaps = detectGaps(res.document.generated_body);
+      if (gaps.apreencher > 0 || gaps.naoInformado > 0) {
+        toast.warning(`⚠️ ${gaps.apreencher + gaps.naoInformado} lacuna(s) detectada(s)`, {
+          description: `${gaps.apreencher} a preencher, ${gaps.naoInformado} não informado`,
+        });
+      }
+
+      // Show critique results if available
+      if (res.critique && res.critique.issues_found > 0) {
+        toast.warning(`🔍 Crítica: ${res.critique.issues_found} problemas encontrados`, {
+          description: res.critique.is_ready_for_review ? "Pronto para revisão" : "Revise antes de enviar",
+        });
+      }
+
       setActiveDocId(res.document.id);
     } catch (e: any) {
       toast.error(e?.message ?? "Falha ao gerar");
@@ -201,13 +219,25 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
                           ))}
                         </div>
                       </div>
-                      <Button onClick={handleGenerate} disabled={generate.isPending} className="w-full bg-volt text-carbon hover:bg-volt/90">
-                        {generate.isPending ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando com Claude…</>
-                        ) : (
-                          <><FileText className="h-4 w-4 mr-2" /> Gerar documento</>
-                        )}
-                      </Button>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer hover:text-zinc-300">
+                          <input
+                            type="checkbox"
+                            checked={useSelfCritique}
+                            onChange={(e) => setUseSelfCritique(e.target.checked)}
+                            disabled={generate.isPending}
+                            className="w-4 h-4"
+                          />
+                          <span>Validar com auto-crítica (mais lento)</span>
+                        </label>
+                        <Button onClick={handleGenerate} disabled={generate.isPending} className="w-full bg-volt text-carbon hover:bg-volt/90">
+                          {generate.isPending ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando com Claude…</>
+                          ) : (
+                            <><FileText className="h-4 w-4 mr-2" /> Gerar documento</>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </ScrollArea>
                 )}
@@ -253,6 +283,12 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
       </DialogContent>
     </Dialog>
   );
+}
+
+function detectGaps(text: string): { apreencher: number; naoInformado: number } {
+  const apreencher = (text.match(/\[A PREENCHER\]/g) ?? []).length;
+  const naoInformado = (text.match(/\[NÃO INFORMADO\]/g) ?? []).length;
+  return { apreencher, naoInformado };
 }
 
 function maskCNPJ(v: string): string {

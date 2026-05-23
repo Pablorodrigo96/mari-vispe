@@ -116,13 +116,14 @@ export function useGenerateLegalDocument() {
       template_code: string;
       custom_fields: Record<string, any>;
       parent_version_id?: string;
+      use_self_critique?: boolean; // Optional: validate document after generation
     }) => {
       const { data, error } = await supabase.functions.invoke("mari-generate-document", {
         body: args,
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      return data as { ok: true; document: LegalDocument; ai: any };
+      return data as { ok: true; document: LegalDocument; ai: any; critique?: any };
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["legal-documents", vars.deal_id] });
