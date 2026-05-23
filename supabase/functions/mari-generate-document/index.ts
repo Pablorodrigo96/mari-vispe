@@ -121,47 +121,63 @@ Deno.serve(async (req) => {
     let totalLatency = 0;
 
     if (parts.length > 0) {
-      // ===== Modular generation (SPA): run each section in parallel =====
-      const results = await Promise.all(
-        parts.map(async (p) => {
-          const sectionInstructions = hydrateTemplate(p.instructions ?? "", body.custom_fields);
-          const userPrompt = [
-            `Você gerará APENAS a seção "${p.title}" do documento ${tpl.label}.`,
-            `Categoria: ${tpl.category} | Template: ${tpl.code}`,
-            ``,
-            `DADOS CONTEXTUAIS DO DEAL:`,
-            `- Codinome interno: ${contextCodename}`,
-            ``,
-            `INSTRUÇÕES DA SEÇÃO:`,
-            sectionInstructions,
-            ``,
-            `Retorne em Markdown apenas o conteúdo desta seção (cabeçalho ## ${p.title} + cláusulas). Sem preâmbulo ou conclusão.`,
-          ].join("\n");
-          return await callAnthropic({
-            model: tpl.preferred_model ?? "claude-opus-4-7",
-            system: systemPrompt,
-            messages: [{ role: "user", content: userPrompt }],
-            max_tokens: 4000,
-            temperature: 0.15,
-            function_name: "mari-generate-document",
-            feature: `legal_doc_${tpl.category}_${p.id}`,
-            user_id: userId,
-            metadata: { deal_id: body.deal_id, deal_pair_id: body.deal_pair_id, template_code: body.template_code, part_id: p.id },
-          });
-        }),
+      // ===== Modular generation (SPA): run each section in parallel with retry =====
+      const results = await Promise.allSettled(
+        parts.map((p) => generateSectionWithRetry(
+          p,
+          tpl,
+          systemPrompt,
+          body.custom_fields,
+          contextCodename,
+          userId,
+        )),
       );
-      provider = results[0]?.provider ?? "";
-      model = results[0]?.model ?? "";
-      fallbackUsed = results.some((r) => r.fallback_used);
-      totalIn = results.reduce((s, r) => s + (r.input_tokens ?? 0), 0);
-      totalOut = results.reduce((s, r) => s + (r.output_tokens ?? 0), 0);
-      totalLatency = Math.max(...results.map((r) => r.latency_ms ?? 0));
+
+      // Collect successful results
+      const successfulResults = [];
+      const failedParts = [];
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].status === "fulfilled") {
+          successfulResults.push(results[i].value);
+        } else {
+          failedParts.push({
+            title: parts[i].title,
+            error: (results[i] as PromiseRejectedResult).reason?.message ?? "Unknown error",
+          });
+        }
+      }
+
+      // If all parts failed, throw error
+      if (successfulResults.length === 0) {
+        return json({
+          error: "all_parts_failed",
+          detail: "Falha ao gerar todas as seções do documento",
+          failed_parts: failedParts,
+        }, 500);
+      }
+
+      // Log warning if some parts failed
+      if (failedParts.length > 0) {
+        console.warn(`[mari-generate-document] ${failedParts.length}/${parts.length} sections failed`, failedParts);
+      }
+
+      provider = successfulResults[0]?.provider ?? "";
+      model = successfulResults[0]?.model ?? "";
+      fallbackUsed = successfulResults.some((r) => r.fallback_used);
+      totalIn = successfulResults.reduce((s, r) => s + (r.input_tokens ?? 0), 0);
+      totalOut = successfulResults.reduce((s, r) => s + (r.output_tokens ?? 0), 0);
+      totalLatency = Math.max(...successfulResults.map((r) => r.latency_ms ?? 0));
+
       finalText = [
         `# ${tpl.label}`,
         "",
         hydrated.replace(/^# .*$/m, "").trim(),
         "",
-        ...results.map((r) => r.text.trim()),
+        ...successfulResults.map((r) => r.text.trim()),
+        ...(failedParts.length > 0 ? [
+          "\n\n---\n\n⚠️ **Seções que falharam na geração (regenrar manualmente):**",
+          ...failedParts.map((p) => `- ${p.title}: ${p.error}`),
+        ] : []),
       ].join("\n\n");
     } else {
       // ===== Monolithic generation (NDA/NBO/TS) =====
@@ -289,6 +305,56 @@ Deno.serve(async (req) => {
     return json({ error: "internal_error", detail: e?.message }, 500);
   }
 });
+
+async function generateSectionWithRetry(
+  part: any,
+  tpl: any,
+  systemPrompt: string,
+  customFields: Record<string, any>,
+  contextCodename: string,
+  userId: string,
+  attempt = 1,
+  maxAttempts = 3,
+): Promise<any> {
+  try {
+    const sectionInstructions = hydrateTemplate(part.instructions ?? "", customFields);
+    const userPrompt = [
+      `Você gerará APENAS a seção "${part.title}" do documento ${tpl.label}.`,
+      `Categoria: ${tpl.category} | Template: ${tpl.code}`,
+      ``,
+      `DADOS CONTEXTUAIS DO DEAL:`,
+      `- Codinome interno: ${contextCodename}`,
+      ``,
+      `INSTRUÇÕES DA SEÇÃO:`,
+      sectionInstructions,
+      ``,
+      `Retorne em Markdown apenas o conteúdo desta seção (cabeçalho ## ${part.title} + cláusulas). Sem preâmbulo ou conclusão.`,
+    ].join("\n");
+
+    return await callAnthropic({
+      model: tpl.preferred_model ?? "claude-opus-4-7",
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+      max_tokens: 4000,
+      temperature: 0.15,
+      function_name: "mari-generate-document",
+      feature: `legal_doc_${tpl.category}_${part.id}`,
+      user_id: userId,
+      metadata: { deal_id: customFields.deal_id, part_id: part.id, attempt },
+    });
+  } catch (error: any) {
+    if (attempt < maxAttempts) {
+      // Exponential backoff: 100ms, 200ms, 400ms
+      const delayMs = Math.pow(2, attempt - 1) * 100;
+      console.warn(
+        `[mari-generate-document] Section "${part.title}" attempt ${attempt} failed, retrying in ${delayMs}ms: ${error?.message}`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return generateSectionWithRetry(part, tpl, systemPrompt, customFields, contextCodename, userId, attempt + 1, maxAttempts);
+    }
+    throw error;
+  }
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
