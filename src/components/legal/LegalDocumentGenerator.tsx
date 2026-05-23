@@ -99,6 +99,13 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
         custom_fields: formatted,
       });
       toast.success(`Documento gerado (v${res.document.version_number}) via ${res.ai.provider}`);
+      // Check for gaps in generated document
+      const gaps = detectGaps(res.document.generated_body);
+      if (gaps.apreencher > 0 || gaps.naoInformado > 0) {
+        toast.warning(`⚠️ ${gaps.apreencher + gaps.naoInformado} lacuna(s) detectada(s)`, {
+          description: `${gaps.apreencher} a preencher, ${gaps.naoInformado} não informado`,
+        });
+      }
       setActiveDocId(res.document.id);
     } catch (e: any) {
       toast.error(e?.message ?? "Falha ao gerar");
@@ -253,6 +260,12 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
       </DialogContent>
     </Dialog>
   );
+}
+
+function detectGaps(text: string): { apreencher: number; naoInformado: number } {
+  const apreencher = (text.match(/\[A PREENCHER\]/g) ?? []).length;
+  const naoInformado = (text.match(/\[NÃO INFORMADO\]/g) ?? []).length;
+  return { apreencher, naoInformado };
 }
 
 function maskCNPJ(v: string): string {
