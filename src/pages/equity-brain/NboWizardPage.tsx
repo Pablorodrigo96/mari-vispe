@@ -89,9 +89,30 @@ export default function NboWizardPage() {
       if (goto) setStep(goto.id);
       return;
     }
+    // Auto-cálculos antes de mandar para o backend (alimenta o template/IA)
+    const valorPorUnidade = Number(payload.valor_por_unidade) || 0;
+    const qtd = Number(payload.quantidade_unidades) || 0;
+    const valorTotal = valorPorUnidade * qtd;
+    const pctVista = Number(payload.percentual_a_vista ?? 40);
+    const numParcelas = Number(payload.num_parcelas ?? 24);
+    const valorAVista = valorTotal * (pctVista / 100);
+    const valorSaldo = valorTotal - valorAVista;
+    const valorParcela = numParcelas > 0 ? valorSaldo / numParcelas : 0;
+
+    const enrichedPayload = {
+      ...payload,
+      valor_total: valorTotal,
+      valor_a_vista: valorAVista,
+      valor_saldo: valorSaldo,
+      valor_parcela_media: valorParcela,
+      forma_pagamento:
+        payload.forma_pagamento ??
+        `${pctVista}% à vista (R$ ${valorAVista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}) + saldo em ${numParcelas} parcelas mensais de R$ ${valorParcela.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} corrigidas pelo IPCA.`,
+    };
+
     const res = await generate.mutateAsync({
       deal_pair_id: pair.id,
-      custom_fields: payload,
+      custom_fields: enrichedPayload,
     });
     if (res?.document?.id) {
       navigate(`/equity-brain/par/${pair.id}`);
