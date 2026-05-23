@@ -364,6 +364,7 @@ const App = () => (
           </Routes>
           </Suspense>
           <CookieConsentBanner />
+          </GenerationTrackerProvider>
         </BrowserRouter>
       </TooltipProvider>
       </ViewAsProvider>
