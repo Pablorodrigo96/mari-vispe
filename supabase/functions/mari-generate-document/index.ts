@@ -218,10 +218,21 @@ Deno.serve(async (req) => {
         ``,
         hydrated,
       ].join("\n");
+
+      // Few-shot HAD×ETECC apenas para NBO v2 (eleva qualidade ao padrão Vispe)
+      const msgs: { role: "user" | "assistant"; content: string }[] = [];
+      if (body.template_code === "legal_nbo_v1") {
+        msgs.push(
+          { role: "user", content: FEW_SHOT_USER_EXAMPLE },
+          { role: "assistant", content: FEW_SHOT_ASSISTANT_EXAMPLE },
+        );
+      }
+      msgs.push({ role: "user", content: userPrompt });
+
       const ai = await callAnthropic({
         model: tpl.preferred_model ?? "claude-sonnet-4-6",
         system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
+        messages: msgs,
         max_tokens: 8000,
         temperature: 0.15,
         function_name: "mari-generate-document",
