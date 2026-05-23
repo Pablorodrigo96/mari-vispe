@@ -51,7 +51,9 @@ export default function NboWizardPage() {
         comprador_nome: pair.buyer_profile_company ?? pair.buyer_profile_name ?? "",
         foro_cidade: "São Paulo",
         data_assinatura: TODAY_ISO(),
-        prazo_exclusividade_dias: 60,
+        prazo_exclusividade_dias: 30,
+        percentual_a_vista: 40,
+        num_parcelas: 24,
       });
       setHydrated(true);
     }
