@@ -504,6 +504,9 @@ function DealCard({
             </a>
           )}
           <TemperatureBadge temp={m.temperature} compact />
+          <span onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} draggable={false}>
+            <LegalDocsMenu dealId={m.id} size="sm" className="h-6 px-1.5 text-[10px] border-zinc-800" label="Docs" />
+          </span>
         </div>
       </div>
     </div>
