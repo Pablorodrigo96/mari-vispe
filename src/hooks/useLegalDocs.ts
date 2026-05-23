@@ -131,6 +131,58 @@ export function useGenerateLegalDocument() {
   });
 }
 
+/**
+ * Fire-and-forget generator: invokes the edge function in the background and
+ * pushes lifecycle events into the GenerationTracker. Returns immediately so
+ * the UI can close the modal and let the user keep working.
+ */
+export function startBackgroundGeneration(
+  qc: ReturnType<typeof useQueryClient>,
+  tracker: {
+    start: (j: any) => void;
+    finish: (id: string, docId: string) => void;
+    fail: (id: string, err: string) => void;
+  },
+  args: {
+    deal_id: string;
+    template_code: string;
+    custom_fields: Record<string, any>;
+    parent_version_id?: string;
+    use_self_critique?: boolean;
+    label: string;
+    category?: string;
+  },
+) {
+  const jobId = `gen-${args.template_code}-${Date.now()}`;
+  tracker.start({
+    id: jobId,
+    dealId: args.deal_id,
+    label: args.label,
+    category: args.category,
+  });
+  (async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("mari-generate-document", {
+        body: {
+          deal_id: args.deal_id,
+          template_code: args.template_code,
+          custom_fields: args.custom_fields,
+          parent_version_id: args.parent_version_id,
+          use_self_critique: args.use_self_critique,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const doc = (data as any).document as LegalDocument;
+      qc.invalidateQueries({ queryKey: ["legal-documents", args.deal_id] });
+      tracker.finish(jobId, doc?.id);
+    } catch (e: any) {
+      tracker.fail(jobId, e?.message ?? "Falha desconhecida");
+    }
+  })();
+  return jobId;
+}
+
 export function usePartnerApproveDocument() {
   const qc = useQueryClient();
   return useMutation({
