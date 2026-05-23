@@ -201,11 +201,51 @@ export default function NboWizardPage() {
 
           {step === 3 && (
             <div className="space-y-4">
-              <Field label="Valor total (R$)" required>
-                <Input value={payload.valor_total ?? ""} onChange={(e) => set("valor_total", e.target.value)} placeholder="Ex: R$ 4.500.000,00" />
-              </Field>
-              <Field label="Forma de pagamento" required hint="Ex: 60% à vista, 40% earn-out em 24 meses.">
-                <Textarea rows={4} value={payload.forma_pagamento ?? ""} onChange={(e) => set("forma_pagamento", e.target.value)} />
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Valor por unidade (R$)" required hint="Ex: 19882.50 (use ponto para decimais)">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={payload.valor_por_unidade ?? ""}
+                    onChange={(e) => set("valor_por_unidade", e.target.value ? Number(e.target.value) : "")}
+                    placeholder="19882.50"
+                  />
+                </Field>
+                <Field label="Quantidade de unidades" required hint="% de quotas, nº de clientes, lotes etc.">
+                  <Input
+                    type="number"
+                    value={payload.quantidade_unidades ?? ""}
+                    onChange={(e) => set("quantidade_unidades", e.target.value ? Number(e.target.value) : "")}
+                    placeholder="100"
+                  />
+                </Field>
+              </div>
+              {payload.valor_por_unidade && payload.quantidade_unidades ? (
+                <div className="text-xs text-[#D9F564] bg-[#D9F564]/10 border border-[#D9F564]/30 rounded-md p-3">
+                  Valor total calculado: <strong>R$ {(Number(payload.valor_por_unidade) * Number(payload.quantidade_unidades)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </div>
+              ) : null}
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="% à vista" required hint="Padrão Vispe: 40%">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={payload.percentual_a_vista ?? 40}
+                    onChange={(e) => set("percentual_a_vista", Number(e.target.value))}
+                  />
+                </Field>
+                <Field label="Nº de parcelas do saldo" required hint="Padrão Vispe: 24 meses (IPCA)">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={payload.num_parcelas ?? 24}
+                    onChange={(e) => set("num_parcelas", Number(e.target.value))}
+                  />
+                </Field>
+              </div>
+              <Field label="Observações de pagamento (opcional)" hint="Earn-out, condicionantes, garantias adicionais.">
+                <Textarea rows={3} value={payload.obs_pagamento ?? ""} onChange={(e) => set("obs_pagamento", e.target.value)} />
               </Field>
             </div>
           )}
