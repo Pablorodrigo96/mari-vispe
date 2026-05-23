@@ -70,7 +70,8 @@ export function LegalDocumentGenerator({
   const [fields, setFields] = useState<Record<string, any>>({});
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [useSelfCritique, setUseSelfCritique] = useState(false);
-  const generate = useGenerateLegalDocument();
+  // Kept for type compatibility; generation now runs in the background tracker.
+  void useGenerateLegalDocument;
   const qc = useQueryClient();
   const tracker = useGenerationTracker();
 
