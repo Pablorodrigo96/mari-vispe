@@ -72,16 +72,34 @@ Deno.serve(async (req) => {
       return json({ error: "missing_required_fields", fields: missing }, 400);
     }
 
-    // Load context: either deal or pair
+    // Load context: deal_id can refer to either public.deals (legacy/unified view)
+    // OR to an eb_companies mandate id (Kanban / DealPair flows pass mandate id here).
     let contextCodename = "N/A";
     if (body.deal_id) {
-      const { data: deal } = await admin
-        .from("deals")
-        .select("id, codename")
-        .eq("id", body.deal_id)
-        .maybeSingle();
-      if (!deal) return json({ error: "deal_not_found" }, 404);
-      contextCodename = deal.codename ?? "N/A";
+      // 1) Try public.deals (may not exist in this project — guard the error)
+      let foundCodename: string | null = null;
+      try {
+        const { data: deal, error: dealErr } = await admin
+          .from("deals" as any)
+          .select("id, codename")
+          .eq("id", body.deal_id)
+          .maybeSingle();
+        if (!dealErr && deal) foundCodename = (deal as any).codename ?? null;
+      } catch (_e) {
+        // table doesn't exist — silently fall through to mandate lookup
+      }
+
+      // 2) Fallback: treat deal_id as an eb_companies (mandate) id
+      if (foundCodename === null) {
+        const { data: m } = await admin
+          .from("eb_companies")
+          .select("id, codename")
+          .eq("id", body.deal_id)
+          .maybeSingle();
+        if (!m) return json({ error: "deal_not_found" }, 404);
+        foundCodename = (m as any).codename ?? null;
+      }
+      contextCodename = foundCodename ?? `DEAL-${body.deal_id.slice(0, 8)}`;
     } else if (body.deal_pair_id) {
       const { data: pair } = await admin
         .from("deal_pairs")
