@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
             `Retorne em Markdown apenas o conteúdo desta seção (cabeçalho ## ${p.title} + cláusulas). Sem preâmbulo ou conclusão.`,
           ].join("\n");
           return await callAnthropic({
-            model: tpl.preferred_model ?? "claude-opus-4-1",
+            model: tpl.preferred_model ?? "claude-opus-4-7",
             system: systemPrompt,
             messages: [{ role: "user", content: userPrompt }],
             max_tokens: 4000,
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
         hydrated,
       ].join("\n");
       const ai = await callAnthropic({
-        model: tpl.preferred_model ?? "claude-sonnet-4-5",
+        model: tpl.preferred_model ?? "claude-sonnet-4-6",
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
         max_tokens: 8000,

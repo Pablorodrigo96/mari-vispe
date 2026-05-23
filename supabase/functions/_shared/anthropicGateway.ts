@@ -4,12 +4,18 @@ import { logApiUsage, callLovableAI } from "./apiTrack.ts";
 
 export interface AnthropicMessage {
   role: "user" | "assistant";
-  content: string;
+  content: string | ContentBlock[];
+}
+
+interface ContentBlock {
+  type: "text";
+  text: string;
+  cache_control?: { type: "ephemeral" };
 }
 
 export interface CallAnthropicOpts {
-  model?: string; // default claude-sonnet-4-5
-  system?: string;
+  model?: string; // default claude-sonnet-4-6
+  system?: string | ContentBlock[];
   messages: AnthropicMessage[];
   max_tokens?: number;
   temperature?: number;
@@ -22,6 +28,8 @@ export interface CallAnthropicOpts {
    * Lovable Gateway with google/gemini-2.5-pro so the flow never blocks.
    */
   allow_fallback?: boolean;
+  timeout_ms?: number; // abort request after this ms (default 90000)
+  use_cache?: boolean; // enable prompt caching on system prompt (default true)
 }
 
 export interface CallAnthropicResult {
@@ -40,8 +48,9 @@ export async function callAnthropic(
   opts: CallAnthropicOpts,
 ): Promise<CallAnthropicResult> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  const model = opts.model ?? "claude-sonnet-4-5";
+  const model = opts.model ?? "claude-sonnet-4-6";
   const allowFallback = opts.allow_fallback !== false;
+  const timeoutMs = opts.timeout_ms ?? 90000;
   const start = Date.now();
 
   if (!apiKey) {
@@ -52,6 +61,26 @@ export async function callAnthropic(
     throw new Error("ANTHROPIC_API_KEY is not configured");
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const useCache = opts.use_cache !== false;
+
+  // Prepare system prompt with optional caching
+  let systemPayload: string | ContentBlock[] | undefined;
+  if (opts.system) {
+    if (useCache) {
+      systemPayload = [
+        {
+          type: "text",
+          text: String(opts.system),
+          cache_control: { type: "ephemeral" },
+        },
+      ];
+    } else {
+      systemPayload = opts.system;
+    }
+  }
+
   try {
     const resp = await fetch(ANTHROPIC_URL, {
       method: "POST",
@@ -60,15 +89,17 @@ export async function callAnthropic(
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model,
         max_tokens: opts.max_tokens ?? 4096,
         temperature: opts.temperature ?? 0.2,
-        system: opts.system,
+        system: systemPayload,
         messages: opts.messages,
       }),
     });
 
+    clearTimeout(timeoutId);
     const latency = Date.now() - start;
 
     if (!resp.ok) {
@@ -124,9 +155,15 @@ export async function callAnthropic(
       latency_ms: latency,
     };
   } catch (e: any) {
+    clearTimeout(timeoutId);
     if (allowFallback) {
-      console.warn(`[anthropicGateway] exception — fallback: ${e?.message}`);
-      return await fallbackToGemini(opts, `exception:${e?.message?.slice(0,80)}`, start);
+      const msg = e?.message ?? String(e);
+      if (msg.includes("abort")) {
+        console.warn(`[anthropicGateway] timeout (${timeoutMs}ms) — falling back to Gemini`);
+        return await fallbackToGemini(opts, `timeout_${timeoutMs}`, start);
+      }
+      console.warn(`[anthropicGateway] exception — fallback: ${msg}`);
+      return await fallbackToGemini(opts, `exception:${msg.slice(0,80)}`, start);
     }
     throw e;
   }
