@@ -457,8 +457,8 @@ function DocumentReviewer({ doc, dealId, canApprove }: { doc: LegalDocument; dea
           <div className="text-sm text-zinc-100 break-words">{doc.label}</div>
           <StatusBadge doc={doc} />
         </div>
-        <ScrollArea className="flex-1 border border-zinc-800 rounded bg-zinc-900/40 p-3">
-          <pre className="text-[11px] text-zinc-200 whitespace-pre-wrap font-mono break-words">{doc.generated_body}</pre>
+        <ScrollArea className="flex-1 border border-zinc-800 rounded">
+          <WordPreview body={doc.generated_body} title={doc.label} />
         </ScrollArea>
       </div>
 
