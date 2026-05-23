@@ -39,7 +39,14 @@ export default function AssinaturaPublica() {
       setData(row);
       setFullName(row.signer_name ?? "");
       setSigned(!!row.signed_at);
+      if (row.signed_at) setSignedAtIso(row.signed_at);
+      if (row.signature_hash) setSignedHash(row.signature_hash);
       setLoading(false);
+      // Fetch IP for certificate (best effort)
+      fetch("https://api.ipify.org?format=json")
+        .then((r) => r.json())
+        .then((j) => setClientIp(j.ip || ""))
+        .catch(() => {});
       await supabase.rpc("signature_mark_viewed" as any, { p_token: token });
     })();
   }, [token]);
