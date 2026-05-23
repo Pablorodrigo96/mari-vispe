@@ -66,7 +66,7 @@ export default function NboWizardPage() {
   const requiredByStep: Record<number, string[]> = {
     1: ["vendedor_nome", "vendedor_cnpj", "vendedor_endereco", "vendedor_representante", "comprador_nome", "comprador_cnpj", "comprador_endereco", "comprador_representante"],
     2: ["objeto_transacao"],
-    3: ["valor_total", "forma_pagamento"],
+    3: ["valor_por_unidade", "quantidade_unidades", "percentual_a_vista", "num_parcelas"],
     4: [],
     5: [],
     6: ["prazo_exclusividade_dias"],
