@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUserRoles } from "@/hooks/useUserRoles";
 import {
   useGenerateLegalDocument,
+  startBackgroundGeneration,
   useHomologations,
   useInternalSignatures,
   useLegalDocuments,
@@ -23,6 +24,9 @@ import {
   type LegalDocument,
   type LegalTemplateField,
 } from "@/hooks/useLegalDocs";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGenerationTracker } from "@/components/legal/GenerationTracker";
+import { WordPreview } from "@/components/legal/WordPreview";
 
 interface Props {
   dealId: string;
