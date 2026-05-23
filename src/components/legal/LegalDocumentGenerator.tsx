@@ -139,15 +139,22 @@ export function LegalDocumentGenerator({
     }
   }
 
+  useEffect(() => {
+    if (open) setCategory(initialCategory);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialCategory]);
+
   if (!(isAdmin || isAdvisor)) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="bg-transparent gap-2">
-          <FileText className="h-4 w-4" /> {triggerLabel}
-        </Button>
-      </DialogTrigger>
+      {!triggerless && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="bg-transparent gap-2">
+            <FileText className="h-4 w-4" /> {triggerLabel}
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="!bg-zinc-950 border-zinc-800 max-w-5xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-zinc-100 break-words">Documentos jurídicos do deal</DialogTitle>
