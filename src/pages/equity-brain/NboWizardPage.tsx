@@ -51,7 +51,9 @@ export default function NboWizardPage() {
         comprador_nome: pair.buyer_profile_company ?? pair.buyer_profile_name ?? "",
         foro_cidade: "São Paulo",
         data_assinatura: TODAY_ISO(),
-        prazo_exclusividade_dias: 60,
+        prazo_exclusividade_dias: 30,
+        percentual_a_vista: 40,
+        num_parcelas: 24,
       });
       setHydrated(true);
     }
@@ -64,7 +66,7 @@ export default function NboWizardPage() {
   const requiredByStep: Record<number, string[]> = {
     1: ["vendedor_nome", "vendedor_cnpj", "vendedor_endereco", "vendedor_representante", "comprador_nome", "comprador_cnpj", "comprador_endereco", "comprador_representante"],
     2: ["objeto_transacao"],
-    3: ["valor_total", "forma_pagamento"],
+    3: ["valor_por_unidade", "quantidade_unidades", "percentual_a_vista", "num_parcelas"],
     4: [],
     5: [],
     6: ["prazo_exclusividade_dias"],
@@ -87,9 +89,30 @@ export default function NboWizardPage() {
       if (goto) setStep(goto.id);
       return;
     }
+    // Auto-cálculos antes de mandar para o backend (alimenta o template/IA)
+    const valorPorUnidade = Number(payload.valor_por_unidade) || 0;
+    const qtd = Number(payload.quantidade_unidades) || 0;
+    const valorTotal = valorPorUnidade * qtd;
+    const pctVista = Number(payload.percentual_a_vista ?? 40);
+    const numParcelas = Number(payload.num_parcelas ?? 24);
+    const valorAVista = valorTotal * (pctVista / 100);
+    const valorSaldo = valorTotal - valorAVista;
+    const valorParcela = numParcelas > 0 ? valorSaldo / numParcelas : 0;
+
+    const enrichedPayload = {
+      ...payload,
+      valor_total: valorTotal,
+      valor_a_vista: valorAVista,
+      valor_saldo: valorSaldo,
+      valor_parcela_media: valorParcela,
+      forma_pagamento:
+        payload.forma_pagamento ??
+        `${pctVista}% à vista (R$ ${valorAVista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}) + saldo em ${numParcelas} parcelas mensais de R$ ${valorParcela.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} corrigidas pelo IPCA.`,
+    };
+
     const res = await generate.mutateAsync({
       deal_pair_id: pair.id,
-      custom_fields: payload,
+      custom_fields: enrichedPayload,
     });
     if (res?.document?.id) {
       navigate(`/equity-brain/par/${pair.id}`);
@@ -199,11 +222,51 @@ export default function NboWizardPage() {
 
           {step === 3 && (
             <div className="space-y-4">
-              <Field label="Valor total (R$)" required>
-                <Input value={payload.valor_total ?? ""} onChange={(e) => set("valor_total", e.target.value)} placeholder="Ex: R$ 4.500.000,00" />
-              </Field>
-              <Field label="Forma de pagamento" required hint="Ex: 60% à vista, 40% earn-out em 24 meses.">
-                <Textarea rows={4} value={payload.forma_pagamento ?? ""} onChange={(e) => set("forma_pagamento", e.target.value)} />
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Valor por unidade (R$)" required hint="Ex: 19882.50 (use ponto para decimais)">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={payload.valor_por_unidade ?? ""}
+                    onChange={(e) => set("valor_por_unidade", e.target.value ? Number(e.target.value) : "")}
+                    placeholder="19882.50"
+                  />
+                </Field>
+                <Field label="Quantidade de unidades" required hint="% de quotas, nº de clientes, lotes etc.">
+                  <Input
+                    type="number"
+                    value={payload.quantidade_unidades ?? ""}
+                    onChange={(e) => set("quantidade_unidades", e.target.value ? Number(e.target.value) : "")}
+                    placeholder="100"
+                  />
+                </Field>
+              </div>
+              {payload.valor_por_unidade && payload.quantidade_unidades ? (
+                <div className="text-xs text-[#D9F564] bg-[#D9F564]/10 border border-[#D9F564]/30 rounded-md p-3">
+                  Valor total calculado: <strong>R$ {(Number(payload.valor_por_unidade) * Number(payload.quantidade_unidades)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </div>
+              ) : null}
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="% à vista" required hint="Padrão Vispe: 40%">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={payload.percentual_a_vista ?? 40}
+                    onChange={(e) => set("percentual_a_vista", Number(e.target.value))}
+                  />
+                </Field>
+                <Field label="Nº de parcelas do saldo" required hint="Padrão Vispe: 24 meses (IPCA)">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={payload.num_parcelas ?? 24}
+                    onChange={(e) => set("num_parcelas", Number(e.target.value))}
+                  />
+                </Field>
+              </div>
+              <Field label="Observações de pagamento (opcional)" hint="Earn-out, condicionantes, garantias adicionais.">
+                <Textarea rows={3} value={payload.obs_pagamento ?? ""} onChange={(e) => set("obs_pagamento", e.target.value)} />
               </Field>
             </div>
           )}

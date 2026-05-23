@@ -914,6 +914,9 @@ export type Database = {
           ai_provider: string | null
           category: string
           created_at: string
+          critique_errors: Json | null
+          critique_passed: boolean | null
+          critique_score: number | null
           custom_fields_snapshot: Json
           deal_id: string | null
           deal_pair_id: string | null
@@ -948,6 +951,9 @@ export type Database = {
           ai_provider?: string | null
           category?: string
           created_at?: string
+          critique_errors?: Json | null
+          critique_passed?: boolean | null
+          critique_score?: number | null
           custom_fields_snapshot?: Json
           deal_id?: string | null
           deal_pair_id?: string | null
@@ -982,6 +988,9 @@ export type Database = {
           ai_provider?: string | null
           category?: string
           created_at?: string
+          critique_errors?: Json | null
+          critique_passed?: boolean | null
+          critique_score?: number | null
           custom_fields_snapshot?: Json
           deal_id?: string | null
           deal_pair_id?: string | null
