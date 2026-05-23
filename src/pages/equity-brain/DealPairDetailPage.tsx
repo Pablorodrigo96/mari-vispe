@@ -36,9 +36,10 @@ export default function DealPairDetailPage() {
         <h1 className="text-lg font-semibold">Par #{pair.id.slice(0, 8)}</h1>
         <Badge className={PAIR_STATUS_COLOR[pair.status]}>{PAIR_STATUS_LABEL[pair.status]}</Badge>
         <div className="ml-auto flex gap-2">
-          <Button asChild size="sm" variant="outline" className="bg-transparent border-zinc-700 text-zinc-200 hover:bg-zinc-800">
+          <LegalDocsMenu dealId={pair.sell_mandate_id} label="Documentos legais" />
+          <Button asChild size="sm" variant="ghost" className="text-zinc-400 hover:text-[#D9F564] hover:bg-zinc-800">
             <Link to={`/equity-brain/par/${pair.id}/nbo`}>
-              <FileText className="h-4 w-4 mr-1" /> Gerar NBO
+              <FileText className="h-4 w-4 mr-1" /> NBO Wizard
             </Link>
           </Button>
           {nexts.map((ns) => (
