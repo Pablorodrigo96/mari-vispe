@@ -344,7 +344,10 @@ Deno.serve(async (req) => {
         ai_provider: provider,
         ai_model: model,
         ai_fallback_used: fallbackUsed,
-        status: "draft",
+        status: critiqueResult && !critiqueResult.is_ready_for_review ? "draft_critique_failed" : "draft",
+        critique_score: critiqueResult?.score ?? null,
+        critique_errors: critiqueResult ? { errors: critiqueResult.errors, warnings: critiqueResult.recommendations } : null,
+        critique_passed: critiqueResult ? critiqueResult.is_ready_for_review : null,
         visible_to_buyer: !!body.visible_to_buyer,
         uploaded_by: userId,
         metadata: {
