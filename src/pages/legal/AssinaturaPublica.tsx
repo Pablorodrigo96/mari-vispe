@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, CheckCircle2, AlertTriangle, PenTool, FileText } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, PenTool, FileText, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { WordPreview } from "@/components/legal/WordPreview";
+import { SignatureCertificate } from "@/components/legal/SignatureCertificate";
+
 
 export default function AssinaturaPublica() {
   const { token } = useParams<{ token: string }>();
