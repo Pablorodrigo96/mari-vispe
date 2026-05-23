@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, FileText, ShieldCheck, Send, PenTool, Copy, Check, AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,10 @@ import {
 interface Props {
   dealId: string;
   triggerLabel?: string;
+  initialCategory?: "nda" | "nbo" | "term_sheet" | "spa";
+  open?: boolean;
+  onOpenChange?: (o: boolean) => void;
+  triggerless?: boolean;
 }
 
 const ROLES: { v: any; l: string }[] = [
@@ -39,9 +43,21 @@ const ROLES: { v: any; l: string }[] = [
   { v: "partner", l: "Parceiro" },
 ];
 
-export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento jurídico" }: Props) {
-  const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState<string>("nda");
+export function LegalDocumentGenerator({
+  dealId,
+  triggerLabel = "Gerar documento jurídico",
+  initialCategory = "nda",
+  open: openProp,
+  onOpenChange,
+  triggerless = false,
+}: Props) {
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (o: boolean) => {
+    if (onOpenChange) onOpenChange(o);
+    else setOpenState(o);
+  };
+  const [category, setCategory] = useState<string>(initialCategory);
   const { isAdmin, isAdvisor } = useUserRoles();
   const canApprove = isAdmin;
   const { data: templates = [] } = useLegalTemplates(category);
@@ -123,15 +139,22 @@ export function LegalDocumentGenerator({ dealId, triggerLabel = "Gerar documento
     }
   }
 
+  useEffect(() => {
+    if (open) setCategory(initialCategory);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialCategory]);
+
   if (!(isAdmin || isAdvisor)) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="bg-transparent gap-2">
-          <FileText className="h-4 w-4" /> {triggerLabel}
-        </Button>
-      </DialogTrigger>
+      {!triggerless && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="bg-transparent gap-2">
+            <FileText className="h-4 w-4" /> {triggerLabel}
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="!bg-zinc-950 border-zinc-800 max-w-5xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-zinc-100 break-words">Documentos jurídicos do deal</DialogTitle>

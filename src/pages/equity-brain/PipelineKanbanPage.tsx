@@ -19,6 +19,7 @@ import { canAdvanceStage, useDealStageProgress } from "@/hooks/useStageTasks";
 import { useDealDocProgress } from "@/hooks/useDealDocuments";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { CheckSquare } from "lucide-react";
+import { LegalDocsMenu } from "@/components/legal/LegalDocsMenu";
 
 type Mandate = {
   id: string;
@@ -503,6 +504,9 @@ function DealCard({
             </a>
           )}
           <TemperatureBadge temp={m.temperature} compact />
+          <span onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} draggable={false}>
+            <LegalDocsMenu dealId={m.id} size="sm" className="h-6 px-1.5 text-[10px] border-zinc-800" label="Docs" />
+          </span>
         </div>
       </div>
     </div>

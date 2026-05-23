@@ -1,44 +1,50 @@
-# Smoke test — NBO → e-mail de fechamento
+# Documentos legais (NDA · NBO · Term Sheet · SPA) acessíveis pelo Pipeline
 
-Objetivo: validar que o trigger `fn_deal_doc_signed_notify` → `deal-closing-notify` → `send-transactional-email` → fila pgmq → entrega via `notify.mari.vispe.com.br` está funcionando ponta a ponta, e que a UI (`PairClosingEmailsCard`) reflete o resultado.
+## Diagnóstico
 
-## Passos
+O gerador (`LegalDocumentGenerator`, que já cobre NDA / NBO / Term Sheet / SPA via IA + homologação + assinatura interna) hoje só está montado em `UnifiedDealPage` (`/equity-brain/deal/:id`). No `/equity-brain/pipeline` (Kanban) e em `/equity-brain/par/:id` o usuário só tem o `Gerar NBO` específico do par, sem entrada para os outros três.
 
-1. **Pré-checagens (read-only)**
-   - Confirmar status do domínio `notify.mari.vispe.com.br` (`check_email_domain_status`).
-   - Confirmar que `process-email-queue` está agendado no pg_cron.
-   - Listar 1 mandato vendedor + 1 buyer existentes para usar no par mock.
+## O que vai mudar (só UI)
 
-2. **Criar par + documento NBO mock** (via migration ou insert direto)
-   - Insert em `deal_pairs` (sell_mandate_id, buy_mandate_id, buyer_profile_id, responsavel_advisor_id, status='nbo').
-   - Insert em `deal_documents` (deal_pair_id, template_code='nbo', category='nbo', status='draft').
+### 1. Card do Kanban (`PipelineKanbanPage` → `DealCard`)
+Adicionar um botão discreto **"Documentos"** (ícone `FileText`) no rodapé do card, ao lado dos ícones já existentes. Ele abre um `DropdownMenu` com 4 itens:
+- Gerar NDA
+- Gerar NBO
+- Gerar Term Sheet
+- Gerar SPA
 
-3. **Disparar assinatura**
-   - UPDATE `deal_documents` SET status='signed', signed_at=now() WHERE id=<doc>.
-   - Trigger `fn_deal_doc_signed_notify` deve chamar `deal-closing-notify` via pg_net.
+Cada item abre o `LegalDocumentGenerator` (já é um `Dialog`) com:
+- `dealId={card.deal_id}` (mandato do vendedor — é o que o gerador usa hoje)
+- categoria inicial pré-selecionada (`nda` / `nbo` / `ts` / `spa`)
 
-4. **Validar backend**
-   - `deal_closing_emails_log`: linhas para seller/buyer/advisor/admin com `sent_at` preenchido.
-   - `audit_events`: evento `nbo_signed` com payload contendo recipients.
-   - `email_send_log`: linhas `pending` → `sent` por destinatário.
-   - Edge function logs: `deal-closing-notify` 200, sem erro.
+Para suportar pré-seleção, estender `LegalDocumentGenerator`:
+- nova prop opcional `initialCategory?: "nda" | "nbo" | "ts" | "spa"`
+- nova prop opcional `defaultOpen?: boolean` + `onOpenChange?: (o:boolean)=>void` para uso controlado
+- nova prop opcional `triggerless?: boolean` para esconder o trigger interno quando o pai controla a abertura via menu
 
-5. **Validar UI**
-   - Abrir `/equity-brain/par/<id>` → `PairClosingEmailsCard` lista os e-mails enviados.
-   - Testar botão "Reenviar" (admin) → nova entrada com `force=true`.
+Gate: só renderizar o botão para `isAdmin || isAdvisor || isLegal` (usar `useUserRoles`).
 
-6. **Repetir para SPA/closing**
-   - Inserir 2º `deal_document` template_code='spa', category='closing', status='signed'.
-   - Validar template `deal-closed` enviado, evento `deal_closed` em audit, banner verde "Deal fechado" no card.
+### 2. Página do Par (`DealPairDetailPage`)
+Substituir o botão único `Gerar NBO` do header por um bloco **"Documentos legais"** abaixo de `PairClosingEmailsCard`, com 4 botões lado a lado (NDA · NBO · Term Sheet · SPA) — mesma mecânica do Kanban.
 
-7. **Cleanup**
-   - Manter par como amostra (útil para QA futuro) ou marcar como teste e remover. Pergunto antes de deletar.
+- NBO continua tendo, em adição, o atalho para o wizard guiado existente (`/equity-brain/par/:id/nbo`), apresentado como link secundário "Usar wizard passo-a-passo" dentro do card NBO. Wizard atual fica intacto.
+- `dealId` para o gerador = `pair.sell_mandate_id`.
 
-## Riscos
+Listagem dos documentos já criados continua vinda do `LegalDocumentGenerator` (ele já mostra histórico por categoria via `useLegalDocuments(dealId)`).
 
-- Se algum mandato/buyer não tiver e-mail vinculado em `auth.users`, recipientes ficam vazios — o teste vai expor isso.
-- Se `pg_net` falhar silenciosamente, `audit_events` fica vazio. Vou checar logs de pg_net na auditoria.
+### 3. Sem mudanças de backend
+- `doc_templates`, `clicksign-mock`, `mari-generate-document`, RLS, edge functions — tudo permanece.
+- Nenhuma migration.
 
-## Entregável
+## Arquivos tocados
+- `src/components/legal/LegalDocumentGenerator.tsx` — adicionar props `initialCategory`, `defaultOpen`, `onOpenChange`, `triggerless`.
+- `src/pages/equity-brain/PipelineKanbanPage.tsx` — novo botão "Documentos" + dropdown no `DealCard` (gate por role).
+- `src/pages/equity-brain/DealPairDetailPage.tsx` — remover botão isolado "Gerar NBO" do header, adicionar bloco "Documentos legais" com 4 ações + atalho para o NBO Wizard.
 
-Relatório curto com: ✅/❌ por etapa, IDs criados, screenshot da UI, e qualquer ajuste necessário descoberto no caminho.
+## Memória
+Atualizar `mem/features/legal-document-ai-pipeline.md` indicando os novos pontos de entrada (Kanban card + Pair detail), além do `UnifiedDealPage`.
+
+## Fora de escopo
+- Mudar fluxo de assinatura, templates ou homologação.
+- Mudar o NBO Wizard (`NboWizardPage`).
+- Disparo automático de NDA do deal-room (segue só pelo trigger atual).
