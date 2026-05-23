@@ -89,18 +89,67 @@ export default function NboWizardPage() {
       if (goto) setStep(goto.id);
       return;
     }
-    // Auto-cálculos antes de mandar para o backend (alimenta o template/IA)
+    // Auto-cálculos antes de mandar para o backend
     const valorPorUnidade = Number(payload.valor_por_unidade) || 0;
     const qtd = Number(payload.quantidade_unidades) || 0;
     const valorTotal = valorPorUnidade * qtd;
     const pctVista = Number(payload.percentual_a_vista ?? 40);
-    const numParcelas = Number(payload.num_parcelas ?? 24);
+    const numParcelas = Number(payload.num_parcelas ?? payload.numero_parcelas ?? 24);
     const valorAVista = valorTotal * (pctVista / 100);
     const valorSaldo = valorTotal - valorAVista;
     const valorParcela = numParcelas > 0 ? valorSaldo / numParcelas : 0;
 
+    // Derivar UF do endereço comprador (procura sigla /XX no final)
+    const inferUF = (addr?: string) => {
+      const m = (addr ?? "").match(/\/\s*([A-Z]{2})\b/);
+      return m?.[1] ?? "SP";
+    };
+    const inferCity = (addr?: string) => {
+      const m = (addr ?? "").match(/,\s*([^,/]+)\/[A-Z]{2}\b/);
+      return m?.[1]?.trim() ?? payload.foro_cidade ?? "São Paulo";
+    };
+    const compradorUF = inferUF(payload.comprador_endereco);
+    const compradorCidade = inferCity(payload.comprador_endereco);
+    const foroUF = payload.foro_uf ?? compradorUF;
+
+    // Data por extenso
+    const dataIso = (payload.data_assinatura ?? TODAY_ISO()) as string;
+    const [yy, mm, dd] = dataIso.split("-");
+    const meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+    const dataExtenso = `${Number(dd)} de ${meses[Number(mm) - 1] ?? "—"} de ${yy}`;
+
+    // Mapeamento wizard → template v2
     const enrichedPayload = {
       ...payload,
+      // Vendedor
+      vendedor_razao_social: payload.vendedor_razao_social ?? payload.vendedor_nome,
+      vendedor_tipo_societario: payload.vendedor_tipo_societario ?? "Ltda",
+      vendedor_endereco_completo: payload.vendedor_endereco_completo ?? payload.vendedor_endereco,
+      vendedor_apelido: payload.vendedor_apelido ?? "Vendedora",
+      vendedor_representante_qualificacao: payload.vendedor_representante_qualificacao ?? payload.vendedor_representante,
+      // Comprador
+      comprador_razao_social: payload.comprador_razao_social ?? payload.comprador_nome,
+      comprador_tipo_societario: payload.comprador_tipo_societario ?? "Ltda",
+      comprador_endereco_completo: payload.comprador_endereco_completo ?? payload.comprador_endereco,
+      comprador_apelido: payload.comprador_apelido ?? "Compradora",
+      comprador_cidade_sede: payload.comprador_cidade_sede ?? compradorCidade,
+      comprador_uf_sede: payload.comprador_uf_sede ?? compradorUF,
+      comprador_representante_qualificacao: payload.comprador_representante_qualificacao ?? payload.comprador_representante,
+      // Operação
+      tipo_transacao: payload.tipo_transacao ?? "compra e venda da totalidade das quotas representativas do capital social",
+      objeto_descricao_completa: payload.objeto_descricao_completa ?? payload.objeto_transacao,
+      unidade_negociada: payload.unidade_negociada ?? "quotas",
+      valor_total_numerico: valorTotal,
+      numero_parcelas: numParcelas,
+      tipo_parcelas: payload.tipo_parcelas ?? "mensais, iguais e sucessivas",
+      prazo_inicio_parcelas_dias: payload.prazo_inicio_parcelas_dias ?? 30,
+      // Foro / assinatura
+      foro_uf: foroUF,
+      local_assinatura_cidade: payload.local_assinatura_cidade ?? payload.foro_cidade,
+      local_assinatura_uf: payload.local_assinatura_uf ?? foroUF,
+      data_assinatura_extenso: payload.data_assinatura_extenso ?? dataExtenso,
+      termos_adicionais_ia: payload.termos_adicionais_ia ?? "",
+      // Derivados (úteis para a IA mesmo se template não usar diretamente)
       valor_total: valorTotal,
       valor_a_vista: valorAVista,
       valor_saldo: valorSaldo,
