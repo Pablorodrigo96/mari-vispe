@@ -241,18 +241,16 @@ export function LegalDocumentGenerator({
                             type="checkbox"
                             checked={useSelfCritique}
                             onChange={(e) => setUseSelfCritique(e.target.checked)}
-                            disabled={generate.isPending}
                             className="w-4 h-4"
                           />
                           <span>Validar com auto-crítica (mais lento)</span>
                         </label>
-                        <Button onClick={handleGenerate} disabled={generate.isPending} className="w-full bg-volt text-carbon hover:bg-volt/90">
-                          {generate.isPending ? (
-                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando com Claude…</>
-                          ) : (
-                            <><FileText className="h-4 w-4 mr-2" /> Gerar documento</>
-                          )}
+                        <Button onClick={handleGenerate} className="w-full bg-volt text-carbon hover:bg-volt/90">
+                          <FileText className="h-4 w-4 mr-2" /> Gerar em segundo plano
                         </Button>
+                        <div className="text-[10px] text-zinc-500 text-center">
+                          A geração roda em segundo plano — você pode fechar essa janela.
+                        </div>
                       </div>
                     </div>
                   </ScrollArea>
