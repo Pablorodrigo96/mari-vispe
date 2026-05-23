@@ -162,6 +162,8 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <GenerationTrackerProvider>
+          <GenerationToaster />
           <ViewAsBanner />
           <PageTracker />
           <Suspense fallback={<RouteFallback />}>
