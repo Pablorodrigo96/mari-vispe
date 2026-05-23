@@ -110,6 +110,8 @@ export default function AssinaturaPublica() {
       });
       if (error) throw error;
       setSigned(true);
+      setSignedHash(hash);
+      setSignedAtIso(new Date().toISOString());
       toast.success("Assinatura registrada com sucesso.");
     } catch (e: any) {
       toast.error(e?.message ?? "Falha ao assinar");
