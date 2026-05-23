@@ -95,11 +95,12 @@ export function useGenerateNboFromDraft() {
           deal_pair_id: args.deal_pair_id,
           template_code: args.template_code ?? "legal_nbo_v1",
           custom_fields: args.custom_fields,
+          use_self_critique: true,
         },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      return data as { ok: true; document: any };
+      return data as { ok: true; document: any; critique?: any };
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["legal-documents"] });
