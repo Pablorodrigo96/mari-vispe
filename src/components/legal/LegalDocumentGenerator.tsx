@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import {
-  useGenerateLegalDocument,
+  startBackgroundGeneration,
   useHomologations,
   useInternalSignatures,
   useLegalDocuments,
@@ -23,6 +23,9 @@ import {
   type LegalDocument,
   type LegalTemplateField,
 } from "@/hooks/useLegalDocs";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGenerationTracker } from "@/components/legal/GenerationTracker";
+import { WordPreview } from "@/components/legal/WordPreview";
 
 interface Props {
   dealId: string;
@@ -66,7 +69,8 @@ export function LegalDocumentGenerator({
   const [fields, setFields] = useState<Record<string, any>>({});
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [useSelfCritique, setUseSelfCritique] = useState(false);
-  const generate = useGenerateLegalDocument();
+  const qc = useQueryClient();
+  const tracker = useGenerationTracker();
 
   const tpl = useMemo(
     () => templates.find((t) => t.code === selectedTplCode) ?? null,
@@ -109,35 +113,22 @@ export function LegalDocumentGenerator({
         if (isFinite(n)) formatted[f.key] = formatBRL(n);
       }
     });
-    try {
-      const res = await generate.mutateAsync({
-        deal_id: dealId,
-        template_code: tpl.code,
-        custom_fields: formatted,
-        use_self_critique: useSelfCritique,
-      });
-      toast.success(`Documento gerado (v${res.document.version_number}) via ${res.ai.provider}`);
-
-      // Check for gaps in generated document
-      const gaps = detectGaps(res.document.generated_body);
-      if (gaps.apreencher > 0 || gaps.naoInformado > 0) {
-        toast.warning(`⚠️ ${gaps.apreencher + gaps.naoInformado} lacuna(s) detectada(s)`, {
-          description: `${gaps.apreencher} a preencher, ${gaps.naoInformado} não informado`,
-        });
-      }
-
-      // Show critique results if available
-      if (res.critique && res.critique.issues_found > 0) {
-        toast.warning(`🔍 Crítica: ${res.critique.issues_found} problemas encontrados`, {
-          description: res.critique.is_ready_for_review ? "Pronto para revisão" : "Revise antes de enviar",
-        });
-      }
-
-      setActiveDocId(res.document.id);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Falha ao gerar");
-    }
+    // Fire-and-forget background generation: tracker shows progress so the
+    // user can close the modal and keep working.
+    startBackgroundGeneration(qc, tracker, {
+      deal_id: dealId,
+      template_code: tpl.code,
+      custom_fields: formatted,
+      use_self_critique: useSelfCritique,
+      label: tpl.label,
+      category: tpl.category,
+    });
+    toast.success("Geração iniciada em segundo plano", {
+      description: "Você pode fechar essa janela e continuar navegando. Avisamos quando ficar pronto.",
+    });
+    setOpen(false);
   }
+
 
   useEffect(() => {
     if (open) setCategory(initialCategory);
@@ -248,18 +239,16 @@ export function LegalDocumentGenerator({
                             type="checkbox"
                             checked={useSelfCritique}
                             onChange={(e) => setUseSelfCritique(e.target.checked)}
-                            disabled={generate.isPending}
                             className="w-4 h-4"
                           />
                           <span>Validar com auto-crítica (mais lento)</span>
                         </label>
-                        <Button onClick={handleGenerate} disabled={generate.isPending} className="w-full bg-volt text-carbon hover:bg-volt/90">
-                          {generate.isPending ? (
-                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando com Claude…</>
-                          ) : (
-                            <><FileText className="h-4 w-4 mr-2" /> Gerar documento</>
-                          )}
+                        <Button onClick={handleGenerate} className="w-full bg-volt text-carbon hover:bg-volt/90">
+                          <FileText className="h-4 w-4 mr-2" /> Gerar em segundo plano
                         </Button>
+                        <div className="text-[10px] text-zinc-500 text-center">
+                          A geração roda em segundo plano — você pode fechar essa janela.
+                        </div>
                       </div>
                     </div>
                   </ScrollArea>
@@ -468,8 +457,8 @@ function DocumentReviewer({ doc, dealId, canApprove }: { doc: LegalDocument; dea
           <div className="text-sm text-zinc-100 break-words">{doc.label}</div>
           <StatusBadge doc={doc} />
         </div>
-        <ScrollArea className="flex-1 border border-zinc-800 rounded bg-zinc-900/40 p-3">
-          <pre className="text-[11px] text-zinc-200 whitespace-pre-wrap font-mono break-words">{doc.generated_body}</pre>
+        <ScrollArea className="flex-1 border border-zinc-800 rounded">
+          <WordPreview body={doc.generated_body} title={doc.label} />
         </ScrollArea>
       </div>
 

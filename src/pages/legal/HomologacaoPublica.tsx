@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { WordPreview } from "@/components/legal/WordPreview";
 
 export default function HomologacaoPublica() {
   const { token } = useParams<{ token: string }>();
@@ -76,9 +77,9 @@ export default function HomologacaoPublica() {
           <div className="text-xs text-zinc-500 mt-1">Para: {data.lawyer_name} ({data.lawyer_email})</div>
         </Card>
 
-        <Card className="!bg-zinc-900/60 backdrop-blur-md border-zinc-800 p-4 max-h-[55vh] overflow-auto">
-          <pre className="text-[11px] text-zinc-200 whitespace-pre-wrap font-mono break-words">{data.document_body}</pre>
-        </Card>
+        <div className="max-h-[55vh] overflow-auto rounded border border-zinc-800">
+          <WordPreview body={data.document_body} title={data.document_label} />
+        </div>
 
         {decision ? (
           <Card className="!bg-zinc-900/60 backdrop-blur-md border-zinc-800 p-4 text-center">

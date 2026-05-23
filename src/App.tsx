@@ -9,6 +9,7 @@ import { ViewAsProvider } from "@/contexts/ViewAsContext";
 import { ViewAsBanner } from "@/components/layout/ViewAsSwitcher";
 import { CookieConsentBanner } from "@/components/cookies/CookieConsentBanner";
 import { usePageTracking } from "@/hooks/usePageTracking";
+import { GenerationTrackerProvider, GenerationToaster } from "@/components/legal/GenerationTracker";
 
 const PageTracker = () => { usePageTracking(); return null; };
 
@@ -161,6 +162,8 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <GenerationTrackerProvider>
+          <GenerationToaster />
           <ViewAsBanner />
           <PageTracker />
           <Suspense fallback={<RouteFallback />}>
@@ -361,6 +364,7 @@ const App = () => (
           </Routes>
           </Suspense>
           <CookieConsentBanner />
+          </GenerationTrackerProvider>
         </BrowserRouter>
       </TooltipProvider>
       </ViewAsProvider>
