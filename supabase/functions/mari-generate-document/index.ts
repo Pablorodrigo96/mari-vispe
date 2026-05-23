@@ -218,10 +218,21 @@ Deno.serve(async (req) => {
         ``,
         hydrated,
       ].join("\n");
+
+      // Few-shot HAD×ETECC apenas para NBO v2 (eleva qualidade ao padrão Vispe)
+      const msgs: { role: "user" | "assistant"; content: string }[] = [];
+      if (body.template_code === "legal_nbo_v1") {
+        msgs.push(
+          { role: "user", content: FEW_SHOT_USER_EXAMPLE },
+          { role: "assistant", content: FEW_SHOT_ASSISTANT_EXAMPLE },
+        );
+      }
+      msgs.push({ role: "user", content: userPrompt });
+
       const ai = await callAnthropic({
         model: tpl.preferred_model ?? "claude-sonnet-4-6",
         system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
+        messages: msgs,
         max_tokens: 8000,
         temperature: 0.15,
         function_name: "mari-generate-document",
@@ -395,3 +406,82 @@ function json(body: unknown, status = 200) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
+
+// ============================================================================
+// FEW-SHOT EXAMPLE — NBO Vispe (caso real HAD × ETECC, anonimizado/simplificado)
+// Usado APENAS quando template_code === 'legal_nbo_v1'.
+// Ensina o modelo a: (1) usar frases sagradas Vispe, (2) 5 seções limpas sem
+// numeração travada, (3) auto-calcular valores, (4) usar [A PREENCHER] só onde
+// faz sentido, (5) tom Vispe.
+// ============================================================================
+
+const FEW_SHOT_USER_EXAMPLE = `Refine o documento abaixo mantendo sua estrutura, cláusulas fixas e dados das partes intactos.
+Categoria: legal | Template: legal_nbo_v1 | Label: Proposta Não Vinculante (NBO)
+
+DADOS CONTEXTUAIS DO DEAL:
+- Codinome interno: MARI-HAD-0042
+
+DOCUMENTO PRÉ-HIDRATADO:
+
+DADOS DA OPERAÇÃO (entrada do wizard):
+- Comprador (proponente): HAD Participações Ltda — CNPJ 12.345.678/0001-99, sede em Porto Alegre/RS, representada por João Silva (CPF 111.222.333-44)
+- Alvo (vendedor): ETECC Engenharia S.A. — CNPJ 98.765.432/0001-11, sede em Caxias do Sul/RS, representada por Maria Souza (CPF 555.666.777-88)
+- Objeto: 100% das quotas da ETECC
+- Valor por unidade: R$ 19.882,50
+- Quantidade de unidades: 100
+- % à vista: 40
+- Nº parcelas: 24
+- Exclusividade (dias): 30
+- Foro: Caxias do Sul/RS
+- Data: 30 de março de 2026`;
+
+const FEW_SHOT_ASSISTANT_EXAMPLE = `# PROPOSTA NÃO VINCULANTE (NBO — Non-Binding Offer)
+
+A presente Proposta Não Vinculante ("Proposta" ou "NBO") é apresentada pela **HAD Participações Ltda**, pessoa jurídica de direito privado, inscrita no CNPJ sob nº 12.345.678/0001-99, com sede em Porto Alegre/RS, neste ato representada por seu administrador **João Silva**, CPF 111.222.333-44 ("Proponente" ou "Compradora"), à **ETECC Engenharia S.A.**, pessoa jurídica de direito privado, inscrita no CNPJ sob nº 98.765.432/0001-11, com sede em Caxias do Sul/RS, neste ato representada por sua administradora **Maria Souza**, CPF 555.666.777-88 ("Alvo" ou "Vendedora"), tendo como interveniente facilitadora a **Vispe Assessoria em M&A Ltda**, CNPJ 31.526.112/0001-04, com sede em Gravataí/RS ("Vispe"), nos seguintes termos.
+
+## Objeto e Estrutura da Operação
+
+A Proponente manifesta seu interesse, de forma não vinculante, em adquirir a totalidade (100%) das quotas representativas do capital social da Alvo, livres e desembaraçadas de quaisquer ônus, gravames ou direitos de terceiros ("Operação"), nos termos e condições aqui descritos e sujeita às condições suspensivas usuais a operações desta natureza.
+
+## Preço e Forma de Pagamento
+
+O preço total ofertado pela Operação é de **R$ 1.988.250,00 (um milhão, novecentos e oitenta e oito mil, duzentos e cinquenta reais)**, equivalente a R$ 19.882,50 por unidade, considerando 100 unidades, a ser pago da seguinte forma:
+
+(i) **R$ 795.300,00 (setecentos e noventa e cinco mil e trezentos reais)**, equivalente a 40% (quarenta por cento) do preço total, a título de pagamento à vista, na data de fechamento da Operação ("Data de Fechamento");
+
+(ii) o saldo remanescente, equivalente a **R$ 1.192.950,00 (um milhão, cento e noventa e dois mil, novecentos e cinquenta reais)**, em **24 (vinte e quatro) parcelas mensais, iguais e sucessivas de R$ 49.706,25 (quarenta e nove mil, setecentos e seis reais e vinte e cinco centavos)**, vencendo-se a primeira 30 (trinta) dias após a Data de Fechamento.
+
+As parcelas serão corrigidas monetariamente pelo IPCA/IBGE acumulado no período, sem incidência de juros remuneratórios.
+
+## Condições Suspensivas e Due Diligence
+
+A formalização da Operação fica condicionada à conclusão satisfatória, a exclusivo critério da Proponente, de auditoria legal, contábil, fiscal, trabalhista e ambiental ("Due Diligence") sobre a Alvo, bem como à celebração de Contrato de Compra e Venda de Quotas ("SPA") refletindo as condições aqui dispostas e as declarações e garantias usuais a operações desta natureza, incluindo cláusula de não-concorrência da Vendedora pelo prazo de 5 (cinco) anos no território nacional.
+
+## Exclusividade e Confidencialidade
+
+Aceita esta Proposta, a Alvo compromete-se a **negociar exclusivamente com a Proponente pelo prazo de 30 (trinta) dias corridos**, contados da assinatura desta NBO ("Período de Exclusividade"), abstendo-se de manter conversas, negociações, fornecer informações ou aceitar propostas de quaisquer terceiros relativas à venda, total ou parcial, da Alvo ou de seus ativos. As Partes reconhecem que todas as informações trocadas no contexto desta Operação são confidenciais e regem-se pelo Acordo de Confidencialidade previamente firmado.
+
+## Caráter Não Vinculante, Foro e Encerramento
+
+Esta NBO tem caráter exclusivamente **não vinculante**, ressalvadas as obrigações de exclusividade, confidencialidade e foro, que vinculam as Partes desde a sua assinatura. Eventuais despesas com a Operação serão arcadas por cada Parte individualmente até a celebração do SPA. Fica eleito o foro da Comarca de **Caxias do Sul/RS** para dirimir quaisquer controvérsias decorrentes desta Proposta, com renúncia expressa a qualquer outro, por mais privilegiado que seja.
+
+E, por estarem assim justas e contratadas, as Partes assinam a presente em 2 (duas) vias de igual teor e forma, na presença das testemunhas abaixo.
+
+Caxias do Sul/RS, 30 de março de 2026.
+
+_____________________________________
+**HAD Participações Ltda**
+João Silva — CPF 111.222.333-44
+
+_____________________________________
+**ETECC Engenharia S.A.**
+Maria Souza — CPF 555.666.777-88
+
+_____________________________________
+**Vispe Assessoria em M&A Ltda**
+(interveniente facilitadora)
+
+Testemunhas:
+1. _________________________ Nome: [A PREENCHER] CPF: [A PREENCHER]
+2. _________________________ Nome: [A PREENCHER] CPF: [A PREENCHER]`;
+
