@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { FileText, ChevronDown } from "lucide-react";
+import { Link } from "react-router-dom";
+import { FileText, ChevronDown, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LegalDocumentGenerator } from "./LegalDocumentGenerator";
@@ -71,6 +73,13 @@ export function LegalDocsMenu({
               {it.label}
             </DropdownMenuItem>
           ))}
+          <DropdownMenuSeparator className="bg-zinc-800" />
+          <DropdownMenuItem asChild>
+            <Link to="/equity-brain/legal/biblioteca" className="flex items-center gap-2">
+              <Library className="h-3.5 w-3.5" />
+              Abrir biblioteca de documentos
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

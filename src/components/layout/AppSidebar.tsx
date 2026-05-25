@@ -181,6 +181,12 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
           ] : []),
         ],
       });
+      groups.push({
+        id: 'juridico', name: '⚖️ Jurídico', icon: FileSignature,
+        children: [
+          { name: 'Biblioteca de documentos', href: '/equity-brain/legal/biblioteca', icon: FileText },
+        ],
+      });
     }
   }
 
