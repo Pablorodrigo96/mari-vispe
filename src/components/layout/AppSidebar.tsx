@@ -5,7 +5,8 @@ import {
   UserSearch, Target, ChartBar, FileText, Award, Calculator, DollarSign,
   Briefcase, Sparkles, Shield, Brain, ChevronDown, LogOut, User, ChevronLeft,
   ChevronRight, BarChart3, FileSignature, Handshake, FileBarChart,
-  TrendingUp, CheckSquare, MessageCircle, Mail,
+  TrendingUp, CheckSquare, MessageCircle, Mail, MessagesSquare,
+  Users, CheckCircle2, Tag, CreditCard, Activity, LineChart, Database,
 } from 'lucide-react';
 import { MariLogo } from '@/components/brand/MariLogo';
 import { cn } from '@/lib/utils';
@@ -128,6 +129,16 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
       },
     );
 
+    // Salas de negociação (Deal Rooms) — visível p/ qualquer logado que possa ter sala
+    if (eff.isBuyer || eff.isSeller || isInsider) {
+      groups.push({
+        id: 'salas', name: 'Salas de negociação', icon: MessagesSquare,
+        children: [
+          { name: 'Minhas salas', href: '/salas', icon: MessagesSquare },
+        ],
+      });
+    }
+
     if (eff.isAdvisor || eff.isFranchisee || eff.isAdmin) {
       groups.push({
         id: 'partners', name: 'Parcerias', icon: Briefcase,
@@ -142,6 +153,28 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
     }
 
     if (eff.isAdmin) {
+      groups.push({
+        id: 'admin_ops', name: '🛠 Admin · Operação', icon: Shield,
+        children: [
+          { name: 'Dashboard admin', href: '/admin', icon: LayoutDashboard },
+          { name: 'Usuários', href: '/admin/users', icon: Users },
+          { name: 'Aprovações', href: '/admin/aprovacoes', icon: CheckCircle2 },
+          { name: 'Anúncios', href: '/admin/listings', icon: Tag },
+          { name: 'Assinaturas', href: '/admin/subscriptions', icon: CreditCard },
+          { name: 'Valuations', href: '/admin/valuations', icon: ChartBar },
+          { name: 'Capital (CRM)', href: '/admin/capital', icon: DollarSign },
+          { name: 'Fornecedores de capital', href: '/admin/capital/providers', icon: Briefcase },
+          { name: 'CRM admin', href: '/admin/crm', icon: ClipboardList },
+        ],
+      });
+      groups.push({
+        id: 'admin_monitor', name: '📡 Admin · Monitoramento', icon: Activity,
+        children: [
+          { name: 'WhatsApp monitor', href: '/admin/whatsapp-monitor', icon: MessageCircle },
+          { name: 'API monitor', href: '/admin/api-monitor', icon: Database },
+          { name: 'Analytics', href: '/admin/analytics', icon: LineChart },
+        ],
+      });
       groups.push({
         id: 'monday', name: '🔄 Migração Monday', icon: Shield,
         children: [

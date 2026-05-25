@@ -6,6 +6,7 @@ import {
   TrendingUp, Building2, GitMerge, FileSignature,
   Settings, Upload, Search, GitCompare, Globe, Activity, Users,
   Table as TableIcon, Gauge, Copy, Database, Tags, CalendarDays, Search as SearchIcon,
+  Scale, ShieldAlert, Send, FileText, Radio, BookOpen, KeyRound, UserCog, Download,
 } from "lucide-react";
 import { Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,23 @@ const DASHBOARDS = [
   { to: "/equity-brain/dashboards/executivo", label: "Executivo", Icon: TrendingUp },
   { to: "/equity-brain/dashboards/mandatos",  label: "Mandatos",  Icon: Building2 },
   { to: "/equity-brain/dashboards/match",     label: "Match",     Icon: GitMerge },
-  { to: "/equity-brain/propostas",            label: "Propostas", Icon: FileSignature },
+  { to: "/equity-brain/dashboards/propostas", label: "Propostas (NBO)", Icon: FileSignature },
+];
+
+const LEGAL_ITEMS = [
+  { to: "/equity-brain/legal/biblioteca", label: "Biblioteca de documentos", Icon: BookOpen },
+  { to: "/equity-brain/crm/aberturas",    label: "Quebras de sigilo (LGPD)", Icon: ShieldAlert },
+];
+
+const CARTAS_ITEMS = [
+  { to: "/equity-brain/cartas/historico", label: "Histórico de lotes", Icon: FileText },
+  { to: "/equity-brain/cartas/modelos",   label: "Modelos (admin)",    Icon: Mail, adminOnly: true },
+];
+
+const ISP_ITEMS = [
+  { to: "/equity-brain/isp/import",    label: "Importar base",      Icon: Upload },
+  { to: "/equity-brain/isp/sugestoes", label: "Sugestões frias",    Icon: Sparkles },
+  { to: "/equity-brain/isp/mercado",   label: "Mercado ISP",        Icon: Radio },
 ];
 
 const ADMIN_ITEMS = [
@@ -45,8 +62,13 @@ const ADMIN_ITEMS = [
   { to: "/equity-brain/admin/benchmark",  label: "Base Benchmark",      Icon: Database },
   { to: "/equity-brain/admin/buyer-classification", label: "Classificar Buyers", Icon: Tags },
   { to: "/equity-brain/admin/auditoria",  label: "Auditoria",           Icon: Search },
+  { to: "/equity-brain/crm/admin/permissoes",  label: "Permissões",        Icon: KeyRound },
+  { to: "/equity-brain/crm/admin/atribuicoes", label: "Atribuições advisor",Icon: UserCog },
+  { to: "/equity-brain/crm/exports",      label: "Exports CSV/XLSX",    Icon: Download },
+  { to: "/equity-brain/vertical/import",  label: "Importar vertical",   Icon: Layers },
   { to: "/equity-brain/admin/shadow",     label: "Shadow v1↔v2",        Icon: GitCompare },
   { to: "/equity-brain/admin/jarvis",     label: "Jarvis 3D",           Icon: Globe },
+  { to: "/equity-brain/grafo-jarvis/guia", label: "Guia Jarvis",        Icon: BookOpen },
   { to: "/equity-brain/admin/monday-parity",     label: "Paridade Monday",     Icon: BarChart3 },
   { to: "/equity-brain/admin/advisors-mapping",  label: "Mapeamento Advisors", Icon: Users },
   { to: "/equity-brain/admin/health",     label: "Health",              Icon: Activity },
@@ -69,6 +91,12 @@ export function EBSidebar() {
   const adminActive = location.pathname.startsWith("/equity-brain/admin");
   const [dashOpen, setDashOpen] = useState(dashboardsActive);
   const [adminOpen, setAdminOpen] = useState(adminActive);
+  const legalActive = location.pathname.startsWith("/equity-brain/legal") || location.pathname.startsWith("/equity-brain/crm/aberturas");
+  const [legalOpen, setLegalOpen] = useState(legalActive);
+  const cartasActive = location.pathname.startsWith("/equity-brain/cartas");
+  const [cartasOpen, setCartasOpen] = useState(cartasActive);
+  const ispActive = location.pathname.startsWith("/equity-brain/isp");
+  const [ispOpen, setIspOpen] = useState(ispActive);
   const verticalsActive = location.pathname.startsWith("/equity-brain/vertical/");
   const [vertOpen, setVertOpen] = useState(verticalsActive);
   const { data: verticals = [] } = useVerticalRegistry({ onlyActive: true });
@@ -227,6 +255,131 @@ export function EBSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Jurídico */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setLegalOpen((o) => !o)}
+                  isActive={legalActive}
+                  tooltip="Jurídico"
+                  className={cn(
+                    legalActive ? "!bg-emerald-950/40 !text-emerald-300" : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <Scale className="h-4 w-4" />
+                  <span>Jurídico</span>
+                  {!collapsed && (
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", legalOpen && "rotate-180")} />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {legalOpen && !collapsed && LEGAL_ITEMS.map(({ to, label, Icon }) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(to)}
+                    className={cn(
+                      "ml-3 text-xs",
+                      isActive(to) ? "!text-[#D9F564] !bg-[#D9F564]/10" : "!text-zinc-500 hover:!text-zinc-200",
+                    )}
+                  >
+                    <NavLink to={to}>
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Cartas */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setCartasOpen((o) => !o)}
+                  isActive={cartasActive}
+                  tooltip="Cartas"
+                  className={cn(
+                    cartasActive ? "!bg-emerald-950/40 !text-emerald-300" : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <Send className="h-4 w-4" />
+                  <span>Cartas</span>
+                  {!collapsed && (
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", cartasOpen && "rotate-180")} />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {cartasOpen && !collapsed && CARTAS_ITEMS.filter(i => !i.adminOnly || isAdmin).map(({ to, label, Icon }) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(to)}
+                    className={cn(
+                      "ml-3 text-xs",
+                      isActive(to) ? "!text-[#D9F564] !bg-[#D9F564]/10" : "!text-zinc-500 hover:!text-zinc-200",
+                    )}
+                  >
+                    <NavLink to={to}>
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* ISP / Anatel */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setIspOpen((o) => !o)}
+                  isActive={ispActive}
+                  tooltip="ISP / Anatel"
+                  className={cn(
+                    ispActive ? "!bg-emerald-950/40 !text-emerald-300" : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <Radio className="h-4 w-4" />
+                  <span>ISP / Anatel</span>
+                  {!collapsed && (
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", ispOpen && "rotate-180")} />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {ispOpen && !collapsed && ISP_ITEMS.map(({ to, label, Icon }) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(to)}
+                    className={cn(
+                      "ml-3 text-xs",
+                      isActive(to) ? "!text-[#D9F564] !bg-[#D9F564]/10" : "!text-zinc-500 hover:!text-zinc-200",
+                    )}
+                  >
+                    <NavLink to={to}>
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+
 
         {/* Verticais (multi-vertical 2026) */}
         {verticals.length > 0 && (
