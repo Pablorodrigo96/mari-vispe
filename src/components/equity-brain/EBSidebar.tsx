@@ -256,6 +256,131 @@ export function EBSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Jurídico */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setLegalOpen((o) => !o)}
+                  isActive={legalActive}
+                  tooltip="Jurídico"
+                  className={cn(
+                    legalActive ? "!bg-emerald-950/40 !text-emerald-300" : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <Scale className="h-4 w-4" />
+                  <span>Jurídico</span>
+                  {!collapsed && (
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", legalOpen && "rotate-180")} />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {legalOpen && !collapsed && LEGAL_ITEMS.map(({ to, label, Icon }) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(to)}
+                    className={cn(
+                      "ml-3 text-xs",
+                      isActive(to) ? "!text-[#D9F564] !bg-[#D9F564]/10" : "!text-zinc-500 hover:!text-zinc-200",
+                    )}
+                  >
+                    <NavLink to={to}>
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Cartas */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setCartasOpen((o) => !o)}
+                  isActive={cartasActive}
+                  tooltip="Cartas"
+                  className={cn(
+                    cartasActive ? "!bg-emerald-950/40 !text-emerald-300" : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <Send className="h-4 w-4" />
+                  <span>Cartas</span>
+                  {!collapsed && (
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", cartasOpen && "rotate-180")} />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {cartasOpen && !collapsed && CARTAS_ITEMS.filter(i => !i.adminOnly || isAdmin).map(({ to, label, Icon }) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(to)}
+                    className={cn(
+                      "ml-3 text-xs",
+                      isActive(to) ? "!text-[#D9F564] !bg-[#D9F564]/10" : "!text-zinc-500 hover:!text-zinc-200",
+                    )}
+                  >
+                    <NavLink to={to}>
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* ISP / Anatel */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setIspOpen((o) => !o)}
+                  isActive={ispActive}
+                  tooltip="ISP / Anatel"
+                  className={cn(
+                    ispActive ? "!bg-emerald-950/40 !text-emerald-300" : "!text-zinc-400 hover:!text-zinc-100 hover:!bg-zinc-900",
+                  )}
+                >
+                  <Radio className="h-4 w-4" />
+                  <span>ISP / Anatel</span>
+                  {!collapsed && (
+                    <ChevronDown className={cn("ml-auto h-3.5 w-3.5 transition-transform", ispOpen && "rotate-180")} />
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {ispOpen && !collapsed && ISP_ITEMS.map(({ to, label, Icon }) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(to)}
+                    className={cn(
+                      "ml-3 text-xs",
+                      isActive(to) ? "!text-[#D9F564] !bg-[#D9F564]/10" : "!text-zinc-500 hover:!text-zinc-200",
+                    )}
+                  >
+                    <NavLink to={to}>
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+
+
         {/* Verticais (multi-vertical 2026) */}
         {verticals.length > 0 && (
           <SidebarGroup>
