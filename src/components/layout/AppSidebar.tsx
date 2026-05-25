@@ -129,6 +129,16 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
       },
     );
 
+    // Salas de negociação (Deal Rooms) — visível p/ qualquer logado que possa ter sala
+    if (eff.isBuyer || eff.isSeller || isInsider) {
+      groups.push({
+        id: 'salas', name: 'Salas de negociação', icon: MessagesSquare,
+        children: [
+          { name: 'Minhas salas', href: '/salas', icon: MessagesSquare },
+        ],
+      });
+    }
+
     if (eff.isAdvisor || eff.isFranchisee || eff.isAdmin) {
       groups.push({
         id: 'partners', name: 'Parcerias', icon: Briefcase,
