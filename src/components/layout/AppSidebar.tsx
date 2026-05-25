@@ -154,6 +154,28 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
 
     if (eff.isAdmin) {
       groups.push({
+        id: 'admin_ops', name: '🛠 Admin · Operação', icon: Shield,
+        children: [
+          { name: 'Dashboard admin', href: '/admin', icon: LayoutDashboard },
+          { name: 'Usuários', href: '/admin/users', icon: Users },
+          { name: 'Aprovações', href: '/admin/aprovacoes', icon: CheckCircle2 },
+          { name: 'Anúncios', href: '/admin/listings', icon: Tag },
+          { name: 'Assinaturas', href: '/admin/subscriptions', icon: CreditCard },
+          { name: 'Valuations', href: '/admin/valuations', icon: ChartBar },
+          { name: 'Capital (CRM)', href: '/admin/capital', icon: DollarSign },
+          { name: 'Fornecedores de capital', href: '/admin/capital/providers', icon: Briefcase },
+          { name: 'CRM admin', href: '/admin/crm', icon: ClipboardList },
+        ],
+      });
+      groups.push({
+        id: 'admin_monitor', name: '📡 Admin · Monitoramento', icon: Activity,
+        children: [
+          { name: 'WhatsApp monitor', href: '/admin/whatsapp-monitor', icon: MessageCircle },
+          { name: 'API monitor', href: '/admin/api-monitor', icon: Database },
+          { name: 'Analytics', href: '/admin/analytics', icon: LineChart },
+        ],
+      });
+      groups.push({
         id: 'monday', name: '🔄 Migração Monday', icon: Shield,
         children: [
           { name: 'Importar Monday', href: '/admin/monday-import', icon: Plus },
