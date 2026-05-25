@@ -279,6 +279,7 @@ const App = () => (
               <Route path="cartas/historico" element={<LetterHistoryPage />} />
               <Route path="par/:id" element={<DealPairDetailPage />} />
               <Route path="par/:id/nbo" element={<RequireRole roles={["admin", "advisor", "legal"]}><NboWizardPage /></RequireRole>} />
+              <Route path="legal/biblioteca" element={<RequireRole roles={["admin", "advisor", "legal", "observer"]}><LegalLibraryPage /></RequireRole>} />
               <Route path="compradores"   element={<CompradoresPage />} />
               <Route path="mercado"       element={<NewsPage />} />
 
