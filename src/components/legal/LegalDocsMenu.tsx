@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { FileText, ChevronDown } from "lucide-react";
+import { Link } from "react-router-dom";
+import { FileText, ChevronDown, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LegalDocumentGenerator } from "./LegalDocumentGenerator";
