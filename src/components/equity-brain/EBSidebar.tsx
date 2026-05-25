@@ -35,7 +35,23 @@ const DASHBOARDS = [
   { to: "/equity-brain/dashboards/executivo", label: "Executivo", Icon: TrendingUp },
   { to: "/equity-brain/dashboards/mandatos",  label: "Mandatos",  Icon: Building2 },
   { to: "/equity-brain/dashboards/match",     label: "Match",     Icon: GitMerge },
-  { to: "/equity-brain/propostas",            label: "Propostas", Icon: FileSignature },
+  { to: "/equity-brain/dashboards/propostas", label: "Propostas (NBO)", Icon: FileSignature },
+];
+
+const LEGAL_ITEMS = [
+  { to: "/equity-brain/legal/biblioteca", label: "Biblioteca de documentos", Icon: BookOpen },
+  { to: "/equity-brain/crm/aberturas",    label: "Quebras de sigilo (LGPD)", Icon: ShieldAlert },
+];
+
+const CARTAS_ITEMS = [
+  { to: "/equity-brain/cartas/historico", label: "Histórico de lotes", Icon: FileText },
+  { to: "/equity-brain/cartas/modelos",   label: "Modelos (admin)",    Icon: Mail, adminOnly: true },
+];
+
+const ISP_ITEMS = [
+  { to: "/equity-brain/isp/import",    label: "Importar base",      Icon: Upload },
+  { to: "/equity-brain/isp/sugestoes", label: "Sugestões frias",    Icon: Sparkles },
+  { to: "/equity-brain/isp/mercado",   label: "Mercado ISP",        Icon: Radio },
 ];
 
 const ADMIN_ITEMS = [
@@ -46,8 +62,13 @@ const ADMIN_ITEMS = [
   { to: "/equity-brain/admin/benchmark",  label: "Base Benchmark",      Icon: Database },
   { to: "/equity-brain/admin/buyer-classification", label: "Classificar Buyers", Icon: Tags },
   { to: "/equity-brain/admin/auditoria",  label: "Auditoria",           Icon: Search },
+  { to: "/equity-brain/crm/admin/permissoes",  label: "Permissões",        Icon: KeyRound },
+  { to: "/equity-brain/crm/admin/atribuicoes", label: "Atribuições advisor",Icon: UserCog },
+  { to: "/equity-brain/crm/exports",      label: "Exports CSV/XLSX",    Icon: Download },
+  { to: "/equity-brain/vertical/import",  label: "Importar vertical",   Icon: Layers },
   { to: "/equity-brain/admin/shadow",     label: "Shadow v1↔v2",        Icon: GitCompare },
   { to: "/equity-brain/admin/jarvis",     label: "Jarvis 3D",           Icon: Globe },
+  { to: "/equity-brain/grafo-jarvis/guia", label: "Guia Jarvis",        Icon: BookOpen },
   { to: "/equity-brain/admin/monday-parity",     label: "Paridade Monday",     Icon: BarChart3 },
   { to: "/equity-brain/admin/advisors-mapping",  label: "Mapeamento Advisors", Icon: Users },
   { to: "/equity-brain/admin/health",     label: "Health",              Icon: Activity },
