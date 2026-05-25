@@ -6,6 +6,7 @@ import {
   TrendingUp, Building2, GitMerge, FileSignature,
   Settings, Upload, Search, GitCompare, Globe, Activity, Users,
   Table as TableIcon, Gauge, Copy, Database, Tags, CalendarDays, Search as SearchIcon,
+  Scale, ShieldAlert, Send, FileText, Radio, BookOpen, KeyRound, UserCog, Download,
 } from "lucide-react";
 import { Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
