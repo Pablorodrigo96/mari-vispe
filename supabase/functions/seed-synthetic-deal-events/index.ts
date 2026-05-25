@@ -63,6 +63,10 @@ function chooseEventType(score: number): string {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const auth = await requireAuth(req, { requireAnyRole: ["admin"] });
+  if (!auth.ok) return authErrorResponse(auth, corsHeaders);
+
+
   const startedAt = new Date().toISOString();
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
