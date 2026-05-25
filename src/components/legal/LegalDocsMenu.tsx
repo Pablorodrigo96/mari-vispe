@@ -73,6 +73,13 @@ export function LegalDocsMenu({
               {it.label}
             </DropdownMenuItem>
           ))}
+          <DropdownMenuSeparator className="bg-zinc-800" />
+          <DropdownMenuItem asChild>
+            <Link to="/equity-brain/legal/biblioteca" className="flex items-center gap-2">
+              <Library className="h-3.5 w-3.5" />
+              Abrir biblioteca de documentos
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
