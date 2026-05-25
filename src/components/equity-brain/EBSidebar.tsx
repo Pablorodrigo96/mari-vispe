@@ -91,6 +91,12 @@ export function EBSidebar() {
   const adminActive = location.pathname.startsWith("/equity-brain/admin");
   const [dashOpen, setDashOpen] = useState(dashboardsActive);
   const [adminOpen, setAdminOpen] = useState(adminActive);
+  const legalActive = location.pathname.startsWith("/equity-brain/legal") || location.pathname.startsWith("/equity-brain/crm/aberturas");
+  const [legalOpen, setLegalOpen] = useState(legalActive);
+  const cartasActive = location.pathname.startsWith("/equity-brain/cartas");
+  const [cartasOpen, setCartasOpen] = useState(cartasActive);
+  const ispActive = location.pathname.startsWith("/equity-brain/isp");
+  const [ispOpen, setIspOpen] = useState(ispActive);
   const verticalsActive = location.pathname.startsWith("/equity-brain/vertical/");
   const [vertOpen, setVertOpen] = useState(verticalsActive);
   const { data: verticals = [] } = useVerticalRegistry({ onlyActive: true });
