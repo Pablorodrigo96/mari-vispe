@@ -42,16 +42,36 @@ Deno.serve(async (req) => {
     const digits = onlyDigits(searchTerm);
     const isCnpj = digits.length === 14;
 
+    // Check if caller is authenticated (Bearer JWT). Anonymous callers do NOT
+    // receive sensitive financial fields (annual_revenue, annual_profit, asking_price).
+    let isAuthenticated = false;
+    const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
+    if (authHeader?.toLowerCase().startsWith("bearer ")) {
+      try {
+        const userClient = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "",
+          { global: { headers: { Authorization: authHeader } }, auth: { persistSession: false } },
+        );
+        const { data: u } = await userClient.auth.getUser();
+        isAuthenticated = !!u?.user;
+      } catch (_) { /* treat as anon */ }
+    }
+
+    const listingFields = isAuthenticated
+      ? "id, title, category, city, state, annual_revenue, annual_profit, asking_price, images, description"
+      : "id, title, category, city, state, images, description";
+
     // 1) Try platform listings first
     const { data: listings } = await supabase
       .from("listings")
-      .select("id, title, category, city, state, annual_revenue, annual_profit, asking_price, images, description")
+      .select(listingFields)
       .eq("status", "active")
       .or(`title.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`)
       .limit(5);
 
     if (listings && listings.length > 0) {
-      const listing = listings[0];
+      const listing: any = listings[0];
       let opportunityCount = 0;
       if (listing.category) {
         const { count } = await supabase
