@@ -129,6 +129,13 @@ export const ValuationTypeSelector = ({
           )}
         </motion.div>
 
+        {/* Plano Perfeito Banner */}
+        {onStartPlanoPerfeito && (
+          <div className="max-w-5xl mx-auto">
+            <PlanoPerfeitoBanner onStart={onStartPlanoPerfeito} />
+          </div>
+        )}
+
         {/* Plans headline */}
         <motion.div
           className="text-center mb-8"
