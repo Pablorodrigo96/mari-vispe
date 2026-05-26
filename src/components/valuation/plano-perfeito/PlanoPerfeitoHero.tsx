@@ -248,7 +248,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.35 }}
-          className="relative mt-16 lg:mt-24 scroll-mt-24"
+          className="relative mt-10 lg:mt-14 scroll-mt-24"
         >
           {/* full-bleed top border */}
           <div
@@ -256,11 +256,11 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
             style={{ backgroundColor: `${BONE}1A` }}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 pt-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 pt-8">
             {pillars.map((p, i) => (
               <div
                 key={p.num}
-                className={`relative group py-8 px-0 md:px-8 lg:px-10 overflow-hidden ${
+                className={`relative group py-6 px-0 md:px-7 lg:px-9 overflow-hidden ${
                   i > 0 ? 'border-t md:border-t-0 md:border-l' : ''
                 }`}
                 style={{ borderColor: `${BONE}1A` }}
@@ -268,7 +268,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
                 {/* Giant outline number */}
                 <span
                   aria-hidden
-                  className="absolute -top-6 -right-2 md:-right-4 text-[140px] md:text-[180px] lg:text-[220px] leading-none font-black select-none pointer-events-none"
+                  className="absolute -top-4 -right-2 md:-right-4 text-[110px] md:text-[140px] lg:text-[170px] leading-none font-black select-none pointer-events-none"
                   style={{
                     color: 'transparent',
                     WebkitTextStroke: `1px ${BONE}10`,
@@ -280,13 +280,13 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
 
                 <div className="relative">
                   <span
-                    className="block font-mono text-xs mb-5 tracking-[0.25em] uppercase"
+                    className="block font-mono text-xs mb-3 tracking-[0.25em] uppercase"
                     style={{ color: VOLT }}
                   >
                     {p.num} — {p.tag}
                   </span>
                   <h3
-                    className="font-bold tracking-tight text-2xl md:text-3xl mb-3 break-words"
+                    className="font-bold tracking-tight text-xl md:text-2xl mb-2 break-words"
                     style={{ color: BONE }}
                   >
                     {p.title}
@@ -304,7 +304,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
         </motion.div>
 
         {/* ─── BOTTOM MARGINALIA ─── */}
-        <div className="hidden md:flex items-center justify-between mt-12 font-mono text-[10px] tracking-[0.25em] uppercase pointer-events-none">
+        <div className="hidden md:flex items-center justify-between mt-8 font-mono text-[10px] tracking-[0.25em] uppercase pointer-events-none">
           <div className="flex items-center gap-3" style={{ color: `${BONE}40` }}>
             <span className="h-px w-12" style={{ backgroundColor: BONE, opacity: 0.15 }} />
             <span>Vispecapital · mari</span>
@@ -322,7 +322,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
 
       {/* Smooth fade into next section */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none z-[5]"
+        className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none z-[5]"
         style={{ background: `linear-gradient(to bottom, transparent, ${CARBON})` }}
       />
     </div>
