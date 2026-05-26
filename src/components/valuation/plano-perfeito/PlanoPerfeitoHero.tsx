@@ -74,7 +74,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
       />
 
       {/* ============ TOP MARGINALIA ============ */}
-      <div className="hidden md:flex absolute top-6 left-6 lg:left-10 right-6 lg:right-10 items-center justify-between z-20 pointer-events-none font-mono text-[10px] tracking-[0.25em] uppercase">
+      <div className="hidden md:flex absolute top-20 md:top-24 left-10 lg:left-16 right-10 lg:right-16 items-center justify-between z-20 pointer-events-none font-mono text-[10px] tracking-[0.25em] uppercase">
         <div className="flex items-center gap-3" style={{ color: VOLT }}>
           <span>[ 01 / 03 ]</span>
           <span className="h-px w-12" style={{ backgroundColor: VOLT, opacity: 0.4 }} />
@@ -107,7 +107,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
       </div>
 
       {/* ============ MAIN CONTENT (edge-to-edge) ============ */}
-      <div className="relative z-10 w-full px-6 md:px-10 lg:px-16 pt-20 md:pt-24 pb-12">
+      <div className="relative z-10 w-full px-10 md:px-16 lg:px-24 pt-28 md:pt-36 lg:pt-40 pb-16">
         {/* ─── HERO ROW ─── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -252,7 +252,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
         >
           {/* full-bleed top border */}
           <div
-            className="absolute -left-6 -right-6 md:-left-10 md:-right-10 lg:-left-16 lg:-right-16 top-0 h-px"
+            className="absolute -left-10 -right-10 md:-left-16 md:-right-16 lg:-left-24 lg:-right-24 top-0 h-px"
             style={{ backgroundColor: `${BONE}1A` }}
           />
 
