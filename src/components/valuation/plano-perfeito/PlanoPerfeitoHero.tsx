@@ -44,7 +44,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
 
   return (
     <div
-      className="relative w-full min-h-screen overflow-hidden selection:text-[#0A0A0A]"
+      className="relative w-full overflow-hidden selection:text-[#0A0A0A]"
       style={{ backgroundColor: CARBON, ['--volt' as any]: VOLT, ['--bone' as any]: BONE }}
     >
       {/* ============ BACKGROUND LAYERS ============ */}
@@ -107,17 +107,17 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
       </div>
 
       {/* ============ MAIN CONTENT (edge-to-edge) ============ */}
-      <div className="relative z-10 w-full px-6 md:px-10 lg:px-16 pt-24 md:pt-28 lg:pt-32 pb-10 min-h-screen flex flex-col">
+      <div className="relative z-10 w-full px-6 md:px-10 lg:px-16 pt-20 md:pt-24 pb-12">
         {/* ─── HERO ROW ─── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-start flex-1"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-6 items-start"
         >
           {/* LEFT: Headline cols 1-7 */}
           <div className="lg:col-span-7 xl:col-span-8">
-            <div className="flex items-center gap-3 mb-8 lg:mb-12">
+            <div className="flex items-center gap-3 mb-5 lg:mb-7">
               <span
                 className="w-2 h-2 rounded-full animate-pulse"
                 style={{ backgroundColor: VOLT, boxShadow: `0 0 14px ${VOLT}` }}
@@ -129,7 +129,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
             </div>
 
             <h1
-              className="font-bold tracking-tighter text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[8.5rem] leading-[0.95] break-words"
+              className="font-bold tracking-tighter text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[6rem] leading-[0.95] break-words"
               style={{ color: BONE }}
             >
               Construa a ponte
@@ -137,18 +137,18 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
               da sua empresa
               <br />
               <span
-                className="inline-block px-3 md:px-5 py-1 md:py-2 mt-3 md:mt-4 leading-none"
+                className="inline-block px-3 md:px-4 py-1 mt-2 leading-none"
                 style={{ backgroundColor: VOLT, color: CARBON }}
               >
                 até o bilhão.
               </span>
             </h1>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 mt-10 lg:mt-14">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 mt-7 lg:mt-9">
               <div className="flex flex-col items-start gap-2">
                 <button
                   onClick={onStart}
-                  className="px-8 py-5 text-sm font-bold uppercase tracking-wider transition-all duration-300 hover:opacity-90 hover:translate-x-1"
+                  className="px-7 py-4 text-sm font-bold uppercase tracking-wider transition-all duration-300 hover:opacity-90 hover:translate-x-1"
                   style={{ backgroundColor: VOLT, color: CARBON }}
                 >
                   Construir meu Plano Perfeito
@@ -160,7 +160,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
               </div>
               <button
                 onClick={scrollToPillars}
-                className="group flex items-center gap-3 px-2 sm:px-4 py-5 text-sm font-bold uppercase tracking-wider"
+                className="group flex items-center gap-3 px-2 sm:px-4 py-4 text-sm font-bold uppercase tracking-wider"
                 style={{ color: BONE }}
               >
                 <span className="border-b pb-0.5 transition-colors" style={{ borderColor: `${BONE}4D` }}>
@@ -179,7 +179,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
             className="lg:col-span-5 xl:col-span-4 lg:mt-4"
           >
             <div
-              className="relative p-6 lg:p-7 backdrop-blur-md"
+              className="relative p-5 backdrop-blur-md"
               style={{
                 backgroundColor: `${BONE}06`,
                 border: `1px solid ${BONE}1A`,
@@ -192,7 +192,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
               <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l" style={{ borderColor: VOLT }} />
               <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r" style={{ borderColor: VOLT }} />
 
-              <div className="flex items-center justify-between mb-6 font-mono text-[10px] tracking-[0.25em] uppercase">
+              <div className="flex items-center justify-between mb-4 font-mono text-[10px] tracking-[0.25em] uppercase">
                 <div className="flex items-center gap-2" style={{ color: BONE }}>
                   <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: VOLT }} />
                   Mari · Ao Vivo
@@ -200,13 +200,13 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
                 <span style={{ color: `${BONE}40` }}>SCAN.01</span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {liveStats.map((s) => {
                   const Icon = s.icon;
                   return (
                     <div
                       key={s.label}
-                      className="flex items-center justify-between py-3 border-b last:border-b-0"
+                      className="flex items-center justify-between py-2 border-b last:border-b-0"
                       style={{ borderColor: `${BONE}10` }}
                     >
                       <div className="flex items-center gap-3 text-sm" style={{ color: `${BONE}A0` }}>
@@ -214,7 +214,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
                         {s.label}
                       </div>
                       <span
-                        className="font-mono text-lg font-semibold tabular-nums"
+                        className="font-mono text-base font-semibold tabular-nums"
                         style={{ color: s.accent ? VOLT : BONE }}
                       >
                         {s.value}
@@ -224,7 +224,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
                 })}
               </div>
 
-              <div className="mt-6 pt-5" style={{ borderTop: `1px dashed ${BONE}1A` }}>
+              <div className="mt-4 pt-4" style={{ borderTop: `1px dashed ${BONE}1A` }}>
                 <p className="text-xs leading-relaxed mb-3" style={{ color: `${BONE}80` }}>
                   <span style={{ color: VOLT }}>●</span>{' '}
                   Mari está olhando para a sua empresa <span style={{ color: VOLT }}>agora</span>. Descubra em 60 segundos se você está em janela.
@@ -248,7 +248,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.35 }}
-          className="relative mt-16 lg:mt-24 scroll-mt-24"
+          className="relative mt-10 lg:mt-14 scroll-mt-24"
         >
           {/* full-bleed top border */}
           <div
@@ -256,11 +256,11 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
             style={{ backgroundColor: `${BONE}1A` }}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 pt-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 pt-8">
             {pillars.map((p, i) => (
               <div
                 key={p.num}
-                className={`relative group py-8 px-0 md:px-8 lg:px-10 overflow-hidden ${
+                className={`relative group py-6 px-0 md:px-7 lg:px-9 overflow-hidden ${
                   i > 0 ? 'border-t md:border-t-0 md:border-l' : ''
                 }`}
                 style={{ borderColor: `${BONE}1A` }}
@@ -268,7 +268,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
                 {/* Giant outline number */}
                 <span
                   aria-hidden
-                  className="absolute -top-6 -right-2 md:-right-4 text-[140px] md:text-[180px] lg:text-[220px] leading-none font-black select-none pointer-events-none"
+                  className="absolute -top-4 -right-2 md:-right-4 text-[110px] md:text-[140px] lg:text-[170px] leading-none font-black select-none pointer-events-none"
                   style={{
                     color: 'transparent',
                     WebkitTextStroke: `1px ${BONE}10`,
@@ -280,13 +280,13 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
 
                 <div className="relative">
                   <span
-                    className="block font-mono text-xs mb-5 tracking-[0.25em] uppercase"
+                    className="block font-mono text-xs mb-3 tracking-[0.25em] uppercase"
                     style={{ color: VOLT }}
                   >
                     {p.num} — {p.tag}
                   </span>
                   <h3
-                    className="font-bold tracking-tight text-2xl md:text-3xl mb-3 break-words"
+                    className="font-bold tracking-tight text-xl md:text-2xl mb-2 break-words"
                     style={{ color: BONE }}
                   >
                     {p.title}
@@ -304,7 +304,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
         </motion.div>
 
         {/* ─── BOTTOM MARGINALIA ─── */}
-        <div className="hidden md:flex items-center justify-between mt-12 font-mono text-[10px] tracking-[0.25em] uppercase pointer-events-none">
+        <div className="hidden md:flex items-center justify-between mt-8 font-mono text-[10px] tracking-[0.25em] uppercase pointer-events-none">
           <div className="flex items-center gap-3" style={{ color: `${BONE}40` }}>
             <span className="h-px w-12" style={{ backgroundColor: BONE, opacity: 0.15 }} />
             <span>Vispecapital · mari</span>
@@ -322,7 +322,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
 
       {/* Smooth fade into next section */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none z-[5]"
+        className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none z-[5]"
         style={{ background: `linear-gradient(to bottom, transparent, ${CARBON})` }}
       />
     </div>
