@@ -81,6 +81,10 @@ const Valuation = () => {
     navigate('/valuation/certificador');
   };
 
+  const handleStartPlanoPerfeito = () => {
+    navigate('/valuation/plano-perfeito');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Seo
@@ -96,7 +100,9 @@ const Valuation = () => {
         onBuyDCF={handleBuyDCF}
         onSubscribeMaster={handleSubscribeMaster}
         onOpenCertifier={handleOpenCertifier}
+        onStartPlanoPerfeito={handleStartPlanoPerfeito}
       />
+
 
       {showBelowFold && (
         <Suspense fallback={<div className="h-[40vh]" />}>
