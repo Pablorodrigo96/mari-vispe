@@ -31,6 +31,7 @@ export const ValuationTypeSelector = ({
   onBuyDCF,
   onSubscribeMaster,
   onOpenCertifier,
+  onStartPlanoPerfeito,
 }: ValuationTypeSelectorProps) => {
   const { user } = useAuth();
   const { 
