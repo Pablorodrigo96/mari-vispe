@@ -179,7 +179,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
             className="lg:col-span-5 xl:col-span-4 lg:mt-4"
           >
             <div
-              className="relative p-6 lg:p-7 backdrop-blur-md"
+              className="relative p-5 backdrop-blur-md"
               style={{
                 backgroundColor: `${BONE}06`,
                 border: `1px solid ${BONE}1A`,
@@ -192,7 +192,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
               <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l" style={{ borderColor: VOLT }} />
               <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r" style={{ borderColor: VOLT }} />
 
-              <div className="flex items-center justify-between mb-6 font-mono text-[10px] tracking-[0.25em] uppercase">
+              <div className="flex items-center justify-between mb-4 font-mono text-[10px] tracking-[0.25em] uppercase">
                 <div className="flex items-center gap-2" style={{ color: BONE }}>
                   <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: VOLT }} />
                   Mari · Ao Vivo
@@ -200,13 +200,13 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
                 <span style={{ color: `${BONE}40` }}>SCAN.01</span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {liveStats.map((s) => {
                   const Icon = s.icon;
                   return (
                     <div
                       key={s.label}
-                      className="flex items-center justify-between py-3 border-b last:border-b-0"
+                      className="flex items-center justify-between py-2 border-b last:border-b-0"
                       style={{ borderColor: `${BONE}10` }}
                     >
                       <div className="flex items-center gap-3 text-sm" style={{ color: `${BONE}A0` }}>
@@ -214,7 +214,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
                         {s.label}
                       </div>
                       <span
-                        className="font-mono text-lg font-semibold tabular-nums"
+                        className="font-mono text-base font-semibold tabular-nums"
                         style={{ color: s.accent ? VOLT : BONE }}
                       >
                         {s.value}
@@ -224,7 +224,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
                 })}
               </div>
 
-              <div className="mt-6 pt-5" style={{ borderTop: `1px dashed ${BONE}1A` }}>
+              <div className="mt-4 pt-4" style={{ borderTop: `1px dashed ${BONE}1A` }}>
                 <p className="text-xs leading-relaxed mb-3" style={{ color: `${BONE}80` }}>
                   <span style={{ color: VOLT }}>●</span>{' '}
                   Mari está olhando para a sua empresa <span style={{ color: VOLT }}>agora</span>. Descubra em 60 segundos se você está em janela.
