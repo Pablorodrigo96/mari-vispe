@@ -117,7 +117,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
         >
           {/* LEFT: Headline cols 1-7 */}
           <div className="lg:col-span-7 xl:col-span-8">
-            <div className="flex items-center gap-3 mb-8 lg:mb-12">
+            <div className="flex items-center gap-3 mb-5 lg:mb-7">
               <span
                 className="w-2 h-2 rounded-full animate-pulse"
                 style={{ backgroundColor: VOLT, boxShadow: `0 0 14px ${VOLT}` }}
@@ -129,7 +129,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
             </div>
 
             <h1
-              className="font-bold tracking-tighter text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[8.5rem] leading-[0.95] break-words"
+              className="font-bold tracking-tighter text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[6rem] leading-[0.95] break-words"
               style={{ color: BONE }}
             >
               Construa a ponte
@@ -137,18 +137,18 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
               da sua empresa
               <br />
               <span
-                className="inline-block px-3 md:px-5 py-1 md:py-2 mt-3 md:mt-4 leading-none"
+                className="inline-block px-3 md:px-4 py-1 mt-2 leading-none"
                 style={{ backgroundColor: VOLT, color: CARBON }}
               >
                 até o bilhão.
               </span>
             </h1>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 mt-10 lg:mt-14">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 mt-7 lg:mt-9">
               <div className="flex flex-col items-start gap-2">
                 <button
                   onClick={onStart}
-                  className="px-8 py-5 text-sm font-bold uppercase tracking-wider transition-all duration-300 hover:opacity-90 hover:translate-x-1"
+                  className="px-7 py-4 text-sm font-bold uppercase tracking-wider transition-all duration-300 hover:opacity-90 hover:translate-x-1"
                   style={{ backgroundColor: VOLT, color: CARBON }}
                 >
                   Construir meu Plano Perfeito
@@ -160,7 +160,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
               </div>
               <button
                 onClick={scrollToPillars}
-                className="group flex items-center gap-3 px-2 sm:px-4 py-5 text-sm font-bold uppercase tracking-wider"
+                className="group flex items-center gap-3 px-2 sm:px-4 py-4 text-sm font-bold uppercase tracking-wider"
                 style={{ color: BONE }}
               >
                 <span className="border-b pb-0.5 transition-colors" style={{ borderColor: `${BONE}4D` }}>
