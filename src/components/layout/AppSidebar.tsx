@@ -114,7 +114,9 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         id: 'valuation', name: 'Valuation', icon: ChartBar,
         children: [
           { name: 'Novo valuation', href: '/valuation', icon: Plus },
+          { name: 'O Plano Perfeito', href: '/valuation/plano-perfeito', icon: Sparkles },
           { name: 'Meus valuations', href: '/meus-valuations', icon: FileText },
+          { name: 'Meus planos perfeitos', href: '/meus-planos-perfeitos', icon: FileText },
           { name: 'Múltiplos', href: '/valuation/multiplos', icon: Calculator },
           { name: 'DCF', href: '/valuation/dcf', icon: ChartBar },
           { name: 'Certificador', href: '/valuation/certificador', icon: Award },

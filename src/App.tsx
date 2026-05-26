@@ -44,6 +44,8 @@ const MariCalculator = lazy(() => import("./pages/MariCalculator"));
 const ValuationMultiplos = lazy(() => import("./pages/ValuationMultiplos"));
 const ValuationDCF = lazy(() => import("./pages/ValuationDCF"));
 const ValuationCertifier = lazy(() => import("./pages/ValuationCertifier"));
+const PlanoPerfeito = lazy(() => import("./pages/PlanoPerfeito"));
+const MeusPlanosPerfeitos = lazy(() => import("./pages/MeusPlanosPerfeitos"));
 const Capital = lazy(() => import("./pages/Capital"));
 const Matching = lazy(() => import("./pages/Matching"));
 const BlindTeaser = lazy(() => import("./pages/BlindTeaser"));
@@ -198,6 +200,7 @@ const App = () => (
               <Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
               <Route path="/valuation/dcf" element={<ValuationDCF />} />
               <Route path="/valuation/certificador" element={<ValuationCertifier />} />
+              <Route path="/valuation/plano-perfeito" element={<PlanoPerfeito />} />
               <Route path="/capital" element={<Capital />} />
               <Route path="/matching" element={<Matching />} />
               <Route path="/teaser/:ticker" element={<BlindTeaser />} />
@@ -210,6 +213,7 @@ const App = () => (
               <Route path="/editar-anuncio/:id" element={<EditListing />} />
               <Route path="/meu-perfil" element={<MyProfile />} />
               <Route path="/meus-valuations" element={<MyValuations />} />
+              <Route path="/meus-planos-perfeitos" element={<MeusPlanosPerfeitos />} />
               <Route path="/cadastrar-comprador" element={<RegisterBuyer />} />
               <Route path="/minhas-captacoes" element={<MyCapitalRequests />} />
               <Route path="/salas" element={<MyDealRoomsPage />} />

@@ -5,6 +5,7 @@ import { ParticlesBackground } from '@/components/ui/particles-background';
 import { motion } from 'framer-motion';
 import { useValuationAccess, VALUATION_PRICES } from '@/hooks/useValuationAccess';
 import { useAuth } from '@/contexts/AuthContext';
+import { PlanoPerfeitoBanner } from '@/components/valuation/plano-perfeito/PlanoPerfeitoBanner';
 
 interface ValuationTypeSelectorProps {
   onSelectFree: () => void;
@@ -13,6 +14,7 @@ interface ValuationTypeSelectorProps {
   onBuyDCF?: () => void;
   onSubscribeMaster?: () => void;
   onOpenCertifier?: () => void;
+  onStartPlanoPerfeito?: () => void;
 }
 
 const formatPrice = (cents: number) => {
@@ -29,6 +31,7 @@ export const ValuationTypeSelector = ({
   onBuyDCF,
   onSubscribeMaster,
   onOpenCertifier,
+  onStartPlanoPerfeito,
 }: ValuationTypeSelectorProps) => {
   const { user } = useAuth();
   const { 
@@ -125,6 +128,13 @@ export const ValuationTypeSelector = ({
             </div>
           )}
         </motion.div>
+
+        {/* Plano Perfeito Banner */}
+        {onStartPlanoPerfeito && (
+          <div className="max-w-5xl mx-auto">
+            <PlanoPerfeitoBanner onStart={onStartPlanoPerfeito} />
+          </div>
+        )}
 
         {/* Plans headline */}
         <motion.div
