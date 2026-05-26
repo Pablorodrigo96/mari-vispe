@@ -107,7 +107,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
       </div>
 
       {/* ============ MAIN CONTENT (edge-to-edge) ============ */}
-      <div className="relative z-10 w-full px-6 md:px-10 lg:px-16 pt-20 md:pt-24 pb-12">
+      <div className="relative z-10 w-full px-10 md:px-16 lg:px-24 pt-28 md:pt-36 lg:pt-40 pb-16">
         {/* ─── HERO ROW ─── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
