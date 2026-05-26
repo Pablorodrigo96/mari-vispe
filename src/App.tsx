@@ -200,6 +200,7 @@ const App = () => (
               <Route path="/valuation/multiplos" element={<ValuationMultiplos />} />
               <Route path="/valuation/dcf" element={<ValuationDCF />} />
               <Route path="/valuation/certificador" element={<ValuationCertifier />} />
+              <Route path="/valuation/plano-perfeito" element={<PlanoPerfeito />} />
               <Route path="/capital" element={<Capital />} />
               <Route path="/matching" element={<Matching />} />
               <Route path="/teaser/:ticker" element={<BlindTeaser />} />
