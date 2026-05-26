@@ -44,6 +44,8 @@ const MariCalculator = lazy(() => import("./pages/MariCalculator"));
 const ValuationMultiplos = lazy(() => import("./pages/ValuationMultiplos"));
 const ValuationDCF = lazy(() => import("./pages/ValuationDCF"));
 const ValuationCertifier = lazy(() => import("./pages/ValuationCertifier"));
+const PlanoPerfeito = lazy(() => import("./pages/PlanoPerfeito"));
+const MeusPlanosPerfeitos = lazy(() => import("./pages/MeusPlanosPerfeitos"));
 const Capital = lazy(() => import("./pages/Capital"));
 const Matching = lazy(() => import("./pages/Matching"));
 const BlindTeaser = lazy(() => import("./pages/BlindTeaser"));
