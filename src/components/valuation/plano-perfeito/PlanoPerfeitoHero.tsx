@@ -107,13 +107,13 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
       </div>
 
       {/* ============ MAIN CONTENT (edge-to-edge) ============ */}
-      <div className="relative z-10 w-full px-6 md:px-10 lg:px-16 pt-24 md:pt-28 lg:pt-32 pb-10 min-h-screen flex flex-col">
+      <div className="relative z-10 w-full px-6 md:px-10 lg:px-16 pt-20 md:pt-24 pb-12">
         {/* ─── HERO ROW ─── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-start flex-1"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-6 items-start"
         >
           {/* LEFT: Headline cols 1-7 */}
           <div className="lg:col-span-7 xl:col-span-8">
