@@ -252,7 +252,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
         >
           {/* full-bleed top border */}
           <div
-            className="absolute -left-6 -right-6 md:-left-10 md:-right-10 lg:-left-16 lg:-right-16 top-0 h-px"
+            className="absolute -left-10 -right-10 md:-left-16 md:-right-16 lg:-left-24 lg:-right-24 top-0 h-px"
             style={{ backgroundColor: `${BONE}1A` }}
           />
 
