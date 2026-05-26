@@ -1,85 +1,43 @@
-## Diagnóstico
+## Compactar Hero do Plano Perfeito
 
-As marcações vermelhas mostram grandes **zonas mortas laterais** no hero do `/valuation` (Plano Perfeito) e também na home (Ato 2). O conteúdo vive num `max-w-7xl` centralizado, então em telas ≥1400px sobra ~25% de cada lado vazio. Falta:
+O hero atual ocupa `min-h-screen` + pilares dentro = altura excessiva. Vou reduzir drasticamente mantendo a estética edge-to-edge.
 
-- Aproveitamento **edge-to-edge** (até as bordas reais)
-- **Marginalia** tipográfica nas bordas (números, labels rotacionados, tickers)
-- Quebra do "centralizão landing page" → grid assimétrico
-- Detalhes que dão profundidade (grid de fundo, coordenadas, rótulos de canto)
+### Mudanças em `PlanoPerfeitoHero.tsx`
 
-## Escopo
+1. **Altura**: remover `min-h-screen` e `flex-1`. Usar padding compacto:
+   - `pt-20 md:pt-24 pb-12` (era `pt-24/28/32` + `pb-10` + min-screen)
+   - Sem `min-h-screen flex flex-col`.
 
-Refazer apenas o **`PlanoPerfeitoHero`** (`/valuation` topo) — o resto da página segue intacto. Se aprovar, aplico o mesmo padrão depois no Ato 2 da home como follow-up.
+2. **Headline menor**:
+   - `text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[6rem]` (era até `8.5rem`)
+   - `leading-[0.95]` mantido.
+   - Reduzir o destaque "até o bilhão." de `py-2 mt-4` para `py-1 mt-2`.
 
-## Direção visual
+3. **Espaçamentos internos** comprimidos:
+   - `mb-8 lg:mb-12` → `mb-5 lg:mb-7` (eyebrow)
+   - `mt-10 lg:mt-14` → `mt-7 lg:mt-9` (CTA row)
+   - Gap do grid `gap-10 lg:gap-8` → `gap-8 lg:gap-6`
+   - Padding do botão `py-5` → `py-4`
 
-**Layout edge-to-edge assimétrico em 12 colunas full-bleed** (sem `max-w-7xl`, padding lateral mínimo `px-6 md:px-10`):
+4. **Card Mari · Ao Vivo** mais denso:
+   - `p-6 lg:p-7` → `p-5`
+   - `space-y-4` → `space-y-2`
+   - `py-3` por linha → `py-2`
+   - `mb-6` header → `mb-4`; `mt-6 pt-5` footer → `mt-4 pt-4`
+   - Texto da stat `text-lg` → `text-base`
 
-```text
-┌─[01]─────────────────────────────────────────────[VALUATION / 2026]─┐
-│ ●                                                                    │
-│ O PLANO PERFEITO                              ┌──────────────────┐  │
-│                                               │ MARI · AO VIVO   │  │
-│ Construa a ponte                              │ Janela    1.248  │  │
-│ da sua empresa                                │ Volume   R$4,2bi │  │
-│ ▓até o bilhão.▓                               │ Múltiplo  6,2x   │  │
-│                                               └──────────────────┘  │
-│ [CONSTRUIR MEU PLANO]   ver como funciona →                         │
-│ ● 100% gratuito                                                     │
-│                                                                      │
-├──────────────────────────────────────────────────────────────────────┤
-│ 01 — STATUS QUO    │ 02 — VISION       │ 03 — STRATEGY              │
-│ De onde você está  │ Aonde quer chegar │ Como chegar lá             │
-│ ...                │ ...               │ ...                        │
-└─[VISPECAPITAL · mari]──────────────────[scroll ↓ ver metodologia]───┘
-```
+5. **Pilares**: extrair para fora do hero OU compactar agressivamente
+   - Manter dentro mas: `mt-16 lg:mt-24` → `mt-10 lg:mt-14`
+   - `py-8` → `py-6`
+   - Número gigante `text-[140/180/220px]` → `text-[110px] md:text-[140px] lg:text-[170px]`
+   - `mb-5` eyebrow → `mb-3`; título `text-2xl md:text-3xl` → `text-xl md:text-2xl`; `mb-3` → `mb-2`
 
-### Mudanças concretas
+6. **Marginalia bottom**: `mt-12` → `mt-8`.
 
-1. **Container full-bleed** — remove `max-w-7xl mx-auto`, usa `w-full px-6 md:px-10 lg:px-16` para encostar nas bordas reais.
+7. **Fade bottom**: `h-32` → `h-20`.
 
-2. **Marginalia nas 4 bordas (borda infinita)**:
-   - **Topo-esquerdo:** ticker `[ 01 / 03 — O PLANO PERFEITO ]` em mono Volt
-   - **Topo-direito:** `VALUATION · 2026` em mono branco/40
-   - **Rodapé-esquerdo:** wordmark vertical rotacionado 90° `VISPECAPITAL · mari` com `writing-mode: vertical-rl` na lateral esquerda (encostado na borda)
-   - **Rodapé-direito:** indicador `SCROLL ↓ METODOLOGIA` em mono pequeno
-   - **Lateral direita:** régua/escala vertical `00 — 03` marcando cada pilar
+### Resultado esperado
+Hero cabe confortavelmente em ~1 viewport desktop (1232px alt) sem rolagem absurda, mantendo grid 12-col, marginalia nas 4 bordas, card Mari à direita, 3 pilares edge-to-edge e tipografia bold do home.
 
-3. **Grid assimétrico 12-col** no hero principal:
-   - Headline ocupa cols 1–7 (esquerda)
-   - **Card "Mari · ao vivo"** novo nas cols 8–12 (preenche a zona morta direita) mostrando: CNPJs analisados, janela de venda, volume mapeado, múltiplo médio — espelhando o card que existe na home (referência da img 1)
-   - Quebra a sensação "tudo no meio"
-
-4. **Background depth** (sem encher de partícula):
-   - Grid de pontos sutil `bg-grid-pattern` em opacidade 5%
-   - Linhas diagonais Volt já existentes mantidas, mas estendidas até as bordas
-   - Coordenadas técnicas decorativas no canto: `LAT -23.55 · LNG -46.63` (vibe Bloomberg/terminal)
-
-5. **Pilares em 3-col edge-to-edge** com numeração gigante de fundo:
-   - Cada pilar ganha um `01` / `02` / `03` enorme (text-[180px] outline) atrás do conteúdo como elemento gráfico
-   - Bordas dos pilares vão até a borda real da tela (não param no container)
-
-6. **Tipografia integrada às bordas**:
-   - Eyebrow encostado na esquerda (não centralizado)
-   - Headline cresce até `lg:text-[9rem]` em telas grandes, com `tracking-tighter` para "abraçar" o espaço
-   - Quebra de linha controlada: "Construa a ponte" / "da sua empresa" / "▓até o bilhão.▓"
-
-7. **Responsivo**:
-   - Mobile: marginalia desliga, vira coluna única simples
-   - Tablet: card lateral vira embaixo do headline
-   - Desktop ≥1280px: layout 12-col completo com todas marginalia
-   - Ultra-wide ≥1536px: aumenta padding lateral para `px-24` mas mantém marginalia colada na borda
-
-### Cores (locked)
-
-Carbon `#0A0A0A` · Volt `#D9F564` · Bone `#FAFAF7` · Graphite `#2A2A2A` — sem desvios.
-
-### Arquivos afetados
-
-- `src/components/valuation/plano-perfeito/PlanoPerfeitoHero.tsx` (reescrito)
-- Nenhum hook/lógica/rota muda
-
-## Fora de escopo (follow-up se quiser)
-
-- Aplicar mesmo tratamento edge-to-edge no Ato 2 da home (`src/components/home/...`)
-- `ValuationTypeSelector` abaixo do hero (mantém como está nesse ciclo)
+### Arquivos
+- `src/components/valuation/plano-perfeito/PlanoPerfeitoHero.tsx` (somente ajuste de tamanhos/spacings, sem mudança estrutural).

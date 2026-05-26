@@ -44,7 +44,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
 
   return (
     <div
-      className="relative w-full min-h-screen overflow-hidden selection:text-[#0A0A0A]"
+      className="relative w-full overflow-hidden selection:text-[#0A0A0A]"
       style={{ backgroundColor: CARBON, ['--volt' as any]: VOLT, ['--bone' as any]: BONE }}
     >
       {/* ============ BACKGROUND LAYERS ============ */}
