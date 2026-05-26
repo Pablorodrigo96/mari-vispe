@@ -2564,6 +2564,51 @@ export type Database = {
           },
         ]
       }
+      planos_perfeitos: {
+        Row: {
+          created_at: string
+          id: string
+          investimento_mensal: number | null
+          lead_tag: string
+          plano_inputs: Json
+          result: Json
+          updated_at: string
+          user_id: string
+          valuation_atual: number | null
+          valuation_inputs: Json
+          valuation_meta: number | null
+          viabilidade: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          investimento_mensal?: number | null
+          lead_tag?: string
+          plano_inputs: Json
+          result: Json
+          updated_at?: string
+          user_id: string
+          valuation_atual?: number | null
+          valuation_inputs: Json
+          valuation_meta?: number | null
+          viabilidade?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          investimento_mensal?: number | null
+          lead_tag?: string
+          plano_inputs?: Json
+          result?: Json
+          updated_at?: string
+          user_id?: string
+          valuation_atual?: number | null
+          valuation_inputs?: Json
+          valuation_meta?: number | null
+          viabilidade?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
