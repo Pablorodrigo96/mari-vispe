@@ -74,7 +74,7 @@ export const PlanoPerfeitoHero = ({ onStart }: Props) => {
       />
 
       {/* ============ TOP MARGINALIA ============ */}
-      <div className="hidden md:flex absolute top-6 left-6 lg:left-10 right-6 lg:right-10 items-center justify-between z-20 pointer-events-none font-mono text-[10px] tracking-[0.25em] uppercase">
+      <div className="hidden md:flex absolute top-20 md:top-24 left-10 lg:left-16 right-10 lg:right-16 items-center justify-between z-20 pointer-events-none font-mono text-[10px] tracking-[0.25em] uppercase">
         <div className="flex items-center gap-3" style={{ color: VOLT }}>
           <span>[ 01 / 03 ]</span>
           <span className="h-px w-12" style={{ backgroundColor: VOLT, opacity: 0.4 }} />

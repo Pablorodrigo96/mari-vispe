@@ -1,43 +1,31 @@
-## Compactar Hero do Plano Perfeito
+## Ajustar respiro / bordas do Hero Plano Perfeito
 
-O hero atual ocupa `min-h-screen` + pilares dentro = altura excessiva. Vou reduzir drasticamente mantendo a estética edge-to-edge.
+A marginalia (`[01/03 — O PLANO PERFEITO]` e `VALUATION · 26 — LNG -46.63`) está colando no header e nas réguas laterais, e a headline encosta na borda esquerda. Vou aumentar os paddings de respiro mantendo a estética edge-to-edge.
 
-### Mudanças em `PlanoPerfeitoHero.tsx`
+### Mudanças em `src/components/valuation/plano-perfeito/PlanoPerfeitoHero.tsx`
 
-1. **Altura**: remover `min-h-screen` e `flex-1`. Usar padding compacto:
-   - `pt-20 md:pt-24 pb-12` (era `pt-24/28/32` + `pb-10` + min-screen)
-   - Sem `min-h-screen flex flex-col`.
+1. **Top marginalia** — descer pra não colidir com o header fixo:
+   - `top-6` → `top-20 md:top-24`
+   - `left-6 lg:left-10` → `left-10 lg:left-16`
+   - `right-6 lg:right-10` → `right-10 lg:right-16`
 
-2. **Headline menor**:
-   - `text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[6rem]` (era até `8.5rem`)
-   - `leading-[0.95]` mantido.
-   - Reduzir o destaque "até o bilhão." de `py-2 mt-4` para `py-1 mt-2`.
+2. **Padding-top do conteúdo principal** — abrir espaço depois da marginalia:
+   - `pt-20 md:pt-24` → `pt-28 md:pt-36 lg:pt-40`
 
-3. **Espaçamentos internos** comprimidos:
-   - `mb-8 lg:mb-12` → `mb-5 lg:mb-7` (eyebrow)
-   - `mt-10 lg:mt-14` → `mt-7 lg:mt-9` (CTA row)
-   - Gap do grid `gap-10 lg:gap-8` → `gap-8 lg:gap-6`
-   - Padding do botão `py-5` → `py-4`
+3. **Padding lateral do conteúdo** — sair de cima das réguas verticais (wordmark esquerdo e ruler 00-03 direito ficam em `left-3` / `right-3`):
+   - `px-6 md:px-10 lg:px-16` → `px-10 md:px-16 lg:px-24`
 
-4. **Card Mari · Ao Vivo** mais denso:
-   - `p-6 lg:p-7` → `p-5`
-   - `space-y-4` → `space-y-2`
-   - `py-3` por linha → `py-2`
-   - `mb-6` header → `mb-4`; `mt-6 pt-5` footer → `mt-4 pt-4`
-   - Texto da stat `text-lg` → `text-base`
+4. **Pilares full-bleed** — ajustar para o novo padding lateral:
+   - `-left-6 -right-6 md:-left-10 md:-right-10 lg:-left-16 lg:-right-16` → `-left-10 -right-10 md:-left-16 md:-right-16 lg:-left-24 lg:-right-24`
 
-5. **Pilares**: extrair para fora do hero OU compactar agressivamente
-   - Manter dentro mas: `mt-16 lg:mt-24` → `mt-10 lg:mt-14`
-   - `py-8` → `py-6`
-   - Número gigante `text-[140/180/220px]` → `text-[110px] md:text-[140px] lg:text-[170px]`
-   - `mb-5` eyebrow → `mb-3`; título `text-2xl md:text-3xl` → `text-xl md:text-2xl`; `mb-3` → `mb-2`
+5. **Bottom marginalia / fade** — manter `mt-8` mas aumentar `pb-12` → `pb-16` para dar respiro inferior.
 
-6. **Marginalia bottom**: `mt-12` → `mt-8`.
+### Resultado
+- Headline "Construa a ponte" começa com ~40px da borda esquerda (não colada).
+- Marginalia topo fica claramente abaixo do header, sem sobrepor logo/menu.
+- Wordmark vertical esquerdo e ruler direito ficam visualmente separados do conteúdo.
+- Card "Mari · Ao Vivo" não encosta na borda direita.
+- Estrutura 12-col, marginalia, pilares edge-to-edge e tipografia ficam intactos.
 
-7. **Fade bottom**: `h-32` → `h-20`.
-
-### Resultado esperado
-Hero cabe confortavelmente em ~1 viewport desktop (1232px alt) sem rolagem absurda, mantendo grid 12-col, marginalia nas 4 bordas, card Mari à direita, 3 pilares edge-to-edge e tipografia bold do home.
-
-### Arquivos
-- `src/components/valuation/plano-perfeito/PlanoPerfeitoHero.tsx` (somente ajuste de tamanhos/spacings, sem mudança estrutural).
+### Arquivo
+- `src/components/valuation/plano-perfeito/PlanoPerfeitoHero.tsx` (apenas ajustes de padding/posicionamento).
