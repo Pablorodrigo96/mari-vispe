@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, MessageCircle, RotateCcw, TrendingUp, Users, Wallet, Target, Calendar } from 'lucide-react';
-import type { PlanoPerfeitoResult } from '@/lib/planoPerfeitoCalculator';
+import type { PlanoPerfeitoResult as PPResult } from '@/lib/planoPerfeitoCalculator';
 import { PlanoPerfeitoChart } from './PlanoPerfeitoChart';
 import { ViabilitySemaforo } from './ViabilitySemaforo';
 
@@ -38,12 +38,12 @@ const useCountUp = (target: number, durationMs = 1500) => {
 };
 
 interface Props {
-  result: PlanoPerfeitoResult;
+  result: PPResult;
   onRestart: () => void;
   onConsultoria: () => void;
 }
 
-export const PlanoPerfeitoResult = ({ result, onRestart, onConsultoria }: Props) => {
+export const PlanoPerfeitoResultView = ({ result, onRestart, onConsultoria }: Props) => {
   const animatedInvest = useCountUp(result.investimentoMensal);
 
   const metrics = [
