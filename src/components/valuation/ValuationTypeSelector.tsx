@@ -61,8 +61,10 @@ export const ValuationTypeSelector = ({
     <section className="relative pt-20 pb-16 md:pt-24 md:pb-20 overflow-hidden">
       {/* Dark Background */}
       <div className="absolute inset-0 gradient-navy-deep" />
-      <div className="absolute inset-0 bg-grid-pattern" />
+      <div className="absolute inset-0 bg-grid-pattern opacity-60" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,hsla(38,92%,50%,0.1),transparent_50%)]" />
+      {/* Smooth top fade from Carbon hero */}
+      <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-[#0A0A0A] via-[#0A0A0A]/80 to-transparent z-[1] pointer-events-none" />
       <ParticlesBackground variant="dark" />
 
       <div className="container relative mx-auto px-4">
