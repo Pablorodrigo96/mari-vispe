@@ -94,6 +94,7 @@ const Valuation = () => {
         path="/valuation"
       />
       <Header />
+      <PlanoPerfeitoHero onStart={handleStartPlanoPerfeito} />
       <ValuationTypeSelector
         onSelectFree={handleSelectFree}
         onSelectDCF={handleSelectDCF}
@@ -101,7 +102,6 @@ const Valuation = () => {
         onBuyDCF={handleBuyDCF}
         onSubscribeMaster={handleSubscribeMaster}
         onOpenCertifier={handleOpenCertifier}
-        onStartPlanoPerfeito={handleStartPlanoPerfeito}
       />
 
 
