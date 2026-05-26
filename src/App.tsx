@@ -213,6 +213,7 @@ const App = () => (
               <Route path="/editar-anuncio/:id" element={<EditListing />} />
               <Route path="/meu-perfil" element={<MyProfile />} />
               <Route path="/meus-valuations" element={<MyValuations />} />
+              <Route path="/meus-planos-perfeitos" element={<MeusPlanosPerfeitos />} />
               <Route path="/cadastrar-comprador" element={<RegisterBuyer />} />
               <Route path="/minhas-captacoes" element={<MyCapitalRequests />} />
               <Route path="/salas" element={<MyDealRoomsPage />} />
