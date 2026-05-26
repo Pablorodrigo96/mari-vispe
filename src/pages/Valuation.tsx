@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PublicChrome as Header } from '@/components/layout/PublicChrome';
 import { ValuationTypeSelector } from '@/components/valuation/ValuationTypeSelector';
+import { PlanoPerfeitoHero } from '@/components/valuation/plano-perfeito/PlanoPerfeitoHero';
 import { useAuth } from '@/contexts/AuthContext';
 import { useValuationAccess } from '@/hooks/useValuationAccess';
 import { toast } from 'sonner';
@@ -93,6 +94,7 @@ const Valuation = () => {
         path="/valuation"
       />
       <Header />
+      <PlanoPerfeitoHero onStart={handleStartPlanoPerfeito} />
       <ValuationTypeSelector
         onSelectFree={handleSelectFree}
         onSelectDCF={handleSelectDCF}
@@ -100,7 +102,6 @@ const Valuation = () => {
         onBuyDCF={handleBuyDCF}
         onSubscribeMaster={handleSubscribeMaster}
         onOpenCertifier={handleOpenCertifier}
-        onStartPlanoPerfeito={handleStartPlanoPerfeito}
       />
 
 

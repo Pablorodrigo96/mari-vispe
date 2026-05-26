@@ -5,7 +5,7 @@ import { ParticlesBackground } from '@/components/ui/particles-background';
 import { motion } from 'framer-motion';
 import { useValuationAccess, VALUATION_PRICES } from '@/hooks/useValuationAccess';
 import { useAuth } from '@/contexts/AuthContext';
-import { PlanoPerfeitoBanner } from '@/components/valuation/plano-perfeito/PlanoPerfeitoBanner';
+
 
 interface ValuationTypeSelectorProps {
   onSelectFree: () => void;
@@ -128,13 +128,6 @@ export const ValuationTypeSelector = ({
             </div>
           )}
         </motion.div>
-
-        {/* Plano Perfeito Banner */}
-        {onStartPlanoPerfeito && (
-          <div className="max-w-5xl mx-auto">
-            <PlanoPerfeitoBanner onStart={onStartPlanoPerfeito} />
-          </div>
-        )}
 
         {/* Plans headline */}
         <motion.div
