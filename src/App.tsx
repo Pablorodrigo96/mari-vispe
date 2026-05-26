@@ -330,11 +330,12 @@ const App = () => (
               <Route path="crm/buyer/:id"        element={<BuyerDetailPage />} />
               <Route path="crm/admin/permissoes" element={<PermissionsAdminPage />} />
               <Route path="crm/admin/auditoria"  element={<RequireRole roles={["admin"]}><AccessAuditPage /></RequireRole>} />
-              <Route path="crm/executivo"        element={<ExecutiveDashboardPage />} />
-              <Route path="crm/matching"         element={<MatchAnalyticsPage />} />
+              {/* Rotas legadas consolidadas nos dashboards oficiais */}
+              <Route path="crm/executivo"        element={<Navigate to="/equity-brain/dashboards/executivo" replace />} />
+              <Route path="crm/matching"         element={<Navigate to="/equity-brain/dashboards/match" replace />} />
               <Route path="crm/admin/atribuicoes" element={<RequireRole roles={["admin"]}><CrmAssignmentsPage /></RequireRole>} />
               <Route path="admin/health" element={<RequireRole roles={["admin"]}><HealthDashboardPage /></RequireRole>} />
-              <Route path="crm/pipeline"         element={<PipelineKanbanPage />} />
+              <Route path="crm/pipeline"         element={<Navigate to="/equity-brain/pipeline" replace />} />
               <Route path="crm/pipeline/historico" element={<PipelineHistoryPage />} />
               {/* deal/:id ainda não tem página própria — redireciona para mandate/:id preservando o id */}
               <Route path="deal/:id"             element={<RedirectWithParams to="/equity-brain/crm/mandate/:id" />} />
