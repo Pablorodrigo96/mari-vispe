@@ -3,6 +3,36 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 
+// Auto-recover from stale chunk hashes after a redeploy.
+// When the browser holds an old index referencing a chunk that no longer
+// exists, dynamic import() throws "Failed to fetch dynamically imported
+// module". We reload once to pick up the fresh manifest.
+const RELOAD_FLAG = "__chunk_reload__";
+function isChunkLoadError(msg: string | undefined) {
+  if (!msg) return false;
+  return (
+    msg.includes("Failed to fetch dynamically imported module") ||
+    msg.includes("Importing a module script failed") ||
+    msg.includes("error loading dynamically imported module")
+  );
+}
+function tryReload() {
+  if (sessionStorage.getItem(RELOAD_FLAG)) return;
+  sessionStorage.setItem(RELOAD_FLAG, "1");
+  window.location.reload();
+}
+window.addEventListener("error", (e) => {
+  if (isChunkLoadError(e?.message)) tryReload();
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const msg = (e?.reason?.message ?? String(e?.reason ?? "")) as string;
+  if (isChunkLoadError(msg)) tryReload();
+});
+// Clear flag on successful load
+window.addEventListener("load", () => {
+  setTimeout(() => sessionStorage.removeItem(RELOAD_FLAG), 2000);
+});
+
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
     <App />
