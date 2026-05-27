@@ -250,11 +250,11 @@ export const PlanoPerfeitoWizard = () => {
         }
 
         setResult(calc);
-        toast.success('Seu Plano Perfeito está pronto!');
+        toast.success('Conta criada e Plano Perfeito pronto! Guarde seu e-mail e senha.');
       } else {
         // Conta criada mas sessão não propagou — mostra resultado direto
         setResult(calc);
-        toast.success('Seu Plano Perfeito está pronto! Verifique seu e-mail pra ativar o login.');
+        toast.success('Plano Perfeito pronto! Conta criada — use seu e-mail e senha para acessar depois.');
       }
     } catch (err) {
       console.error(err);
