@@ -62,7 +62,7 @@ const MeusPlanosPerfeitos = () => {
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Meus Planos</h1>
               <p className="text-sm text-muted-foreground mt-1">Histórico das suas simulações.</p>
             </div>
-            <Button onClick={() => navigate('/valuation/plano-perfeito')}>
+            <Button onClick={() => navigate('/valuation/plano-perfeito?novo=1')}>
               Novo Plano
             </Button>
           </div>
@@ -72,7 +72,7 @@ const MeusPlanosPerfeitos = () => {
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum Plano Perfeito ainda</h3>
               <p className="text-muted-foreground mb-6">Crie seu primeiro plano para ver o histórico aqui.</p>
-              <Button onClick={() => navigate('/valuation/plano-perfeito')}>Traçar Meu Plano</Button>
+              <Button onClick={() => navigate('/valuation/plano-perfeito?novo=1')}>Traçar Meu Plano</Button>
             </div>
           ) : (
             <div className="space-y-4">
