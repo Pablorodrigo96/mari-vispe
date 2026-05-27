@@ -272,7 +272,12 @@ export const PlanoPerfeitoWizard = () => {
           <div className="max-w-5xl mx-auto">
             <PlanoPerfeitoResultView
               result={result}
-              onRestart={() => { setResult(null); setStep(0); setData(initial); }}
+              onRestart={() => {
+                setResult(null);
+                setStep(0);
+                setData(initial);
+                navigate('/valuation/plano-perfeito?novo=1', { replace: true });
+              }}
               onConsultoria={() => navigate('/capital')}
             />
           </div>
