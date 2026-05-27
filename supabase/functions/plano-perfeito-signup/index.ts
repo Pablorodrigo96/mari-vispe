@@ -1,6 +1,6 @@
-// Edge function: cria conta para usuário não-logado que conclui o Plano Perfeito.
-// Usa service-role para criar o user já confirmado e devolve senha temporária
-// para auto-login no cliente. Marca o profile com lead_tag = plano_perfeito.
+// Edge function: cria conta para usuário não-logado que conclui o Plano Perfeito
+// e PERSISTE o plano no banco usando service-role (não depende da sessão propagar
+// no cliente). Devolve senha para auto-login.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -15,10 +15,19 @@ interface Body {
   phone?: string;
   companyName?: string;
   password?: string;
+  // Novos campos — dados do plano para persistir no servidor
+  valuationInputs?: Record<string, unknown>;
+  planoInputs?: Record<string, unknown>;
+  result?: {
+    valuationAtual?: number;
+    valuationMeta?: number;
+    investimentoMensal?: number;
+    viabilidade?: "green" | "yellow" | "red";
+    [k: string]: unknown;
+  };
 }
 
 const generateTempPassword = () => {
-  // 16 chars, garante upper+lower+digit
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
   let out = "";
   const buf = new Uint32Array(16);
@@ -51,25 +60,55 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // Helper para persistir o plano no banco (service-role bypassa RLS)
+    const savePlano = async (userId: string): Promise<{ ok: boolean; planoId?: string; error?: string }> => {
+      if (!body.valuationInputs || !body.planoInputs || !body.result) {
+        return { ok: false, error: "missing plano payload" };
+      }
+      const { data: inserted, error: insertErr } = await admin
+        .from("planos_perfeitos")
+        .insert({
+          user_id: userId,
+          valuation_inputs: body.valuationInputs as any,
+          plano_inputs: body.planoInputs as any,
+          result: body.result as any,
+          valuation_atual: body.result.valuationAtual ?? null,
+          valuation_meta: body.result.valuationMeta ?? null,
+          investimento_mensal: body.result.investimentoMensal ?? null,
+          viabilidade: body.result.viabilidade ?? null,
+          lead_tag: "plano_perfeito",
+        } as any)
+        .select("id")
+        .single();
+
+      if (insertErr) {
+        console.error("planos_perfeitos insert error", insertErr);
+        return { ok: false, error: insertErr.message };
+      }
+      return { ok: true, planoId: (inserted as any)?.id };
+    };
+
     // 1. Verificar se já existe um user com esse e-mail
     const { data: existing } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
     const found = existing?.users?.find((u: any) => (u.email || "").toLowerCase() === email);
 
     if (found) {
-      // Conta já existe — não criar de novo nem mudar a senha. Cliente
-      // deve pedir reset por outro fluxo. Devolvemos success sem tempPassword
-      // para o cliente redirecionar p/ login.
+      // Conta já existe — não cria de novo, mas tenta salvar o plano sob o user existente
+      const persist = await savePlano(found.id);
       return new Response(
         JSON.stringify({
           success: true,
           alreadyExists: true,
+          planoSaved: persist.ok,
+          planoId: persist.planoId,
+          planoError: persist.error,
           message: "Conta já existente. Faça login para ver seu Plano Perfeito.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // 2. Criar user já confirmado — usa senha do usuário se fornecida, senão temporária
+    // 2. Criar user já confirmado
     const finalPassword = userPassword.length >= 8 ? userPassword : generateTempPassword();
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email,
@@ -94,20 +133,23 @@ Deno.serve(async (req) => {
 
     const userId = created.user.id;
 
-    // 3. Atualizar profile (criado pelo trigger handle_new_user) com phone + tag
+    // 3. Atualizar profile com phone + tag (trigger handle_new_user já criou)
     await admin
       .from("profiles")
       .update({ phone, lead_tag: "plano_perfeito" } as any)
       .eq("user_id", userId);
 
-    // Best effort — se a coluna lead_tag não existir, ignora silenciosamente
-    // (não bloqueia o fluxo). O signup_source já está no auth.users metadata.
+    // 4. Persistir o plano no banco IMEDIATAMENTE (service-role, não depende de sessão)
+    const persist = await savePlano(userId);
 
     return new Response(
       JSON.stringify({
         success: true,
         userId,
-        tempPassword: finalPassword, // cliente faz signInWithPassword imediatamente
+        tempPassword: finalPassword,
+        planoSaved: persist.ok,
+        planoId: persist.planoId,
+        planoError: persist.error,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
