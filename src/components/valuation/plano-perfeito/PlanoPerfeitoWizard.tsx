@@ -189,6 +189,7 @@ export const PlanoPerfeitoWizard = () => {
             email: data.lead.email,
             phone: data.lead.phone,
             companyName: data.lead.companyName,
+            password: data.lead.password,
           },
         });
         if (signErr || !signup?.success) {
