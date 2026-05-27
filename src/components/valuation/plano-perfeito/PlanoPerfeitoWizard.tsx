@@ -180,9 +180,8 @@ export const PlanoPerfeitoWizard = () => {
     }
 
     try {
-      // 1. Garantir conta — se não logado, criar via edge function
-      let userId = user?.id;
-      if (!userId) {
+      // CAMINHO A — usuário NÃO logado: signup + persistência no backend (service-role)
+      if (!user) {
         const { data: signup, error: signErr } = await supabase.functions.invoke('plano-perfeito-signup', {
           body: {
             fullName: data.lead.fullName,
@@ -190,72 +189,79 @@ export const PlanoPerfeitoWizard = () => {
             phone: data.lead.phone,
             companyName: data.lead.companyName,
             password: data.lead.password,
+            // Envia o plano calculado para persistência server-side
+            valuationInputs,
+            planoInputs,
+            result: calc,
           },
         });
+
         if (signErr || !signup?.success) {
           toast.error(signup?.error || 'Não conseguimos criar sua conta. Tente novamente.');
           setSubmitting(false);
           return;
         }
-        // Auto-login com a senha temporária
+
+        // Auto-login com a senha cadastrada
         if (signup.tempPassword) {
           const { error: loginErr } = await supabase.auth.signInWithPassword({
             email: data.lead.email,
             password: signup.tempPassword,
           });
-          if (loginErr) {
-            console.warn('auto-login falhou', loginErr);
-          }
-        }
-        // Aguarda propagação da sessão (até 2s)
-        userId = (await waitForSession()) ?? undefined;
-      }
-
-      // 2. Se temos sessão: checa crédito + persiste
-      if (userId) {
-        if (!canUseMultiples()) {
-          // Mostra resultado mesmo assim, mas avisa
-          setResult(calc);
-          toast.warning('Você já usou seu Plano grátis. Resultado mostrado em modo prévia.');
-          setSubmitting(false);
-          return;
-        }
-
-        const { error: insertError } = await supabase
-          .from('planos_perfeitos' as any)
-          .insert({
-            user_id: userId,
-            valuation_inputs: valuationInputs as any,
-            plano_inputs: planoInputs as any,
-            result: calc as any,
-            valuation_atual: calc.valuationAtual,
-            valuation_meta: calc.valuationMeta,
-            investimento_mensal: calc.investimentoMensal,
-            viabilidade: calc.viabilidade,
-            lead_tag: 'plano_perfeito',
-          });
-
-        if (insertError) {
-          console.error('Erro ao salvar plano perfeito', insertError);
-          // Mostra o resultado mesmo sem persistir — usuário não perde o cálculo
-          setResult(calc);
-          toast.warning('Mostrando seu plano, mas não conseguimos salvá-lo agora.');
-          setSubmitting(false);
-          return;
-        }
-
-        // Consumir crédito só após persistir
-        if (!isAdmin && !isMasterPlan) {
-          await consumeMultiplesAccess();
+          if (loginErr) console.warn('auto-login falhou', loginErr);
+          await waitForSession();
         }
 
         setResult(calc);
-        toast.success('Conta criada e Plano Perfeito pronto! Guarde seu e-mail e senha.');
-      } else {
-        // Conta criada mas sessão não propagou — mostra resultado direto
-        setResult(calc);
-        toast.success('Plano Perfeito pronto! Conta criada — use seu e-mail e senha para acessar depois.');
+
+        if (signup.planoSaved) {
+          toast.success('Conta criada e Plano Perfeito salvo em Meus Planos!');
+        } else if (signup.alreadyExists) {
+          toast.warning('Você já tem conta. Faça login para acessar seus planos.');
+        } else {
+          toast.warning('Plano gerado, mas não conseguimos salvá-lo agora. Tente novamente em Meus Planos.');
+        }
+        return;
       }
+
+      // CAMINHO B — usuário JÁ logado: insert direto (RLS via auth.uid())
+      const userId = user.id;
+
+      if (!canUseMultiples()) {
+        setResult(calc);
+        toast.warning('Você já usou seu Plano grátis. Resultado mostrado em modo prévia.');
+        setSubmitting(false);
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from('planos_perfeitos' as any)
+        .insert({
+          user_id: userId,
+          valuation_inputs: valuationInputs as any,
+          plano_inputs: planoInputs as any,
+          result: calc as any,
+          valuation_atual: calc.valuationAtual,
+          valuation_meta: calc.valuationMeta,
+          investimento_mensal: calc.investimentoMensal,
+          viabilidade: calc.viabilidade,
+          lead_tag: 'plano_perfeito',
+        });
+
+      if (insertError) {
+        console.error('Erro ao salvar plano perfeito', insertError);
+        setResult(calc);
+        toast.warning('Mostrando seu plano, mas não conseguimos salvá-lo agora.');
+        setSubmitting(false);
+        return;
+      }
+
+      if (!isAdmin && !isMasterPlan) {
+        await consumeMultiplesAccess();
+      }
+
+      setResult(calc);
+      toast.success('Plano Perfeito salvo em Meus Planos!');
     } catch (err) {
       console.error(err);
       // Mesmo com erro, mostra o cálculo — só não persistimos

@@ -1,36 +1,34 @@
-## Mudanças
+# Plano de correção
 
-**1. Step de Lead (`StepLeadCapture.tsx`) — pede senha**
-- Adicionar campo `password` (e `passwordConfirm`) ao `LeadFormData`.
-- UI: 2 inputs do tipo password com `Eye/EyeOff` toggle, ícone `Lock`, hint "Guarde essa senha — você vai usar pra acessar o relatório completo".
-- Mudar copy do topo: "Crie sua conta para receber o Plano Perfeito" (em vez de "criamos automaticamente").
-- Validação no Wizard: senha mín. 8 chars, igual à confirmação.
+## Objetivo
+Garantir que, quando um usuário novo conclui o Plano Perfeito, o relatório seja salvo imediatamente na conta dele e apareça em **Meus Planos**, sem depender do login terminar de propagar no navegador.
 
-**2. Wizard (`PlanoPerfeitoWizard.tsx`)**
-- `initial.lead` ganha `password: ''` e `passwordConfirm: ''`.
-- `validate()` no step 5: exigir senha ≥ 8 e bater com a confirmação.
-- `handleSubmit`: passar `password` pra edge function (em vez de senha temporária).
+## O que será alterado
 
-**3. Edge function (`plano-perfeito-signup/index.ts`)**
-- Aceitar `password` no body; se vier, usa ela (em vez de `generateTempPassword`).
-- Retorna `password` no payload (pro auto-login imediato) — mesma forma que `tempPassword` hoje.
-- Mantém fallback de senha temporária se cliente não mandar (compat).
+### 1. Salvar o plano no backend durante a criação da conta
+No fluxo atual, a conta é criada e depois o navegador tenta logar e salvar o plano. Essa segunda etapa pode falhar por atraso de sessão.
 
-**4. CTA de login no Resultado (`PlanoPerfeitoResult.tsx`)**
-- Novo card destacado **acima dos CTAs**, com fundo accent suave + ícone `Lock`:
-  - Título: "Acesse seu relatório completo mês a mês"
-  - Texto: "Veja a evolução detalhada de receita, clientes, investimento por período e o passo-a-passo de ações para viabilizar este Plano. Faça login com a conta que você acabou de criar."
-  - Botão `→ Acessar relatório completo` que vai para `/meus-planos-perfeitos` (se logado) ou `/auth` (se não).
-- Aceitar prop opcional `isLoggedIn?: boolean` e `onAcessarRelatorio: () => void` vindas do Wizard.
+Vou alterar a função `plano-perfeito-signup` para também receber os dados calculados do plano e inserir o registro em `planos_perfeitos` usando permissão segura do backend.
 
-**5. Mensagem pós-submit no Wizard**
-- Toast de sucesso passa a mencionar: "Conta criada! Use seu e-mail e senha para acessar quando quiser."
+### 2. Ajustar o wizard para enviar o plano completo ao signup
+No `PlanoPerfeitoWizard`, quando o usuário ainda não estiver logado:
 
-## Arquivos editados
+- calcular o resultado normalmente;
+- chamar `plano-perfeito-signup` enviando cadastro + resultado do plano;
+- fazer login automático com a senha cadastrada;
+- mostrar o resultado;
+- garantir que, ao acessar **Meus Planos**, o plano já exista no histórico.
 
-- `src/components/valuation/plano-perfeito/StepLeadCapture.tsx`
-- `src/components/valuation/plano-perfeito/PlanoPerfeitoWizard.tsx`
-- `src/components/valuation/plano-perfeito/PlanoPerfeitoResult.tsx`
+### 3. Manter o fluxo de usuário já logado
+Para usuário já autenticado, manter o salvamento atual pelo cliente, com a regra existente de só consumir crédito após o insert funcionar.
+
+### 4. Melhorar feedback de erro
+Se o salvamento no backend falhar, a tela vai avisar claramente que o plano foi gerado, mas não foi salvo, em vez de parecer que tudo deu certo.
+
+## Arquivos previstos
+
 - `supabase/functions/plano-perfeito-signup/index.ts`
+- `src/components/valuation/plano-perfeito/PlanoPerfeitoWizard.tsx`
 
-Nenhuma mudança de schema ou RLS.
+## Resultado esperado
+Após concluir o cadastro pelo Plano Perfeito, o usuário deve conseguir entrar em **Meus Planos** e ver o relatório recém-criado.
