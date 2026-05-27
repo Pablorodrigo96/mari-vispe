@@ -49,7 +49,7 @@ const initial: FormData = {
   cac: 0,
   arpu: 0,
   churnPercent: 5,
-  lead: { fullName: '', email: '', phone: '', companyName: '' },
+  lead: { fullName: '', email: '', phone: '', companyName: '', password: '', passwordConfirm: '' },
 };
 
 const STEPS = ['Perfil', 'Financeiro', 'Meta', 'Prazo', 'CAC & ARPU', 'Contato'] as const;
@@ -115,6 +115,8 @@ export const PlanoPerfeitoWizard = () => {
         if (!data.lead.email.includes('@')) return toast.error('Informe um e-mail válido'), false;
         if (data.lead.phone.replace(/\D/g, '').length < 10) return toast.error('Informe um WhatsApp válido'), false;
         if (!data.lead.companyName.trim()) return toast.error('Informe sua empresa'), false;
+        if (data.lead.password.length < 8) return toast.error('A senha precisa ter no mínimo 8 caracteres'), false;
+        if (data.lead.password !== data.lead.passwordConfirm) return toast.error('As senhas não coincidem'), false;
         return true;
       default:
         return true;
