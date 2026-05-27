@@ -135,8 +135,48 @@ export const PlanoPerfeitoWizard = () => {
     else setStep(step - 1);
   };
 
+  const waitForSession = async (maxTries = 8, delayMs = 250): Promise<string | null> => {
+    for (let i = 0; i < maxTries; i++) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) return session.user.id;
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+    return null;
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
+
+    // Sempre calcula PRIMEIRO — não dependemos de auth pra mostrar o resultado
+    const valuationInputs = {
+      companyType: data.companyType,
+      segment: data.segment,
+      annualRevenue: parseCurrency(data.annualRevenue),
+      ebitdaMargin: parseFloat(data.ebitdaMargin) || 0,
+      netProfitMargin: parseFloat(data.netProfitMargin) || 0,
+      fullName: data.lead.fullName || user?.email || '',
+      companyName: data.lead.companyName || '',
+      email: data.lead.email || user?.email || '',
+      phone: data.lead.phone || '',
+    };
+    const planoInputs = {
+      metaValuation: data.metaValuation,
+      prazoAnos: data.prazoAnos,
+      cac: data.cac,
+      arpu: data.arpu,
+      churnAnual: (data.churnPercent || 5) / 100,
+    };
+
+    let calc: PlanoPerfeitoResult;
+    try {
+      calc = calcularPlanoPerfeito(valuationInputs, planoInputs);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao gerar o Plano Perfeito.');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       // 1. Garantir conta — se não logado, criar via edge function
       let userId = user?.id;
@@ -161,82 +201,63 @@ export const PlanoPerfeitoWizard = () => {
             password: signup.tempPassword,
           });
           if (loginErr) {
-            toast.error('Conta criada — verifique seu e-mail para o link de acesso.');
-            // segue mesmo assim para não bloquear o usuário (vai cair em /auth)
+            console.warn('auto-login falhou', loginErr);
           }
         }
-        // Aguarda propagação da sessão
-        const { data: { user: newUser } } = await supabase.auth.getUser();
-        userId = newUser?.id;
-        if (!userId) {
-          toast.error('Conta criada — faça login para ver seu Plano Perfeito.');
-          navigate('/auth?redirect=/valuation/plano-perfeito');
+        // Aguarda propagação da sessão (até 2s)
+        userId = (await waitForSession()) ?? undefined;
+      }
+
+      // 2. Se temos sessão: checa crédito + persiste
+      if (userId) {
+        if (!canUseMultiples()) {
+          // Mostra resultado mesmo assim, mas avisa
+          setResult(calc);
+          toast.warning('Você já usou seu Plano grátis. Resultado mostrado em modo prévia.');
+          setSubmitting(false);
           return;
         }
+
+        const { error: insertError } = await supabase
+          .from('planos_perfeitos' as any)
+          .insert({
+            user_id: userId,
+            valuation_inputs: valuationInputs as any,
+            plano_inputs: planoInputs as any,
+            result: calc as any,
+            valuation_atual: calc.valuationAtual,
+            valuation_meta: calc.valuationMeta,
+            investimento_mensal: calc.investimentoMensal,
+            viabilidade: calc.viabilidade,
+            lead_tag: 'plano_perfeito',
+          });
+
+        if (insertError) {
+          console.error('Erro ao salvar plano perfeito', insertError);
+          // Mostra o resultado mesmo sem persistir — usuário não perde o cálculo
+          setResult(calc);
+          toast.warning('Mostrando seu plano, mas não conseguimos salvá-lo agora.');
+          setSubmitting(false);
+          return;
+        }
+
+        // Consumir crédito só após persistir
+        if (!isAdmin && !isMasterPlan) {
+          await consumeMultiplesAccess();
+        }
+
+        setResult(calc);
+        toast.success('Seu Plano Perfeito está pronto!');
+      } else {
+        // Conta criada mas sessão não propagou — mostra resultado direto
+        setResult(calc);
+        toast.success('Seu Plano Perfeito está pronto! Verifique seu e-mail pra ativar o login.');
       }
-
-      // 2. Checar crédito (admin/master ilimitado; básico = mesmo balcão de multiples)
-      if (!canUseMultiples()) {
-        toast.error('Você já usou seu Plano grátis. Faça upgrade para o Master.');
-        navigate('/valuation');
-        return;
-      }
-
-      // 3. Calcular
-      const valuationInputs = {
-        companyType: data.companyType,
-        segment: data.segment,
-        annualRevenue: parseCurrency(data.annualRevenue),
-        ebitdaMargin: parseFloat(data.ebitdaMargin) || 0,
-        netProfitMargin: parseFloat(data.netProfitMargin) || 0,
-        fullName: data.lead.fullName || user?.email || '',
-        companyName: data.lead.companyName || '',
-        email: data.lead.email || user?.email || '',
-        phone: data.lead.phone || '',
-      };
-
-      const planoInputs = {
-        metaValuation: data.metaValuation,
-        prazoAnos: data.prazoAnos,
-        cac: data.cac,
-        arpu: data.arpu,
-        churnAnual: (data.churnPercent || 5) / 100,
-      };
-
-      const calc = calcularPlanoPerfeito(valuationInputs, planoInputs);
-
-      // 4. Persistir ANTES de consumir crédito (memória do projeto: valuation-credit-refund)
-      const { error: insertError } = await supabase
-        .from('planos_perfeitos' as any)
-        .insert({
-          user_id: userId,
-          valuation_inputs: valuationInputs as any,
-          plano_inputs: planoInputs as any,
-          result: calc as any,
-          valuation_atual: calc.valuationAtual,
-          valuation_meta: calc.valuationMeta,
-          investimento_mensal: calc.investimentoMensal,
-          viabilidade: calc.viabilidade,
-          lead_tag: 'plano_perfeito',
-        });
-
-      if (insertError) {
-        console.error('Erro ao salvar plano perfeito', insertError);
-        toast.error('Não conseguimos salvar seu plano. Tente novamente.');
-        setSubmitting(false);
-        return;
-      }
-
-      // 5. Consumir crédito (só após persistir; admin/master é noop p/ Master via flag)
-      if (!isAdmin && !isMasterPlan) {
-        await consumeMultiplesAccess();
-      }
-
-      setResult(calc);
-      toast.success('Seu Plano Perfeito está pronto!');
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao gerar o Plano Perfeito.');
+      // Mesmo com erro, mostra o cálculo — só não persistimos
+      setResult(calc);
+      toast.warning('Mostrando seu plano. Não conseguimos salvar agora.');
     } finally {
       setSubmitting(false);
     }
