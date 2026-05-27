@@ -275,6 +275,8 @@ export const PlanoPerfeitoWizard = () => {
           <div className="max-w-5xl mx-auto">
             <PlanoPerfeitoResultView
               result={result}
+              isLoggedIn={!!user}
+              onAcessarRelatorio={() => navigate(user ? '/meus-planos-perfeitos' : '/auth')}
               onRestart={() => {
                 setResult(null);
                 setStep(0);
