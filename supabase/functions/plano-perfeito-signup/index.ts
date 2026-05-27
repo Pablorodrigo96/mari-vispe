@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         userId,
-        tempPassword, // cliente faz signInWithPassword imediatamente
+        tempPassword: finalPassword, // cliente faz signInWithPassword imediatamente
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
