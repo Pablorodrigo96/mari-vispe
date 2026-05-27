@@ -28,10 +28,10 @@ window.addEventListener("unhandledrejection", (e) => {
   const msg = (e?.reason?.message ?? String(e?.reason ?? "")) as string;
   if (isChunkLoadError(msg)) tryReload();
 });
-// Clear flag on successful load
-window.addEventListener("load", () => {
-  setTimeout(() => sessionStorage.removeItem(RELOAD_FLAG), 2000);
-});
+// NOTE: Flag is intentionally NOT auto-cleared on load. Keeping it sticky for
+// the tab's lifetime prevents the reload-loop we observed when the chunk error
+// kept re-occurring after the 2s window. The flag resets naturally when the
+// user closes/reopens the tab (sessionStorage is per-tab).
 
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
