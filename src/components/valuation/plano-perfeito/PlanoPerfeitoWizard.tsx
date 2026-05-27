@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Sparkles, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { PlanoPerfeitoResultView } from './PlanoPerfeitoResult';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useValuationAccess } from '@/hooks/useValuationAccess';
+import { usePlanosPerfeitos } from '@/hooks/usePlanosPerfeitos';
 import { supabase } from '@/integrations/supabase/client';
 import { parseCurrency } from '@/lib/valuationCalculator';
 import { calcularPlanoPerfeito, type PlanoPerfeitoResult } from '@/lib/planoPerfeitoCalculator';
@@ -55,13 +56,27 @@ const STEPS = ['Perfil', 'Financeiro', 'Meta', 'Prazo', 'CAC & ARPU', 'Contato']
 
 export const PlanoPerfeitoWizard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const forceNew = searchParams.get('novo') === '1';
   const { user } = useAuth();
   const { canUseMultiples, consumeMultiplesAccess, isMasterPlan, isAdmin } = useValuationAccess();
+  const { data: planosSalvos, isLoading: planosLoading } = usePlanosPerfeitos();
 
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>(initial);
   const [result, setResult] = useState<PlanoPerfeitoResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hidrata último plano salvo quando o usuário entra pelo menu
+  useEffect(() => {
+    if (hydrated || forceNew || !user || planosLoading) return;
+    const ultimo = planosSalvos?.[0];
+    if (ultimo?.result) {
+      setResult(ultimo.result as PlanoPerfeitoResult);
+    }
+    setHydrated(true);
+  }, [user, planosSalvos, planosLoading, forceNew, hydrated]);
 
   // Logged-in user pode pular o lead step (já temos os dados)
   const needsLeadStep = !user;
