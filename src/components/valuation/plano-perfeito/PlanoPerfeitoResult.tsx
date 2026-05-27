@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, MessageCircle, RotateCcw, TrendingUp, Users, Wallet, Target, Calendar } from 'lucide-react';
+import { Download, MessageCircle, RotateCcw, TrendingUp, Users, Wallet, Target, Calendar, Lock, ArrowRight } from 'lucide-react';
 import type { PlanoPerfeitoResult as PPResult } from '@/lib/planoPerfeitoCalculator';
 import { PlanoPerfeitoChart } from './PlanoPerfeitoChart';
 import { ViabilitySemaforo } from './ViabilitySemaforo';
@@ -41,9 +41,11 @@ interface Props {
   result: PPResult;
   onRestart: () => void;
   onConsultoria: () => void;
+  isLoggedIn?: boolean;
+  onAcessarRelatorio?: () => void;
 }
 
-export const PlanoPerfeitoResultView = ({ result, onRestart, onConsultoria }: Props) => {
+export const PlanoPerfeitoResultView = ({ result, onRestart, onConsultoria, isLoggedIn, onAcessarRelatorio }: Props) => {
   const animatedInvest = useCountUp(result.investimentoMensal);
 
   const metrics = [
@@ -123,6 +125,42 @@ export const PlanoPerfeitoResultView = ({ result, onRestart, onConsultoria }: Pr
           </p>
         </div>
       </div>
+
+      {/* ACESSO AO RELATÓRIO COMPLETO */}
+      {onAcessarRelatorio && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="relative overflow-hidden rounded-2xl border-2 border-accent/50 bg-gradient-to-br from-accent/15 via-card to-card p-6 sm:p-8 print:hidden"
+        >
+          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 text-accent flex-shrink-0">
+              <Lock className="h-7 w-7" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground break-words">
+                Tenha acesso completo às informações detalhadas mês a mês
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1 break-words">
+                Veja a evolução de receita, clientes e investimento período a período, mais o passo-a-passo
+                de ações para viabilizar este projeto. {isLoggedIn
+                  ? 'Acesse agora seu painel de planos.'
+                  : 'Faça login com a conta que você acabou de criar.'}
+              </p>
+            </div>
+            <Button
+              size="lg"
+              onClick={onAcessarRelatorio}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold shadow-lg shadow-accent/30 sm:flex-shrink-0"
+            >
+              {isLoggedIn ? 'Acessar relatório' : 'Fazer login'}
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        </motion.div>
+      )}
 
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row gap-3 print:hidden">

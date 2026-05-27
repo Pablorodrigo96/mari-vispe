@@ -14,6 +14,7 @@ interface Body {
   email?: string;
   phone?: string;
   companyName?: string;
+  password?: string;
 }
 
 const generateTempPassword = () => {
@@ -35,6 +36,7 @@ Deno.serve(async (req) => {
     const email = (body.email || "").trim().toLowerCase();
     const phone = (body.phone || "").trim();
     const companyName = (body.companyName || "").trim();
+    const userPassword = (body.password || "").trim();
 
     if (!fullName || !email.includes("@") || !phone || !companyName) {
       return new Response(JSON.stringify({ success: false, error: "Dados inválidos" }), {
@@ -67,11 +69,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Criar user já confirmado
-    const tempPassword = generateTempPassword();
+    // 2. Criar user já confirmado — usa senha do usuário se fornecida, senão temporária
+    const finalPassword = userPassword.length >= 8 ? userPassword : generateTempPassword();
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email,
-      password: tempPassword,
+      password: finalPassword,
       email_confirm: true,
       user_metadata: {
         full_name: fullName,
@@ -105,7 +107,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         userId,
-        tempPassword, // cliente faz signInWithPassword imediatamente
+        tempPassword: finalPassword, // cliente faz signInWithPassword imediatamente
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

@@ -49,7 +49,7 @@ const initial: FormData = {
   cac: 0,
   arpu: 0,
   churnPercent: 5,
-  lead: { fullName: '', email: '', phone: '', companyName: '' },
+  lead: { fullName: '', email: '', phone: '', companyName: '', password: '', passwordConfirm: '' },
 };
 
 const STEPS = ['Perfil', 'Financeiro', 'Meta', 'Prazo', 'CAC & ARPU', 'Contato'] as const;
@@ -115,6 +115,8 @@ export const PlanoPerfeitoWizard = () => {
         if (!data.lead.email.includes('@')) return toast.error('Informe um e-mail válido'), false;
         if (data.lead.phone.replace(/\D/g, '').length < 10) return toast.error('Informe um WhatsApp válido'), false;
         if (!data.lead.companyName.trim()) return toast.error('Informe sua empresa'), false;
+        if (data.lead.password.length < 8) return toast.error('A senha precisa ter no mínimo 8 caracteres'), false;
+        if (data.lead.password !== data.lead.passwordConfirm) return toast.error('As senhas não coincidem'), false;
         return true;
       default:
         return true;
@@ -187,6 +189,7 @@ export const PlanoPerfeitoWizard = () => {
             email: data.lead.email,
             phone: data.lead.phone,
             companyName: data.lead.companyName,
+            password: data.lead.password,
           },
         });
         if (signErr || !signup?.success) {
@@ -247,11 +250,11 @@ export const PlanoPerfeitoWizard = () => {
         }
 
         setResult(calc);
-        toast.success('Seu Plano Perfeito está pronto!');
+        toast.success('Conta criada e Plano Perfeito pronto! Guarde seu e-mail e senha.');
       } else {
         // Conta criada mas sessão não propagou — mostra resultado direto
         setResult(calc);
-        toast.success('Seu Plano Perfeito está pronto! Verifique seu e-mail pra ativar o login.');
+        toast.success('Plano Perfeito pronto! Conta criada — use seu e-mail e senha para acessar depois.');
       }
     } catch (err) {
       console.error(err);
@@ -272,6 +275,8 @@ export const PlanoPerfeitoWizard = () => {
           <div className="max-w-5xl mx-auto">
             <PlanoPerfeitoResultView
               result={result}
+              isLoggedIn={!!user}
+              onAcessarRelatorio={() => navigate(user ? '/meus-planos-perfeitos' : '/auth')}
               onRestart={() => {
                 setResult(null);
                 setStep(0);
