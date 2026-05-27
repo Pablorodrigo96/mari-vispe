@@ -1,31 +1,44 @@
-## Ajustar respiro / bordas do Hero Plano Perfeito
+## Diagnóstico
 
-A marginalia (`[01/03 — O PLANO PERFEITO]` e `VALUATION · 26 — LNG -46.63`) está colando no header e nas réguas laterais, e a headline encosta na borda esquerda. Vou aumentar os paddings de respiro mantendo a estética edge-to-edge.
+**1. Piscar/reload em `/valuation/plano-perfeito`**
+Olhando o network: a página dispara 4 `page_view` em ~9s, alternando entre `?__lovable_sha=...` (sem user) e URL limpa (com user). Isso é o `main.tsx` reagindo a `Failed to fetch dynamically imported module` (chunk antigo após deploy) e chamando `window.location.reload()`. Como o `RELOAD_FLAG` é limpo após 2s no `window.load`, se o erro voltar a ocorrer (importação preguiçosa de algum componente do wizard), entra em loop.
 
-### Mudanças em `src/components/valuation/plano-perfeito/PlanoPerfeitoHero.tsx`
+**2. Após signup, não entra no resultado**
+O `handleSubmit` já tenta `signInWithPassword` e segue para `setResult(calc)`. Mas se `supabase.auth.getUser()` ainda não propagou, cai no fallback `navigate('/auth?redirect=…')` — o usuário perde o cálculo. Além disso, o resultado vive apenas em state local; sair da página e voltar pelo menu reabre o wizard zerado.
 
-1. **Top marginalia** — descer pra não colidir com o header fixo:
-   - `top-6` → `top-20 md:top-24`
-   - `left-6 lg:left-10` → `left-10 lg:left-16`
-   - `right-6 lg:right-10` → `right-10 lg:right-16`
+**3. Menu "O Plano Perfeito" sempre abre o formulário**
+`PlanoPerfeitoWizard` começa em `step=0` sem checar se o usuário já tem um plano salvo em `planos_perfeitos`.
 
-2. **Padding-top do conteúdo principal** — abrir espaço depois da marginalia:
-   - `pt-20 md:pt-24` → `pt-28 md:pt-36 lg:pt-40`
+---
 
-3. **Padding lateral do conteúdo** — sair de cima das réguas verticais (wordmark esquerdo e ruler 00-03 direito ficam em `left-3` / `right-3`):
-   - `px-6 md:px-10 lg:px-16` → `px-10 md:px-16 lg:px-24`
+## Plano
 
-4. **Pilares full-bleed** — ajustar para o novo padding lateral:
-   - `-left-6 -right-6 md:-left-10 md:-right-10 lg:-left-16 lg:-right-16` → `-left-10 -right-10 md:-left-16 md:-right-16 lg:-left-24 lg:-right-24`
+### A. Estancar o loop de reload (`src/main.tsx`)
+- Tornar o auto-reload **idempotente por sessão**: remover o `setTimeout(clear, 2000)` no `window.load`. O flag só é limpo se o usuário trocar de rota com sucesso (navegação manual). Assim, no máximo 1 reload por sessão de aba.
+- Trocar `sessionStorage` por marca em `window.name` opcionalmente — mantém entre reloads mas zera ao fechar aba.
 
-5. **Bottom marginalia / fade** — manter `mt-8` mas aumentar `pb-12` → `pb-16` para dar respiro inferior.
+### B. Auto-login e ir direto pro resultado (`PlanoPerfeitoWizard.tsx`)
+- Após `signInWithPassword`, esperar a sessão com **polling curto** (até 8× 250ms em `supabase.auth.getSession()`) em vez de uma única chamada a `getUser()`.
+- Se mesmo assim falhar, em vez de mandar pra `/auth`, **renderizar o resultado calculado direto** (já temos `calc` na memória) e mostrar um toast pedindo confirmação por e-mail — o cálculo nunca é perdido.
+- Persistir `calc` antes do auto-login também (já está). Garantir que `setResult(calc)` acontece sempre que o cálculo deu certo, independente do estado da sessão.
 
-### Resultado
-- Headline "Construa a ponte" começa com ~40px da borda esquerda (não colada).
-- Marginalia topo fica claramente abaixo do header, sem sobrepor logo/menu.
-- Wordmark vertical esquerdo e ruler direito ficam visualmente separados do conteúdo.
-- Card "Mari · Ao Vivo" não encosta na borda direita.
-- Estrutura 12-col, marginalia, pilares edge-to-edge e tipografia ficam intactos.
+### C. Reabrir último plano ao entrar pelo menu (`PlanoPerfeitoWizard.tsx`)
+- No mount, se `user` existir, buscar via `usePlanosPerfeitos` o último plano.
+- Se houver: hidratar `setResult(ultimoPlano.result)` automaticamente e mostrar tela de resultado com:
+  - Botão **"Criar novo Plano Perfeito"** (zera state e volta para step 0).
+  - Botão **"Ver histórico"** → `/meus-planos-perfeitos`.
+- Se não houver plano: comportamento atual (wizard step 0).
+- Suportar `?novo=1` na URL para forçar wizard mesmo com plano salvo (para o caso do usuário clicar em "Novo Plano" em `MeusPlanosPerfeitos`).
 
-### Arquivo
-- `src/components/valuation/plano-perfeito/PlanoPerfeitoHero.tsx` (apenas ajustes de padding/posicionamento).
+### D. Ajustes pequenos
+- Em `MeusPlanosPerfeitos`, fazer `Novo Plano` navegar com `?novo=1`.
+- Em `PlanoPerfeitoResultView` (quando carregado de histórico), garantir que `onRestart` navega com `?novo=1` em vez de só zerar o state.
+
+---
+
+## Arquivos tocados
+- `src/main.tsx` — remover limpeza automática do flag de reload.
+- `src/components/valuation/plano-perfeito/PlanoPerfeitoWizard.tsx` — polling de sessão, fallback robusto, hidratação do último plano via `usePlanosPerfeitos`, leitura de `?novo=1`.
+- `src/pages/MeusPlanosPerfeitos.tsx` — `Novo Plano` com `?novo=1`.
+
+Sem mudanças de schema, sem novas rotas, sem mexer no Hero (que já foi ajustado nas iterações anteriores).
