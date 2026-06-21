@@ -115,8 +115,10 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
         children: [
           { name: 'Novo valuation', href: '/valuation', icon: Plus },
           { name: 'O Plano Perfeito', href: '/valuation/plano-perfeito', icon: Sparkles },
+          { name: 'Equity Planner', href: '/equity-planner', icon: Target },
           { name: 'Meus valuations', href: '/meus-valuations', icon: FileText },
           { name: 'Meus planos perfeitos', href: '/meus-planos-perfeitos', icon: FileText },
+          { name: 'Meus Equity Planners', href: '/meus-equity-planners', icon: FileText },
           { name: 'Múltiplos', href: '/valuation/multiplos', icon: Calculator },
           { name: 'DCF', href: '/valuation/dcf', icon: ChartBar },
           { name: 'Certificador', href: '/valuation/certificador', icon: Award },
