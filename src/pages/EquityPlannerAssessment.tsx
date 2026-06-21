@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles, FileDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -248,6 +248,9 @@ export default function EquityPlannerAssessment() {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" className="bg-transparent" onClick={() => window.open(`/equity-planner/${assess.id}/relatorio?auto=1`, "_blank")}>
+              <FileDown className="h-4 w-4 mr-2" /> Baixar PDF
+            </Button>
             <Button variant="outline" className="bg-transparent" disabled={recomputing} onClick={handleRecompute}>
               {recomputing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
               Re-medir
