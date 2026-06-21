@@ -137,25 +137,41 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // 1) Confirmar assessment + carregar dono
+    // 1) Confirmar assessment + carregar dono + classificação
     const { data: assess, error: aErr } = await supabase
       .from("equity_assessments")
-      .select("id, user_id, company_id")
+      .select("id, user_id, company_id, archetype_classification, arquetipo_sugerido, migracao_arquetipo_sugerida")
       .eq("id", assessmentId)
       .single();
     if (aErr || !assess) throw new Error("assessment not found");
 
-    // 2) Carregar arquétipos + comps + library
-    const [{ data: archetypes }, { data: comps }, { data: library }] = await Promise.all([
+    // 1.5) Se ainda não foi classificado, chamar classifier inline
+    let classification = (assess as any).archetype_classification;
+    if (!classification) {
+      const classifyRes = await fetch(`${SUPABASE_URL}/functions/v1/equity-planner-classify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
+        body: JSON.stringify({ assessmentId, intakeText, companyData }),
+      });
+      const cj = await classifyRes.json();
+      classification = cj.classification || { arquetipo_id: "servico_profissional", confianca: 0.4 };
+    }
+    const arqId = classification.arquetipo_id || (assess as any).arquetipo_sugerido || "servico_profissional";
+
+    // 2) Carregar arquétipos + comps + library + migrations
+    const [{ data: archetypes }, { data: comps }, { data: library }, { data: migrations }] = await Promise.all([
       supabase.from("equity_archetypes").select("*").order("ordem"),
       supabase.from("equity_comps_benchmarks").select("*"),
-      supabase.from("equity_initiative_library").select("*"),
+      supabase.from("equity_initiative_library").select("*").eq("arquetipo_id", arqId),
+      supabase.from("equity_archetype_migrations").select("*").eq("de_arquetipo_id", arqId),
     ]);
 
     // 3) Chamar Claude
     const prompt = buildPrompt({
       companyData, intakeText: intakeText || "",
+      classification,
       archetypes: archetypes || [], comps: comps || [], library: library || [],
+      migrations: migrations || [],
     });
 
     const ai = await callAnthropic({
