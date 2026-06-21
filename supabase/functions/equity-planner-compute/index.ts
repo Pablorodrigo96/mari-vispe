@@ -273,6 +273,42 @@ Deno.serve(async (req) => {
     const deltaCrescimento = Math.max(0, Math.round((valorAlvoBase - valorAtual) * 0.15));
     const premioEstrategico = Math.max(0, valorAlvo - valorAlvoBase);
 
+    // 5.5) DCF simplificado (5 anos + perpetuidade Gordon) e SDE para micros
+    const dcfP = parsed.dcf_premissas || {};
+    const wacc = Math.max(0.08, Math.min(0.35, Number(dcfP.wacc) || 0.20));
+    const cagr = Math.max(0, Math.min(0.40, Number(dcfP.cagr_5y) || 0.10));
+    const gP = Math.max(0, Math.min(0.06, Number(dcfP.perpetuidade_g) || 0.04));
+    const taxa = Math.max(0, Math.min(0.40, Number(dcfP.taxa_imposto) || 0.27));
+    let valorDcf = 0;
+    if (ebitda > 0 && wacc > gP) {
+      const fcf0 = ebitda * (1 - taxa);
+      for (let y = 1; y <= 5; y++) {
+        const fcfY = fcf0 * Math.pow(1 + cagr, y);
+        valorDcf += fcfY / Math.pow(1 + wacc, y);
+      }
+      const fcf6 = fcf0 * Math.pow(1 + cagr, 5) * (1 + gP);
+      const terminal = fcf6 / (wacc - gP);
+      valorDcf += terminal / Math.pow(1 + wacc, 5);
+      valorDcf = Math.round(valorDcf);
+    }
+
+    // SDE (Seller's Discretionary Earnings) — só faz sentido pra micro/pequena
+    const addbacks = parsed.addbacks || {};
+    const remDono = Number(addbacks.remuneracao_dono || 0);
+    const sde = ebitda + remDono;
+    const sdeMultiplo = porte === "micro" ? 2.0 : porte === "pequena" ? 2.5 : 0;
+    const valorSde = sdeMultiplo > 0 ? Math.round(sde * sdeMultiplo) : 0;
+
+    // Triangulação: múltiplos é o âncora; DCF/SDE são sanity-check
+    let valorTriangulado = valorAtual;
+    if (valorDcf > 0 && valorSde > 0) {
+      valorTriangulado = Math.round(valorAtual * 0.55 + valorDcf * 0.30 + valorSde * 0.15);
+    } else if (valorDcf > 0) {
+      valorTriangulado = Math.round(valorAtual * 0.70 + valorDcf * 0.30);
+    } else if (valorSde > 0) {
+      valorTriangulado = Math.round(valorAtual * 0.80 + valorSde * 0.20);
+    }
+
     // 6) Persistir tudo
     // limpar prévios
     await supabase.from("equity_dimension_scores").delete().eq("assessment_id", assessmentId);
@@ -291,14 +327,19 @@ Deno.serve(async (req) => {
     // valuation
     const { data: valIns, error: vErr } = await supabase.from("equity_valuations").insert({
       assessment_id: assessmentId,
-      metodo: "multiplos",
+      metodo: "triangulado",
+      ebitda_contabil: Number(parsed.ebitda_contabil ?? Math.max(0, ebitda - Object.values(addbacks).reduce((s: number, n: any) => s + (Number(n) || 0), 0))),
       ebitda_normalizado: ebitda,
-      addbacks: parsed.addbacks || {},
+      addbacks,
       multiplo_aplicado: multiploAtual,
       faixa_min: comp.multiplo_min,
       faixa_max: comp.multiplo_max,
       valor_atual: valorAtual,
       valor_alvo: valorAlvo,
+      valor_dcf: valorDcf,
+      valor_sde: valorSde,
+      valor_triangulado: valorTriangulado,
+      dcf_premissas: { wacc, cagr_5y: cagr, perpetuidade_g: gP, taxa_imposto: taxa },
       premissas: { premissas: parsed.premissas_valuation || [], ipe_alvo: ipeAlvo, multiplo_alvo: multiploAlvo, porte },
     }).select("id").single();
     if (vErr) throw vErr;
