@@ -406,6 +406,12 @@ export default function EquityPlannerNew() {
             )}
           </div>
         </Card>
+
+        {(step === 3 || step === 4 || step === 5) && draftAssessmentId && (
+          <div className="mt-4">
+            <EquityDocsUpload assessmentId={draftAssessmentId} compact />
+          </div>
+        )}
       </div>
     </div>
   );
