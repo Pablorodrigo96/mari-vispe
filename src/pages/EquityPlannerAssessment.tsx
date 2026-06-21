@@ -25,10 +25,10 @@ interface Assessment {
   archetype_classification: any | null;
 }
 interface DimScore { dimensao: string; score: number; peso: number; destruidor_top: boolean; evidencias: any; }
-interface Valuation { id: string; ebitda_normalizado: number; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; }
+interface Valuation { id: string; ebitda_contabil: number | null; ebitda_normalizado: number; addbacks: any; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; valor_dcf: number | null; valor_sde: number | null; valor_triangulado: number | null; dcf_premissas: any; }
 interface Bridge { parcela: string; descricao: string; delta_valor: number; ordem: number; }
 interface Initiative { id: string; titulo: string; descricao: string | null; dimensao_alvo: string; delta_ipe: number; delta_valor: number; esforco: string; prazo_meses: number; sprint: number; status: string; tipo: string; prioridade: number; }
-interface Buyer { arquetipo_comprador: string; nome_alvo: string | null; tese_aquisicao: string | null; premio_estimado_pct: number; premio_estimado_valor: number; }
+interface Buyer { arquetipo_comprador: string; nome_alvo: string | null; setor_alvo: string | null; tese_aquisicao: string | null; racional_premio: string | null; sinergias: string[] | null; exemplos_targets: string[] | null; premio_estimado_pct: number; premio_estimado_valor: number; }
 interface Progresso { ipe: number; valor: number; created_at: string; evento: string; }
 
 export default function EquityPlannerAssessment() {
