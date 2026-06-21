@@ -159,10 +159,16 @@ export default function EquityPlannerAssessment() {
               </Badge>
             </div>
           </div>
-          <Button variant="outline" className="bg-transparent" disabled={recomputing} onClick={handleRecompute}>
-            {recomputing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            Re-medir
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" className="bg-transparent" disabled={recomputing} onClick={handleRecompute}>
+              {recomputing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Re-medir
+            </Button>
+            <Button className="bg-volt text-carbon hover:bg-volt/90" disabled={creatingRound} onClick={handleNewRound}>
+              {creatingRound ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PlusCircle className="h-4 w-4 mr-2" />}
+              Nova rodada
+            </Button>
+          </div>
         </div>
 
         {/* IPE Hero */}
