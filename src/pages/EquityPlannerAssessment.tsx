@@ -495,7 +495,54 @@ export default function EquityPlannerAssessment() {
           </TabsContent>
 
           {/* PROGRESSO */}
-          <TabsContent value="progresso" className="mt-4">
+          <TabsContent value="progresso" className="mt-4 space-y-4">
+            {/* Resumo evolutivo entre últimas duas medições */}
+            {progresso.length >= 2 && (() => {
+              const last = progresso[progresso.length - 1];
+              const prev = progresso[progresso.length - 2];
+              const dIPE = (last.ipe || 0) - (prev.ipe || 0);
+              const dValor = (Number(last.valor) || 0) - (Number(prev.valor) || 0);
+              const dAlvo = (Number(last.valor_alvo) || 0) - (Number(prev.valor_alvo) || 0);
+              const dias = Math.max(1, Math.round((+new Date(last.created_at) - +new Date(prev.created_at)) / 86400000));
+              const Tone = ({ v }: { v: number }) => v > 0 ? <TrendingUp className="h-4 w-4 text-emerald-400" /> : v < 0 ? <TrendingDown className="h-4 w-4 text-rose-400" /> : <Minus className="h-4 w-4 text-muted-foreground" />;
+              const cls = (v: number) => v > 0 ? "text-emerald-400" : v < 0 ? "text-rose-400" : "text-muted-foreground";
+              return (
+                <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/20 p-5">
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                    <h3 className="font-semibold">Evolução vs. medição anterior</h3>
+                    <span className="text-xs text-muted-foreground">Janela: {dias} dia(s)</span>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
+                      <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Δ IPE</p>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className={`text-2xl font-bold ${cls(dIPE)}`}>{dIPE > 0 ? "+" : ""}{dIPE}</span>
+                        <Tone v={dIPE} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{prev.ipe} → {last.ipe}</p>
+                    </div>
+                    <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
+                      <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Δ Valor atual</p>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className={`text-2xl font-bold ${cls(dValor)}`}>{dValor >= 0 ? "+" : ""}{brl(dValor)}</span>
+                        <Tone v={dValor} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{brl(prev.valor)} → {brl(last.valor)}</p>
+                    </div>
+                    <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
+                      <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Δ Valor potencial</p>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className={`text-2xl font-bold ${cls(dAlvo)}`}>{dAlvo >= 0 ? "+" : ""}{brl(dAlvo)}</span>
+                        <Tone v={dAlvo} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{brl(prev.valor_alvo)} → {brl(last.valor_alvo)}</p>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })()}
+
+            {/* Gráfico evolutivo */}
             <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
               <h3 className="font-semibold mb-3">Loop de re-medição</h3>
               {progresso.length < 2 ? (
@@ -504,19 +551,94 @@ export default function EquityPlannerAssessment() {
                 </p>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
-                  <LineChart data={progresso.map(p => ({ data: new Date(p.created_at).toLocaleDateString("pt-BR"), IPE: p.ipe, Valor: Math.round(p.valor/1000) }))}>
+                  <LineChart data={progresso.map(p => ({ data: new Date(p.created_at).toLocaleDateString("pt-BR"), IPE: p.ipe, Valor: Math.round(Number(p.valor)/1000) }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                     <XAxis dataKey="data" tick={{ fill: "#aaa", fontSize: 11 }} />
-                    <YAxis yAxisId="left" tick={{ fill: "#aaa", fontSize: 11 }} />
+                    <YAxis yAxisId="left" tick={{ fill: "#aaa", fontSize: 11 }} domain={[0, 100]} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fill: "#aaa", fontSize: 11 }} />
                     <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #D9F564" }} />
                     <Legend />
                     <Line yAxisId="left" type="monotone" dataKey="IPE" stroke="#D9F564" strokeWidth={2} />
-                    <Line yAxisId="right" type="monotone" dataKey="Valor" stroke="#60a5fa" strokeWidth={2} />
+                    <Line yAxisId="right" type="monotone" dataKey="Valor" stroke="#60a5fa" strokeWidth={2} name="Valor (R$ mil)" />
                   </LineChart>
                 </ResponsiveContainer>
               )}
             </Card>
+
+            {/* Tabela comparativa dimensão-a-dimensão */}
+            {progresso.length >= 2 && (() => {
+              const last = progresso[progresso.length - 1];
+              const prev = progresso[progresso.length - 2];
+              const lastDims = last.dim_snapshot || {};
+              const prevDims = prev.dim_snapshot || {};
+              const rows = DIMENSOES.map(d => {
+                const a = Number(prevDims[d.key] ?? 0);
+                const b = Number(lastDims[d.key] ?? 0);
+                return { key: d.key, label: d.label, prev: a, last: b, delta: b - a };
+              }).sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta));
+              return (
+                <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
+                  <h3 className="font-semibold mb-3">Comparação dimensão-a-dimensão</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-xs uppercase text-muted-foreground border-b border-volt/10">
+                          <th className="py-2 font-medium">Dimensão</th>
+                          <th className="py-2 font-medium text-right">Antes</th>
+                          <th className="py-2 font-medium text-right">Agora</th>
+                          <th className="py-2 font-medium text-right">Δ</th>
+                          <th className="py-2 font-medium w-1/3">Evolução</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map(r => {
+                          const tone = r.delta > 0 ? "text-emerald-400" : r.delta < 0 ? "text-rose-400" : "text-muted-foreground";
+                          return (
+                            <tr key={r.key} className="border-b border-volt/5">
+                              <td className="py-2 break-words">{r.label}</td>
+                              <td className="py-2 text-right font-mono text-muted-foreground">{r.prev}</td>
+                              <td className="py-2 text-right font-mono">{r.last}</td>
+                              <td className={`py-2 text-right font-mono font-bold ${tone}`}>{r.delta > 0 ? "+" : ""}{r.delta}</td>
+                              <td className="py-2">
+                                <div className="relative h-2 bg-slate-800 rounded overflow-hidden">
+                                  <div className="absolute top-0 left-0 h-full bg-muted-foreground/40" style={{ width: `${r.prev}%` }} />
+                                  <div className={`absolute top-0 left-0 h-full ${r.delta >= 0 ? "bg-volt/70" : "bg-rose-500/70"}`} style={{ width: `${r.last}%`, mixBlendMode: "screen" as any }} />
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              );
+            })()}
+
+            {/* Histórico de rodadas */}
+            {progresso.length >= 1 && (
+              <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
+                <h3 className="font-semibold mb-3">Histórico de medições</h3>
+                <div className="space-y-2">
+                  {[...progresso].reverse().map((p, idx) => (
+                    <div key={p.id} className={`flex items-center justify-between p-3 rounded border ${p.assessment_id === assess.id ? "border-volt/40 bg-volt/5" : "border-volt/10 bg-slate-950/40"}`}>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Badge variant="outline" className="border-volt/30 bg-transparent">#{progresso.length - idx}</Badge>
+                        <span className="text-sm">{new Date(p.created_at).toLocaleString("pt-BR")}</span>
+                        {p.assessment_id === assess.id && <Badge className="bg-volt text-carbon text-[10px]">Esta rodada</Badge>}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-muted-foreground">IPE <span className="text-volt font-mono font-bold">{p.ipe}</span></span>
+                        <span className="text-muted-foreground">{brl(p.valor)}</span>
+                        {p.assessment_id && p.assessment_id !== assess.id && (
+                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate(`/equity-planner/${p.assessment_id}`)}>Abrir</Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
