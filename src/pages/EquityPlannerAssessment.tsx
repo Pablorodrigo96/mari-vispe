@@ -240,6 +240,27 @@ export default function EquityPlannerAssessment() {
 
           {/* PLANO */}
           <TabsContent value="plano" className="mt-4">
+            {assess.migracao_arquetipo_sugerida?.para_arquetipo_id && (
+              <Card className="!bg-gradient-to-br from-volt/10 to-volt/5 backdrop-blur-md border-volt/50 p-5 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-3xl">🚀</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="font-bold">Migração de Arquétipo — alavanca de maior valor</h3>
+                      <Badge className="bg-volt text-carbon">
+                        {ARQUETIPOS_LABEL[assess.arquetipo_id || ""] || assess.arquetipo_id} → {ARQUETIPOS_LABEL[assess.migracao_arquetipo_sugerida.para_arquetipo_id] || assess.migracao_arquetipo_sugerida.para_arquetipo_id}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground break-words">
+                      {assess.migracao_arquetipo_sugerida.racional}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Viabilidade: <span className="text-volt font-medium">{assess.migracao_arquetipo_sugerida.viabilidade}</span>
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
             <div className="grid md:grid-cols-4 gap-3">
               {[1,2,3,4].map((sp) => (
                 <Card key={sp} className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-4">
@@ -249,14 +270,15 @@ export default function EquityPlannerAssessment() {
                   </h4>
                   <div className="space-y-2">
                     {inits.filter((i) => i.sprint === sp).map((i) => (
-                      <div key={i.id} className={`p-3 rounded border ${i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : "border-volt/10 bg-slate-950/40"}`}>
+                      <div key={i.id} className={`p-3 rounded border ${i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" : "border-volt/10 bg-slate-950/40"}`}>
                         <p className="font-medium text-sm break-words">{i.titulo}</p>
                         {i.descricao && <p className="text-xs text-muted-foreground mt-1 break-words">{i.descricao}</p>}
                         <div className="flex flex-wrap gap-1 mt-2 text-[10px]">
                           <Badge variant="outline" className="border-volt/30 text-volt">+{i.delta_ipe} IPE</Badge>
                           <Badge variant="outline" className="border-volt/30">{brl(i.delta_valor)}</Badge>
                           <Badge variant="outline">{i.esforco}</Badge>
-                          {i.tipo === "migracao_arquetipo" && <Badge className="bg-volt text-carbon text-[10px]">Migração de arquétipo</Badge>}
+                          {i.tipo === "migracao_arquetipo" && <Badge className="bg-volt text-carbon text-[10px]">Migração</Badge>}
+                          {i.tipo === "derisk" && <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px]">De-risk</Badge>}
                         </div>
                       </div>
                     ))}
