@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, RefreshCw, ArrowLeft, TrendingUp, Users, Activity, Target, LineChart as LineIcon, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, TrendingUp, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import {
   LineChart, Line, Legend,
 } from "recharts";
 import { DIMENSOES, ARQUETIPOS_LABEL, VEREDITO_LABEL, brl } from "@/lib/equity-planner/constants";
+import EquityDocsUpload from "@/components/equity-planner/EquityDocsUpload";
 
 interface Assessment {
   id: string; ipe_composto: number | null; arquetipo_id: string | null;
