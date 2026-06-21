@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { DIMENSOES, PORTE_OPTIONS, ARQUETIPOS_LABEL } from "@/lib/equity-planner/constants";
+import EquityDocsUpload from "@/components/equity-planner/EquityDocsUpload";
 
 type Mode = "wizard" | "meeting_paste";
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
