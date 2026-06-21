@@ -20,6 +20,8 @@ interface Assessment {
   id: string; ipe_composto: number | null; arquetipo_id: string | null;
   veredito_liquidez: string | null; summary: string | null; status: string;
   company_id: string; confianca_arquetipo: number | null;
+  migracao_arquetipo_sugerida: any | null;
+  archetype_classification: any | null;
 }
 interface DimScore { dimensao: string; score: number; peso: number; destruidor_top: boolean; evidencias: any; }
 interface Valuation { id: string; ebitda_normalizado: number; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; }
