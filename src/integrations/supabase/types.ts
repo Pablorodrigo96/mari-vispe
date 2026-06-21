@@ -1730,6 +1730,7 @@ export type Database = {
         Row: {
           arquetipo_comprador: string
           assessment_id: string
+          carta_convite: string | null
           created_at: string
           exemplos_targets: Json | null
           id: string
@@ -1738,6 +1739,7 @@ export type Database = {
           premio_estimado_valor: number | null
           prioridade: number | null
           racional_premio: string | null
+          selecionado: boolean
           setor_alvo: string | null
           sinergias: Json | null
           tese_aquisicao: string | null
@@ -1745,6 +1747,7 @@ export type Database = {
         Insert: {
           arquetipo_comprador: string
           assessment_id: string
+          carta_convite?: string | null
           created_at?: string
           exemplos_targets?: Json | null
           id?: string
@@ -1753,6 +1756,7 @@ export type Database = {
           premio_estimado_valor?: number | null
           prioridade?: number | null
           racional_premio?: string | null
+          selecionado?: boolean
           setor_alvo?: string | null
           sinergias?: Json | null
           tese_aquisicao?: string | null
@@ -1760,6 +1764,7 @@ export type Database = {
         Update: {
           arquetipo_comprador?: string
           assessment_id?: string
+          carta_convite?: string | null
           created_at?: string
           exemplos_targets?: Json | null
           id?: string
@@ -1768,6 +1773,7 @@ export type Database = {
           premio_estimado_valor?: number | null
           prioridade?: number | null
           racional_premio?: string | null
+          selecionado?: boolean
           setor_alvo?: string | null
           sinergias?: Json | null
           tese_aquisicao?: string | null

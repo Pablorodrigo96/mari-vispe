@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -28,7 +29,7 @@ interface DimScore { dimensao: string; score: number; peso: number; destruidor_t
 interface Valuation { id: string; ebitda_contabil: number | null; ebitda_normalizado: number; addbacks: any; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; valor_dcf: number | null; valor_sde: number | null; valor_triangulado: number | null; dcf_premissas: any; }
 interface Bridge { parcela: string; descricao: string; delta_valor: number; ordem: number; }
 interface Initiative { id: string; titulo: string; descricao: string | null; dimensao_alvo: string; delta_ipe: number; delta_valor: number; esforco: string; prazo_meses: number; sprint: number; status: string; tipo: string; prioridade: number; }
-interface Buyer { arquetipo_comprador: string; nome_alvo: string | null; setor_alvo: string | null; tese_aquisicao: string | null; racional_premio: string | null; sinergias: string[] | null; exemplos_targets: string[] | null; premio_estimado_pct: number; premio_estimado_valor: number; }
+interface Buyer { id: string; arquetipo_comprador: string; nome_alvo: string | null; setor_alvo: string | null; tese_aquisicao: string | null; racional_premio: string | null; sinergias: string[] | null; exemplos_targets: string[] | null; premio_estimado_pct: number; premio_estimado_valor: number; selecionado: boolean; carta_convite: string | null; }
 interface Progresso { id: string; assessment_id: string | null; ipe: number; valor: number; valor_alvo: number | null; created_at: string; evento: string; dim_snapshot: Record<string, number> | null; top_destruidores: any[] | null; arquetipo_id: string | null; veredito_liquidez: string | null; }
 
 export default function EquityPlannerAssessment() {
@@ -45,6 +46,10 @@ export default function EquityPlannerAssessment() {
   const [inits, setInits] = useState<Initiative[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [progresso, setProgresso] = useState<Progresso[]>([]);
+  const [letterOpen, setLetterOpen] = useState(false);
+  const [letterBuyer, setLetterBuyer] = useState<Buyer | null>(null);
+  const [letterLoading, setLetterLoading] = useState(false);
+  const [letterText, setLetterText] = useState<string>("");
 
   const load = async () => {
     if (!id) return;
@@ -122,6 +127,89 @@ export default function EquityPlannerAssessment() {
       toast.error("Falha ao criar rodada: " + e.message);
     } finally { setCreatingRound(false); }
   };
+
+  // Onda 5 — Buyer reverso
+  const buyerSelecionado = buyers.find((b) => b.selecionado) || null;
+
+  const handleSelectBuyer = async (buyer: Buyer) => {
+    if (!assess) return;
+    const newState = !buyer.selecionado;
+    try {
+      // mutually exclusive: limpa todos e marca o escolhido
+      await supabase.from("equity_buyer_map").update({ selecionado: false }).eq("assessment_id", assess.id);
+      if (newState) {
+        await supabase.from("equity_buyer_map").update({ selecionado: true }).eq("id", buyer.id);
+      }
+      setBuyers((bs) => bs.map((b) => ({ ...b, selecionado: b.id === buyer.id ? newState : false })));
+      toast.success(newState ? "Comprador-alvo definido — plano reordenado" : "Comprador-alvo removido");
+    } catch (e: any) {
+      toast.error("Falha: " + e.message);
+    }
+  };
+
+  const handleGenerateLetter = async (buyer: Buyer) => {
+    if (!assess) return;
+    setLetterBuyer(buyer);
+    setLetterText(buyer.carta_convite || "");
+    setLetterOpen(true);
+    if (buyer.carta_convite) return;
+    setLetterLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("equity-planner-buyer-letter", {
+        body: { assessmentId: assess.id, buyerId: buyer.id },
+      });
+      if (error) throw error;
+      setLetterText((data as any)?.carta || "");
+      setBuyers((bs) => bs.map((b) => b.id === buyer.id ? { ...b, carta_convite: (data as any)?.carta } : b));
+    } catch (e: any) {
+      toast.error("Falha ao gerar carta: " + e.message);
+    } finally { setLetterLoading(false); }
+  };
+
+  const copyLetter = async () => {
+    try { await navigator.clipboard.writeText(letterText); toast.success("Carta copiada"); }
+    catch { toast.error("Não foi possível copiar"); }
+  };
+
+  const openWhatsApp = () => {
+    const text = encodeURIComponent(letterText);
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+  };
+
+  // Mapeia sinergias do comprador para dimensões prioritárias (engenharia reversa do plano)
+  const SINERGIA_DIM_KEYWORDS: Array<{ dim: string; kw: RegExp }> = [
+    { dim: "qualidade_receita", kw: /recorr|contrato|mrr|arr|assinatura|retenc|churn/i },
+    { dim: "motor_comercial", kw: /cross[- ]sell|upsell|funil|pipeline|comercial|vendas|canal/i },
+    { dim: "margem", kw: /margem|custo|sinergia operacional|escala|consolida|back[- ]office/i },
+    { dim: "independencia_dono", kw: /dono|liderança|sucess|gestor|substitu/i },
+    { dim: "gestao", kw: /gest(ão|ao)|liderança|c-?level|segundo nível/i },
+    { dim: "higiene_financeira", kw: /contábil|cont(á|a)bil|auditável|earn[- ]out|due dilig|reporting/i },
+    { dim: "contingencias", kw: /passivo|trabalhista|fiscal|contingência|process/i },
+    { dim: "concentracao", kw: /concentra|diversifica|carteira|cliente top|whitespace/i },
+    { dim: "narrativa", kw: /tese|tam|narrativa|crescimento|expansão|geografia|nova praça/i },
+    { dim: "atratividade", kw: /estratég|prêmio|sinergia estratég|posicionamento|marca/i },
+    { dim: "societario", kw: /societár|cap table|quotas|acordo de sócio|ip/i },
+    { dim: "processos", kw: /sop|processo|sistema|erp|integração/i },
+  ];
+
+  const dimsBoostByBuyer = (buyer: Buyer | null): Set<string> => {
+    const out = new Set<string>();
+    if (!buyer) return out;
+    const blob = [buyer.tese_aquisicao || "", buyer.racional_premio || "", ...(buyer.sinergias || [])].join(" ").toLowerCase();
+    SINERGIA_DIM_KEYWORDS.forEach((m) => { if (m.kw.test(blob)) out.add(m.dim); });
+    return out;
+  };
+  const dimsBoost = dimsBoostByBuyer(buyerSelecionado);
+
+  const initsReordered = useMemo(() => {
+    if (!buyerSelecionado || dimsBoost.size === 0) return inits;
+    return [...inits].sort((a, b) => {
+      const ab = dimsBoost.has(a.dimensao_alvo) ? 0 : 1;
+      const bb = dimsBoost.has(b.dimensao_alvo) ? 0 : 1;
+      if (ab !== bb) return ab - bb;
+      return (a.prioridade || 0) - (b.prioridade || 0);
+    });
+  }, [inits, buyerSelecionado, dimsBoost]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-volt" /></div>;
   if (!assess) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Diagnóstico não encontrado.</div>;
@@ -403,16 +491,39 @@ export default function EquityPlannerAssessment() {
                 </div>
               </Card>
             )}
+            {buyerSelecionado && (
+              <Card className="!bg-gradient-to-r from-volt/15 to-volt/5 backdrop-blur-md border-volt/50 p-4 mb-4">
+                <div className="flex items-start gap-3 flex-wrap">
+                  <Crosshair className="h-5 w-5 text-volt mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold break-words">
+                      Plano em engenharia reversa para: <span className="text-volt">{buyerSelecionado.nome_alvo || buyerSelecionado.arquetipo_comprador}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 break-words">
+                      Iniciativas que destravam sinergias deste comprador foram priorizadas no topo.
+                      {dimsBoost.size > 0 && (
+                        <> Dimensões em foco: {Array.from(dimsBoost).map((d) => DIMENSOES.find((x) => x.key === d)?.label || d).join(" · ")}.</>
+                      )}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" className="bg-transparent" onClick={() => handleSelectBuyer(buyerSelecionado)}>Limpar alvo</Button>
+                </div>
+              </Card>
+            )}
             <div className="grid md:grid-cols-4 gap-3">
-              {[1,2,3,4].map((sp) => (
+              {[1,2,3,4].map((sp) => {
+                const sprintInits = initsReordered.filter((i) => i.sprint === sp);
+                return (
                 <Card key={sp} className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-4">
                   <h4 className="font-semibold mb-3 flex items-center justify-between">
                     <span>Sprint {sp}</span>
                     <span className="text-xs text-muted-foreground">Q{sp}</span>
                   </h4>
                   <div className="space-y-2">
-                    {inits.filter((i) => i.sprint === sp).map((i) => (
-                      <div key={i.id} className={`p-3 rounded border ${i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" : "border-volt/10 bg-slate-950/40"}`}>
+                    {sprintInits.map((i) => {
+                      const boosted = !!buyerSelecionado && dimsBoost.has(i.dimensao_alvo);
+                      return (
+                      <div key={i.id} className={`p-3 rounded border ${boosted ? "border-volt/60 bg-volt/10 ring-1 ring-volt/30" : i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" : "border-volt/10 bg-slate-950/40"}`}>
                         <p className="font-medium text-sm break-words">{i.titulo}</p>
                         {i.descricao && <p className="text-xs text-muted-foreground mt-1 break-words">{i.descricao}</p>}
                         <div className="flex flex-wrap gap-1 mt-2 text-[10px]">
@@ -421,15 +532,18 @@ export default function EquityPlannerAssessment() {
                           <Badge variant="outline">{i.esforco}</Badge>
                           {i.tipo === "migracao_arquetipo" && <Badge className="bg-volt text-carbon text-[10px]">Migração</Badge>}
                           {i.tipo === "derisk" && <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px]">De-risk</Badge>}
+                          {boosted && <Badge className="bg-volt/20 text-volt border-volt/40 text-[10px]"><Crosshair className="h-3 w-3 mr-0.5" />Alvo</Badge>}
                         </div>
                       </div>
-                    ))}
-                    {inits.filter((i) => i.sprint === sp).length === 0 && (
+                      );
+                    })}
+                    {sprintInits.length === 0 && (
                       <p className="text-xs text-muted-foreground">— sem iniciativas neste sprint —</p>
                     )}
                   </div>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
 
@@ -441,10 +555,13 @@ export default function EquityPlannerAssessment() {
                            : b.arquetipo_comprador === "financeiro" ? "border-blue-500/30 bg-blue-500/5"
                            : "border-amber-500/30 bg-amber-500/5";
                 return (
-                  <Card key={i} className={`!bg-slate-900/60 backdrop-blur-md p-5 border ${tone}`}>
+                  <Card key={b.id} className={`!bg-slate-900/60 backdrop-blur-md p-5 border ${b.selecionado ? "border-volt ring-2 ring-volt/50" : tone}`}>
                     <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
                       <Badge className="bg-volt/10 text-volt border-volt/30 capitalize">{b.arquetipo_comprador}</Badge>
-                      {b.setor_alvo && <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{b.setor_alvo}</span>}
+                      <div className="flex items-center gap-1">
+                        {b.selecionado && <Badge className="bg-volt text-carbon text-[10px]"><Crosshair className="h-3 w-3 mr-0.5" />Alvo</Badge>}
+                        {b.setor_alvo && <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{b.setor_alvo}</span>}
+                      </div>
                     </div>
                     {b.nome_alvo && <h4 className="font-semibold break-words">{b.nome_alvo}</h4>}
                     <p className="text-sm text-muted-foreground mt-2 break-words">{b.tese_aquisicao}</p>
@@ -474,6 +591,22 @@ export default function EquityPlannerAssessment() {
                       {b.racional_premio && (
                         <p className="text-[11px] text-muted-foreground mt-1 break-words italic">{b.racional_premio}</p>
                       )}
+                    </div>
+
+                    <div className="mt-4 flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant={b.selecionado ? "default" : "outline"}
+                        className={b.selecionado ? "bg-volt text-carbon hover:bg-volt/90 flex-1" : "bg-transparent flex-1"}
+                        onClick={() => handleSelectBuyer(b)}
+                      >
+                        <Crosshair className="h-3 w-3 mr-1" />
+                        {b.selecionado ? "Alvo definido" : "Definir como alvo"}
+                      </Button>
+                      <Button size="sm" variant="outline" className="bg-transparent" onClick={() => handleGenerateLetter(b)}>
+                        {b.carta_convite ? <Mail className="h-3 w-3 mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                        {b.carta_convite ? "Ver carta" : "Gerar carta"}
+                      </Button>
                     </div>
                   </Card>
                 );
@@ -641,6 +774,46 @@ export default function EquityPlannerAssessment() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Carta-convite — Onda 5 */}
+        <Dialog open={letterOpen} onOpenChange={setLetterOpen}>
+          <DialogContent className="max-w-2xl !bg-slate-900 border-volt/30">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-volt" />
+                Carta-convite blind — {letterBuyer?.nome_alvo || letterBuyer?.arquetipo_comprador}
+              </DialogTitle>
+            </DialogHeader>
+            {letterLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin text-volt" />
+                <p className="text-sm">Gerando carta personalizada com IA…</p>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={letterText}
+                  onChange={(e) => setLetterText(e.target.value)}
+                  className="w-full h-80 p-4 rounded border border-volt/20 bg-slate-950/60 text-sm font-mono leading-relaxed resize-none focus:border-volt focus:outline-none break-words"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Texto blind (sem razão social). Você pode editar antes de enviar.
+                </p>
+              </>
+            )}
+            <DialogFooter className="flex-wrap gap-2">
+              <Button variant="outline" className="bg-transparent" onClick={() => letterBuyer && handleGenerateLetter({ ...letterBuyer, carta_convite: null })} disabled={letterLoading}>
+                <Sparkles className="h-3 w-3 mr-1" /> Regenerar
+              </Button>
+              <Button variant="outline" className="bg-transparent" onClick={copyLetter} disabled={letterLoading || !letterText}>
+                <Copy className="h-3 w-3 mr-1" /> Copiar
+              </Button>
+              <Button className="bg-volt text-carbon hover:bg-volt/90" onClick={openWhatsApp} disabled={letterLoading || !letterText}>
+                <MessageCircle className="h-3 w-3 mr-1" /> Enviar via WhatsApp
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
