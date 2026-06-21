@@ -243,7 +243,77 @@ export default function EquityPlannerAssessment() {
           </TabsContent>
 
           {/* VALOR */}
-          <TabsContent value="valor" className="mt-4">
+          <TabsContent value="valor" className="mt-4 space-y-4">
+            {/* Triangulação de métodos */}
+            {val && (val.valor_dcf || val.valor_sde) && (
+              <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/20 p-5">
+                <h3 className="font-semibold mb-3">Triangulação de valor — sanity check</h3>
+                <div className="grid md:grid-cols-4 gap-3">
+                  <div className="p-3 rounded border border-volt/30 bg-volt/5">
+                    <p className="text-xs uppercase text-muted-foreground">Múltiplos (âncora)</p>
+                    <p className="text-xl font-bold text-volt mt-1">{brl(val.valor_atual)}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">EBITDA × {val.multiplo_aplicado}x</p>
+                  </div>
+                  {!!val.valor_dcf && (
+                    <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
+                      <p className="text-xs uppercase text-muted-foreground">DCF (5 anos + perpetuidade)</p>
+                      <p className="text-xl font-bold mt-1">{brl(val.valor_dcf)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        WACC {(val.dcf_premissas?.wacc*100).toFixed(0)}% · CAGR {(val.dcf_premissas?.cagr_5y*100).toFixed(0)}% · g {(val.dcf_premissas?.perpetuidade_g*100).toFixed(1)}%
+                      </p>
+                    </div>
+                  )}
+                  {!!val.valor_sde && (
+                    <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
+                      <p className="text-xs uppercase text-muted-foreground">SDE (dono-operador)</p>
+                      <p className="text-xl font-bold mt-1">{brl(val.valor_sde)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">EBITDA + pró-labore × múltiplo de micro</p>
+                    </div>
+                  )}
+                  {!!val.valor_triangulado && (
+                    <div className="p-3 rounded border border-emerald-500/30 bg-emerald-500/5">
+                      <p className="text-xs uppercase text-muted-foreground">Triangulado</p>
+                      <p className="text-xl font-bold text-emerald-400 mt-1">{brl(val.valor_triangulado)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">Mix ponderado dos métodos</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {/* Normalização EBITDA */}
+            {val && val.addbacks && Object.keys(val.addbacks || {}).length > 0 && (
+              <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
+                <h3 className="font-semibold mb-3">Normalização do EBITDA — addbacks identificados</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        <tr className="border-b border-volt/10">
+                          <td className="py-2 text-muted-foreground">EBITDA contábil</td>
+                          <td className="py-2 text-right font-mono">{brl(val.ebitda_contabil)}</td>
+                        </tr>
+                        {Object.entries(val.addbacks).filter(([_,v]) => Number(v) > 0).map(([k, v]) => (
+                          <tr key={k} className="border-b border-volt/5">
+                            <td className="py-2 text-xs text-muted-foreground">+ {k.replace(/_/g, " ")}</td>
+                            <td className="py-2 text-right font-mono text-volt">{brl(Number(v))}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t-2 border-volt/30">
+                          <td className="py-2 font-semibold">EBITDA normalizado</td>
+                          <td className="py-2 text-right font-mono font-bold text-volt">{brl(val.ebitda_normalizado)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-2">
+                    <p><strong className="text-volt">Por que normalizar?</strong> Compradores aplicam o múltiplo sobre o EBITDA "limpo" — descontando custos pessoais do dono, gastos não-recorrentes e remunerações fora do mercado.</p>
+                    <p>Cada R$ de addback bem-documentado vale múltiplo × R$ de preço de venda. Documente em planilha auditável com lastro.</p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
               <h3 className="font-semibold mb-3">Value Bridge — valor hoje → valor potencial</h3>
               <ResponsiveContainer width="100%" height={340}>
