@@ -56,6 +56,7 @@ function buildPrompt(args: {
   comps: any[];
   library: any[];
   migrations: any[];
+  buyerArchetypes: any[];
 }) {
   return `INTAKE_TEXTO_LIVRE:
 """
@@ -88,27 +89,35 @@ ${JSON.stringify(args.library.map(i => ({
 ROTAS_MIGRACAO_DISPONIVEIS:
 ${JSON.stringify(args.migrations, null, 2)}
 
+PERFIS_COMPRADOR_DISPONIVEIS (ancore buyer_map em perfil_id):
+${JSON.stringify(args.buyerArchetypes.map(b => ({
+  perfil_id: b.id, arquetipo: b.arquetipo_comprador, nome: b.nome_perfil,
+  setor: b.setor_alvo, tese: b.tese_padrao,
+  premio_pct: [b.premio_tipico_min, b.premio_tipico_max],
+  sinergias: b.sinergias_padrao, exemplos: b.exemplos_targets,
+})), null, 2)}
+
 Devolva um JSON com a forma:
 {
-  "dimensoes": [
-    { "dimensao": "independencia_dono", "score": 0, "evidencia": "string", "premissa": false }
-  ],
+  "dimensoes": [{ "dimensao": "independencia_dono", "score": 0, "evidencia": "string", "premissa": false }],
+  "ebitda_contabil": 0,
   "ebitda_normalizado": 0,
-  "addbacks": { "remuneracao_dono": 0, "despesas_pessoais": 0, "nao_recorrentes": 0 },
+  "addbacks": { "remuneracao_dono": 0, "despesas_pessoais": 0, "nao_recorrentes": 0, "aluguel_imovel_proprio": 0, "outros": 0 },
+  "dcf_premissas": { "wacc": 0.20, "cagr_5y": 0.12, "perpetuidade_g": 0.04, "taxa_imposto": 0.27 },
   "premissas_valuation": ["string"],
   "veredito_liquidez": "vendavel_hoje|vendavel_6_12m|vendavel_12_24m|inviavel_sem_reestruturacao",
   "summary": "2-3 frases para o dono",
   "iniciativas": [
-    {
-      "library_id": null,
-      "titulo":"string","descricao":"string","dimensao_alvo":"independencia_dono",
+    { "library_id": null, "titulo":"string","descricao":"string","dimensao_alvo":"independencia_dono",
       "delta_ipe": 0, "delta_valor": 0, "esforco":"baixo|medio|alto",
-      "prazo_meses": 3, "sprint": 1, "tipo":"execucao|derisk|migracao_arquetipo",
-      "custom_justificativa": null
-    }
+      "prazo_meses": 3, "sprint": 1, "tipo":"execucao|derisk|migracao_arquetipo", "custom_justificativa": null }
   ],
   "buyer_map": [
-    {"arquetipo_comprador":"estrategico|financeiro|individual","tese_aquisicao":"string","premio_estimado_pct": 0, "nome_alvo":"perfil generico"}
+    { "perfil_id": "uuid_do_perfil",
+      "arquetipo_comprador":"estrategico|financeiro|individual",
+      "tese_aquisicao":"string", "racional_premio":"string",
+      "premio_estimado_pct": 0, "nome_alvo":"perfil ou descricao",
+      "setor_alvo":"string", "sinergias":["s1","s2"], "exemplos_targets":["nome1","nome2"] }
   ]
 }`;
 }
