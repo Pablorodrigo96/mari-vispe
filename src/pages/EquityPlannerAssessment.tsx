@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, RefreshCw, ArrowLeft, TrendingUp, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -29,7 +29,7 @@ interface Valuation { id: string; ebitda_contabil: number | null; ebitda_normali
 interface Bridge { parcela: string; descricao: string; delta_valor: number; ordem: number; }
 interface Initiative { id: string; titulo: string; descricao: string | null; dimensao_alvo: string; delta_ipe: number; delta_valor: number; esforco: string; prazo_meses: number; sprint: number; status: string; tipo: string; prioridade: number; }
 interface Buyer { arquetipo_comprador: string; nome_alvo: string | null; setor_alvo: string | null; tese_aquisicao: string | null; racional_premio: string | null; sinergias: string[] | null; exemplos_targets: string[] | null; premio_estimado_pct: number; premio_estimado_valor: number; }
-interface Progresso { ipe: number; valor: number; created_at: string; evento: string; }
+interface Progresso { id: string; assessment_id: string | null; ipe: number; valor: number; valor_alvo: number | null; created_at: string; evento: string; dim_snapshot: Record<string, number> | null; top_destruidores: any[] | null; arquetipo_id: string | null; veredito_liquidez: string | null; }
 
 export default function EquityPlannerAssessment() {
   const { id } = useParams();
@@ -37,6 +37,7 @@ export default function EquityPlannerAssessment() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
+  const [creatingRound, setCreatingRound] = useState(false);
   const [assess, setAssess] = useState<Assessment | null>(null);
   const [dims, setDims] = useState<DimScore[]>([]);
   const [val, setVal] = useState<Valuation | null>(null);
