@@ -290,8 +290,44 @@ Deno.serve(async (req) => {
       { valuation_id: valIns.id, parcela: "valor_alvo", descricao: "Valor potencial pós-execução do plano", delta_valor: valorAlvo, ordem: 5 },
     ]);
 
-    // initiatives
-    const inits = (parsed.iniciativas || []).map((i: any, idx: number) => ({
+    // initiatives — força migração de arquétipo no topo se sugerida pelo classificador
+    const migrSug = classification?.migracao_sugerida;
+    let allInits: any[] = (parsed.iniciativas || []).slice();
+    const hasMigracao = allInits.some((i: any) => i.tipo === "migracao_arquetipo");
+    if (migrSug?.para_arquetipo_id && !hasMigracao) {
+      const rota = (migrations || []).find((m: any) => m.para_arquetipo_id === migrSug.para_arquetipo_id);
+      const deltaMult = Number(rota?.delta_multiplo_esperado || 2.5);
+      allInits.unshift({
+        library_id: null,
+        titulo: rota?.titulo || `Migrar para ${migrSug.para_arquetipo_id}`,
+        descricao: rota?.descricao_rota || migrSug.racional,
+        dimensao_alvo: "qualidade_receita",
+        delta_ipe: 15,
+        delta_valor: Math.round(deltaMult * Math.max(0, ebitda)),
+        esforco: "alto",
+        prazo_meses: 9,
+        sprint: 1,
+        tipo: "migracao_arquetipo",
+      });
+    }
+
+    // Priorização: derisk (independencia/higiene/contingencias) primeiro,
+    // migração obrigatória no topo, depois execução por (delta_valor / esforco*prazo)
+    const ESFORCO_W: Record<string, number> = { baixo: 1, medio: 2, alto: 3 };
+    const DERISK_DIMS = new Set(["independencia_dono","higiene_financeira","contingencias"]);
+    allInits.sort((a: any, b: any) => {
+      const am = a.tipo === "migracao_arquetipo" ? 0 : 1;
+      const bm = b.tipo === "migracao_arquetipo" ? 0 : 1;
+      if (am !== bm) return am - bm;
+      const ad = DERISK_DIMS.has(a.dimensao_alvo) ? 0 : 1;
+      const bd = DERISK_DIMS.has(b.dimensao_alvo) ? 0 : 1;
+      if (ad !== bd) return ad - bd;
+      const ap = (Number(a.delta_valor) || 0) / ((ESFORCO_W[a.esforco] || 2) * Math.max(1, Number(a.prazo_meses) || 3));
+      const bp = (Number(b.delta_valor) || 0) / ((ESFORCO_W[b.esforco] || 2) * Math.max(1, Number(b.prazo_meses) || 3));
+      return bp - ap;
+    });
+
+    const inits = allInits.map((i: any, idx: number) => ({
       assessment_id: assessmentId,
       dimensao_alvo: DIMENSOES.includes(i.dimensao_alvo) ? i.dimensao_alvo : "independencia_dono",
       titulo: String(i.titulo || "Iniciativa"),
@@ -300,9 +336,11 @@ Deno.serve(async (req) => {
       delta_valor: Math.max(0, Number(i.delta_valor) || 0),
       esforco: ["baixo","medio","alto"].includes(i.esforco) ? i.esforco : "medio",
       prazo_meses: Math.max(1, Number(i.prazo_meses) || 3),
-      sprint: Math.max(1, Math.min(4, Number(i.sprint) || 1)),
+      sprint: Math.max(1, Math.min(4, Number(i.sprint) || (idx < 3 ? 1 : idx < 6 ? 2 : idx < 9 ? 3 : 4))),
       status: "planejada",
-      tipo: ["execucao","derisk","migracao_arquetipo"].includes(i.tipo) ? i.tipo : "execucao",
+      tipo: ["execucao","derisk","migracao_arquetipo"].includes(i.tipo)
+        ? i.tipo
+        : (DERISK_DIMS.has(i.dimensao_alvo) ? "derisk" : "execucao"),
       prioridade: idx + 1,
     }));
     if (inits.length) await supabase.from("equity_initiatives").insert(inits);
