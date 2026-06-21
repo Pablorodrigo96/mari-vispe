@@ -199,6 +199,7 @@ export default function EquityPlannerAssessment() {
             <TabsTrigger value="valor"><TrendingUp className="h-4 w-4 mr-1" /> Valor</TabsTrigger>
             <TabsTrigger value="plano"><Target className="h-4 w-4 mr-1" /> Plano</TabsTrigger>
             <TabsTrigger value="compradores"><Users className="h-4 w-4 mr-1" /> Compradores</TabsTrigger>
+            <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1" /> Docs</TabsTrigger>
             <TabsTrigger value="progresso"><LineIcon className="h-4 w-4 mr-1" /> Progresso</TabsTrigger>
           </TabsList>
 
