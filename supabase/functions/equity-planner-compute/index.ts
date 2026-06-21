@@ -31,23 +31,30 @@ const DIM_LABELS: Record<string,string> = {
 };
 
 const SYSTEM = `Você é o orquestrador de um motor de Equity Planner para PMEs brasileiras.
-Sua missão: a partir do intake do empresário (texto livre + respostas estruturadas) e dos arquétipos/comps fornecidos, devolver um JSON estrito com:
-1) arquetipo_sugerido (id) + confianca (0..1) + racional curto;
-2) scores nas 12 dimensões (0..100) com 1 evidência cada;
-3) ebitda_normalizado em reais (estime addbacks declarados; se faltar dado, use a melhor estimativa marcada como premissa);
-4) iniciativas (8 a 12) priorizadas em sprints (1..4) cobrindo 12 meses, cada uma com delta_ipe e delta_valor em reais;
-5) buyer_map (3 entradas, uma por arquétipo de comprador) com tese e premio_estimado_pct (0..30).
+Sua missão: a partir do intake do empresário (texto livre + respostas estruturadas), de uma CLASSIFICAÇÃO DE ARQUÉTIPO já feita por um classificador especialista, e dos arquétipos/comps/biblioteca fornecidos, devolver um JSON estrito com:
+1) scores nas 12 dimensões (0..100) com 1 evidência cada;
+2) ebitda_normalizado em reais (estime addbacks declarados; se faltar dado, use a melhor estimativa marcada como premissa);
+3) iniciativas (8 a 12) priorizadas em sprints (1..4) cobrindo 12 meses, cada uma com delta_ipe e delta_valor em reais — ANCORE em itens do PLAYBOOK quando possível, e marque library_id; iniciativas custom só com justificativa;
+4) buyer_map (3 entradas, uma por arquétipo de comprador) com tese e premio_estimado_pct (0..30);
+5) veredito_liquidez calibrado: vendavel_hoje (IPE>=75 sem killers), vendavel_6_12m (IPE 60-75), vendavel_12_24m (IPE 45-60), inviavel_sem_reestruturacao (IPE<45 ou killers críticos);
+6) summary em 2-3 frases pro dono.
 
-REGRA DE GROUNDING: todo número ancora em algo do intake; quando faltar, marque "premissa" na evidência.
-Linguagem pt-BR, tom de sócio de M&A direto. NÃO invente CNPJ, nomes de empresas reais ou múltiplos fora da faixa.
-Devolva APENAS o JSON, sem markdown.`;
+REGRAS DURAS:
+- O ARQUÉTIPO já foi decidido pelo classificador. Não troque.
+- Se a classificação inclui migracao_arquetipo_sugerida, GARANTA uma iniciativa tipo "migracao_arquetipo" no SPRINT 1 com delta_valor significativo (use delta_multiplo_esperado × ebitda).
+- Ordem de execução respeita "DE-RISKING ANTES DE CRESCIMENTO": dimensões independencia_dono, higiene_financeira, contingencias vêm nos sprints 1-2; narrativa/atratividade/motor_comercial nos sprints 3-4.
+- Todo número ancora em algo do intake; quando faltar, marque "premissa" na evidência.
+- Linguagem pt-BR, tom de sócio de M&A direto. NÃO invente CNPJ, nomes de empresas reais ou múltiplos fora da faixa.
+- Devolva APENAS o JSON, sem markdown.`;
 
 function buildPrompt(args: {
   companyData: any;
   intakeText: string;
+  classification: any;
   archetypes: any[];
   comps: any[];
   library: any[];
+  migrations: any[];
 }) {
   return `INTAKE_TEXTO_LIVRE:
 """
@@ -57,6 +64,9 @@ ${args.intakeText}
 EMPRESA (declarada):
 ${JSON.stringify(args.companyData, null, 2)}
 
+CLASSIFICACAO_ARQUETIPO (já decidida — use como verdade):
+${JSON.stringify(args.classification || {}, null, 2)}
+
 ARQUETIPOS_DISPONIVEIS:
 ${JSON.stringify(args.archetypes.map(a => ({
   id: a.id, nome: a.nome, descricao: a.descricao,
@@ -64,33 +74,36 @@ ${JSON.stringify(args.archetypes.map(a => ({
   pesos: a.pesos_dimensoes, killers: a.killers,
 })), null, 2)}
 
-COMPS_BENCHMARKS (por arquétipo×porte):
+COMPS_BENCHMARKS:
 ${JSON.stringify(args.comps, null, 2)}
 
-PLAYBOOK_INICIATIVAS_BASE:
+PLAYBOOK_INICIATIVAS (use library_id quando ancorar):
 ${JSON.stringify(args.library.map(i => ({
-  arquetipo: i.arquetipo_id, dim: i.dimensao, titulo: i.titulo,
-  delta_ipe: i.delta_ipe_padrao, esforco: i.esforco, prazo: i.prazo_meses, tipo: i.tipo,
+  library_id: i.id, arquetipo: i.arquetipo_id, dim: i.dimensao, titulo: i.titulo,
+  descricao: i.descricao, delta_ipe: i.delta_ipe_padrao, esforco: i.esforco,
+  prazo: i.prazo_meses, tipo: i.tipo,
 })), null, 2)}
+
+ROTAS_MIGRACAO_DISPONIVEIS:
+${JSON.stringify(args.migrations, null, 2)}
 
 Devolva um JSON com a forma:
 {
-  "arquetipo_sugerido": "servico_profissional|projeto_obra|recorrente",
-  "confianca_arquetipo": 0.0,
-  "racional_arquetipo": "string curta",
   "dimensoes": [
     { "dimensao": "independencia_dono", "score": 0, "evidencia": "string", "premissa": false }
   ],
   "ebitda_normalizado": 0,
   "addbacks": { "remuneracao_dono": 0, "despesas_pessoais": 0, "nao_recorrentes": 0 },
   "premissas_valuation": ["string"],
-  "veredito_liquidez": "vendavel_hoje|vendavel_em_meses|inviavel",
+  "veredito_liquidez": "vendavel_hoje|vendavel_6_12m|vendavel_12_24m|inviavel_sem_reestruturacao",
   "summary": "2-3 frases para o dono",
   "iniciativas": [
     {
+      "library_id": null,
       "titulo":"string","descricao":"string","dimensao_alvo":"independencia_dono",
       "delta_ipe": 0, "delta_valor": 0, "esforco":"baixo|medio|alto",
-      "prazo_meses": 3, "sprint": 1, "tipo":"execucao|derisk|migracao_arquetipo"
+      "prazo_meses": 3, "sprint": 1, "tipo":"execucao|derisk|migracao_arquetipo",
+      "custom_justificativa": null
     }
   ],
   "buyer_map": [
