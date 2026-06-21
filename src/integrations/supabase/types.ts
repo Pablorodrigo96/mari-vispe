@@ -1505,6 +1505,42 @@ export type Database = {
         }
         Relationships: []
       }
+      equity_archetype_migrations: {
+        Row: {
+          created_at: string
+          de_arquetipo_id: string
+          delta_multiplo_esperado: number
+          descricao_curta: string | null
+          descricao_rota: string
+          exemplos: string[] | null
+          id: string
+          para_arquetipo_id: string
+          titulo: string
+        }
+        Insert: {
+          created_at?: string
+          de_arquetipo_id: string
+          delta_multiplo_esperado?: number
+          descricao_curta?: string | null
+          descricao_rota: string
+          exemplos?: string[] | null
+          id?: string
+          para_arquetipo_id: string
+          titulo: string
+        }
+        Update: {
+          created_at?: string
+          de_arquetipo_id?: string
+          delta_multiplo_esperado?: number
+          descricao_curta?: string | null
+          descricao_rota?: string
+          exemplos?: string[] | null
+          id?: string
+          para_arquetipo_id?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       equity_archetypes: {
         Row: {
           created_at: string
@@ -1558,6 +1594,7 @@ export type Database = {
       }
       equity_assessments: {
         Row: {
+          archetype_classification: Json | null
           arquetipo_id: string | null
           arquetipo_sugerido: string | null
           company_id: string
@@ -1565,6 +1602,7 @@ export type Database = {
           created_at: string
           id: string
           ipe_composto: number | null
+          migracao_arquetipo_sugerida: Json | null
           raw_intake: Json | null
           source: string
           status: string
@@ -1574,6 +1612,7 @@ export type Database = {
           veredito_liquidez: string | null
         }
         Insert: {
+          archetype_classification?: Json | null
           arquetipo_id?: string | null
           arquetipo_sugerido?: string | null
           company_id: string
@@ -1581,6 +1620,7 @@ export type Database = {
           created_at?: string
           id?: string
           ipe_composto?: number | null
+          migracao_arquetipo_sugerida?: Json | null
           raw_intake?: Json | null
           source?: string
           status?: string
@@ -1590,6 +1630,7 @@ export type Database = {
           veredito_liquidez?: string | null
         }
         Update: {
+          archetype_classification?: Json | null
           arquetipo_id?: string | null
           arquetipo_sugerido?: string | null
           company_id?: string
@@ -1597,6 +1638,7 @@ export type Database = {
           created_at?: string
           id?: string
           ipe_composto?: number | null
+          migracao_arquetipo_sugerida?: Json | null
           raw_intake?: Json | null
           source?: string
           status?: string
