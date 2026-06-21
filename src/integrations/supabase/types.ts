@@ -1603,7 +1603,9 @@ export type Database = {
           id: string
           ipe_composto: number | null
           migracao_arquetipo_sugerida: Json | null
+          parent_assessment_id: string | null
           raw_intake: Json | null
+          rodada: number | null
           source: string
           status: string
           summary: string | null
@@ -1621,7 +1623,9 @@ export type Database = {
           id?: string
           ipe_composto?: number | null
           migracao_arquetipo_sugerida?: Json | null
+          parent_assessment_id?: string | null
           raw_intake?: Json | null
+          rodada?: number | null
           source?: string
           status?: string
           summary?: string | null
@@ -1639,7 +1643,9 @@ export type Database = {
           id?: string
           ipe_composto?: number | null
           migracao_arquetipo_sugerida?: Json | null
+          parent_assessment_id?: string | null
           raw_intake?: Json | null
+          rodada?: number | null
           source?: string
           status?: string
           summary?: string | null
@@ -1667,6 +1673,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "equity_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equity_assessments_parent_assessment_id_fkey"
+            columns: ["parent_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "equity_assessments"
             referencedColumns: ["id"]
           },
         ]
@@ -2096,31 +2109,46 @@ export type Database = {
       }
       equity_progress_log: {
         Row: {
+          arquetipo_id: string | null
           assessment_id: string | null
           company_id: string
           created_at: string
+          dim_snapshot: Json | null
           evento: string | null
           id: string
           ipe: number | null
+          top_destruidores: Json | null
           valor: number | null
+          valor_alvo: number | null
+          veredito_liquidez: string | null
         }
         Insert: {
+          arquetipo_id?: string | null
           assessment_id?: string | null
           company_id: string
           created_at?: string
+          dim_snapshot?: Json | null
           evento?: string | null
           id?: string
           ipe?: number | null
+          top_destruidores?: Json | null
           valor?: number | null
+          valor_alvo?: number | null
+          veredito_liquidez?: string | null
         }
         Update: {
+          arquetipo_id?: string | null
           assessment_id?: string | null
           company_id?: string
           created_at?: string
+          dim_snapshot?: Json | null
           evento?: string | null
           id?: string
           ipe?: number | null
+          top_destruidores?: Json | null
           valor?: number | null
+          valor_alvo?: number | null
+          veredito_liquidez?: string | null
         }
         Relationships: [
           {
