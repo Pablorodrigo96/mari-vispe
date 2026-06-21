@@ -409,16 +409,26 @@ Deno.serve(async (req) => {
     }));
     if (inits.length) await supabase.from("equity_initiatives").insert(inits);
 
-    // buyer map
-    const buyers = (parsed.buyer_map || []).slice(0, 5).map((b: any, idx: number) => ({
-      assessment_id: assessmentId,
-      arquetipo_comprador: ["estrategico","financeiro","individual"].includes(b.arquetipo_comprador) ? b.arquetipo_comprador : "estrategico",
-      nome_alvo: b.nome_alvo || null,
-      tese_aquisicao: b.tese_aquisicao || null,
-      premio_estimado_pct: Math.max(0, Math.min(50, Number(b.premio_estimado_pct) || 0)),
-      premio_estimado_valor: Math.round(valorAlvoBase * Math.max(0, Number(b.premio_estimado_pct) || 0) / 100),
-      prioridade: idx + 1,
-    }));
+    // buyer map enriquecido — herda sinergias/exemplos do perfil ancorado quando IA não preencher
+    const buyerArchById = new Map((buyerArchs || []).map((b: any) => [b.id, b]));
+    const buyers = (parsed.buyer_map || []).slice(0, 5).map((b: any, idx: number) => {
+      const perfil = b.perfil_id ? buyerArchById.get(b.perfil_id) : null;
+      const sin = Array.isArray(b.sinergias) && b.sinergias.length ? b.sinergias : (perfil?.sinergias_padrao || []);
+      const ex = Array.isArray(b.exemplos_targets) && b.exemplos_targets.length ? b.exemplos_targets : (perfil?.exemplos_targets || []);
+      return {
+        assessment_id: assessmentId,
+        arquetipo_comprador: ["estrategico","financeiro","individual"].includes(b.arquetipo_comprador) ? b.arquetipo_comprador : (perfil?.arquetipo_comprador || "estrategico"),
+        nome_alvo: b.nome_alvo || perfil?.nome_perfil || null,
+        setor_alvo: b.setor_alvo || perfil?.setor_alvo || null,
+        tese_aquisicao: b.tese_aquisicao || perfil?.tese_padrao || null,
+        racional_premio: b.racional_premio || null,
+        sinergias: sin,
+        exemplos_targets: ex,
+        premio_estimado_pct: Math.max(0, Math.min(50, Number(b.premio_estimado_pct) || 0)),
+        premio_estimado_valor: Math.round(valorAlvoBase * Math.max(0, Number(b.premio_estimado_pct) || 0) / 100),
+        prioridade: idx + 1,
+      };
+    });
     if (buyers.length) await supabase.from("equity_buyer_map").insert(buyers);
 
     // veredito calibrado
