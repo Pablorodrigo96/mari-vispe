@@ -774,6 +774,46 @@ export default function EquityPlannerAssessment() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Carta-convite — Onda 5 */}
+        <Dialog open={letterOpen} onOpenChange={setLetterOpen}>
+          <DialogContent className="max-w-2xl !bg-slate-900 border-volt/30">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-volt" />
+                Carta-convite blind — {letterBuyer?.nome_alvo || letterBuyer?.arquetipo_comprador}
+              </DialogTitle>
+            </DialogHeader>
+            {letterLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin text-volt" />
+                <p className="text-sm">Gerando carta personalizada com IA…</p>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={letterText}
+                  onChange={(e) => setLetterText(e.target.value)}
+                  className="w-full h-80 p-4 rounded border border-volt/20 bg-slate-950/60 text-sm font-mono leading-relaxed resize-none focus:border-volt focus:outline-none break-words"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Texto blind (sem razão social). Você pode editar antes de enviar.
+                </p>
+              </>
+            )}
+            <DialogFooter className="flex-wrap gap-2">
+              <Button variant="outline" className="bg-transparent" onClick={() => letterBuyer && handleGenerateLetter({ ...letterBuyer, carta_convite: null })} disabled={letterLoading}>
+                <Sparkles className="h-3 w-3 mr-1" /> Regenerar
+              </Button>
+              <Button variant="outline" className="bg-transparent" onClick={copyLetter} disabled={letterLoading || !letterText}>
+                <Copy className="h-3 w-3 mr-1" /> Copiar
+              </Button>
+              <Button className="bg-volt text-carbon hover:bg-volt/90" onClick={openWhatsApp} disabled={letterLoading || !letterText}>
+                <MessageCircle className="h-3 w-3 mr-1" /> Enviar via WhatsApp
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
