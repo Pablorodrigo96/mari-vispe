@@ -555,10 +555,13 @@ export default function EquityPlannerAssessment() {
                            : b.arquetipo_comprador === "financeiro" ? "border-blue-500/30 bg-blue-500/5"
                            : "border-amber-500/30 bg-amber-500/5";
                 return (
-                  <Card key={i} className={`!bg-slate-900/60 backdrop-blur-md p-5 border ${tone}`}>
+                  <Card key={b.id} className={`!bg-slate-900/60 backdrop-blur-md p-5 border ${b.selecionado ? "border-volt ring-2 ring-volt/50" : tone}`}>
                     <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
                       <Badge className="bg-volt/10 text-volt border-volt/30 capitalize">{b.arquetipo_comprador}</Badge>
-                      {b.setor_alvo && <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{b.setor_alvo}</span>}
+                      <div className="flex items-center gap-1">
+                        {b.selecionado && <Badge className="bg-volt text-carbon text-[10px]"><Crosshair className="h-3 w-3 mr-0.5" />Alvo</Badge>}
+                        {b.setor_alvo && <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{b.setor_alvo}</span>}
+                      </div>
                     </div>
                     {b.nome_alvo && <h4 className="font-semibold break-words">{b.nome_alvo}</h4>}
                     <p className="text-sm text-muted-foreground mt-2 break-words">{b.tese_aquisicao}</p>
@@ -588,6 +591,22 @@ export default function EquityPlannerAssessment() {
                       {b.racional_premio && (
                         <p className="text-[11px] text-muted-foreground mt-1 break-words italic">{b.racional_premio}</p>
                       )}
+                    </div>
+
+                    <div className="mt-4 flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant={b.selecionado ? "default" : "outline"}
+                        className={b.selecionado ? "bg-volt text-carbon hover:bg-volt/90 flex-1" : "bg-transparent flex-1"}
+                        onClick={() => handleSelectBuyer(b)}
+                      >
+                        <Crosshair className="h-3 w-3 mr-1" />
+                        {b.selecionado ? "Alvo definido" : "Definir como alvo"}
+                      </Button>
+                      <Button size="sm" variant="outline" className="bg-transparent" onClick={() => handleGenerateLetter(b)}>
+                        {b.carta_convite ? <Mail className="h-3 w-3 mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                        {b.carta_convite ? "Ver carta" : "Gerar carta"}
+                      </Button>
                     </div>
                   </Card>
                 );
