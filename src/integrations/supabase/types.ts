@@ -1671,38 +1671,92 @@ export type Database = {
           },
         ]
       }
+      equity_buyer_archetypes: {
+        Row: {
+          arquetipo_comprador: string
+          created_at: string
+          exemplos_targets: Json | null
+          id: string
+          nome_perfil: string
+          premio_tipico_max: number | null
+          premio_tipico_min: number | null
+          seller_arquetipo_id: string
+          setor_alvo: string | null
+          sinergias_padrao: Json | null
+          tese_padrao: string
+        }
+        Insert: {
+          arquetipo_comprador: string
+          created_at?: string
+          exemplos_targets?: Json | null
+          id?: string
+          nome_perfil: string
+          premio_tipico_max?: number | null
+          premio_tipico_min?: number | null
+          seller_arquetipo_id: string
+          setor_alvo?: string | null
+          sinergias_padrao?: Json | null
+          tese_padrao: string
+        }
+        Update: {
+          arquetipo_comprador?: string
+          created_at?: string
+          exemplos_targets?: Json | null
+          id?: string
+          nome_perfil?: string
+          premio_tipico_max?: number | null
+          premio_tipico_min?: number | null
+          seller_arquetipo_id?: string
+          setor_alvo?: string | null
+          sinergias_padrao?: Json | null
+          tese_padrao?: string
+        }
+        Relationships: []
+      }
       equity_buyer_map: {
         Row: {
           arquetipo_comprador: string
           assessment_id: string
           created_at: string
+          exemplos_targets: Json | null
           id: string
           nome_alvo: string | null
           premio_estimado_pct: number | null
           premio_estimado_valor: number | null
           prioridade: number | null
+          racional_premio: string | null
+          setor_alvo: string | null
+          sinergias: Json | null
           tese_aquisicao: string | null
         }
         Insert: {
           arquetipo_comprador: string
           assessment_id: string
           created_at?: string
+          exemplos_targets?: Json | null
           id?: string
           nome_alvo?: string | null
           premio_estimado_pct?: number | null
           premio_estimado_valor?: number | null
           prioridade?: number | null
+          racional_premio?: string | null
+          setor_alvo?: string | null
+          sinergias?: Json | null
           tese_aquisicao?: string | null
         }
         Update: {
           arquetipo_comprador?: string
           assessment_id?: string
           created_at?: string
+          exemplos_targets?: Json | null
           id?: string
           nome_alvo?: string | null
           premio_estimado_pct?: number | null
           premio_estimado_valor?: number | null
           prioridade?: number | null
+          racional_premio?: string | null
+          setor_alvo?: string | null
+          sinergias?: Json | null
           tese_aquisicao?: string | null
         }
         Relationships: [
@@ -2090,6 +2144,8 @@ export type Database = {
           addbacks: Json | null
           assessment_id: string
           created_at: string
+          dcf_premissas: Json | null
+          ebitda_contabil: number | null
           ebitda_normalizado: number | null
           faixa_max: number | null
           faixa_min: number | null
@@ -2099,11 +2155,16 @@ export type Database = {
           premissas: Json | null
           valor_alvo: number | null
           valor_atual: number | null
+          valor_dcf: number | null
+          valor_sde: number | null
+          valor_triangulado: number | null
         }
         Insert: {
           addbacks?: Json | null
           assessment_id: string
           created_at?: string
+          dcf_premissas?: Json | null
+          ebitda_contabil?: number | null
           ebitda_normalizado?: number | null
           faixa_max?: number | null
           faixa_min?: number | null
@@ -2113,11 +2174,16 @@ export type Database = {
           premissas?: Json | null
           valor_alvo?: number | null
           valor_atual?: number | null
+          valor_dcf?: number | null
+          valor_sde?: number | null
+          valor_triangulado?: number | null
         }
         Update: {
           addbacks?: Json | null
           assessment_id?: string
           created_at?: string
+          dcf_premissas?: Json | null
+          ebitda_contabil?: number | null
           ebitda_normalizado?: number | null
           faixa_max?: number | null
           faixa_min?: number | null
@@ -2127,6 +2193,9 @@ export type Database = {
           premissas?: Json | null
           valor_alvo?: number | null
           valor_atual?: number | null
+          valor_dcf?: number | null
+          valor_sde?: number | null
+          valor_triangulado?: number | null
         }
         Relationships: [
           {
