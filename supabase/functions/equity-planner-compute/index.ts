@@ -168,12 +168,13 @@ Deno.serve(async (req) => {
     }
     const arqId = classification.arquetipo_id || (assess as any).arquetipo_sugerido || "servico_profissional";
 
-    // 2) Carregar arquétipos + comps + library + migrations + documentos extraídos
-    const [{ data: archetypes }, { data: comps }, { data: library }, { data: migrations }, { data: docs }] = await Promise.all([
+    // 2) Carregar arquétipos + comps + library + migrations + buyer archetypes + documentos extraídos
+    const [{ data: archetypes }, { data: comps }, { data: library }, { data: migrations }, { data: buyerArchs }, { data: docs }] = await Promise.all([
       supabase.from("equity_archetypes").select("*").order("ordem"),
       supabase.from("equity_comps_benchmarks").select("*"),
       supabase.from("equity_initiative_library").select("*").eq("arquetipo_id", arqId),
       supabase.from("equity_archetype_migrations").select("*").eq("de_arquetipo_id", arqId),
+      supabase.from("equity_buyer_archetypes").select("*").eq("seller_arquetipo_id", arqId),
       supabase.from("equity_company_documents")
         .select("file_name, doc_type, extraction_summary, extracted_json")
         .eq("assessment_id", assessmentId)
@@ -193,14 +194,14 @@ Deno.serve(async (req) => {
       companyData, intakeText: (intakeText || "") + docContext,
       classification,
       archetypes: archetypes || [], comps: comps || [], library: library || [],
-      migrations: migrations || [],
+      migrations: migrations || [], buyerArchetypes: buyerArchs || [],
     });
 
     const ai = await callAnthropic({
       model: "claude-sonnet-4-6",
       system: SYSTEM,
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 4500,
+      max_tokens: 5500,
       temperature: 0.3,
       function_name: "equity-planner-compute",
       feature: "equity_planner",
