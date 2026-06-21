@@ -491,16 +491,39 @@ export default function EquityPlannerAssessment() {
                 </div>
               </Card>
             )}
+            {buyerSelecionado && (
+              <Card className="!bg-gradient-to-r from-volt/15 to-volt/5 backdrop-blur-md border-volt/50 p-4 mb-4">
+                <div className="flex items-start gap-3 flex-wrap">
+                  <Crosshair className="h-5 w-5 text-volt mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold break-words">
+                      Plano em engenharia reversa para: <span className="text-volt">{buyerSelecionado.nome_alvo || buyerSelecionado.arquetipo_comprador}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 break-words">
+                      Iniciativas que destravam sinergias deste comprador foram priorizadas no topo.
+                      {dimsBoost.size > 0 && (
+                        <> Dimensões em foco: {Array.from(dimsBoost).map((d) => DIMENSOES.find((x) => x.key === d)?.label || d).join(" · ")}.</>
+                      )}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" className="bg-transparent" onClick={() => handleSelectBuyer(buyerSelecionado)}>Limpar alvo</Button>
+                </div>
+              </Card>
+            )}
             <div className="grid md:grid-cols-4 gap-3">
-              {[1,2,3,4].map((sp) => (
+              {[1,2,3,4].map((sp) => {
+                const sprintInits = initsReordered.filter((i) => i.sprint === sp);
+                return (
                 <Card key={sp} className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-4">
                   <h4 className="font-semibold mb-3 flex items-center justify-between">
                     <span>Sprint {sp}</span>
                     <span className="text-xs text-muted-foreground">Q{sp}</span>
                   </h4>
                   <div className="space-y-2">
-                    {inits.filter((i) => i.sprint === sp).map((i) => (
-                      <div key={i.id} className={`p-3 rounded border ${i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" : "border-volt/10 bg-slate-950/40"}`}>
+                    {sprintInits.map((i) => {
+                      const boosted = !!buyerSelecionado && dimsBoost.has(i.dimensao_alvo);
+                      return (
+                      <div key={i.id} className={`p-3 rounded border ${boosted ? "border-volt/60 bg-volt/10 ring-1 ring-volt/30" : i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" : "border-volt/10 bg-slate-950/40"}`}>
                         <p className="font-medium text-sm break-words">{i.titulo}</p>
                         {i.descricao && <p className="text-xs text-muted-foreground mt-1 break-words">{i.descricao}</p>}
                         <div className="flex flex-wrap gap-1 mt-2 text-[10px]">
@@ -509,15 +532,18 @@ export default function EquityPlannerAssessment() {
                           <Badge variant="outline">{i.esforco}</Badge>
                           {i.tipo === "migracao_arquetipo" && <Badge className="bg-volt text-carbon text-[10px]">Migração</Badge>}
                           {i.tipo === "derisk" && <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px]">De-risk</Badge>}
+                          {boosted && <Badge className="bg-volt/20 text-volt border-volt/40 text-[10px]"><Crosshair className="h-3 w-3 mr-0.5" />Alvo</Badge>}
                         </div>
                       </div>
-                    ))}
-                    {inits.filter((i) => i.sprint === sp).length === 0 && (
+                      );
+                    })}
+                    {sprintInits.length === 0 && (
                       <p className="text-xs text-muted-foreground">— sem iniciativas neste sprint —</p>
                     )}
                   </div>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
 
