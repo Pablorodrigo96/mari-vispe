@@ -396,17 +396,48 @@ export default function EquityPlannerAssessment() {
           {/* COMPRADORES */}
           <TabsContent value="compradores" className="mt-4">
             <div className="grid md:grid-cols-3 gap-4">
-              {buyers.map((b, i) => (
-                <Card key={i} className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
-                  <Badge className="bg-volt/10 text-volt border-volt/30 mb-2">{b.arquetipo_comprador}</Badge>
-                  {b.nome_alvo && <h4 className="font-semibold break-words">{b.nome_alvo}</h4>}
-                  <p className="text-sm text-muted-foreground mt-2 break-words">{b.tese_aquisicao}</p>
-                  <div className="mt-3 pt-3 border-t border-volt/10">
-                    <p className="text-xs text-muted-foreground">Prêmio estimado</p>
-                    <p className="text-lg font-bold text-volt">{b.premio_estimado_pct?.toFixed(0)}% · {brl(b.premio_estimado_valor)}</p>
-                  </div>
-                </Card>
-              ))}
+              {buyers.map((b, i) => {
+                const tone = b.arquetipo_comprador === "estrategico" ? "border-volt/40 bg-volt/5"
+                           : b.arquetipo_comprador === "financeiro" ? "border-blue-500/30 bg-blue-500/5"
+                           : "border-amber-500/30 bg-amber-500/5";
+                return (
+                  <Card key={i} className={`!bg-slate-900/60 backdrop-blur-md p-5 border ${tone}`}>
+                    <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                      <Badge className="bg-volt/10 text-volt border-volt/30 capitalize">{b.arquetipo_comprador}</Badge>
+                      {b.setor_alvo && <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{b.setor_alvo}</span>}
+                    </div>
+                    {b.nome_alvo && <h4 className="font-semibold break-words">{b.nome_alvo}</h4>}
+                    <p className="text-sm text-muted-foreground mt-2 break-words">{b.tese_aquisicao}</p>
+
+                    {!!b.sinergias?.length && (
+                      <div className="mt-3">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Sinergias capturáveis</p>
+                        <ul className="space-y-1">
+                          {b.sinergias.slice(0, 5).map((s, idx) => (
+                            <li key={idx} className="text-xs flex gap-1 break-words"><span className="text-volt">▸</span>{s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {!!b.exemplos_targets?.length && (
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {b.exemplos_targets.slice(0, 5).map((e, idx) => (
+                          <Badge key={idx} variant="outline" className="text-[10px] border-volt/20 bg-transparent">{e}</Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-3 border-t border-volt/10">
+                      <p className="text-xs text-muted-foreground">Prêmio estimado vs. múltiplo base</p>
+                      <p className="text-lg font-bold text-volt">{b.premio_estimado_pct?.toFixed(0)}% · {brl(b.premio_estimado_valor)}</p>
+                      {b.racional_premio && (
+                        <p className="text-[11px] text-muted-foreground mt-1 break-words italic">{b.racional_premio}</p>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
               {buyers.length === 0 && <p className="text-muted-foreground col-span-3 text-center py-10">Sem buyer map disponível.</p>}
             </div>
           </TabsContent>
