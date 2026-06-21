@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { ArrowRight, ArrowLeft, Sparkles, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { DIMENSOES, PORTE_OPTIONS } from "@/lib/equity-planner/constants";
 

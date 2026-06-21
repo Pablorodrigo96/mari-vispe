@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Activity, Target, TrendingUp, Users, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PILARES = [
   { icon: Activity, title: "Raio-X de Equity", desc: "12 dimensões de prontidão pontuadas para gerar seu Índice de Prontidão (IPE)." },
