@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -28,7 +29,7 @@ interface DimScore { dimensao: string; score: number; peso: number; destruidor_t
 interface Valuation { id: string; ebitda_contabil: number | null; ebitda_normalizado: number; addbacks: any; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; valor_dcf: number | null; valor_sde: number | null; valor_triangulado: number | null; dcf_premissas: any; }
 interface Bridge { parcela: string; descricao: string; delta_valor: number; ordem: number; }
 interface Initiative { id: string; titulo: string; descricao: string | null; dimensao_alvo: string; delta_ipe: number; delta_valor: number; esforco: string; prazo_meses: number; sprint: number; status: string; tipo: string; prioridade: number; }
-interface Buyer { arquetipo_comprador: string; nome_alvo: string | null; setor_alvo: string | null; tese_aquisicao: string | null; racional_premio: string | null; sinergias: string[] | null; exemplos_targets: string[] | null; premio_estimado_pct: number; premio_estimado_valor: number; }
+interface Buyer { id: string; arquetipo_comprador: string; nome_alvo: string | null; setor_alvo: string | null; tese_aquisicao: string | null; racional_premio: string | null; sinergias: string[] | null; exemplos_targets: string[] | null; premio_estimado_pct: number; premio_estimado_valor: number; selecionado: boolean; carta_convite: string | null; }
 interface Progresso { id: string; assessment_id: string | null; ipe: number; valor: number; valor_alvo: number | null; created_at: string; evento: string; dim_snapshot: Record<string, number> | null; top_destruidores: any[] | null; arquetipo_id: string | null; veredito_liquidez: string | null; }
 
 export default function EquityPlannerAssessment() {
@@ -45,6 +46,10 @@ export default function EquityPlannerAssessment() {
   const [inits, setInits] = useState<Initiative[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [progresso, setProgresso] = useState<Progresso[]>([]);
+  const [letterOpen, setLetterOpen] = useState(false);
+  const [letterBuyer, setLetterBuyer] = useState<Buyer | null>(null);
+  const [letterLoading, setLetterLoading] = useState(false);
+  const [letterText, setLetterText] = useState<string>("");
 
   const load = async () => {
     if (!id) return;
