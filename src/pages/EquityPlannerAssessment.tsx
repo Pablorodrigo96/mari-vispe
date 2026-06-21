@@ -90,6 +90,39 @@ export default function EquityPlannerAssessment() {
     } finally { setRecomputing(false); }
   };
 
+  const handleNewRound = async () => {
+    if (!assess || !user) return;
+    setCreatingRound(true);
+    try {
+      const rodadaAtual = Number((assess as any).rodada) || 1;
+      const { data: novo, error: insErr } = await supabase
+        .from("equity_assessments")
+        .insert({
+          user_id: user.id,
+          company_id: assess.company_id,
+          arquetipo_id: assess.arquetipo_id,
+          raw_intake: (assess as any).raw_intake || {},
+          source: "re-medicao",
+          status: "draft",
+          parent_assessment_id: assess.id,
+          rodada: rodadaAtual + 1,
+        } as any)
+        .select("id")
+        .single();
+      if (insErr) throw insErr;
+      const intake = (assess as any).raw_intake?.meetingText
+        || JSON.stringify((assess as any).raw_intake || {});
+      const { error } = await supabase.functions.invoke("equity-planner-compute", {
+        body: { assessmentId: (novo as any).id, intakeText: intake, companyData: (assess as any).raw_intake || {} },
+      });
+      if (error) throw error;
+      toast.success(`Rodada ${rodadaAtual + 1} criada`);
+      navigate(`/equity-planner/${(novo as any).id}`);
+    } catch (e: any) {
+      toast.error("Falha ao criar rodada: " + e.message);
+    } finally { setCreatingRound(false); }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-volt" /></div>;
   if (!assess) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Diagnóstico não encontrado.</div>;
 
