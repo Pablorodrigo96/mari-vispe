@@ -205,6 +205,10 @@ const App = () => (
               <Route path="/valuation/dcf" element={<ValuationDCF />} />
               <Route path="/valuation/certificador" element={<ValuationCertifier />} />
               <Route path="/valuation/plano-perfeito" element={<PlanoPerfeito />} />
+              <Route path="/equity-planner" element={<EquityPlanner />} />
+              <Route path="/equity-planner/novo" element={<EquityPlannerNew />} />
+              <Route path="/equity-planner/:id" element={<EquityPlannerAssessment />} />
+              <Route path="/meus-equity-planners" element={<MyEquityPlanners />} />
               <Route path="/capital" element={<Capital />} />
               <Route path="/matching" element={<Matching />} />
               <Route path="/teaser/:ticker" element={<BlindTeaser />} />
