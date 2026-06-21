@@ -157,6 +157,36 @@ export default function EquityPlannerAssessment() {
               </p>
             </div>
           </div>
+
+          {/* Faixa de múltiplo visual */}
+          {val && (
+            <div className="mt-6 pt-5 border-t border-volt/10">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-xs uppercase text-muted-foreground tracking-wider">Posição na faixa de múltiplo do arquétipo</p>
+                <p className="text-xs text-muted-foreground">
+                  {val.faixa_min}x — <span className="text-volt font-bold">{val.multiplo_aplicado}x hoje</span> — {val.faixa_max}x
+                </p>
+              </div>
+              <div className="relative h-3 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-rose-500/40 via-amber-500/40 to-emerald-500/60"
+                  style={{ width: "100%" }}
+                />
+                <div
+                  className="absolute top-0 h-full w-1 bg-volt shadow-[0_0_8px_#D9F564]"
+                  style={{
+                    left: `${Math.max(0, Math.min(100, ((val.multiplo_aplicado - val.faixa_min) / Math.max(0.01, (val.faixa_max - val.faixa_min))) * 100))}%`,
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                <span>zona invendável</span>
+                <span>vendável com desconto</span>
+                <span>topo da faixa + prêmio estratégico</span>
+              </div>
+            </div>
+          )}
+
           {assess.summary && (
             <p className="mt-5 text-muted-foreground break-words border-l-2 border-volt pl-4">{assess.summary}</p>
           )}
