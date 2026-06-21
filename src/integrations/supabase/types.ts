@@ -1771,6 +1771,75 @@ export type Database = {
           },
         ]
       }
+      equity_company_documents: {
+        Row: {
+          assessment_id: string | null
+          company_id: string | null
+          created_at: string
+          doc_type: string | null
+          extracted_json: Json | null
+          extraction_error: string | null
+          extraction_status: string
+          extraction_summary: string | null
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          doc_type?: string | null
+          extracted_json?: Json | null
+          extraction_error?: string | null
+          extraction_status?: string
+          extraction_summary?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assessment_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          doc_type?: string | null
+          extracted_json?: Json | null
+          extraction_error?: string | null
+          extraction_status?: string
+          extraction_summary?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_company_documents_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equity_company_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "equity_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equity_comps_benchmarks: {
         Row: {
           arquetipo_id: string
