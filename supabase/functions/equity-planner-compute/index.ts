@@ -453,12 +453,23 @@ Deno.serve(async (req) => {
       arquetipo_id: arqId,
     }).eq("id", assess.company_id);
 
-    // progress log snapshot
+    // progress log snapshot (enriquecido — Onda 4 loop)
+    const dimSnapshot: Record<string, number> = {};
+    dimRows.forEach((d: any) => { dimSnapshot[d.dimensao] = d.score; });
+    const topDestruidoresSnap = dimRows
+      .filter((d: any) => d.destruidor_top)
+      .sort((a: any, b: any) => a.score - b.score)
+      .map((d: any) => ({ dimensao: d.dimensao, score: d.score, peso: d.peso }));
     await supabase.from("equity_progress_log").insert({
       company_id: assess.company_id,
       assessment_id: assessmentId,
       ipe: ipeFinal,
       valor: valorAtual,
+      valor_alvo: valorAlvo,
+      arquetipo_id: arqId,
+      veredito_liquidez: veredito,
+      dim_snapshot: dimSnapshot,
+      top_destruidores: topDestruidoresSnap,
       evento: "compute",
     });
 
