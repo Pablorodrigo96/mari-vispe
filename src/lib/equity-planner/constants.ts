@@ -31,8 +31,11 @@ export const PORTE_OPTIONS = [
 
 export const VEREDITO_LABEL: Record<string, { label: string; tone: "good" | "warn" | "bad" }> = {
   vendavel_hoje: { label: "Vendável hoje", tone: "good" },
+  vendavel_6_12m: { label: "Vendável em 6–12 meses", tone: "warn" },
+  vendavel_12_24m: { label: "Vendável em 12–24 meses", tone: "warn" },
   vendavel_em_meses: { label: "Vendável em alguns meses", tone: "warn" },
   inviavel: { label: "Inviável sem reestruturação", tone: "bad" },
+  inviavel_sem_reestruturacao: { label: "Inviável sem reestruturação", tone: "bad" },
 };
 
 export function brl(n: number | null | undefined): string {

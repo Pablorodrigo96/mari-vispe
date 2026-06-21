@@ -8,14 +8,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { ArrowRight, ArrowLeft, Sparkles, FileText, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRight, ArrowLeft, Sparkles, FileText, Loader2, Wand2, Rocket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { DIMENSOES, PORTE_OPTIONS } from "@/lib/equity-planner/constants";
+import { DIMENSOES, PORTE_OPTIONS, ARQUETIPOS_LABEL } from "@/lib/equity-planner/constants";
 
 type Mode = "wizard" | "meeting_paste";
-type Step = 0 | 1 | 2 | 3 | 4;
+type Step = 0 | 1 | 2 | 3 | 4 | 5;
+
+interface Classification {
+  arquetipo_id: string;
+  confianca: number;
+  justificativa: string;
+  sinais_detectados?: string[];
+  migracao_sugerida?: {
+    para_arquetipo_id?: string | null;
+    racional?: string;
+    viabilidade?: string;
+  } | null;
+}
 
 export default function EquityPlannerNew() {
   const { user } = useAuth();
@@ -23,6 +36,10 @@ export default function EquityPlannerNew() {
   const [step, setStep] = useState<Step>(0);
   const [mode, setMode] = useState<Mode>("wizard");
   const [loading, setLoading] = useState(false);
+  const [classifying, setClassifying] = useState(false);
+  const [classification, setClassification] = useState<Classification | null>(null);
+  const [draftAssessmentId, setDraftAssessmentId] = useState<string | null>(null);
+  const [chosenArquetipo, setChosenArquetipo] = useState<string>("");
 
   // Company data
   const [razao, setRazao] = useState("");
@@ -64,45 +81,88 @@ export default function EquityPlannerNew() {
     return lines.join("\n");
   };
 
-  const handleSubmit = async () => {
+  const ensureDraft = async (): Promise<string> => {
+    if (draftAssessmentId) return draftAssessmentId;
+    const { data: company, error: cErr } = await supabase
+      .from("equity_companies")
+      .insert({
+        user_id: user.id,
+        razao_social: razao || null,
+        cnpj: cnpj || null,
+        setor_livre: setor || null,
+        porte,
+        uf: uf || null,
+      })
+      .select("id")
+      .single();
+    if (cErr) throw cErr;
+
+    const { data: assess, error: aErr } = await supabase
+      .from("equity_assessments")
+      .insert({
+        user_id: user.id,
+        company_id: company.id,
+        source: mode,
+        raw_intake: { mode, scores, faturamento, ebitda, observ, meetingText, razao, cnpj, setor, porte, uf },
+        status: "draft",
+      })
+      .select("id")
+      .single();
+    if (aErr) throw aErr;
+    setDraftAssessmentId(assess.id);
+    return assess.id;
+  };
+
+  const runClassifier = async () => {
     if (!razao && !cnpj) {
-      toast.error("Preencha razão social ou CNPJ.");
+      toast.error("Preencha razão social ou CNPJ na etapa 1.");
+      return;
+    }
+    setClassifying(true);
+    try {
+      const id = await ensureDraft();
+      const intakeText = buildIntakeText();
+      const { data, error } = await supabase.functions.invoke("equity-planner-classify", {
+        body: {
+          assessmentId: id,
+          intakeText,
+          companyData: { razao_social: razao, cnpj, setor_livre: setor, porte, uf,
+            faturamento_declarado: faturamento, ebitda_declarado: ebitda },
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setClassification(data.classification);
+      setChosenArquetipo(data.classification.arquetipo_id);
+      setStep(4);
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Falha ao classificar: " + (e?.message || "erro"));
+    } finally {
+      setClassifying(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!draftAssessmentId) {
+      toast.error("Rode a classificação antes de gerar.");
       return;
     }
     setLoading(true);
     try {
-      const { data: company, error: cErr } = await supabase
-        .from("equity_companies")
-        .insert({
-          user_id: user.id,
-          razao_social: razao || null,
-          cnpj: cnpj || null,
-          setor_livre: setor || null,
-          porte,
-          uf: uf || null,
-        })
-        .select("id")
-        .single();
-      if (cErr) throw cErr;
+      // Permite override do arquétipo escolhido pelo usuário
+      if (classification && chosenArquetipo && chosenArquetipo !== classification.arquetipo_id) {
+        await supabase.from("equity_assessments").update({
+          archetype_classification: { ...classification, arquetipo_id: chosenArquetipo, user_overridden: true },
+          arquetipo_sugerido: chosenArquetipo,
+        }).eq("id", draftAssessmentId);
+      }
 
       const intakeText = buildIntakeText();
-      const { data: assess, error: aErr } = await supabase
-        .from("equity_assessments")
-        .insert({
-          user_id: user.id,
-          company_id: company.id,
-          source: mode,
-          raw_intake: { mode, scores, faturamento, ebitda, observ, meetingText, razao, cnpj, setor, porte, uf },
-          status: "draft",
-        })
-        .select("id")
-        .single();
-      if (aErr) throw aErr;
-
       toast.info("Calculando IPE, valuation e plano…", { duration: 5000 });
       const { data: out, error: fErr } = await supabase.functions.invoke("equity-planner-compute", {
         body: {
-          assessmentId: assess.id,
+          assessmentId: draftAssessmentId,
           intakeText,
           companyData: { razao_social: razao, cnpj, setor_livre: setor, porte, uf,
             faturamento_declarado: faturamento, ebitda_declarado: ebitda },
@@ -112,7 +172,7 @@ export default function EquityPlannerNew() {
       if (out?.error) throw new Error(out.error);
 
       toast.success("Diagnóstico pronto!");
-      navigate(`/equity-planner/${assess.id}`);
+      navigate(`/equity-planner/${draftAssessmentId}`);
     } catch (e: any) {
       console.error(e);
       toast.error("Falha ao gerar diagnóstico: " + (e?.message || "erro desconhecido"));
@@ -121,7 +181,7 @@ export default function EquityPlannerNew() {
     }
   };
 
-  const progress = ((step + 1) / 5) * 100;
+  const progress = ((step + 1) / 6) * 100;
 
   return (
     <div className="min-h-screen bg-background py-10 px-4">
@@ -132,7 +192,6 @@ export default function EquityPlannerNew() {
         </div>
 
         <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-6">
-          {/* Step 0 — escolher modo */}
           {step === 0 && (
             <div>
               <h2 className="text-2xl font-bold mb-2">Como vamos entrar com os dados?</h2>
@@ -149,14 +208,13 @@ export default function EquityPlannerNew() {
                   <RadioGroupItem value="meeting_paste" className="mt-1" />
                   <div>
                     <div className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4 text-volt"/> Colar diagnóstico de reunião</div>
-                    <p className="text-sm text-muted-foreground break-words">Cole a transcrição ou ata da sessão de diagnóstico. A IA extrai e preenche o data model.</p>
+                    <p className="text-sm text-muted-foreground break-words">Cole a transcrição ou ata da sessão. A IA extrai e preenche o data model.</p>
                   </div>
                 </label>
               </RadioGroup>
             </div>
           )}
 
-          {/* Step 1 — identificação */}
           {step === 1 && (
             <div className="space-y-4">
               <h2 className="text-2xl font-bold">Identificação da empresa</h2>
@@ -187,7 +245,6 @@ export default function EquityPlannerNew() {
             </div>
           )}
 
-          {/* Step 2 — dados financeiros */}
           {step === 2 && (
             <div className="space-y-4">
               <h2 className="text-2xl font-bold">Dados financeiros (declarado)</h2>
@@ -203,7 +260,6 @@ export default function EquityPlannerNew() {
             </div>
           )}
 
-          {/* Step 3 — auto-avaliação OU paste */}
           {step === 3 && mode === "wizard" && (
             <div className="space-y-4">
               <h2 className="text-2xl font-bold">Auto-avaliação (0 a 100)</h2>
@@ -221,6 +277,8 @@ export default function EquityPlannerNew() {
                   </div>
                 ))}
               </div>
+              <Textarea value={observ} onChange={(e) => setObserv(e.target.value)} className="min-h-[100px]"
+                placeholder="Observações livres (opcional)..." />
             </div>
           )}
 
@@ -236,29 +294,111 @@ export default function EquityPlannerNew() {
             </div>
           )}
 
-          {/* Step 4 — observações + submit */}
+          {/* Step 4 — Classificação de Arquétipo via IA */}
           {step === 4 && (
             <div className="space-y-4">
-              <h2 className="text-2xl font-bold">Algo mais a contar?</h2>
-              <p className="text-sm text-muted-foreground">Opcional. Qualquer detalhe que ajude a IA a entender contexto.</p>
-              <Textarea value={observ} onChange={(e) => setObserv(e.target.value)} className="min-h-[160px]"
-                placeholder="Ex.: temos um contrato de R$500k/mês que renova em 6 meses; sócio quer sair em 18 meses..." />
-              <div className="text-sm bg-volt/5 border border-volt/20 rounded p-3 break-words">
-                Ao continuar, geramos seu Raio-X, Valuation com Value Bridge, plano em sprints e mapa de compradores.
-                Leva ~30 segundos.
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <Wand2 className="h-5 w-5 text-volt" /> Classificação de Arquétipo
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Antes de gerar o diagnóstico completo, a IA detecta o modelo econômico (arquétipo) da empresa.
+                Você pode confirmar ou trocar a escolha.
+              </p>
+
+              {!classification ? (
+                <Button className="bg-volt text-carbon hover:bg-volt/90 w-full" disabled={classifying} onClick={runClassifier}>
+                  {classifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analisando…</> : <>Rodar classificador <Sparkles className="ml-2 h-4 w-4" /></>}
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <Card className="!bg-slate-950/40 border-volt/30 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge className="bg-volt text-carbon">
+                        {ARQUETIPOS_LABEL[classification.arquetipo_id] || classification.arquetipo_id}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        Confiança: {Math.round((classification.confianca || 0) * 100)}%
+                      </span>
+                    </div>
+                    <p className="text-sm break-words">{classification.justificativa}</p>
+                    {classification.sinais_detectados && classification.sinais_detectados.length > 0 && (
+                      <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+                        {classification.sinais_detectados.map((s, i) => (
+                          <li key={i} className="break-words">• {s}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </Card>
+
+                  {classification.migracao_sugerida?.para_arquetipo_id && (
+                    <Card className="!bg-volt/5 border-volt/40 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Rocket className="h-4 w-4 text-volt" />
+                        <span className="font-semibold text-sm">Migração de arquétipo sugerida</span>
+                        <Badge variant="outline" className="border-volt/40 text-volt">
+                          → {ARQUETIPOS_LABEL[classification.migracao_sugerida.para_arquetipo_id] || classification.migracao_sugerida.para_arquetipo_id}
+                        </Badge>
+                      </div>
+                      <p className="text-sm break-words text-muted-foreground">
+                        {classification.migracao_sugerida.racional}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Viabilidade: <span className="text-volt">{classification.migracao_sugerida.viabilidade}</span>
+                      </p>
+                    </Card>
+                  )}
+
+                  <div>
+                    <Label className="text-sm">Confirmar ou trocar o arquétipo atual:</Label>
+                    <select
+                      className="w-full bg-background border border-input rounded-md p-2 mt-1"
+                      value={chosenArquetipo}
+                      onChange={(e) => setChosenArquetipo(e.target.value)}
+                    >
+                      {Object.entries(ARQUETIPOS_LABEL).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold">Pronto para gerar o diagnóstico</h2>
+              <div className="text-sm bg-volt/5 border border-volt/20 rounded p-4 space-y-2 break-words">
+                <p><strong>Arquétipo:</strong> {ARQUETIPOS_LABEL[chosenArquetipo] || chosenArquetipo}</p>
+                <p><strong>Modo de entrada:</strong> {mode === "wizard" ? "Intake guiado" : "Diagnóstico colado"}</p>
+                <p className="text-muted-foreground">
+                  Vamos gerar Raio-X (12 dimensões), Valuation com Value Bridge, plano em sprints
+                  e mapa de compradores. Leva ~30 segundos.
+                </p>
               </div>
             </div>
           )}
 
           <div className="flex justify-between mt-8">
-            <Button variant="outline" className="bg-transparent" disabled={step === 0 || loading} onClick={() => setStep((s) => (s - 1) as Step)}>
+            <Button variant="outline" className="bg-transparent" disabled={step === 0 || loading || classifying} onClick={() => setStep((s) => Math.max(0, s - 1) as Step)}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
             </Button>
-            {step < 4 ? (
+            {step < 3 && (
               <Button className="bg-volt text-carbon hover:bg-volt/90" onClick={() => setStep((s) => (s + 1) as Step)}>
                 Próximo <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            ) : (
+            )}
+            {step === 3 && (
+              <Button className="bg-volt text-carbon hover:bg-volt/90" disabled={classifying} onClick={runClassifier}>
+                {classifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Classificando…</> : <>Classificar arquétipo <Wand2 className="ml-2 h-4 w-4" /></>}
+              </Button>
+            )}
+            {step === 4 && classification && (
+              <Button className="bg-volt text-carbon hover:bg-volt/90" onClick={() => setStep(5)}>
+                Avançar <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {step === 5 && (
               <Button className="bg-volt text-carbon hover:bg-volt/90" disabled={loading} onClick={handleSubmit}>
                 {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando…</> : <>Gerar diagnóstico <Sparkles className="ml-2 h-4 w-4" /></>}
               </Button>

@@ -31,23 +31,30 @@ const DIM_LABELS: Record<string,string> = {
 };
 
 const SYSTEM = `Você é o orquestrador de um motor de Equity Planner para PMEs brasileiras.
-Sua missão: a partir do intake do empresário (texto livre + respostas estruturadas) e dos arquétipos/comps fornecidos, devolver um JSON estrito com:
-1) arquetipo_sugerido (id) + confianca (0..1) + racional curto;
-2) scores nas 12 dimensões (0..100) com 1 evidência cada;
-3) ebitda_normalizado em reais (estime addbacks declarados; se faltar dado, use a melhor estimativa marcada como premissa);
-4) iniciativas (8 a 12) priorizadas em sprints (1..4) cobrindo 12 meses, cada uma com delta_ipe e delta_valor em reais;
-5) buyer_map (3 entradas, uma por arquétipo de comprador) com tese e premio_estimado_pct (0..30).
+Sua missão: a partir do intake do empresário (texto livre + respostas estruturadas), de uma CLASSIFICAÇÃO DE ARQUÉTIPO já feita por um classificador especialista, e dos arquétipos/comps/biblioteca fornecidos, devolver um JSON estrito com:
+1) scores nas 12 dimensões (0..100) com 1 evidência cada;
+2) ebitda_normalizado em reais (estime addbacks declarados; se faltar dado, use a melhor estimativa marcada como premissa);
+3) iniciativas (8 a 12) priorizadas em sprints (1..4) cobrindo 12 meses, cada uma com delta_ipe e delta_valor em reais — ANCORE em itens do PLAYBOOK quando possível, e marque library_id; iniciativas custom só com justificativa;
+4) buyer_map (3 entradas, uma por arquétipo de comprador) com tese e premio_estimado_pct (0..30);
+5) veredito_liquidez calibrado: vendavel_hoje (IPE>=75 sem killers), vendavel_6_12m (IPE 60-75), vendavel_12_24m (IPE 45-60), inviavel_sem_reestruturacao (IPE<45 ou killers críticos);
+6) summary em 2-3 frases pro dono.
 
-REGRA DE GROUNDING: todo número ancora em algo do intake; quando faltar, marque "premissa" na evidência.
-Linguagem pt-BR, tom de sócio de M&A direto. NÃO invente CNPJ, nomes de empresas reais ou múltiplos fora da faixa.
-Devolva APENAS o JSON, sem markdown.`;
+REGRAS DURAS:
+- O ARQUÉTIPO já foi decidido pelo classificador. Não troque.
+- Se a classificação inclui migracao_arquetipo_sugerida, GARANTA uma iniciativa tipo "migracao_arquetipo" no SPRINT 1 com delta_valor significativo (use delta_multiplo_esperado × ebitda).
+- Ordem de execução respeita "DE-RISKING ANTES DE CRESCIMENTO": dimensões independencia_dono, higiene_financeira, contingencias vêm nos sprints 1-2; narrativa/atratividade/motor_comercial nos sprints 3-4.
+- Todo número ancora em algo do intake; quando faltar, marque "premissa" na evidência.
+- Linguagem pt-BR, tom de sócio de M&A direto. NÃO invente CNPJ, nomes de empresas reais ou múltiplos fora da faixa.
+- Devolva APENAS o JSON, sem markdown.`;
 
 function buildPrompt(args: {
   companyData: any;
   intakeText: string;
+  classification: any;
   archetypes: any[];
   comps: any[];
   library: any[];
+  migrations: any[];
 }) {
   return `INTAKE_TEXTO_LIVRE:
 """
@@ -57,6 +64,9 @@ ${args.intakeText}
 EMPRESA (declarada):
 ${JSON.stringify(args.companyData, null, 2)}
 
+CLASSIFICACAO_ARQUETIPO (já decidida — use como verdade):
+${JSON.stringify(args.classification || {}, null, 2)}
+
 ARQUETIPOS_DISPONIVEIS:
 ${JSON.stringify(args.archetypes.map(a => ({
   id: a.id, nome: a.nome, descricao: a.descricao,
@@ -64,33 +74,36 @@ ${JSON.stringify(args.archetypes.map(a => ({
   pesos: a.pesos_dimensoes, killers: a.killers,
 })), null, 2)}
 
-COMPS_BENCHMARKS (por arquétipo×porte):
+COMPS_BENCHMARKS:
 ${JSON.stringify(args.comps, null, 2)}
 
-PLAYBOOK_INICIATIVAS_BASE:
+PLAYBOOK_INICIATIVAS (use library_id quando ancorar):
 ${JSON.stringify(args.library.map(i => ({
-  arquetipo: i.arquetipo_id, dim: i.dimensao, titulo: i.titulo,
-  delta_ipe: i.delta_ipe_padrao, esforco: i.esforco, prazo: i.prazo_meses, tipo: i.tipo,
+  library_id: i.id, arquetipo: i.arquetipo_id, dim: i.dimensao, titulo: i.titulo,
+  descricao: i.descricao, delta_ipe: i.delta_ipe_padrao, esforco: i.esforco,
+  prazo: i.prazo_meses, tipo: i.tipo,
 })), null, 2)}
+
+ROTAS_MIGRACAO_DISPONIVEIS:
+${JSON.stringify(args.migrations, null, 2)}
 
 Devolva um JSON com a forma:
 {
-  "arquetipo_sugerido": "servico_profissional|projeto_obra|recorrente",
-  "confianca_arquetipo": 0.0,
-  "racional_arquetipo": "string curta",
   "dimensoes": [
     { "dimensao": "independencia_dono", "score": 0, "evidencia": "string", "premissa": false }
   ],
   "ebitda_normalizado": 0,
   "addbacks": { "remuneracao_dono": 0, "despesas_pessoais": 0, "nao_recorrentes": 0 },
   "premissas_valuation": ["string"],
-  "veredito_liquidez": "vendavel_hoje|vendavel_em_meses|inviavel",
+  "veredito_liquidez": "vendavel_hoje|vendavel_6_12m|vendavel_12_24m|inviavel_sem_reestruturacao",
   "summary": "2-3 frases para o dono",
   "iniciativas": [
     {
+      "library_id": null,
       "titulo":"string","descricao":"string","dimensao_alvo":"independencia_dono",
       "delta_ipe": 0, "delta_valor": 0, "esforco":"baixo|medio|alto",
-      "prazo_meses": 3, "sprint": 1, "tipo":"execucao|derisk|migracao_arquetipo"
+      "prazo_meses": 3, "sprint": 1, "tipo":"execucao|derisk|migracao_arquetipo",
+      "custom_justificativa": null
     }
   ],
   "buyer_map": [
@@ -124,25 +137,41 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // 1) Confirmar assessment + carregar dono
+    // 1) Confirmar assessment + carregar dono + classificação
     const { data: assess, error: aErr } = await supabase
       .from("equity_assessments")
-      .select("id, user_id, company_id")
+      .select("id, user_id, company_id, archetype_classification, arquetipo_sugerido, migracao_arquetipo_sugerida")
       .eq("id", assessmentId)
       .single();
     if (aErr || !assess) throw new Error("assessment not found");
 
-    // 2) Carregar arquétipos + comps + library
-    const [{ data: archetypes }, { data: comps }, { data: library }] = await Promise.all([
+    // 1.5) Se ainda não foi classificado, chamar classifier inline
+    let classification = (assess as any).archetype_classification;
+    if (!classification) {
+      const classifyRes = await fetch(`${SUPABASE_URL}/functions/v1/equity-planner-classify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
+        body: JSON.stringify({ assessmentId, intakeText, companyData }),
+      });
+      const cj = await classifyRes.json();
+      classification = cj.classification || { arquetipo_id: "servico_profissional", confianca: 0.4 };
+    }
+    const arqId = classification.arquetipo_id || (assess as any).arquetipo_sugerido || "servico_profissional";
+
+    // 2) Carregar arquétipos + comps + library + migrations
+    const [{ data: archetypes }, { data: comps }, { data: library }, { data: migrations }] = await Promise.all([
       supabase.from("equity_archetypes").select("*").order("ordem"),
       supabase.from("equity_comps_benchmarks").select("*"),
-      supabase.from("equity_initiative_library").select("*"),
+      supabase.from("equity_initiative_library").select("*").eq("arquetipo_id", arqId),
+      supabase.from("equity_archetype_migrations").select("*").eq("de_arquetipo_id", arqId),
     ]);
 
     // 3) Chamar Claude
     const prompt = buildPrompt({
       companyData, intakeText: intakeText || "",
+      classification,
       archetypes: archetypes || [], comps: comps || [], library: library || [],
+      migrations: migrations || [],
     });
 
     const ai = await callAnthropic({
@@ -166,8 +195,7 @@ Deno.serve(async (req) => {
       throw new Error("ai_invalid_json: " + (e as Error).message);
     }
 
-    // 4) Calcular IPE composto
-    const arqId = parsed.arquetipo_sugerido as string;
+    // 4) Calcular IPE composto (arqId já vem da classificação)
     const arq = (archetypes || []).find((a: any) => a.id === arqId) || (archetypes || [])[0];
     const pesos: Record<string, number> = arq?.pesos_dimensoes || {};
     let ipe = 0; let pesoTotal = 0;
@@ -262,8 +290,44 @@ Deno.serve(async (req) => {
       { valuation_id: valIns.id, parcela: "valor_alvo", descricao: "Valor potencial pós-execução do plano", delta_valor: valorAlvo, ordem: 5 },
     ]);
 
-    // initiatives
-    const inits = (parsed.iniciativas || []).map((i: any, idx: number) => ({
+    // initiatives — força migração de arquétipo no topo se sugerida pelo classificador
+    const migrSug = classification?.migracao_sugerida;
+    let allInits: any[] = (parsed.iniciativas || []).slice();
+    const hasMigracao = allInits.some((i: any) => i.tipo === "migracao_arquetipo");
+    if (migrSug?.para_arquetipo_id && !hasMigracao) {
+      const rota = (migrations || []).find((m: any) => m.para_arquetipo_id === migrSug.para_arquetipo_id);
+      const deltaMult = Number(rota?.delta_multiplo_esperado || 2.5);
+      allInits.unshift({
+        library_id: null,
+        titulo: rota?.titulo || `Migrar para ${migrSug.para_arquetipo_id}`,
+        descricao: rota?.descricao_rota || migrSug.racional,
+        dimensao_alvo: "qualidade_receita",
+        delta_ipe: 15,
+        delta_valor: Math.round(deltaMult * Math.max(0, ebitda)),
+        esforco: "alto",
+        prazo_meses: 9,
+        sprint: 1,
+        tipo: "migracao_arquetipo",
+      });
+    }
+
+    // Priorização: derisk (independencia/higiene/contingencias) primeiro,
+    // migração obrigatória no topo, depois execução por (delta_valor / esforco*prazo)
+    const ESFORCO_W: Record<string, number> = { baixo: 1, medio: 2, alto: 3 };
+    const DERISK_DIMS = new Set(["independencia_dono","higiene_financeira","contingencias"]);
+    allInits.sort((a: any, b: any) => {
+      const am = a.tipo === "migracao_arquetipo" ? 0 : 1;
+      const bm = b.tipo === "migracao_arquetipo" ? 0 : 1;
+      if (am !== bm) return am - bm;
+      const ad = DERISK_DIMS.has(a.dimensao_alvo) ? 0 : 1;
+      const bd = DERISK_DIMS.has(b.dimensao_alvo) ? 0 : 1;
+      if (ad !== bd) return ad - bd;
+      const ap = (Number(a.delta_valor) || 0) / ((ESFORCO_W[a.esforco] || 2) * Math.max(1, Number(a.prazo_meses) || 3));
+      const bp = (Number(b.delta_valor) || 0) / ((ESFORCO_W[b.esforco] || 2) * Math.max(1, Number(b.prazo_meses) || 3));
+      return bp - ap;
+    });
+
+    const inits = allInits.map((i: any, idx: number) => ({
       assessment_id: assessmentId,
       dimensao_alvo: DIMENSOES.includes(i.dimensao_alvo) ? i.dimensao_alvo : "independencia_dono",
       titulo: String(i.titulo || "Iniciativa"),
@@ -272,9 +336,11 @@ Deno.serve(async (req) => {
       delta_valor: Math.max(0, Number(i.delta_valor) || 0),
       esforco: ["baixo","medio","alto"].includes(i.esforco) ? i.esforco : "medio",
       prazo_meses: Math.max(1, Number(i.prazo_meses) || 3),
-      sprint: Math.max(1, Math.min(4, Number(i.sprint) || 1)),
+      sprint: Math.max(1, Math.min(4, Number(i.sprint) || (idx < 3 ? 1 : idx < 6 ? 2 : idx < 9 ? 3 : 4))),
       status: "planejada",
-      tipo: ["execucao","derisk","migracao_arquetipo"].includes(i.tipo) ? i.tipo : "execucao",
+      tipo: ["execucao","derisk","migracao_arquetipo"].includes(i.tipo)
+        ? i.tipo
+        : (DERISK_DIMS.has(i.dimensao_alvo) ? "derisk" : "execucao"),
       prioridade: idx + 1,
     }));
     if (inits.length) await supabase.from("equity_initiatives").insert(inits);
@@ -291,13 +357,20 @@ Deno.serve(async (req) => {
     }));
     if (buyers.length) await supabase.from("equity_buyer_map").insert(buyers);
 
+    // veredito calibrado
+    const vereditoCalc = ipeFinal >= 75 ? "vendavel_hoje"
+                       : ipeFinal >= 60 ? "vendavel_6_12m"
+                       : ipeFinal >= 45 ? "vendavel_12_24m"
+                       : "inviavel_sem_reestruturacao";
+    const veredito = parsed.veredito_liquidez || vereditoCalc;
+
     // update assessment + company arquetipo
     await supabase.from("equity_assessments").update({
       arquetipo_id: arqId,
       arquetipo_sugerido: arqId,
-      confianca_arquetipo: Number(parsed.confianca_arquetipo) || null,
+      confianca_arquetipo: Number(classification?.confianca) || null,
       ipe_composto: ipeFinal,
-      veredito_liquidez: parsed.veredito_liquidez || (ipeFinal < piso ? "inviavel" : ipeFinal < 70 ? "vendavel_em_meses" : "vendavel_hoje"),
+      veredito_liquidez: veredito,
       summary: parsed.summary || null,
       status: "computed",
     }).eq("id", assessmentId);

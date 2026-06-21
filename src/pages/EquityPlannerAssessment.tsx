@@ -20,6 +20,8 @@ interface Assessment {
   id: string; ipe_composto: number | null; arquetipo_id: string | null;
   veredito_liquidez: string | null; summary: string | null; status: string;
   company_id: string; confianca_arquetipo: number | null;
+  migracao_arquetipo_sugerida: any | null;
+  archetype_classification: any | null;
 }
 interface DimScore { dimensao: string; score: number; peso: number; destruidor_top: boolean; evidencias: any; }
 interface Valuation { id: string; ebitda_normalizado: number; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; }
@@ -155,6 +157,36 @@ export default function EquityPlannerAssessment() {
               </p>
             </div>
           </div>
+
+          {/* Faixa de múltiplo visual */}
+          {val && (
+            <div className="mt-6 pt-5 border-t border-volt/10">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-xs uppercase text-muted-foreground tracking-wider">Posição na faixa de múltiplo do arquétipo</p>
+                <p className="text-xs text-muted-foreground">
+                  {val.faixa_min}x — <span className="text-volt font-bold">{val.multiplo_aplicado}x hoje</span> — {val.faixa_max}x
+                </p>
+              </div>
+              <div className="relative h-3 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-rose-500/40 via-amber-500/40 to-emerald-500/60"
+                  style={{ width: "100%" }}
+                />
+                <div
+                  className="absolute top-0 h-full w-1 bg-volt shadow-[0_0_8px_#D9F564]"
+                  style={{
+                    left: `${Math.max(0, Math.min(100, ((val.multiplo_aplicado - val.faixa_min) / Math.max(0.01, (val.faixa_max - val.faixa_min))) * 100))}%`,
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                <span>zona invendável</span>
+                <span>vendável com desconto</span>
+                <span>topo da faixa + prêmio estratégico</span>
+              </div>
+            </div>
+          )}
+
           {assess.summary && (
             <p className="mt-5 text-muted-foreground break-words border-l-2 border-volt pl-4">{assess.summary}</p>
           )}
@@ -238,6 +270,27 @@ export default function EquityPlannerAssessment() {
 
           {/* PLANO */}
           <TabsContent value="plano" className="mt-4">
+            {assess.migracao_arquetipo_sugerida?.para_arquetipo_id && (
+              <Card className="!bg-gradient-to-br from-volt/10 to-volt/5 backdrop-blur-md border-volt/50 p-5 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-3xl">🚀</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="font-bold">Migração de Arquétipo — alavanca de maior valor</h3>
+                      <Badge className="bg-volt text-carbon">
+                        {ARQUETIPOS_LABEL[assess.arquetipo_id || ""] || assess.arquetipo_id} → {ARQUETIPOS_LABEL[assess.migracao_arquetipo_sugerida.para_arquetipo_id] || assess.migracao_arquetipo_sugerida.para_arquetipo_id}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground break-words">
+                      {assess.migracao_arquetipo_sugerida.racional}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Viabilidade: <span className="text-volt font-medium">{assess.migracao_arquetipo_sugerida.viabilidade}</span>
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
             <div className="grid md:grid-cols-4 gap-3">
               {[1,2,3,4].map((sp) => (
                 <Card key={sp} className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-4">
@@ -247,14 +300,15 @@ export default function EquityPlannerAssessment() {
                   </h4>
                   <div className="space-y-2">
                     {inits.filter((i) => i.sprint === sp).map((i) => (
-                      <div key={i.id} className={`p-3 rounded border ${i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : "border-volt/10 bg-slate-950/40"}`}>
+                      <div key={i.id} className={`p-3 rounded border ${i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" : "border-volt/10 bg-slate-950/40"}`}>
                         <p className="font-medium text-sm break-words">{i.titulo}</p>
                         {i.descricao && <p className="text-xs text-muted-foreground mt-1 break-words">{i.descricao}</p>}
                         <div className="flex flex-wrap gap-1 mt-2 text-[10px]">
                           <Badge variant="outline" className="border-volt/30 text-volt">+{i.delta_ipe} IPE</Badge>
                           <Badge variant="outline" className="border-volt/30">{brl(i.delta_valor)}</Badge>
                           <Badge variant="outline">{i.esforco}</Badge>
-                          {i.tipo === "migracao_arquetipo" && <Badge className="bg-volt text-carbon text-[10px]">Migração de arquétipo</Badge>}
+                          {i.tipo === "migracao_arquetipo" && <Badge className="bg-volt text-carbon text-[10px]">Migração</Badge>}
+                          {i.tipo === "derisk" && <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px]">De-risk</Badge>}
                         </div>
                       </div>
                     ))}
