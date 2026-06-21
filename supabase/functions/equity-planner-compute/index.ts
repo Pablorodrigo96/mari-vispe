@@ -357,13 +357,20 @@ Deno.serve(async (req) => {
     }));
     if (buyers.length) await supabase.from("equity_buyer_map").insert(buyers);
 
+    // veredito calibrado
+    const vereditoCalc = ipeFinal >= 75 ? "vendavel_hoje"
+                       : ipeFinal >= 60 ? "vendavel_6_12m"
+                       : ipeFinal >= 45 ? "vendavel_12_24m"
+                       : "inviavel_sem_reestruturacao";
+    const veredito = parsed.veredito_liquidez || vereditoCalc;
+
     // update assessment + company arquetipo
     await supabase.from("equity_assessments").update({
       arquetipo_id: arqId,
       arquetipo_sugerido: arqId,
-      confianca_arquetipo: Number(parsed.confianca_arquetipo) || null,
+      confianca_arquetipo: Number(classification?.confianca) || null,
       ipe_composto: ipeFinal,
-      veredito_liquidez: parsed.veredito_liquidez || (ipeFinal < piso ? "inviavel" : ipeFinal < 70 ? "vendavel_em_meses" : "vendavel_hoje"),
+      veredito_liquidez: veredito,
       summary: parsed.summary || null,
       status: "computed",
     }).eq("id", assessmentId);
