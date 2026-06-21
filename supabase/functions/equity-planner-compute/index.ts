@@ -31,20 +31,21 @@ const DIM_LABELS: Record<string,string> = {
 };
 
 const SYSTEM = `Você é o orquestrador de um motor de Equity Planner para PMEs brasileiras.
-Sua missão: a partir do intake do empresário (texto livre + respostas estruturadas), de uma CLASSIFICAÇÃO DE ARQUÉTIPO já feita por um classificador especialista, e dos arquétipos/comps/biblioteca fornecidos, devolver um JSON estrito com:
+Sua missão: a partir do intake do empresário, da CLASSIFICAÇÃO DE ARQUÉTIPO já feita, e dos arquétipos/comps/biblioteca/perfis de comprador fornecidos, devolver um JSON estrito com:
 1) scores nas 12 dimensões (0..100) com 1 evidência cada;
-2) ebitda_normalizado em reais (estime addbacks declarados; se faltar dado, use a melhor estimativa marcada como premissa);
-3) iniciativas (8 a 12) priorizadas em sprints (1..4) cobrindo 12 meses, cada uma com delta_ipe e delta_valor em reais — ANCORE em itens do PLAYBOOK quando possível, e marque library_id; iniciativas custom só com justificativa;
-4) buyer_map (3 entradas, uma por arquétipo de comprador) com tese e premio_estimado_pct (0..30);
-5) veredito_liquidez calibrado: vendavel_hoje (IPE>=75 sem killers), vendavel_6_12m (IPE 60-75), vendavel_12_24m (IPE 45-60), inviavel_sem_reestruturacao (IPE<45 ou killers críticos);
-6) summary em 2-3 frases pro dono.
+2) ebitda_contabil e ebitda_normalizado em reais, com addbacks DETALHADOS (remuneracao_dono, despesas_pessoais, nao_recorrentes, aluguel_imovel_proprio, outros);
+3) iniciativas (8 a 12) priorizadas em sprints (1..4), cada uma com delta_ipe e delta_valor — ANCORE em PLAYBOOK quando possível;
+4) buyer_map (3 a 5 entradas) ANCORADO nos perfis fornecidos (use perfil_id), com sinergias (3-5 strings), racional_premio (1-2 frases), exemplos_targets (3-5 nomes plausíveis); premio_estimado_pct dentro da faixa típica;
+5) dcf_premissas: { wacc, cagr_5y, perpetuidade_g, taxa_imposto } — realistas para PME BR (WACC 15-25%, g 3-5%);
+6) veredito_liquidez: vendavel_hoje (IPE>=75), vendavel_6_12m (60-75), vendavel_12_24m (45-60), inviavel_sem_reestruturacao (<45 ou killers);
+7) summary em 2-3 frases pro dono.
 
 REGRAS DURAS:
-- O ARQUÉTIPO já foi decidido pelo classificador. Não troque.
-- Se a classificação inclui migracao_arquetipo_sugerida, GARANTA uma iniciativa tipo "migracao_arquetipo" no SPRINT 1 com delta_valor significativo (use delta_multiplo_esperado × ebitda).
-- Ordem de execução respeita "DE-RISKING ANTES DE CRESCIMENTO": dimensões independencia_dono, higiene_financeira, contingencias vêm nos sprints 1-2; narrativa/atratividade/motor_comercial nos sprints 3-4.
-- Todo número ancora em algo do intake; quando faltar, marque "premissa" na evidência.
-- Linguagem pt-BR, tom de sócio de M&A direto. NÃO invente CNPJ, nomes de empresas reais ou múltiplos fora da faixa.
+- Não troque o arquétipo do classificador.
+- Se houver migracao_sugerida, GARANTA iniciativa tipo "migracao_arquetipo" no SPRINT 1 com delta_valor = delta_multiplo_esperado × ebitda.
+- "DE-RISKING ANTES DE CRESCIMENTO": independencia_dono/higiene_financeira/contingencias nos sprints 1-2.
+- Buyer map: cada item espelha um perfil_id de PERFIS_COMPRADOR_DISPONIVEIS (adapte sinergias/exemplos quando faltar contexto).
+- Não invente CNPJ ou múltiplos fora da faixa.
 - Devolva APENAS o JSON, sem markdown.`;
 
 function buildPrompt(args: {
@@ -55,6 +56,7 @@ function buildPrompt(args: {
   comps: any[];
   library: any[];
   migrations: any[];
+  buyerArchetypes: any[];
 }) {
   return `INTAKE_TEXTO_LIVRE:
 """
@@ -87,27 +89,35 @@ ${JSON.stringify(args.library.map(i => ({
 ROTAS_MIGRACAO_DISPONIVEIS:
 ${JSON.stringify(args.migrations, null, 2)}
 
+PERFIS_COMPRADOR_DISPONIVEIS (ancore buyer_map em perfil_id):
+${JSON.stringify(args.buyerArchetypes.map(b => ({
+  perfil_id: b.id, arquetipo: b.arquetipo_comprador, nome: b.nome_perfil,
+  setor: b.setor_alvo, tese: b.tese_padrao,
+  premio_pct: [b.premio_tipico_min, b.premio_tipico_max],
+  sinergias: b.sinergias_padrao, exemplos: b.exemplos_targets,
+})), null, 2)}
+
 Devolva um JSON com a forma:
 {
-  "dimensoes": [
-    { "dimensao": "independencia_dono", "score": 0, "evidencia": "string", "premissa": false }
-  ],
+  "dimensoes": [{ "dimensao": "independencia_dono", "score": 0, "evidencia": "string", "premissa": false }],
+  "ebitda_contabil": 0,
   "ebitda_normalizado": 0,
-  "addbacks": { "remuneracao_dono": 0, "despesas_pessoais": 0, "nao_recorrentes": 0 },
+  "addbacks": { "remuneracao_dono": 0, "despesas_pessoais": 0, "nao_recorrentes": 0, "aluguel_imovel_proprio": 0, "outros": 0 },
+  "dcf_premissas": { "wacc": 0.20, "cagr_5y": 0.12, "perpetuidade_g": 0.04, "taxa_imposto": 0.27 },
   "premissas_valuation": ["string"],
   "veredito_liquidez": "vendavel_hoje|vendavel_6_12m|vendavel_12_24m|inviavel_sem_reestruturacao",
   "summary": "2-3 frases para o dono",
   "iniciativas": [
-    {
-      "library_id": null,
-      "titulo":"string","descricao":"string","dimensao_alvo":"independencia_dono",
+    { "library_id": null, "titulo":"string","descricao":"string","dimensao_alvo":"independencia_dono",
       "delta_ipe": 0, "delta_valor": 0, "esforco":"baixo|medio|alto",
-      "prazo_meses": 3, "sprint": 1, "tipo":"execucao|derisk|migracao_arquetipo",
-      "custom_justificativa": null
-    }
+      "prazo_meses": 3, "sprint": 1, "tipo":"execucao|derisk|migracao_arquetipo", "custom_justificativa": null }
   ],
   "buyer_map": [
-    {"arquetipo_comprador":"estrategico|financeiro|individual","tese_aquisicao":"string","premio_estimado_pct": 0, "nome_alvo":"perfil generico"}
+    { "perfil_id": "uuid_do_perfil",
+      "arquetipo_comprador":"estrategico|financeiro|individual",
+      "tese_aquisicao":"string", "racional_premio":"string",
+      "premio_estimado_pct": 0, "nome_alvo":"perfil ou descricao",
+      "setor_alvo":"string", "sinergias":["s1","s2"], "exemplos_targets":["nome1","nome2"] }
   ]
 }`;
 }
@@ -158,12 +168,13 @@ Deno.serve(async (req) => {
     }
     const arqId = classification.arquetipo_id || (assess as any).arquetipo_sugerido || "servico_profissional";
 
-    // 2) Carregar arquétipos + comps + library + migrations + documentos extraídos
-    const [{ data: archetypes }, { data: comps }, { data: library }, { data: migrations }, { data: docs }] = await Promise.all([
+    // 2) Carregar arquétipos + comps + library + migrations + buyer archetypes + documentos extraídos
+    const [{ data: archetypes }, { data: comps }, { data: library }, { data: migrations }, { data: buyerArchs }, { data: docs }] = await Promise.all([
       supabase.from("equity_archetypes").select("*").order("ordem"),
       supabase.from("equity_comps_benchmarks").select("*"),
       supabase.from("equity_initiative_library").select("*").eq("arquetipo_id", arqId),
       supabase.from("equity_archetype_migrations").select("*").eq("de_arquetipo_id", arqId),
+      supabase.from("equity_buyer_archetypes").select("*").eq("seller_arquetipo_id", arqId),
       supabase.from("equity_company_documents")
         .select("file_name, doc_type, extraction_summary, extracted_json")
         .eq("assessment_id", assessmentId)
@@ -183,14 +194,14 @@ Deno.serve(async (req) => {
       companyData, intakeText: (intakeText || "") + docContext,
       classification,
       archetypes: archetypes || [], comps: comps || [], library: library || [],
-      migrations: migrations || [],
+      migrations: migrations || [], buyerArchetypes: buyerArchs || [],
     });
 
     const ai = await callAnthropic({
       model: "claude-sonnet-4-6",
       system: SYSTEM,
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 4500,
+      max_tokens: 5500,
       temperature: 0.3,
       function_name: "equity-planner-compute",
       feature: "equity_planner",
@@ -262,6 +273,42 @@ Deno.serve(async (req) => {
     const deltaCrescimento = Math.max(0, Math.round((valorAlvoBase - valorAtual) * 0.15));
     const premioEstrategico = Math.max(0, valorAlvo - valorAlvoBase);
 
+    // 5.5) DCF simplificado (5 anos + perpetuidade Gordon) e SDE para micros
+    const dcfP = parsed.dcf_premissas || {};
+    const wacc = Math.max(0.08, Math.min(0.35, Number(dcfP.wacc) || 0.20));
+    const cagr = Math.max(0, Math.min(0.40, Number(dcfP.cagr_5y) || 0.10));
+    const gP = Math.max(0, Math.min(0.06, Number(dcfP.perpetuidade_g) || 0.04));
+    const taxa = Math.max(0, Math.min(0.40, Number(dcfP.taxa_imposto) || 0.27));
+    let valorDcf = 0;
+    if (ebitda > 0 && wacc > gP) {
+      const fcf0 = ebitda * (1 - taxa);
+      for (let y = 1; y <= 5; y++) {
+        const fcfY = fcf0 * Math.pow(1 + cagr, y);
+        valorDcf += fcfY / Math.pow(1 + wacc, y);
+      }
+      const fcf6 = fcf0 * Math.pow(1 + cagr, 5) * (1 + gP);
+      const terminal = fcf6 / (wacc - gP);
+      valorDcf += terminal / Math.pow(1 + wacc, 5);
+      valorDcf = Math.round(valorDcf);
+    }
+
+    // SDE (Seller's Discretionary Earnings) — só faz sentido pra micro/pequena
+    const addbacks = parsed.addbacks || {};
+    const remDono = Number(addbacks.remuneracao_dono || 0);
+    const sde = ebitda + remDono;
+    const sdeMultiplo = porte === "micro" ? 2.0 : porte === "pequena" ? 2.5 : 0;
+    const valorSde = sdeMultiplo > 0 ? Math.round(sde * sdeMultiplo) : 0;
+
+    // Triangulação: múltiplos é o âncora; DCF/SDE são sanity-check
+    let valorTriangulado = valorAtual;
+    if (valorDcf > 0 && valorSde > 0) {
+      valorTriangulado = Math.round(valorAtual * 0.55 + valorDcf * 0.30 + valorSde * 0.15);
+    } else if (valorDcf > 0) {
+      valorTriangulado = Math.round(valorAtual * 0.70 + valorDcf * 0.30);
+    } else if (valorSde > 0) {
+      valorTriangulado = Math.round(valorAtual * 0.80 + valorSde * 0.20);
+    }
+
     // 6) Persistir tudo
     // limpar prévios
     await supabase.from("equity_dimension_scores").delete().eq("assessment_id", assessmentId);
@@ -280,14 +327,19 @@ Deno.serve(async (req) => {
     // valuation
     const { data: valIns, error: vErr } = await supabase.from("equity_valuations").insert({
       assessment_id: assessmentId,
-      metodo: "multiplos",
+      metodo: "triangulado",
+      ebitda_contabil: Number(parsed.ebitda_contabil ?? Math.max(0, ebitda - Object.values(addbacks).reduce((s: number, n: any) => s + (Number(n) || 0), 0))),
       ebitda_normalizado: ebitda,
-      addbacks: parsed.addbacks || {},
+      addbacks,
       multiplo_aplicado: multiploAtual,
       faixa_min: comp.multiplo_min,
       faixa_max: comp.multiplo_max,
       valor_atual: valorAtual,
       valor_alvo: valorAlvo,
+      valor_dcf: valorDcf,
+      valor_sde: valorSde,
+      valor_triangulado: valorTriangulado,
+      dcf_premissas: { wacc, cagr_5y: cagr, perpetuidade_g: gP, taxa_imposto: taxa },
       premissas: { premissas: parsed.premissas_valuation || [], ipe_alvo: ipeAlvo, multiplo_alvo: multiploAlvo, porte },
     }).select("id").single();
     if (vErr) throw vErr;
@@ -357,16 +409,26 @@ Deno.serve(async (req) => {
     }));
     if (inits.length) await supabase.from("equity_initiatives").insert(inits);
 
-    // buyer map
-    const buyers = (parsed.buyer_map || []).slice(0, 5).map((b: any, idx: number) => ({
-      assessment_id: assessmentId,
-      arquetipo_comprador: ["estrategico","financeiro","individual"].includes(b.arquetipo_comprador) ? b.arquetipo_comprador : "estrategico",
-      nome_alvo: b.nome_alvo || null,
-      tese_aquisicao: b.tese_aquisicao || null,
-      premio_estimado_pct: Math.max(0, Math.min(50, Number(b.premio_estimado_pct) || 0)),
-      premio_estimado_valor: Math.round(valorAlvoBase * Math.max(0, Number(b.premio_estimado_pct) || 0) / 100),
-      prioridade: idx + 1,
-    }));
+    // buyer map enriquecido — herda sinergias/exemplos do perfil ancorado quando IA não preencher
+    const buyerArchById = new Map((buyerArchs || []).map((b: any) => [b.id, b]));
+    const buyers = (parsed.buyer_map || []).slice(0, 5).map((b: any, idx: number) => {
+      const perfil = b.perfil_id ? buyerArchById.get(b.perfil_id) : null;
+      const sin = Array.isArray(b.sinergias) && b.sinergias.length ? b.sinergias : (perfil?.sinergias_padrao || []);
+      const ex = Array.isArray(b.exemplos_targets) && b.exemplos_targets.length ? b.exemplos_targets : (perfil?.exemplos_targets || []);
+      return {
+        assessment_id: assessmentId,
+        arquetipo_comprador: ["estrategico","financeiro","individual"].includes(b.arquetipo_comprador) ? b.arquetipo_comprador : (perfil?.arquetipo_comprador || "estrategico"),
+        nome_alvo: b.nome_alvo || perfil?.nome_perfil || null,
+        setor_alvo: b.setor_alvo || perfil?.setor_alvo || null,
+        tese_aquisicao: b.tese_aquisicao || perfil?.tese_padrao || null,
+        racional_premio: b.racional_premio || null,
+        sinergias: sin,
+        exemplos_targets: ex,
+        premio_estimado_pct: Math.max(0, Math.min(50, Number(b.premio_estimado_pct) || 0)),
+        premio_estimado_valor: Math.round(valorAlvoBase * Math.max(0, Number(b.premio_estimado_pct) || 0) / 100),
+        prioridade: idx + 1,
+      };
+    });
     if (buyers.length) await supabase.from("equity_buyer_map").insert(buyers);
 
     // veredito calibrado

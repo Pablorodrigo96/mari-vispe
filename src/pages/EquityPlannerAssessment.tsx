@@ -25,10 +25,10 @@ interface Assessment {
   archetype_classification: any | null;
 }
 interface DimScore { dimensao: string; score: number; peso: number; destruidor_top: boolean; evidencias: any; }
-interface Valuation { id: string; ebitda_normalizado: number; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; }
+interface Valuation { id: string; ebitda_contabil: number | null; ebitda_normalizado: number; addbacks: any; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; valor_dcf: number | null; valor_sde: number | null; valor_triangulado: number | null; dcf_premissas: any; }
 interface Bridge { parcela: string; descricao: string; delta_valor: number; ordem: number; }
 interface Initiative { id: string; titulo: string; descricao: string | null; dimensao_alvo: string; delta_ipe: number; delta_valor: number; esforco: string; prazo_meses: number; sprint: number; status: string; tipo: string; prioridade: number; }
-interface Buyer { arquetipo_comprador: string; nome_alvo: string | null; tese_aquisicao: string | null; premio_estimado_pct: number; premio_estimado_valor: number; }
+interface Buyer { arquetipo_comprador: string; nome_alvo: string | null; setor_alvo: string | null; tese_aquisicao: string | null; racional_premio: string | null; sinergias: string[] | null; exemplos_targets: string[] | null; premio_estimado_pct: number; premio_estimado_valor: number; }
 interface Progresso { ipe: number; valor: number; created_at: string; evento: string; }
 
 export default function EquityPlannerAssessment() {
@@ -243,7 +243,77 @@ export default function EquityPlannerAssessment() {
           </TabsContent>
 
           {/* VALOR */}
-          <TabsContent value="valor" className="mt-4">
+          <TabsContent value="valor" className="mt-4 space-y-4">
+            {/* Triangulação de métodos */}
+            {val && (val.valor_dcf || val.valor_sde) && (
+              <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/20 p-5">
+                <h3 className="font-semibold mb-3">Triangulação de valor — sanity check</h3>
+                <div className="grid md:grid-cols-4 gap-3">
+                  <div className="p-3 rounded border border-volt/30 bg-volt/5">
+                    <p className="text-xs uppercase text-muted-foreground">Múltiplos (âncora)</p>
+                    <p className="text-xl font-bold text-volt mt-1">{brl(val.valor_atual)}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">EBITDA × {val.multiplo_aplicado}x</p>
+                  </div>
+                  {!!val.valor_dcf && (
+                    <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
+                      <p className="text-xs uppercase text-muted-foreground">DCF (5 anos + perpetuidade)</p>
+                      <p className="text-xl font-bold mt-1">{brl(val.valor_dcf)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        WACC {(val.dcf_premissas?.wacc*100).toFixed(0)}% · CAGR {(val.dcf_premissas?.cagr_5y*100).toFixed(0)}% · g {(val.dcf_premissas?.perpetuidade_g*100).toFixed(1)}%
+                      </p>
+                    </div>
+                  )}
+                  {!!val.valor_sde && (
+                    <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
+                      <p className="text-xs uppercase text-muted-foreground">SDE (dono-operador)</p>
+                      <p className="text-xl font-bold mt-1">{brl(val.valor_sde)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">EBITDA + pró-labore × múltiplo de micro</p>
+                    </div>
+                  )}
+                  {!!val.valor_triangulado && (
+                    <div className="p-3 rounded border border-emerald-500/30 bg-emerald-500/5">
+                      <p className="text-xs uppercase text-muted-foreground">Triangulado</p>
+                      <p className="text-xl font-bold text-emerald-400 mt-1">{brl(val.valor_triangulado)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">Mix ponderado dos métodos</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {/* Normalização EBITDA */}
+            {val && val.addbacks && Object.keys(val.addbacks || {}).length > 0 && (
+              <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
+                <h3 className="font-semibold mb-3">Normalização do EBITDA — addbacks identificados</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        <tr className="border-b border-volt/10">
+                          <td className="py-2 text-muted-foreground">EBITDA contábil</td>
+                          <td className="py-2 text-right font-mono">{brl(val.ebitda_contabil)}</td>
+                        </tr>
+                        {Object.entries(val.addbacks).filter(([_,v]) => Number(v) > 0).map(([k, v]) => (
+                          <tr key={k} className="border-b border-volt/5">
+                            <td className="py-2 text-xs text-muted-foreground">+ {k.replace(/_/g, " ")}</td>
+                            <td className="py-2 text-right font-mono text-volt">{brl(Number(v))}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t-2 border-volt/30">
+                          <td className="py-2 font-semibold">EBITDA normalizado</td>
+                          <td className="py-2 text-right font-mono font-bold text-volt">{brl(val.ebitda_normalizado)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-2">
+                    <p><strong className="text-volt">Por que normalizar?</strong> Compradores aplicam o múltiplo sobre o EBITDA "limpo" — descontando custos pessoais do dono, gastos não-recorrentes e remunerações fora do mercado.</p>
+                    <p>Cada R$ de addback bem-documentado vale múltiplo × R$ de preço de venda. Documente em planilha auditável com lastro.</p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
               <h3 className="font-semibold mb-3">Value Bridge — valor hoje → valor potencial</h3>
               <ResponsiveContainer width="100%" height={340}>
@@ -326,17 +396,48 @@ export default function EquityPlannerAssessment() {
           {/* COMPRADORES */}
           <TabsContent value="compradores" className="mt-4">
             <div className="grid md:grid-cols-3 gap-4">
-              {buyers.map((b, i) => (
-                <Card key={i} className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
-                  <Badge className="bg-volt/10 text-volt border-volt/30 mb-2">{b.arquetipo_comprador}</Badge>
-                  {b.nome_alvo && <h4 className="font-semibold break-words">{b.nome_alvo}</h4>}
-                  <p className="text-sm text-muted-foreground mt-2 break-words">{b.tese_aquisicao}</p>
-                  <div className="mt-3 pt-3 border-t border-volt/10">
-                    <p className="text-xs text-muted-foreground">Prêmio estimado</p>
-                    <p className="text-lg font-bold text-volt">{b.premio_estimado_pct?.toFixed(0)}% · {brl(b.premio_estimado_valor)}</p>
-                  </div>
-                </Card>
-              ))}
+              {buyers.map((b, i) => {
+                const tone = b.arquetipo_comprador === "estrategico" ? "border-volt/40 bg-volt/5"
+                           : b.arquetipo_comprador === "financeiro" ? "border-blue-500/30 bg-blue-500/5"
+                           : "border-amber-500/30 bg-amber-500/5";
+                return (
+                  <Card key={i} className={`!bg-slate-900/60 backdrop-blur-md p-5 border ${tone}`}>
+                    <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                      <Badge className="bg-volt/10 text-volt border-volt/30 capitalize">{b.arquetipo_comprador}</Badge>
+                      {b.setor_alvo && <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{b.setor_alvo}</span>}
+                    </div>
+                    {b.nome_alvo && <h4 className="font-semibold break-words">{b.nome_alvo}</h4>}
+                    <p className="text-sm text-muted-foreground mt-2 break-words">{b.tese_aquisicao}</p>
+
+                    {!!b.sinergias?.length && (
+                      <div className="mt-3">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Sinergias capturáveis</p>
+                        <ul className="space-y-1">
+                          {b.sinergias.slice(0, 5).map((s, idx) => (
+                            <li key={idx} className="text-xs flex gap-1 break-words"><span className="text-volt">▸</span>{s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {!!b.exemplos_targets?.length && (
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {b.exemplos_targets.slice(0, 5).map((e, idx) => (
+                          <Badge key={idx} variant="outline" className="text-[10px] border-volt/20 bg-transparent">{e}</Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-3 border-t border-volt/10">
+                      <p className="text-xs text-muted-foreground">Prêmio estimado vs. múltiplo base</p>
+                      <p className="text-lg font-bold text-volt">{b.premio_estimado_pct?.toFixed(0)}% · {brl(b.premio_estimado_valor)}</p>
+                      {b.racional_premio && (
+                        <p className="text-[11px] text-muted-foreground mt-1 break-words italic">{b.racional_premio}</p>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
               {buyers.length === 0 && <p className="text-muted-foreground col-span-3 text-center py-10">Sem buyer map disponível.</p>}
             </div>
           </TabsContent>
