@@ -341,6 +341,18 @@ export default function EquityPlannerAssessment() {
             </div>
           </TabsContent>
 
+          {/* DOCS */}
+          <TabsContent value="docs" className="mt-4 space-y-3">
+            <EquityDocsUpload
+              assessmentId={assess.id}
+              companyId={assess.company_id}
+              onExtracted={() => { /* hint: user can hit Re-medir to re-run compute with new doc context */ }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Após anexar novos documentos, clique em <span className="text-volt">Re-medir</span> no topo para recalcular o diagnóstico incorporando os fatos extraídos.
+            </p>
+          </TabsContent>
+
           {/* PROGRESSO */}
           <TabsContent value="progresso" className="mt-4">
             <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
