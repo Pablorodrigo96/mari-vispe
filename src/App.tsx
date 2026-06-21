@@ -46,6 +46,10 @@ const ValuationDCF = lazy(() => import("./pages/ValuationDCF"));
 const ValuationCertifier = lazy(() => import("./pages/ValuationCertifier"));
 const PlanoPerfeito = lazy(() => import("./pages/PlanoPerfeito"));
 const MeusPlanosPerfeitos = lazy(() => import("./pages/MeusPlanosPerfeitos"));
+const EquityPlanner = lazy(() => import("./pages/EquityPlanner"));
+const EquityPlannerNew = lazy(() => import("./pages/EquityPlannerNew"));
+const EquityPlannerAssessment = lazy(() => import("./pages/EquityPlannerAssessment"));
+const MyEquityPlanners = lazy(() => import("./pages/MyEquityPlanners"));
 const Capital = lazy(() => import("./pages/Capital"));
 const Matching = lazy(() => import("./pages/Matching"));
 const BlindTeaser = lazy(() => import("./pages/BlindTeaser"));
@@ -201,6 +205,10 @@ const App = () => (
               <Route path="/valuation/dcf" element={<ValuationDCF />} />
               <Route path="/valuation/certificador" element={<ValuationCertifier />} />
               <Route path="/valuation/plano-perfeito" element={<PlanoPerfeito />} />
+              <Route path="/equity-planner" element={<EquityPlanner />} />
+              <Route path="/equity-planner/novo" element={<EquityPlannerNew />} />
+              <Route path="/equity-planner/:id" element={<EquityPlannerAssessment />} />
+              <Route path="/meus-equity-planners" element={<MyEquityPlanners />} />
               <Route path="/capital" element={<Capital />} />
               <Route path="/matching" element={<Matching />} />
               <Route path="/teaser/:ticker" element={<BlindTeaser />} />

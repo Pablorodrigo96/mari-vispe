@@ -1505,6 +1505,569 @@ export type Database = {
         }
         Relationships: []
       }
+      equity_archetypes: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          exemplos_setor: string[] | null
+          faixa_multiplo_max: number
+          faixa_multiplo_min: number
+          id: string
+          killers: Json | null
+          kpis: Json | null
+          nome: string
+          ordem: number | null
+          pesos_dimensoes: Json
+          piso_liquidez: number
+          universo_compradores: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          exemplos_setor?: string[] | null
+          faixa_multiplo_max: number
+          faixa_multiplo_min: number
+          id: string
+          killers?: Json | null
+          kpis?: Json | null
+          nome: string
+          ordem?: number | null
+          pesos_dimensoes: Json
+          piso_liquidez?: number
+          universo_compradores?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          exemplos_setor?: string[] | null
+          faixa_multiplo_max?: number
+          faixa_multiplo_min?: number
+          id?: string
+          killers?: Json | null
+          kpis?: Json | null
+          nome?: string
+          ordem?: number | null
+          pesos_dimensoes?: Json
+          piso_liquidez?: number
+          universo_compradores?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      equity_assessments: {
+        Row: {
+          arquetipo_id: string | null
+          arquetipo_sugerido: string | null
+          company_id: string
+          confianca_arquetipo: number | null
+          created_at: string
+          id: string
+          ipe_composto: number | null
+          raw_intake: Json | null
+          source: string
+          status: string
+          summary: string | null
+          updated_at: string
+          user_id: string
+          veredito_liquidez: string | null
+        }
+        Insert: {
+          arquetipo_id?: string | null
+          arquetipo_sugerido?: string | null
+          company_id: string
+          confianca_arquetipo?: number | null
+          created_at?: string
+          id?: string
+          ipe_composto?: number | null
+          raw_intake?: Json | null
+          source?: string
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+          veredito_liquidez?: string | null
+        }
+        Update: {
+          arquetipo_id?: string | null
+          arquetipo_sugerido?: string | null
+          company_id?: string
+          confianca_arquetipo?: number | null
+          created_at?: string
+          id?: string
+          ipe_composto?: number | null
+          raw_intake?: Json | null
+          source?: string
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+          veredito_liquidez?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_assessments_arquetipo_id_fkey"
+            columns: ["arquetipo_id"]
+            isOneToOne: false
+            referencedRelation: "equity_archetypes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equity_assessments_arquetipo_sugerido_fkey"
+            columns: ["arquetipo_sugerido"]
+            isOneToOne: false
+            referencedRelation: "equity_archetypes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equity_assessments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "equity_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_buyer_map: {
+        Row: {
+          arquetipo_comprador: string
+          assessment_id: string
+          created_at: string
+          id: string
+          nome_alvo: string | null
+          premio_estimado_pct: number | null
+          premio_estimado_valor: number | null
+          prioridade: number | null
+          tese_aquisicao: string | null
+        }
+        Insert: {
+          arquetipo_comprador: string
+          assessment_id: string
+          created_at?: string
+          id?: string
+          nome_alvo?: string | null
+          premio_estimado_pct?: number | null
+          premio_estimado_valor?: number | null
+          prioridade?: number | null
+          tese_aquisicao?: string | null
+        }
+        Update: {
+          arquetipo_comprador?: string
+          assessment_id?: string
+          created_at?: string
+          id?: string
+          nome_alvo?: string | null
+          premio_estimado_pct?: number | null
+          premio_estimado_valor?: number | null
+          prioridade?: number | null
+          tese_aquisicao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_buyer_map_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_companies: {
+        Row: {
+          arquetipo_id: string | null
+          cidade: string | null
+          cnae: string | null
+          cnpj: string | null
+          created_at: string
+          id: string
+          porte: string | null
+          razao_social: string | null
+          regime_tributario: string | null
+          setor_livre: string | null
+          uf: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          arquetipo_id?: string | null
+          cidade?: string | null
+          cnae?: string | null
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          porte?: string | null
+          razao_social?: string | null
+          regime_tributario?: string | null
+          setor_livre?: string | null
+          uf?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          arquetipo_id?: string | null
+          cidade?: string | null
+          cnae?: string | null
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          porte?: string | null
+          razao_social?: string | null
+          regime_tributario?: string | null
+          setor_livre?: string | null
+          uf?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_companies_arquetipo_id_fkey"
+            columns: ["arquetipo_id"]
+            isOneToOne: false
+            referencedRelation: "equity_archetypes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_comps_benchmarks: {
+        Row: {
+          arquetipo_id: string
+          created_at: string
+          fonte: string | null
+          id: string
+          metrica: string
+          multiplo_max: number
+          multiplo_min: number
+          porte: string
+          setor: string | null
+          vigencia: string | null
+        }
+        Insert: {
+          arquetipo_id: string
+          created_at?: string
+          fonte?: string | null
+          id?: string
+          metrica?: string
+          multiplo_max: number
+          multiplo_min: number
+          porte: string
+          setor?: string | null
+          vigencia?: string | null
+        }
+        Update: {
+          arquetipo_id?: string
+          created_at?: string
+          fonte?: string | null
+          id?: string
+          metrica?: string
+          multiplo_max?: number
+          multiplo_min?: number
+          porte?: string
+          setor?: string | null
+          vigencia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_comps_benchmarks_arquetipo_id_fkey"
+            columns: ["arquetipo_id"]
+            isOneToOne: false
+            referencedRelation: "equity_archetypes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_dimension_scores: {
+        Row: {
+          assessment_id: string
+          created_at: string
+          destruidor_top: boolean | null
+          dimensao: string
+          evidencias: Json | null
+          id: string
+          peso: number | null
+          score: number
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string
+          destruidor_top?: boolean | null
+          dimensao: string
+          evidencias?: Json | null
+          id?: string
+          peso?: number | null
+          score: number
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string
+          destruidor_top?: boolean | null
+          dimensao?: string
+          evidencias?: Json | null
+          id?: string
+          peso?: number | null
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_dimension_scores_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_initiative_library: {
+        Row: {
+          arquetipo_id: string | null
+          created_at: string
+          delta_ipe_padrao: number | null
+          descricao: string | null
+          dimensao: string
+          esforco: string | null
+          id: string
+          prazo_meses: number | null
+          tipo: string | null
+          titulo: string
+        }
+        Insert: {
+          arquetipo_id?: string | null
+          created_at?: string
+          delta_ipe_padrao?: number | null
+          descricao?: string | null
+          dimensao: string
+          esforco?: string | null
+          id?: string
+          prazo_meses?: number | null
+          tipo?: string | null
+          titulo: string
+        }
+        Update: {
+          arquetipo_id?: string | null
+          created_at?: string
+          delta_ipe_padrao?: number | null
+          descricao?: string | null
+          dimensao?: string
+          esforco?: string | null
+          id?: string
+          prazo_meses?: number | null
+          tipo?: string | null
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_initiative_library_arquetipo_id_fkey"
+            columns: ["arquetipo_id"]
+            isOneToOne: false
+            referencedRelation: "equity_archetypes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_initiatives: {
+        Row: {
+          assessment_id: string
+          created_at: string
+          delta_ipe: number | null
+          delta_valor: number | null
+          dependencias: string[] | null
+          descricao: string | null
+          dimensao_alvo: string
+          esforco: string | null
+          id: string
+          prazo_meses: number | null
+          prioridade: number | null
+          sprint: number | null
+          status: string
+          tipo: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string
+          delta_ipe?: number | null
+          delta_valor?: number | null
+          dependencias?: string[] | null
+          descricao?: string | null
+          dimensao_alvo: string
+          esforco?: string | null
+          id?: string
+          prazo_meses?: number | null
+          prioridade?: number | null
+          sprint?: number | null
+          status?: string
+          tipo?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string
+          delta_ipe?: number | null
+          delta_valor?: number | null
+          dependencias?: string[] | null
+          descricao?: string | null
+          dimensao_alvo?: string
+          esforco?: string | null
+          id?: string
+          prazo_meses?: number | null
+          prioridade?: number | null
+          sprint?: number | null
+          status?: string
+          tipo?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_initiatives_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_progress_log: {
+        Row: {
+          assessment_id: string | null
+          company_id: string
+          created_at: string
+          evento: string | null
+          id: string
+          ipe: number | null
+          valor: number | null
+        }
+        Insert: {
+          assessment_id?: string | null
+          company_id: string
+          created_at?: string
+          evento?: string | null
+          id?: string
+          ipe?: number | null
+          valor?: number | null
+        }
+        Update: {
+          assessment_id?: string | null
+          company_id?: string
+          created_at?: string
+          evento?: string | null
+          id?: string
+          ipe?: number | null
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_progress_log_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equity_progress_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "equity_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_valuations: {
+        Row: {
+          addbacks: Json | null
+          assessment_id: string
+          created_at: string
+          ebitda_normalizado: number | null
+          faixa_max: number | null
+          faixa_min: number | null
+          id: string
+          metodo: string
+          multiplo_aplicado: number | null
+          premissas: Json | null
+          valor_alvo: number | null
+          valor_atual: number | null
+        }
+        Insert: {
+          addbacks?: Json | null
+          assessment_id: string
+          created_at?: string
+          ebitda_normalizado?: number | null
+          faixa_max?: number | null
+          faixa_min?: number | null
+          id?: string
+          metodo?: string
+          multiplo_aplicado?: number | null
+          premissas?: Json | null
+          valor_alvo?: number | null
+          valor_atual?: number | null
+        }
+        Update: {
+          addbacks?: Json | null
+          assessment_id?: string
+          created_at?: string
+          ebitda_normalizado?: number | null
+          faixa_max?: number | null
+          faixa_min?: number | null
+          id?: string
+          metodo?: string
+          multiplo_aplicado?: number | null
+          premissas?: Json | null
+          valor_alvo?: number | null
+          valor_atual?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_valuations_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_value_bridge_items: {
+        Row: {
+          created_at: string
+          delta_valor: number
+          descricao: string | null
+          id: string
+          iniciativa_ids: string[] | null
+          ordem: number | null
+          parcela: string
+          valuation_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta_valor?: number
+          descricao?: string | null
+          id?: string
+          iniciativa_ids?: string[] | null
+          ordem?: number | null
+          parcela: string
+          valuation_id: string
+        }
+        Update: {
+          created_at?: string
+          delta_valor?: number
+          descricao?: string | null
+          id?: string
+          iniciativa_ids?: string[] | null
+          ordem?: number | null
+          parcela?: string
+          valuation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_value_bridge_items_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "equity_valuations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franchisee_regions: {
         Row: {
           categories: string[] | null
