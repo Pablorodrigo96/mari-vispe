@@ -195,8 +195,7 @@ Deno.serve(async (req) => {
       throw new Error("ai_invalid_json: " + (e as Error).message);
     }
 
-    // 4) Calcular IPE composto
-    const arqId = parsed.arquetipo_sugerido as string;
+    // 4) Calcular IPE composto (arqId já vem da classificação)
     const arq = (archetypes || []).find((a: any) => a.id === arqId) || (archetypes || [])[0];
     const pesos: Record<string, number> = arq?.pesos_dimensoes || {};
     let ipe = 0; let pesoTotal = 0;
