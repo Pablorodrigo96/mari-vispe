@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, RefreshCw, ArrowLeft, TrendingUp, Users, Activity, Target, LineChart as LineIcon, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, TrendingUp, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import {
   LineChart, Line, Legend,
 } from "recharts";
 import { DIMENSOES, ARQUETIPOS_LABEL, VEREDITO_LABEL, brl } from "@/lib/equity-planner/constants";
+import EquityDocsUpload from "@/components/equity-planner/EquityDocsUpload";
 
 interface Assessment {
   id: string; ipe_composto: number | null; arquetipo_id: string | null;
@@ -198,6 +199,7 @@ export default function EquityPlannerAssessment() {
             <TabsTrigger value="valor"><TrendingUp className="h-4 w-4 mr-1" /> Valor</TabsTrigger>
             <TabsTrigger value="plano"><Target className="h-4 w-4 mr-1" /> Plano</TabsTrigger>
             <TabsTrigger value="compradores"><Users className="h-4 w-4 mr-1" /> Compradores</TabsTrigger>
+            <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1" /> Docs</TabsTrigger>
             <TabsTrigger value="progresso"><LineIcon className="h-4 w-4 mr-1" /> Progresso</TabsTrigger>
           </TabsList>
 
@@ -337,6 +339,18 @@ export default function EquityPlannerAssessment() {
               ))}
               {buyers.length === 0 && <p className="text-muted-foreground col-span-3 text-center py-10">Sem buyer map disponível.</p>}
             </div>
+          </TabsContent>
+
+          {/* DOCS */}
+          <TabsContent value="docs" className="mt-4 space-y-3">
+            <EquityDocsUpload
+              assessmentId={assess.id}
+              companyId={assess.company_id}
+              onExtracted={() => { /* hint: user can hit Re-medir to re-run compute with new doc context */ }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Após anexar novos documentos, clique em <span className="text-volt">Re-medir</span> no topo para recalcular o diagnóstico incorporando os fatos extraídos.
+            </p>
           </TabsContent>
 
           {/* PROGRESSO */}

@@ -158,17 +158,29 @@ Deno.serve(async (req) => {
     }
     const arqId = classification.arquetipo_id || (assess as any).arquetipo_sugerido || "servico_profissional";
 
-    // 2) Carregar arquétipos + comps + library + migrations
-    const [{ data: archetypes }, { data: comps }, { data: library }, { data: migrations }] = await Promise.all([
+    // 2) Carregar arquétipos + comps + library + migrations + documentos extraídos
+    const [{ data: archetypes }, { data: comps }, { data: library }, { data: migrations }, { data: docs }] = await Promise.all([
       supabase.from("equity_archetypes").select("*").order("ordem"),
       supabase.from("equity_comps_benchmarks").select("*"),
       supabase.from("equity_initiative_library").select("*").eq("arquetipo_id", arqId),
       supabase.from("equity_archetype_migrations").select("*").eq("de_arquetipo_id", arqId),
+      supabase.from("equity_company_documents")
+        .select("file_name, doc_type, extraction_summary, extracted_json")
+        .eq("assessment_id", assessmentId)
+        .eq("extraction_status", "done"),
     ]);
+
+    // Enriquecer intakeText com resumos de documentos extraídos (verdade documental)
+    const docContext = (docs || []).length
+      ? "\n\n=== DOCUMENTOS EXTRAÍDOS PELA IA (sobrepõem declarações verbais) ===\n" +
+        (docs || []).map((d: any) =>
+          `[${d.doc_type || "doc"}] ${d.file_name}: ${d.extraction_summary || ""}\nFatos: ${JSON.stringify(d.extracted_json?.financeiro || {})}; Governança: ${JSON.stringify(d.extracted_json?.governanca || {})}; Sinais: ${(d.extracted_json?.sinais_qualitativos || []).join(" · ")}`
+        ).join("\n\n")
+      : "";
 
     // 3) Chamar Claude
     const prompt = buildPrompt({
-      companyData, intakeText: intakeText || "",
+      companyData, intakeText: (intakeText || "") + docContext,
       classification,
       archetypes: archetypes || [], comps: comps || [], library: library || [],
       migrations: migrations || [],
