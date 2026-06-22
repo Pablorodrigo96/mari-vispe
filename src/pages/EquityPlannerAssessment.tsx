@@ -719,7 +719,7 @@ export default function EquityPlannerAssessment() {
                         className={`w-full text-left p-3 rounded-lg border transition-all hover:scale-[1.01] hover:shadow-lg ${
                           isDone ? "border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/20" :
                           boosted ? "border-volt/60 bg-volt/10 ring-1 ring-volt/30" :
-                          i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" :
+                          (i.tipo === "migracao_arquetipo" || i.tipo === "reestruturacao_modelo") ? "border-volt/60 bg-volt/5" :
                           i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" :
                           "border-white/10 bg-carbon/40 hover:border-volt/40"
                         }`}
@@ -728,12 +728,13 @@ export default function EquityPlannerAssessment() {
                           <p className="font-medium text-sm break-words text-bone flex-1">{i.titulo}</p>
                           <Brain className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${isDone ? "text-emerald-400" : dd ? "text-volt" : "text-white/40"}`} />
                         </div>
-                        {i.descricao && <p className="text-xs text-white/65 mt-1 break-words line-clamp-2">{i.descricao}</p>}
+                        {i.descricao && <p className="text-xs text-white/75 mt-1 break-words line-clamp-2">{i.descricao}</p>}
                         <div className="flex flex-wrap gap-1 mt-2 text-[10px]">
                           <Badge variant="outline" className="border-volt/30 text-volt bg-volt/5">+{i.delta_ipe} IPE</Badge>
                           <Badge variant="outline" className="border-volt/30 text-volt bg-volt/5">{brl(i.delta_valor)}</Badge>
                           <Badge variant="outline" className="border-white/20 text-white/80 bg-transparent">{i.esforco}</Badge>
                           {i.tipo === "migracao_arquetipo" && <Badge className="bg-volt text-carbon text-[10px]">Migração</Badge>}
+                          {i.tipo === "reestruturacao_modelo" && <Badge className="bg-volt text-carbon text-[10px]">Reestruturação</Badge>}
                           {i.tipo === "derisk" && <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px]">De-risk</Badge>}
                           {boosted && <Badge className="bg-volt/20 text-volt border-volt/40 text-[10px]"><Crosshair className="h-3 w-3 mr-0.5" />Alvo</Badge>}
                         </div>
