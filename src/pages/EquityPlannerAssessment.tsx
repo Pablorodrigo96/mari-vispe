@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles, FileDown, BarChart3, Briefcase, ExternalLink } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles, FileDown, BarChart3, Briefcase, ExternalLink, Brain, CheckCircle2, Rocket } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,8 @@ import {
 import { DIMENSOES, ARQUETIPOS_LABEL, VEREDITO_LABEL, brl } from "@/lib/equity-planner/constants";
 import EquityDocsUpload from "@/components/equity-planner/EquityDocsUpload";
 import EquityMarketTab from "@/components/equity-planner/EquityMarketTab";
+import InitiativeDeepDiveModal from "@/components/equity-planner/InitiativeDeepDiveModal";
+import AnnualPlanTimeline from "@/components/equity-planner/AnnualPlanTimeline";
 
 interface Assessment {
   id: string; ipe_composto: number | null; arquetipo_id: string | null;
