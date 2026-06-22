@@ -159,14 +159,19 @@ Deno.serve(async (req) => {
 
     // 1.5) Se ainda não foi classificado, chamar classifier inline
     let classification = (assess as any).archetype_classification;
-    if (!classification) {
+    if (!classification || classification?._fallback === true) {
       const classifyRes = await fetch(`${SUPABASE_URL}/functions/v1/equity-planner-classify`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
         body: JSON.stringify({ assessmentId, intakeText, companyData }),
       });
-      const cj = await classifyRes.json();
-      classification = cj.classification || { arquetipo_id: "servico_profissional", confianca: 0.4 };
+      const cj = await classifyRes.json().catch(() => ({}));
+      if (classifyRes.ok && cj.classification) {
+        classification = cj.classification;
+      } else {
+        // classify falhou — usa arquétipo default mas NÃO marca _fallback no banco
+        classification = classification || { arquetipo_id: "servico_profissional", confianca: 0.4 };
+      }
     }
     const arqId = classification.arquetipo_id || (assess as any).arquetipo_sugerido || "servico_profissional";
 
