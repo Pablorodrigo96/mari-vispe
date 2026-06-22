@@ -65,6 +65,7 @@ export default function EquityPlannerAssessment() {
   const [deepdiveInitiative, setDeepdiveInitiative] = useState<Initiative | null>(null);
   const [annualPlan, setAnnualPlan] = useState<any | null>(null);
   const [buildingAnnual, setBuildingAnnual] = useState(false);
+  const [marketScan, setMarketScan] = useState<any | null>(null);
 
   const load = async () => {
     if (!id) return;
