@@ -284,7 +284,10 @@ export default function EquityPlannerAssessment() {
   const piso = 45;
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
+    <div className="min-h-screen bg-carbon text-bone py-8 px-4 relative">
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_15%_0%,_hsla(72,86%,68%,0.08)_0%,_transparent_55%)]" />
+      <div className="relative z-10">
+      <div className="hidden" data-anchor="assessment-content"></div>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
