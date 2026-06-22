@@ -286,6 +286,7 @@ const App = () => (
               <Route path="/admin/api-monitor" element={<RequireRole roles={["admin"]}><AdminApiMonitor /></RequireRole>} />
               <Route path="/admin/analytics" element={<RequireRole roles={["admin"]}><AdminAnalytics /></RequireRole>} />
               <Route path="/admin/cartas-grafica" element={<RequireRole roles={["admin"]}><AdminLettersSettings /></RequireRole>} />
+              <Route path="/admin/tokenizacao" element={<RequireRole roles={["admin"]}><AdminTokenizacao /></RequireRole>} />
               {/* legados — agora rodam dentro do shell EB */}
               <Route path="/admin/monday-parity" element={<Navigate to="/equity-brain/admin/monday-parity" replace />} />
               <Route path="/admin/advisors-mapping" element={<Navigate to="/equity-brain/admin/advisors-mapping" replace />} />
