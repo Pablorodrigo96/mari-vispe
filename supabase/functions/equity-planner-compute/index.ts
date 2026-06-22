@@ -571,13 +571,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Priorização: derisk (independencia/higiene/contingencias) primeiro,
-    // migração obrigatória no topo, depois execução por (delta_valor / esforco*prazo)
+    // Priorização: migração/reestruturação no topo, depois derisk, depois execução por (delta_valor / esforco*prazo)
     const ESFORCO_W: Record<string, number> = { baixo: 1, medio: 2, alto: 3 };
     const DERISK_DIMS = new Set(["independencia_dono","higiene_financeira","contingencias"]);
+    const MODELO_TIPOS = new Set(["migracao_arquetipo", "reestruturacao_modelo"]);
     allInits.sort((a: any, b: any) => {
-      const am = a.tipo === "migracao_arquetipo" ? 0 : 1;
-      const bm = b.tipo === "migracao_arquetipo" ? 0 : 1;
+      const am = MODELO_TIPOS.has(a.tipo) ? 0 : 1;
+      const bm = MODELO_TIPOS.has(b.tipo) ? 0 : 1;
       if (am !== bm) return am - bm;
       const ad = DERISK_DIMS.has(a.dimensao_alvo) ? 0 : 1;
       const bd = DERISK_DIMS.has(b.dimensao_alvo) ? 0 : 1;
@@ -598,7 +598,7 @@ Deno.serve(async (req) => {
       prazo_meses: Math.max(1, Number(i.prazo_meses) || 3),
       sprint: Math.max(1, Math.min(4, Number(i.sprint) || (idx < 3 ? 1 : idx < 6 ? 2 : idx < 9 ? 3 : 4))),
       status: "planejada",
-      tipo: ["execucao","derisk","migracao_arquetipo"].includes(i.tipo)
+      tipo: ["execucao","derisk","migracao_arquetipo","reestruturacao_modelo"].includes(i.tipo)
         ? i.tipo
         : (DERISK_DIMS.has(i.dimensao_alvo) ? "derisk" : "execucao"),
       prioridade: idx + 1,
