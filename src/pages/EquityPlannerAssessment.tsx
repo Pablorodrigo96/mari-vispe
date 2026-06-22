@@ -283,6 +283,37 @@ export default function EquityPlannerAssessment() {
   const veredito = VEREDITO_LABEL[assess.veredito_liquidez || "vendavel_em_meses"];
   const piso = 45;
 
+  // Detecta estado quebrado: status ai_failed OU valuation existe mas tudo zerado E sem plano/buyers
+  const reportBroken =
+    assess.status === "ai_failed" ||
+    (!!val && (val.valor_atual ?? 0) === 0 && (val.ebitda_normalizado ?? 0) === 0 && inits.length === 0 && buyers.length === 0);
+
+  if (reportBroken) {
+    return (
+      <div className="min-h-screen bg-carbon text-bone flex items-center justify-center px-4">
+        <Card className="!bg-slate-900/70 backdrop-blur-md border-amber-500/40 p-8 max-w-xl text-center">
+          <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
+          <h2 className="text-2xl font-bold mb-2 text-bone">Análise não concluída</h2>
+          <p className="text-muted-foreground mb-6 break-words">
+            A IA não devolveu um resultado válido na última execução, então o relatório
+            ficou sem valuation, plano e compradores. Re-rode agora — leva ~30 segundos
+            e regenera tudo do zero com base nas suas respostas.
+          </p>
+          <div className="flex gap-2 justify-center flex-wrap">
+            <Button className="bg-volt text-carbon hover:bg-volt/90" disabled={recomputing} onClick={handleRecompute}>
+              {recomputing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Re-rodar diagnóstico
+            </Button>
+            <Button variant="outline" className="bg-transparent" onClick={() => navigate("/meus-equity-planners")}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Meus diagnósticos
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+
   return (
     <div className="min-h-screen bg-carbon text-bone py-8 px-4 relative">
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_15%_0%,_hsla(72,86%,68%,0.08)_0%,_transparent_55%)]" />
@@ -547,7 +578,7 @@ export default function EquityPlannerAssessment() {
                   <XAxis dataKey="name" tick={{ fill: "#aaa", fontSize: 11 }} />
                   <YAxis tick={{ fill: "#aaa", fontSize: 11 }} tickFormatter={(v) => brl(v)} />
                   <Tooltip
-                    contentStyle={{ background: "#1a1a1a", border: "1px solid #D9F564" }}
+                    contentStyle={{ background: "#1a1a1a", border: "1px solid #D9F564", color: "#FAFAF7" }} itemStyle={{ color: "#FAFAF7" }} labelStyle={{ color: "#D9F564" }}
                     formatter={(v: any) => brl(v as number)}
                   />
                   <Bar dataKey="valor" fill="#D9F564" />
@@ -801,7 +832,7 @@ export default function EquityPlannerAssessment() {
                     <XAxis dataKey="data" tick={{ fill: "#aaa", fontSize: 11 }} />
                     <YAxis yAxisId="left" tick={{ fill: "#aaa", fontSize: 11 }} domain={[0, 100]} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fill: "#aaa", fontSize: 11 }} />
-                    <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #D9F564" }} />
+                    <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #D9F564", color: "#FAFAF7" }} itemStyle={{ color: "#FAFAF7" }} labelStyle={{ color: "#D9F564" }} />
                     <Legend />
                     <Line yAxisId="left" type="monotone" dataKey="IPE" stroke="#D9F564" strokeWidth={2} />
                     <Line yAxisId="right" type="monotone" dataKey="Valor" stroke="#60a5fa" strokeWidth={2} name="Valor (R$ mil)" />

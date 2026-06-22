@@ -32,13 +32,14 @@ const DIM_LABELS: Record<string,string> = {
 
 const SYSTEM = `Você é o orquestrador de um motor de Equity Planner para PMEs brasileiras.
 Sua missão: a partir do intake do empresário, da CLASSIFICAÇÃO DE ARQUÉTIPO já feita, e dos arquétipos/comps/biblioteca/perfis de comprador fornecidos, devolver um JSON estrito com:
-1) scores nas 12 dimensões (0..100) com 1 evidência cada;
-2) ebitda_contabil e ebitda_normalizado em reais, com addbacks DETALHADOS (remuneracao_dono, despesas_pessoais, nao_recorrentes, aluguel_imovel_proprio, outros);
-3) iniciativas (8 a 12) priorizadas em sprints (1..4), cada uma com delta_ipe e delta_valor — ANCORE em PLAYBOOK quando possível;
-4) buyer_map (3 a 5 entradas) ANCORADO nos perfis fornecidos (use perfil_id), com sinergias (3-5 strings), racional_premio (1-2 frases), exemplos_targets (3-5 nomes plausíveis); premio_estimado_pct dentro da faixa típica;
+1) scores nas 12 dimensões (0..100) com 1 evidência cada — OBRIGATÓRIO 12 itens;
+2) ebitda_contabil e ebitda_normalizado em reais (use o ebitda declarado quando não houver melhor sinal — NUNCA devolva 0 se o usuário informou faturamento>0; estime margem típica do arquétipo se faltar), com addbacks DETALHADOS (remuneracao_dono, despesas_pessoais, nao_recorrentes, aluguel_imovel_proprio, outros);
+3) iniciativas — OBRIGATÓRIO MÍNIMO 8, MÁXIMO 12, distribuídas em sprints 1..4 (pelo menos 1 por sprint), cada uma com delta_ipe (>0) e delta_valor (em R$, >0) — ANCORE em PLAYBOOK quando possível;
+4) buyer_map — OBRIGATÓRIO MÍNIMO 3, MÁXIMO 5 entradas ANCORADAS nos perfis fornecidos (use perfil_id), com sinergias (3-5 strings), racional_premio (1-2 frases), exemplos_targets (3-5 nomes plausíveis); premio_estimado_pct dentro da faixa típica;
 5) dcf_premissas: { wacc, cagr_5y, perpetuidade_g, taxa_imposto } — realistas para PME BR (WACC 15-25%, g 3-5%);
-6) veredito_liquidez: vendavel_hoje (IPE>=75), vendavel_6_12m (60-75), vendavel_12_24m (45-60), inviavel_sem_reestruturacao (<45 ou killers);
-7) summary em 2-3 frases pro dono.
+6) veredito_liquidez: vendavel_hoje (IPE>=75), vendavel_6_12m (60-75), vendavel_12_24m (45-60), inviavel_sem_reestruturacao (<45 ou killers) — OBRIGATÓRIO;
+7) summary em 2-3 frases pro dono — OBRIGATÓRIO;
+8) premissas_valuation: lista de 3-6 strings explicando as premissas usadas.
 
 REGRAS DURAS:
 - Não troque o arquétipo do classificador.
@@ -46,7 +47,8 @@ REGRAS DURAS:
 - "DE-RISKING ANTES DE CRESCIMENTO": independencia_dono/higiene_financeira/contingencias nos sprints 1-2.
 - Buyer map: cada item espelha um perfil_id de PERFIS_COMPRADOR_DISPONIVEIS (adapte sinergias/exemplos quando faltar contexto).
 - Não invente CNPJ ou múltiplos fora da faixa.
-- Devolva APENAS o JSON, sem markdown.`;
+- Devolva APENAS o JSON, sem markdown, sem prosa antes ou depois.
+- NUNCA devolva arrays vazios para iniciativas ou buyer_map. Se faltar dado, use defaults conservadores do PLAYBOOK e marque premissa=true nas dimensões correspondentes.`;
 
 function buildPrompt(args: {
   companyData: any;
@@ -157,14 +159,19 @@ Deno.serve(async (req) => {
 
     // 1.5) Se ainda não foi classificado, chamar classifier inline
     let classification = (assess as any).archetype_classification;
-    if (!classification) {
+    if (!classification || classification?._fallback === true) {
       const classifyRes = await fetch(`${SUPABASE_URL}/functions/v1/equity-planner-classify`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
         body: JSON.stringify({ assessmentId, intakeText, companyData }),
       });
-      const cj = await classifyRes.json();
-      classification = cj.classification || { arquetipo_id: "servico_profissional", confianca: 0.4 };
+      const cj = await classifyRes.json().catch(() => ({}));
+      if (classifyRes.ok && cj.classification) {
+        classification = cj.classification;
+      } else {
+        // classify falhou — usa arquétipo default mas NÃO marca _fallback no banco
+        classification = classification || { arquetipo_id: "servico_profissional", confianca: 0.4 };
+      }
     }
     const arqId = classification.arquetipo_id || (assess as any).arquetipo_sugerido || "servico_profissional";
 
@@ -197,20 +204,9 @@ Deno.serve(async (req) => {
       migrations: migrations || [], buyerArchetypes: buyerArchs || [],
     });
 
-    const ai = await callAnthropic({
-      model: "claude-sonnet-4-6",
-      system: SYSTEM,
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 5500,
-      temperature: 0.3,
-      function_name: "equity-planner-compute",
-      feature: "equity_planner",
-      user_id: assess.user_id,
-    });
-
-    // Extrair JSON (robusto: strip fences, extrai primeiro {...} balanceado, repara vírgulas finais)
+    // Extrator JSON robusto
     function extractJson(raw: string): any {
-      let s = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+      let s = (raw || "").trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
       const first = s.indexOf("{");
       if (first === -1) throw new Error("no_json_object");
       let depth = 0, end = -1, inStr = false, esc = false;
@@ -228,28 +224,69 @@ Deno.serve(async (req) => {
       }
       let candidate = end > first ? s.slice(first, end + 1) : s.slice(first);
       try { return JSON.parse(candidate); } catch {}
-      // Repara vírgulas finais antes de } ou ]
       const repaired = candidate.replace(/,\s*([}\]])/g, "$1");
       return JSON.parse(repaired);
     }
 
-    let parsed: any;
-    try {
-      parsed = extractJson(ai.text || "");
-    } catch (e) {
-      console.error("[equity-planner-compute] ai_invalid_json, usando fallback. Raw head:", (ai.text || "").slice(0, 400));
-      parsed = {
-        dimensoes: DIMENSOES.map((d) => ({ dimensao: d, score: 50, evidencia: "Dados insuficientes — estimativa base.", premissa: true })),
-        ebitda_normalizado: 0,
-        ajustes_ebitda: [],
-        diagnostico_executivo: "Diagnóstico parcial — a análise detalhada não pôde ser gerada agora. Refaça em alguns minutos para o resultado completo.",
-        plano_90d: [],
-        plano_12m: [],
-        plano_36m: [],
-        riscos: [],
-        buyer_map: [],
-      };
+    function validateParsed(p: any): { ok: boolean; reason?: string } {
+      if (!p || typeof p !== "object") return { ok: false, reason: "not_object" };
+      const dims = Array.isArray(p.dimensoes) ? p.dimensoes : [];
+      const inits = Array.isArray(p.iniciativas) ? p.iniciativas : [];
+      const buyers = Array.isArray(p.buyer_map) ? p.buyer_map : [];
+      if (dims.length < 8) return { ok: false, reason: `dimensoes_curtas:${dims.length}` };
+      if (inits.length < 4) return { ok: false, reason: `iniciativas_curtas:${inits.length}` };
+      if (buyers.length < 2) return { ok: false, reason: `buyers_curtos:${buyers.length}` };
+      return { ok: true };
     }
+
+    async function callAndParse(temperature: number, maxTokens: number) {
+      const ai = await callAnthropic({
+        model: "claude-sonnet-4-6",
+        system: SYSTEM,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: maxTokens,
+        temperature,
+        function_name: "equity-planner-compute",
+        feature: "equity_planner",
+        user_id: assess.user_id,
+      });
+      const parsed = extractJson(ai.text || "");
+      return { parsed, ai };
+    }
+
+    let parsed: any = null;
+    let aiMeta: any = null;
+    let lastErr: string = "";
+    for (const attempt of [
+      { temperature: 0.3, max_tokens: 5500 },
+      { temperature: 0,   max_tokens: 7500 },
+    ]) {
+      try {
+        const r = await callAndParse(attempt.temperature, attempt.max_tokens);
+        const v = validateParsed(r.parsed);
+        if (!v.ok) { lastErr = `validation:${v.reason}`; continue; }
+        parsed = r.parsed;
+        aiMeta = r.ai;
+        break;
+      } catch (e) {
+        lastErr = (e as Error).message || "parse_error";
+        console.warn(`[equity-planner-compute] attempt failed: ${lastErr}`);
+      }
+    }
+
+    if (!parsed) {
+      // NÃO sobrescrever dados anteriores. Marca o assessment como ai_failed e devolve 500.
+      await supabase.from("equity_assessments")
+        .update({ status: "ai_failed" })
+        .eq("id", assessmentId);
+      return new Response(JSON.stringify({
+        error: "ai_invalid_json",
+        detail: lastErr,
+        hint: "A IA não devolveu um resultado válido. Clique em Re-medir para tentar de novo.",
+      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const ai = aiMeta;
 
     // 4) Calcular IPE composto (arqId já vem da classificação)
     const arq = (archetypes || []).find((a: any) => a.id === arqId) || (archetypes || [])[0];
@@ -281,7 +318,11 @@ Deno.serve(async (req) => {
     const porte = (companyData?.porte as string) || "pequena";
     const comp = (comps || []).find((c: any) => c.arquetipo_id === arqId && c.porte === porte)
               || { multiplo_min: arq.faixa_multiplo_min, multiplo_max: arq.faixa_multiplo_max };
-    const ebitda = Math.max(0, Number(parsed.ebitda_normalizado ?? 0));
+    // EBITDA: prioriza o que a IA normalizou; fallback para declarado pelo usuário; último recurso: 15% do faturamento (margem média PME)
+    const ebitdaDeclarado = Number(companyData?.ebitda) || 0;
+    const fatDeclarado = Number(companyData?.faturamento) || 0;
+    const ebitdaAi = Number(parsed.ebitda_normalizado) || 0;
+    const ebitda = Math.max(0, ebitdaAi || ebitdaDeclarado || (fatDeclarado > 0 ? Math.round(fatDeclarado * 0.15) : 0));
     const piso = arq?.piso_liquidez ?? 45;
     const pos = curva(ipeFinal, piso);
     const multiploAtual = Number((comp.multiplo_min + (comp.multiplo_max - comp.multiplo_min) * pos).toFixed(2));
