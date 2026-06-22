@@ -23,17 +23,19 @@ export default function InvestirKYC() {
       const { data } = await supabase.from("investor_kyc").select("*").eq("user_id", ures.user.id).maybeSingle();
       if (data) {
         setExisting(data);
+        const addr = (data.address as any) || {};
         setForm({
           full_name: data.full_name || "",
           cpf: data.cpf || "",
           birth_date: data.birth_date || "",
           phone: data.phone || "",
-          address_street: data.address?.street || "",
-          address_city: data.address?.city || "",
-          address_state: data.address?.state || "",
-          address_cep: data.address?.cep || "",
+          address_street: addr.street || "",
+          address_city: addr.city || "",
+          address_state: addr.state || "",
+          address_cep: addr.cep || "",
         });
       }
+
     })();
   }, [navigate]);
 
