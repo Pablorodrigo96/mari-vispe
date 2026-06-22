@@ -1094,6 +1094,14 @@ export default function EquityPlannerAssessment() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Deep dive modal — Onda 9 */}
+        <InitiativeDeepDiveModal
+          open={deepdiveOpen}
+          onOpenChange={(o) => { setDeepdiveOpen(o); if (!o) load(); }}
+          initiative={deepdiveInitiative}
+          onCompiled={() => load()}
+        />
       </div>
       </div>
     </div>
