@@ -19,7 +19,16 @@ export type DimensaoKey = typeof DIMENSOES[number]["key"];
 export const ARQUETIPOS_LABEL: Record<string, string> = {
   servico_profissional: "Serviço Profissional",
   projeto_obra: "Projeto / Sob Encomenda",
+  projeto_obra_estruturado: "Projeto Estruturado (escopo fechado)",
   recorrente: "Receita Recorrente / Assinatura",
+  produto_ip: "Produto / IP Licenciável",
+};
+
+export const INICIATIVA_TIPO_LABEL: Record<string, { label: string; tone: "volt" | "amber" | "rose" | "slate" }> = {
+  execucao: { label: "Execução", tone: "slate" },
+  derisk: { label: "De-risking", tone: "amber" },
+  migracao_arquetipo: { label: "Migração de modelo", tone: "volt" },
+  reestruturacao_modelo: { label: "Reestruturação de modelo", tone: "volt" },
 };
 
 export const PORTE_OPTIONS = [

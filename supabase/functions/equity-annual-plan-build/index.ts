@@ -16,6 +16,7 @@ Regras:
 - Cada ação deve ser executável por um sócio/dono de PME (não consultoria abstrata).
 - Conecte iniciativas: se "reduzir dependência do dono" depende de "estruturar #2", coloque na ordem.
 - North star: target de IPE final + delta de valor projetado.
+- Se houver ROTA DE MIGRAÇÃO de modelo ativa, o plano DEVE conter uma TRILHA DE VENDABILIDADE paralela com marco mensal explícito (M1..M12) da transição de modelo, meta trimestral de % de receita recorrente e checklist de exit-readiness no M12 (governança, finanças, contratos, equipe, dossiê).
 - Devolva APENAS JSON estrito, sem markdown.`;
 
 function extractJson(raw: string): any {
@@ -75,8 +76,11 @@ VALUATION:
 
 COMPRADOR-ALVO (se houver): ${JSON.stringify(buyers || [])}
 
+ROTA DE MIGRAÇÃO DE MODELO (se houver): ${JSON.stringify((assess as any).migracao_arquetipo_sugerida || null)}
+VENDABILIDADE ATUAL: ${JSON.stringify(((assess as any).archetype_classification || {}).vendabilidade_atual || null)}
+
 INICIATIVAS DO PLANO:
-${(inits || []).map((i: any) => `- [${i.sprint}] ${i.titulo} (${i.dimensao_alvo}, Δ${i.delta_ipe} IPE, ${i.esforco}, ${i.prazo_meses}m)`).join("\n")}
+${(inits || []).map((i: any) => `- [${i.sprint}] ${i.titulo} (${i.dimensao_alvo}, tipo=${i.tipo}, Δ${i.delta_ipe} IPE, ${i.esforco}, ${i.prazo_meses}m)`).join("\n")}
 
 PROMPTS DE ACELERAÇÃO (respostas profundas do dono):
 ${compiledPrompts.map((c: any, idx: number) => `=== ${idx + 1}. ${c.titulo} (sprint ${c.sprint}) ===\n${c.prompt}`).join("\n\n")}
@@ -90,6 +94,16 @@ Devolva JSON:
     "tese_central": "uma frase forte que sintetiza o ano"
   },
   "resumo_executivo": "3 a 5 frases dizendo qual é o caminho de 12 meses",
+  "trilha_vendabilidade": {
+    "ativa": true,
+    "modelo_origem": "string",
+    "modelo_destino": "string",
+    "meta_recorrencia_pct": { "t1": 0, "t2": 0, "t3": 0, "t4": 0 },
+    "marcos_mensais": [
+      { "mes": 1, "marco": "string curta com o entregável de transição de modelo daquele mês" }
+    ],
+    "checklist_exit_readiness_m12": ["governança","finanças auditadas","contratos","equipe","dossiê de venda"]
+  },
   "meses": [
     {
       "mes": 1,
@@ -109,7 +123,7 @@ Devolva JSON:
   ]
 }
 
-Exatamente 12 meses. Cada mês com 2-4 ações.`;
+Exatamente 12 meses. Cada mês com 2-4 ações. trilha_vendabilidade.marcos_mensais deve ter 12 itens (um por mês) quando houver rota de migração; se não houver, devolva trilha_vendabilidade.ativa = false e arrays vazios.`;
 
     const resp = await callLovableAI(
       {

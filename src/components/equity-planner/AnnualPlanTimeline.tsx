@@ -15,7 +15,8 @@ export default function AnnualPlanTimeline({ plan }: Props) {
   const [openMes, setOpenMes] = useState<number | null>(1);
 
   if (!plan?.plan_data) return null;
-  const { north_star, resumo_executivo, meses } = plan.plan_data;
+  const { north_star, resumo_executivo, meses, trilha_vendabilidade } = plan.plan_data;
+  const trilhaAtiva = !!trilha_vendabilidade?.ativa && Array.isArray(trilha_vendabilidade?.marcos_mensais) && trilha_vendabilidade.marcos_mensais.length > 0;
 
   return (
     <div className="space-y-5">
@@ -48,6 +49,50 @@ export default function AnnualPlanTimeline({ plan }: Props) {
           </div>
         </div>
       </Card>
+
+      {/* Trilha de Vendabilidade */}
+      {trilhaAtiva && (
+        <Card className="!bg-graphite/40 backdrop-blur-md border-volt/30 p-6">
+          <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-widest text-volt font-semibold">Trilha de Vendabilidade</p>
+              <p className="text-lg font-bold text-bone mt-1 break-words">
+                {trilha_vendabilidade.modelo_origem || "Modelo atual"} → {trilha_vendabilidade.modelo_destino || "Modelo vendável"}
+              </p>
+            </div>
+            {trilha_vendabilidade.meta_recorrencia_pct && (
+              <div className="flex gap-2 flex-wrap">
+                {["t1","t2","t3","t4"].map((t) => (
+                  <Badge key={t} variant="outline" className="border-volt/40 text-volt bg-volt/5 text-[10px]">
+                    {t.toUpperCase()}: {trilha_vendabilidade.meta_recorrencia_pct[t] ?? 0}% recorrente
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+            {trilha_vendabilidade.marcos_mensais.map((m: any, i: number) => (
+              <div key={i} className="rounded-lg border border-volt/20 bg-carbon/60 p-3">
+                <p className="text-[10px] uppercase tracking-widest text-volt font-bold tabular-nums">M{m.mes ?? i + 1}</p>
+                <p className="text-xs text-bone/85 mt-1 break-words leading-snug">{m.marco}</p>
+              </div>
+            ))}
+          </div>
+          {!!trilha_vendabilidade.checklist_exit_readiness_m12?.length && (
+            <div className="mt-5 pt-4 border-t border-white/10">
+              <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-semibold">Checklist de exit-readiness no M12</p>
+              <ul className="mt-2 grid md:grid-cols-2 gap-1.5">
+                {trilha_vendabilidade.checklist_exit_readiness_m12.map((c: string, i: number) => (
+                  <li key={i} className="text-xs text-bone/85 flex gap-2 items-start break-words">
+                    <span className="text-emerald-400 mt-0.5">✓</span>{c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
+      )}
+
 
       {/* Timeline 12 meses */}
       <div className="space-y-2">

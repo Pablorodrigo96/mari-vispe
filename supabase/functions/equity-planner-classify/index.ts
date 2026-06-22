@@ -10,14 +10,17 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const SYSTEM = `Você é o Classificador de Arquétipo do Equity Planner.
-Sua única tarefa: dado o intake (texto livre e/ou auto-avaliação) de uma PME, identificar o ARQUÉTIPO DE MODELO DE NEGÓCIO atual da empresa entre os disponíveis e, se existir, apontar uma MIGRAÇÃO DE ARQUÉTIPO que seria a maior alavanca de valor.
+Sua tarefa: dado o intake (texto livre e/ou auto-avaliação) de uma PME, identificar o ARQUÉTIPO DE MODELO DE NEGÓCIO atual e, OBRIGATORIAMENTE para arquétipos de baixa liquidez (servico_profissional, projeto_obra), apontar a MIGRAÇÃO DE MODELO mais valiosa.
 
 Setor é metadado — o que importa é o modelo econômico:
-- servico_profissional: people-based, hora-homem, projeto sob demanda, dependência do dono típica (consultoria, advocacia, agência, contabilidade)
-- projeto_obra: receita lumpy por contrato/obra, capital de giro pesado (construtora, integrador em modelo projeto, engenharia)
-- recorrente: MRR/ARR, contratos mensais, churn como métrica-chave (SaaS, MSP, manutenção contratada, mensalidade)
+- servico_profissional: people-based, hora-homem, projeto sob demanda, dependência do dono típica (consultoria, advocacia, agência, contabilidade) — BAIXA LIQUIDEZ
+- projeto_obra: receita lumpy por contrato/obra, capital de giro pesado (construtora, integrador em modelo projeto, engenharia) — BAIXA LIQUIDEZ
+- recorrente: MRR/ARR, contratos mensais, churn como métrica-chave (SaaS, MSP, manutenção contratada, mensalidade) — ALTA LIQUIDEZ
 
-Devolva APENAS JSON estrito sem markdown.`;
+REGRAS DURAS:
+- Se arquetipo_id ∈ {servico_profissional, projeto_obra}, "migracao_sugerida" é OBRIGATÓRIO (não pode ser null) — escolha a melhor rota das ROTAS DE MIGRAÇÃO disponíveis.
+- "vendabilidade_atual" é SEMPRE obrigatório, com nota 0-100 honesta (consultoria pura ~30-40, projeto obra ~35-45, recorrente saudável 65+) e 3-5 obstáculos concretos.
+- Devolva APENAS JSON estrito sem markdown.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -62,11 +65,17 @@ Devolva JSON:
   "confianca": 0.0,
   "justificativa": "1-2 frases explicando por quê",
   "sinais_detectados": ["string","string"],
+  "vendabilidade_atual": {
+    "nota_0_100": 0,
+    "motivo_baixa_liquidez": "1-2 frases sobre por que essa empresa é (ou não) líquida hoje no mercado de M&A",
+    "principais_obstaculos": ["3 a 5 obstáculos concretos que travam a venda dessa empresa específica"]
+  },
   "migracao_sugerida": {
-    "rota_id": null | "uuid da rota acima",
-    "para_arquetipo_id": null | "id",
-    "racional": "se aplicável, por que essa migração é a maior alavanca de valor desta empresa em específico",
-    "viabilidade": "alta|media|baixa"
+    "rota_id": "uuid da rota acima (OBRIGATÓRIO p/ servico_profissional/projeto_obra)",
+    "para_arquetipo_id": "id do arquétipo destino",
+    "racional": "por que essa migração é a maior alavanca de valor desta empresa em específico",
+    "viabilidade": "alta|media|baixa",
+    "bloqueadores": ["3 bloqueadores concretos para essa migração nesta empresa"]
   } | null
 }`;
 
@@ -127,23 +136,74 @@ Devolva JSON:
         parsed = JSON.parse(repaired);
       }
     } catch (e) {
-      // Fallback soft: classificação default p/ não travar o wizard
+      // Fallback soft: classificação default p/ não travar o wizard.
+      // NÃO retorna aqui — segue para o bloco de enforcement abaixo
+      // para popular vendabilidade_atual e migracao_sugerida via defaults.
       console.warn("[equity-planner-classify] invalid_json:", (e as Error).message, "head:", (ai.text || "").slice(0, 200));
-      const fallback = {
+      parsed = {
         arquetipo_id: "servico_profissional",
         confianca: 0.4,
         racional: "Classificação automática indisponível — usando default conservador. O compute refinará no próximo passo.",
         migracao_sugerida: null,
         _fallback: true,
       };
-      await supabase.from("equity_assessments").update({
-        archetype_classification: fallback,
-        arquetipo_sugerido: fallback.arquetipo_id,
-        confianca_arquetipo: fallback.confianca,
-      }).eq("id", assessmentId);
-      return new Response(JSON.stringify({ ok: true, classification: fallback, provider: ai.provider, fallback: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    }
+
+    // ENFORCEMENT: garante vendabilidade_atual e migracao_sugerida p/ arquétipos ilíquidos
+    const ILIQUIDOS = new Set(["servico_profissional", "projeto_obra"]);
+    const VENDABILIDADE_DEFAULT: Record<string, any> = {
+      servico_profissional: {
+        nota_0_100: 35,
+        motivo_baixa_liquidez: "Empresa de serviço profissional sem recorrência: receita depende de horas-homem e da figura do dono, o que afasta o investidor estratégico.",
+        principais_obstaculos: [
+          "Dono é o principal entregador e vendedor",
+          "Receita projeto-a-projeto sem previsibilidade",
+          "Metodologia não documentada/transferível",
+          "Time difícil de reter sem o dono",
+          "Margem espremida por hora-homem"
+        ]
+      },
+      projeto_obra: {
+        nota_0_100: 40,
+        motivo_baixa_liquidez: "Receita lumpy por contrato/obra, capital de giro pesado e dependência de relacionamentos do dono — comprador estratégico pondera caixa, não múltiplo cheio.",
+        principais_obstaculos: [
+          "Backlog volátil e não-recorrente",
+          "Capital de giro alto e variável",
+          "Concentração em poucos clientes/contratos",
+          "Sem linha de serviços contratados pós-obra",
+          "Margens sensíveis a custos de insumos"
+        ]
+      },
+      recorrente: {
+        nota_0_100: 65,
+        motivo_baixa_liquidez: "Modelo recorrente já é atrativo no M&A — o gap está em escala, churn e governança para arrancar prêmio máximo.",
+        principais_obstaculos: [
+          "Churn ainda não controlado",
+          "Governança/financeiro abaixo de DD",
+          "Concentração de receita em poucos clientes"
+        ]
+      }
+    };
+    if (!parsed.vendabilidade_atual || typeof parsed.vendabilidade_atual !== "object") {
+      parsed.vendabilidade_atual = VENDABILIDADE_DEFAULT[parsed.arquetipo_id] || VENDABILIDADE_DEFAULT.servico_profissional;
+    }
+    if (ILIQUIDOS.has(parsed.arquetipo_id) && (!parsed.migracao_sugerida || !parsed.migracao_sugerida.para_arquetipo_id)) {
+      // pega 1a rota disponível para esse arquétipo de origem (prioriza para recorrente)
+      const rotas = (migrations || []).filter((m: any) => m.de_arquetipo_id === parsed.arquetipo_id);
+      const rota = rotas.find((r: any) => r.para_arquetipo_id === "recorrente") || rotas[0];
+      if (rota) {
+        parsed.migracao_sugerida = {
+          rota_id: rota.id,
+          para_arquetipo_id: rota.para_arquetipo_id,
+          racional: rota.descricao_rota,
+          viabilidade: "media",
+          bloqueadores: rota.bloqueadores || [],
+        };
+      }
+    }
+    if (parsed.migracao_sugerida && !parsed.migracao_sugerida.bloqueadores?.length) {
+      const rota = (migrations || []).find((m: any) => m.id === parsed.migracao_sugerida.rota_id);
+      parsed.migracao_sugerida.bloqueadores = rota?.bloqueadores || [];
     }
 
     // persist

@@ -506,7 +506,8 @@ Deno.serve(async (req) => {
       { valuation_id: valIns.id, parcela: "valor_alvo", descricao: "Valor potencial pós-execução do plano", delta_valor: valorAlvo, ordem: 5 },
     ]);
 
-    // initiatives — força migração de arquétipo no topo se sugerida pelo classificador
+    // initiatives — força migração de arquétipo + reestruturação de modelo p/ arquétipos ilíquidos
+    const ILIQUIDOS = new Set(["servico_profissional", "projeto_obra"]);
     const migrSug = classification?.migracao_sugerida;
     let allInits: any[] = (parsed.iniciativas || []).slice();
     const hasMigracao = allInits.some((i: any) => i.tipo === "migracao_arquetipo");
@@ -515,7 +516,7 @@ Deno.serve(async (req) => {
       const deltaMult = Number(rota?.delta_multiplo_esperado || 2.5);
       allInits.unshift({
         library_id: null,
-        titulo: rota?.titulo || `Migrar para ${migrSug.para_arquetipo_id}`,
+        titulo: rota?.titulo || `Migrar modelo para ${migrSug.para_arquetipo_id}`,
         descricao: rota?.descricao_rota || migrSug.racional,
         dimensao_alvo: "qualidade_receita",
         delta_ipe: 15,
@@ -527,13 +528,56 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Priorização: derisk (independencia/higiene/contingencias) primeiro,
-    // migração obrigatória no topo, depois execução por (delta_valor / esforco*prazo)
+    // Para arquétipos ilíquidos, GARANTE 2 iniciativas de reestruturação de modelo no Sprint 1
+    if (ILIQUIDOS.has(arqId)) {
+      const hasRecorrencia = allInits.some((i: any) =>
+        /recorr|retainer|contrato\s+mensal|MRR|ARR|assinatura/i.test(`${i.titulo} ${i.descricao || ""}`)
+      );
+      const hasIndepDono = allInits.some((i: any) =>
+        i.dimensao_alvo === "independencia_dono" ||
+        /dono|second\b|segundo\s+nível|playbook|delegar|sucessão/i.test(`${i.titulo} ${i.descricao || ""}`)
+      );
+      if (!hasRecorrencia) {
+        allInits.unshift({
+          library_id: null,
+          titulo: arqId === "servico_profissional"
+            ? "Criar oferta retainer mensal sobre a base atual"
+            : "Lançar linha de serviços contratados pós-projeto (manutenção/SLA)",
+          descricao: arqId === "servico_profissional"
+            ? "Empacotar 30-40% do escopo atual em contrato mensal recorrente (retainer) para clientes-chave — vira MRR previsível."
+            : "Toda obra entregue passa a abrir contrato anual de manutenção/operação com SLA — receita lumpy ganha cauda recorrente.",
+          dimensao_alvo: "qualidade_receita",
+          delta_ipe: 10,
+          delta_valor: Math.round(0.8 * Math.max(0, ebitda)),
+          esforco: "medio",
+          prazo_meses: 4,
+          sprint: 1,
+          tipo: "reestruturacao_modelo",
+        });
+      }
+      if (!hasIndepDono) {
+        allInits.unshift({
+          library_id: null,
+          titulo: "Tirar o dono do funil: estruturar #2 comercial e operacional",
+          descricao: "Mapear o que só o dono faz hoje (vendas, entrega-chave, decisões), formar segundo nível com playbook e CRM, e fazer o dono sair de 1-2 frentes em 90 dias.",
+          dimensao_alvo: "independencia_dono",
+          delta_ipe: 12,
+          delta_valor: Math.round(0.6 * Math.max(0, ebitda)),
+          esforco: "medio",
+          prazo_meses: 6,
+          sprint: 1,
+          tipo: "reestruturacao_modelo",
+        });
+      }
+    }
+
+    // Priorização: migração/reestruturação no topo, depois derisk, depois execução por (delta_valor / esforco*prazo)
     const ESFORCO_W: Record<string, number> = { baixo: 1, medio: 2, alto: 3 };
     const DERISK_DIMS = new Set(["independencia_dono","higiene_financeira","contingencias"]);
+    const MODELO_TIPOS = new Set(["migracao_arquetipo", "reestruturacao_modelo"]);
     allInits.sort((a: any, b: any) => {
-      const am = a.tipo === "migracao_arquetipo" ? 0 : 1;
-      const bm = b.tipo === "migracao_arquetipo" ? 0 : 1;
+      const am = MODELO_TIPOS.has(a.tipo) ? 0 : 1;
+      const bm = MODELO_TIPOS.has(b.tipo) ? 0 : 1;
       if (am !== bm) return am - bm;
       const ad = DERISK_DIMS.has(a.dimensao_alvo) ? 0 : 1;
       const bd = DERISK_DIMS.has(b.dimensao_alvo) ? 0 : 1;
@@ -554,7 +598,7 @@ Deno.serve(async (req) => {
       prazo_meses: Math.max(1, Number(i.prazo_meses) || 3),
       sprint: Math.max(1, Math.min(4, Number(i.sprint) || (idx < 3 ? 1 : idx < 6 ? 2 : idx < 9 ? 3 : 4))),
       status: "planejada",
-      tipo: ["execucao","derisk","migracao_arquetipo"].includes(i.tipo)
+      tipo: ["execucao","derisk","migracao_arquetipo","reestruturacao_modelo"].includes(i.tipo)
         ? i.tipo
         : (DERISK_DIMS.has(i.dimensao_alvo) ? "derisk" : "execucao"),
       prioridade: idx + 1,
