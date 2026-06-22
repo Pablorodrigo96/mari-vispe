@@ -2,7 +2,7 @@
 // prompts compilados das iniciativas. POST { assessment_id }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { callAnthropic } from "../_shared/anthropicGateway.ts";
+import { callLovableAI } from "../_shared/apiTrack.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
