@@ -25,6 +25,8 @@ interface Assessment {
   company_id: string; confianca_arquetipo: number | null;
   migracao_arquetipo_sugerida: any | null;
   archetype_classification: any | null;
+  promoted_mandate_id: string | null;
+  promoted_at: string | null;
 }
 interface DimScore { dimensao: string; score: number; peso: number; destruidor_top: boolean; evidencias: any; }
 interface Valuation { id: string; ebitda_contabil: number | null; ebitda_normalizado: number; addbacks: any; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; valor_dcf: number | null; valor_sde: number | null; valor_triangulado: number | null; dcf_premissas: any; }
