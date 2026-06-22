@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { InvestirShell, SectionEyebrow } from "@/components/investir/InvestirShell";
+import { InvestirShell } from "@/components/investir/InvestirShell";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, ShieldCheck, Layers, TrendingUp, Lock, FileCheck2, Wallet } from "lucide-react";
+import {
+  ArrowRight,
+  ShieldCheck,
+  Wallet,
+  Sparkles,
+  Lock,
+  FileCheck2,
+  Smartphone,
+  TrendingUp,
+  ChevronDown,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Token = {
@@ -22,13 +32,10 @@ type Token = {
 const fmtBRL = (n: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(n || 0);
 
-const fmtNum = (n: number) =>
-  new Intl.NumberFormat("pt-BR").format(n || 0);
-
 export default function InvestirHome() {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ offerings: 0, companies: 0, sectors: 0, minTicket: 0 });
+  const [companies, setCompanies] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -38,244 +45,250 @@ export default function InvestirHome() {
         .in("status", ["primary_open", "approved", "issued"])
         .order("created_at", { ascending: false })
         .limit(6);
-      const list = (data as Token[]) || [];
-      setTokens(list);
-
-      const { count: companyCount } = await supabase
+      setTokens((data as Token[]) || []);
+      const { count } = await supabase
         .from("listings")
         .select("id", { head: true, count: "exact" })
         .eq("is_tokenizable", true);
-
-      setStats({
-        offerings: list.filter(t => t.status === "primary_open").length,
-        companies: companyCount || list.length,
-        sectors: 12,
-        minTicket: list.length ? Math.min(...list.map(t => t.min_ticket || Infinity)) : 100,
-      });
+      setCompanies(count || 0);
       setLoading(false);
     })();
   }, []);
 
+  const minTicket = tokens.length ? Math.min(...tokens.map(t => t.min_ticket || 100)) : 100;
+
   return (
     <InvestirShell>
-      {/* HERO */}
+      {/* HERO — direto, sem jargão */}
       <section className="relative overflow-hidden border-b border-bone/10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(217,245,100,0.15),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(217,245,100,0.06),transparent_60%)]" />
-        <div className="relative max-w-[1400px] mx-auto px-6 pt-20 pb-24 grid lg:grid-cols-[1.2fr_1fr] gap-16 items-center">
-          <div>
-            <SectionEyebrow>Plataforma regulada · Ativos privados tokenizados</SectionEyebrow>
-            <h1 className="mt-5 text-5xl md:text-6xl lg:text-7xl font-semibold tracking-tight leading-[1.02] text-bone">
-              Invista em empresas <br/>
-              <span className="text-volt">privadas tokenizadas</span>
-            </h1>
-            <p className="mt-6 text-lg text-bone/70 max-w-xl leading-relaxed">
-              Acesse ativos digitais lastreados em empresas reais, participe de ofertas selecionadas
-              e acompanhe sua carteira em uma plataforma regulada, segura e transparente.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                to="/investir/empresas"
-                className="inline-flex items-center gap-2 bg-volt hover:bg-volt/90 text-carbon font-semibold px-5 py-3 rounded-md transition-all"
-              >
-                Explorar empresas <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                to="/investir/auth?mode=signup"
-                className="inline-flex items-center gap-2 border border-bone/20 hover:bg-bone/10 text-bone font-medium px-5 py-3 rounded-md transition-all"
-              >
-                Criar conta de investidor
-              </Link>
-              <Link
-                to="/investir/como-funciona"
-                className="inline-flex items-center gap-2 text-bone/70 hover:text-bone font-medium px-2 py-3"
-              >
-                Como funciona →
-              </Link>
-            </div>
-
-            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-xs text-bone/50">
-              <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-volt/70" />Verificação KYC/AML</span>
-              <span className="flex items-center gap-1.5"><FileCheck2 className="w-3.5 h-3.5 text-volt/70" />Documentação jurídica</span>
-              <span className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-volt/70" />Custódia regulada</span>
-            </div>
-          </div>
-
-          {/* Ticker preview */}
-          <div className="relative bg-graphite/60 border border-bone/10 rounded-2xl p-5 backdrop-blur-xl">
-            <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-bone/40 mb-4">
-              <span>Ofertas em destaque</span>
-              <span className="text-volt">ao vivo</span>
-            </div>
-            <div className="space-y-1">
-              {(loading ? Array.from({length:4}) : tokens.slice(0,4)).map((t: any, i) => (
-                <TickerRow key={i} token={t} loading={loading} />
-              ))}
-            </div>
-            <Link to="/investir/empresas" className="mt-4 text-xs text-volt hover:underline flex items-center gap-1">
-              Ver todas as empresas <ArrowRight className="w-3 h-3" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(217,245,100,0.18),transparent_60%)]" />
+        <div className="relative max-w-[1200px] mx-auto px-6 pt-20 pb-16 md:pt-28 md:pb-24 text-center">
+          <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-volt/90 bg-volt/10 border border-volt/20 px-3 py-1.5 rounded-full mb-6">
+            <Sparkles className="w-3 h-3" /> Novo · investimento em empresas privadas
+          </span>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-semibold tracking-tight leading-[1.02] text-bone max-w-4xl mx-auto">
+            Invista em empresas reais <br className="hidden md:block" />
+            <span className="text-volt">a partir de {fmtBRL(minTicket)}.</span>
+          </h1>
+          <p className="mt-6 text-lg md:text-xl text-bone/70 max-w-2xl mx-auto leading-relaxed">
+            Conta 100% digital, sem mensalidade. Escolha a empresa, deposite via Pix
+            e acompanhe sua carteira em um só lugar.
+          </p>
+          <div className="mt-9 flex flex-wrap justify-center gap-3">
+            <Link
+              to="/investir/auth?mode=signup"
+              className="inline-flex items-center gap-2 bg-volt hover:bg-volt/90 text-carbon font-semibold px-6 py-3.5 rounded-full transition-all text-base"
+            >
+              Quero começar <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              to="/investir/empresas"
+              className="inline-flex items-center gap-2 border border-bone/20 hover:bg-bone/10 text-bone font-medium px-6 py-3.5 rounded-full transition-all text-base"
+            >
+              Ver empresas disponíveis
             </Link>
           </div>
+          <div className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs text-bone/50">
+            <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-volt/70" />Identidade verificada</span>
+            <span className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-volt/70" />Custódia regulada</span>
+            <span className="flex items-center gap-1.5"><FileCheck2 className="w-3.5 h-3.5 text-volt/70" />Documentação jurídica</span>
+          </div>
         </div>
       </section>
 
-      {/* STAT STRIP */}
-      <section className="border-b border-bone/10 bg-graphite/30">
-        <div className="max-w-[1400px] mx-auto px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
-          <Stat label="Ofertas ativas" value={fmtNum(stats.offerings)} />
-          <Stat label="Empresas tokenizadas" value={fmtNum(stats.companies)} />
-          <Stat label="Setores cobertos" value={fmtNum(stats.sectors)} />
-          <Stat label="Ticket mínimo a partir de" value={fmtBRL(stats.minTicket)} />
-        </div>
-      </section>
-
-      {/* FEATURED OFFERINGS */}
-      <section className="max-w-[1400px] mx-auto px-6 py-20">
-        <div className="flex items-end justify-between gap-4 mb-8">
-          <div>
-            <SectionEyebrow>Ofertas em destaque</SectionEyebrow>
-            <h2 className="mt-3 text-3xl md:text-4xl font-semibold tracking-tight">
-              Empresas selecionadas, disponíveis agora
-            </h2>
-          </div>
-          <Link to="/investir/empresas" className="text-sm text-bone/70 hover:text-volt flex items-center gap-1">
-            Ver listagem completa <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({length: 6}).map((_,i)=>(<Skeleton key={i} className="h-56 rounded-xl bg-graphite/50" />))}
-          </div>
-        ) : tokens.length === 0 ? (
-          <EmptyOfferings />
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tokens.map(t => <OfferCard key={t.id} token={t} />)}
-          </div>
-        )}
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section className="border-t border-bone/10 bg-graphite/20">
-        <div className="max-w-[1400px] mx-auto px-6 py-20">
-          <SectionEyebrow>Como funciona em 4 passos</SectionEyebrow>
-          <h2 className="mt-3 text-3xl md:text-4xl font-semibold tracking-tight mb-12">
-            Do cadastro ao token na sua carteira
+      {/* POR QUE INVESTIR AQUI */}
+      <section className="border-b border-bone/10">
+        <div className="max-w-[1200px] mx-auto px-6 py-16 md:py-20">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-bone text-center mb-3">
+            Simples, do início ao fim.
           </h2>
-          <div className="grid md:grid-cols-4 gap-6">
+          <p className="text-bone/60 text-center mb-12 max-w-xl mx-auto">
+            Sem corretagem escondida, sem boletas complicadas. É só escolher, depositar e investir.
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { n: "01", icon: ShieldCheck, t: "Cadastro e KYC", d: "Crie sua conta e envie sua documentação para análise de identidade." },
-              { n: "02", icon: Layers, t: "Suitability", d: "Defina seu perfil de investidor e os ativos elegíveis pra você." },
-              { n: "03", icon: Wallet, t: "Reserva", d: "Deposite, escolha o ativo, defina o valor e confirme a reserva." },
-              { n: "04", icon: TrendingUp, t: "Liquidação", d: "Tokens custodiados na sua carteira e acompanhamento em tempo real." },
-            ].map(step => (
-              <div key={step.n} className="bg-carbon/60 border border-bone/10 rounded-xl p-6 hover:border-volt/30 transition-colors">
-                <div className="text-volt/70 text-xs font-mono mb-3">{step.n}</div>
-                <step.icon className="w-6 h-6 text-volt mb-4" />
-                <div className="font-semibold text-bone mb-2">{step.t}</div>
-                <div className="text-sm text-bone/60 leading-relaxed">{step.d}</div>
+              { icon: Wallet, t: `Comece com ${fmtBRL(minTicket)}`, d: "Ticket baixo. Sem precisar de patrimônio enorme pra entrar." },
+              { icon: ShieldCheck, t: "Empresas curadas", d: "Cada oferta passa por análise antes de chegar até você." },
+              { icon: Smartphone, t: "100% digital", d: "Do cadastro à compra em minutos, no celular ou no computador." },
+              { icon: TrendingUp, t: "Você no controle", d: "Acompanhe sua carteira, reservas e documentos em tempo real." },
+            ].map((b, i) => (
+              <div key={i} className="bg-graphite/40 border border-bone/10 rounded-2xl p-6 hover:border-volt/30 transition-colors">
+                <div className="w-10 h-10 rounded-lg bg-volt/15 grid place-items-center mb-4">
+                  <b.icon className="w-5 h-5 text-volt" />
+                </div>
+                <div className="font-semibold text-bone mb-2 text-lg">{b.t}</div>
+                <div className="text-sm text-bone/60 leading-relaxed">{b.d}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* RISK STRIP */}
-      <section className="border-t border-bone/10">
-        <div className="max-w-[1400px] mx-auto px-6 py-16 grid md:grid-cols-[1fr_1.4fr] gap-12 items-center">
-          <div>
-            <SectionEyebrow>Educação e risco</SectionEyebrow>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-              Transparência sobre o que você está adquirindo
-            </h2>
+      {/* OFERTAS EM DESTAQUE */}
+      <section className="border-b border-bone/10 bg-graphite/20">
+        <div className="max-w-[1200px] mx-auto px-6 py-16 md:py-20">
+          <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-volt mb-2">Disponível agora</div>
+              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-bone">
+                Empresas abertas para investimento
+              </h2>
+            </div>
+            <Link to="/investir/empresas" className="text-sm text-bone/70 hover:text-volt flex items-center gap-1">
+              Ver todas <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <ul className="space-y-3 text-sm text-bone/70">
+
+          {loading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-56 rounded-2xl bg-graphite/50" />
+              ))}
+            </div>
+          ) : tokens.length === 0 ? (
+            <EmptyOfferings />
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tokens.map(t => <OfferCard key={t.id} token={t} />)}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* COMO FUNCIONA */}
+      <section className="border-b border-bone/10">
+        <div className="max-w-[1200px] mx-auto px-6 py-16 md:py-20">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-bone text-center mb-3">
+            Como funciona em 4 passos
+          </h2>
+          <p className="text-bone/60 text-center mb-12">Em menos de 10 minutos você está investindo.</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              "Todos os investidores passam por verificação de identidade, suitability e validações de compliance antes de operar.",
-              "As ofertas e negociações seguem regras aplicáveis ao tipo de ativo, ao perfil do investidor e à autorização regulatória da plataforma.",
-              "Investimentos em empresas privadas envolvem risco de perda total do capital; ativos privados podem ter baixa liquidez.",
-              "Rentabilidade passada ou projetada não representa garantia de retorno. Leia sempre os documentos da oferta antes de investir.",
-            ].map((t,i)=>(
-              <li key={i} className="flex gap-3"><span className="text-volt mt-1">•</span><span>{t}</span></li>
+              { t: "Crie sua conta", d: "Cadastro rápido com e-mail e senha. Sem papelada." },
+              { t: "Confirme seus dados", d: "Envie um documento com foto e selfie. Análise em até 1 dia útil." },
+              { t: "Deposite via Pix", d: "Adicione saldo na sua carteira na hora, sem taxa." },
+              { t: "Escolha e invista", d: "Selecione a empresa, defina o valor e confirme. Pronto." },
+            ].map((s, i) => (
+              <div key={i} className="relative bg-carbon/60 border border-bone/10 rounded-2xl p-6">
+                <div className="text-5xl font-semibold text-volt/30 tabular-nums leading-none mb-4">
+                  {String(i + 1).padStart(2, "0")}
+                </div>
+                <div className="font-semibold text-bone mb-2 text-lg">{s.t}</div>
+                <div className="text-sm text-bone/60 leading-relaxed">{s.d}</div>
+              </div>
             ))}
-          </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* SEGURANÇA */}
+      <section className="border-b border-bone/10 bg-graphite/20">
+        <div className="max-w-[1200px] mx-auto px-6 py-16 md:py-20 grid md:grid-cols-[1fr_1.3fr] gap-12 items-center">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-volt mb-3">Segurança</div>
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-bone">
+              Seu dinheiro protegido, regras claras.
+            </h2>
+            <p className="mt-4 text-bone/60 leading-relaxed">
+              Investir em empresas privadas envolve risco. Por isso, somos transparentes em cada etapa.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-3">
+            {[
+              { icon: ShieldCheck, t: "Identidade verificada", d: "KYC obrigatório com análise antifraude." },
+              { icon: Lock, t: "Custódia regulada", d: "Seu saldo fica segregado em conta de pagamento." },
+              { icon: FileCheck2, t: "Documentos jurídicos", d: "Cada oferta tem contrato, prospecto e riscos disponíveis." },
+            ].map((s, i) => (
+              <div key={i} className="bg-carbon/60 border border-bone/10 rounded-2xl p-5">
+                <s.icon className="w-5 h-5 text-volt mb-3" />
+                <div className="font-medium text-bone text-sm mb-1.5">{s.t}</div>
+                <div className="text-xs text-bone/55 leading-relaxed">{s.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="border-b border-bone/10">
+        <div className="max-w-[820px] mx-auto px-6 py-16 md:py-20">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-bone text-center mb-10">
+            Perguntas frequentes
+          </h2>
+          <div className="divide-y divide-bone/10 border-y border-bone/10">
+            {[
+              {
+                q: "Quanto preciso pra começar?",
+                a: `O ticket mínimo varia por empresa, mas começa em ${fmtBRL(minTicket)}. Você escolhe o valor que quer investir em cada oferta.`,
+              },
+              {
+                q: "Como recebo retorno do meu investimento?",
+                a: "Depende da empresa e do tipo de oferta — pode ser via valorização da cota, dividendos ou recompra. Tudo está descrito nos documentos da oferta.",
+              },
+              {
+                q: "Posso resgatar quando quiser?",
+                a: "Investimentos em empresas privadas têm liquidez limitada. Você só consegue vender quando há comprador interessado ou em eventos previstos no contrato.",
+              },
+              {
+                q: "Tem taxa de mensalidade?",
+                a: "Não. Manter sua conta e sua carteira é grátis. Pode haver taxa por operação, sempre informada antes da reserva.",
+              },
+            ].map((item, i) => (
+              <FaqItem key={i} {...item} />
+            ))}
+          </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="border-t border-bone/10 bg-volt/5">
-        <div className="max-w-[1400px] mx-auto px-6 py-20 text-center">
-          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight">
-            Pronto para entrar no <span className="text-volt">private equity</span> digital?
+      <section className="bg-volt/5">
+        <div className="max-w-[1200px] mx-auto px-6 py-20 text-center">
+          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-bone">
+            Pronto para começar?
           </h2>
           <p className="mt-4 text-bone/60 max-w-xl mx-auto">
-            Abra sua conta de investidor, conclua o onboarding e comece a participar das ofertas disponíveis.
+            Abra sua conta grátis e veja todas as empresas disponíveis em segundos.
           </p>
           <Link
             to="/investir/auth?mode=signup"
-            className="inline-flex items-center gap-2 mt-8 bg-volt hover:bg-volt/90 text-carbon font-semibold px-6 py-3.5 rounded-md transition-all"
+            className="inline-flex items-center gap-2 mt-8 bg-volt hover:bg-volt/90 text-carbon font-semibold px-7 py-4 rounded-full transition-all"
           >
-            Criar conta gratuita <ArrowRight className="w-4 h-4" />
+            Abrir conta grátis <ArrowRight className="w-4 h-4" />
           </Link>
+          <div className="mt-4 text-xs text-bone/40">
+            {companies > 0 ? `${companies}+ empresas disponíveis · ` : ""}Sem mensalidade · Cancelamento a qualquer momento
+          </div>
         </div>
       </section>
     </InvestirShell>
   );
 }
 
-function TickerRow({ token, loading }: { token?: Token; loading?: boolean }) {
-  if (loading) return <Skeleton className="h-12 rounded bg-carbon/60" />;
-  if (!token) {
-    return (
-      <div className="flex items-center justify-between px-3 py-3 rounded bg-carbon/40">
-        <div className="text-xs text-bone/40">Em breve</div>
-      </div>
-    );
-  }
-  const pct = token.total_offering_amount
-    ? Math.min(100, (token.amount_raised / token.total_offering_amount) * 100)
-    : 0;
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Link
-      to={`/investir/ativo/${token.symbol}`}
-      className="flex items-center justify-between px-3 py-3 rounded hover:bg-carbon/60 transition-colors group"
+    <button
+      onClick={() => setOpen(o => !o)}
+      className="w-full text-left py-5 flex items-start justify-between gap-4 group"
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-8 h-8 rounded bg-volt/10 border border-volt/20 grid place-items-center text-[10px] font-mono text-volt">
-          {token.symbol.slice(0, 3)}
-        </div>
-        <div className="min-w-0">
-          <div className="text-sm text-bone group-hover:text-volt truncate">{token.name}</div>
-          <div className="text-[11px] text-bone/40 font-mono">{token.symbol} · {token.instrument_type}</div>
-        </div>
+      <div className="flex-1">
+        <div className="font-medium text-bone group-hover:text-volt transition-colors">{q}</div>
+        {open && <div className="mt-3 text-sm text-bone/65 leading-relaxed">{a}</div>}
       </div>
-      <div className="text-right">
-        <div className="text-sm font-mono tabular-nums text-bone">{fmtBRL(token.initial_price)}</div>
-        <div className="text-[11px] text-volt/80 font-mono tabular-nums">{pct.toFixed(0)}% captado</div>
-      </div>
-    </Link>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-3xl md:text-4xl font-semibold text-bone tabular-nums">{value}</div>
-      <div className="text-xs text-bone/50 mt-1 uppercase tracking-wider">{label}</div>
-    </div>
+      <ChevronDown className={`w-5 h-5 text-bone/40 mt-0.5 transition-transform ${open ? "rotate-180" : ""}`} />
+    </button>
   );
 }
 
 function EmptyOfferings() {
   return (
-    <div className="border border-dashed border-bone/15 rounded-xl p-12 text-center">
-      <div className="text-bone/60 mb-2">Nenhuma oferta ativa neste momento</div>
-      <p className="text-sm text-bone/40 max-w-md mx-auto">
-        Estamos finalizando a curadoria das próximas empresas. Cadastre-se para ser avisado assim que abrirem.
+    <div className="border border-dashed border-bone/15 rounded-2xl p-12 text-center bg-carbon/40">
+      <div className="text-bone/70 mb-2 text-lg">Nenhuma oferta aberta no momento</div>
+      <p className="text-sm text-bone/50 max-w-md mx-auto">
+        Cadastre-se grátis pra receber aviso assim que a próxima empresa abrir.
       </p>
-      <Link to="/investir/auth?mode=signup" className="inline-block mt-6 text-volt hover:underline text-sm">
-        Criar conta e receber alertas →
+      <Link to="/investir/auth?mode=signup" className="inline-block mt-6 text-volt hover:underline text-sm font-medium">
+        Quero ser avisado →
       </Link>
     </div>
   );
@@ -285,57 +298,53 @@ function OfferCard({ token }: { token: Token }) {
   const pct = token.total_offering_amount
     ? Math.min(100, (token.amount_raised / token.total_offering_amount) * 100)
     : 0;
-  const statusLabels: Record<string,string> = {
-    primary_open: "Aberta",
-    approved: "Em breve",
-    issued: "Emitida",
-    primary_closed: "Encerrada",
-    secondary_open: "Mercado secundário",
-  };
-  const riskLabels: Record<string,string> = { low: "Baixo", medium: "Médio", high: "Alto" };
+  const isOpen = token.status === "primary_open";
   return (
     <Link
       to={`/investir/ativo/${token.symbol}`}
-      className="group relative bg-graphite/40 border border-bone/10 rounded-xl p-5 hover:border-volt/40 transition-all overflow-hidden"
+      className="group relative bg-carbon/60 border border-bone/10 rounded-2xl p-5 hover:border-volt/40 transition-all overflow-hidden block"
     >
-      <div className="absolute -top-12 -right-12 w-32 h-32 bg-volt/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="relative">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <div className="text-[10px] font-mono text-volt/80 mb-1">{token.symbol}</div>
-            <div className="font-semibold text-bone leading-tight line-clamp-2">{token.name}</div>
+      <div className="flex items-start justify-between mb-5">
+        <div className="min-w-0 pr-3">
+          <div className="font-semibold text-bone text-lg leading-tight line-clamp-2 break-words">
+            {token.name}
           </div>
-          <span className="text-[10px] uppercase tracking-wider bg-volt/10 text-volt px-2 py-0.5 rounded">
-            {statusLabels[token.status] || token.status}
-          </span>
+          <div className="text-xs text-bone/40 mt-1 font-mono">{token.symbol}</div>
         </div>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <Field label="Instrumento" value={token.instrument_type} />
-          <Field label="Risco" value={riskLabels[token.risk_level || ""] || "—"} />
-          <Field label="Preço/token" value={fmtBRL(token.initial_price)} mono />
-          <Field label="Ticket mínimo" value={fmtBRL(token.min_ticket)} mono />
+        <span className={`shrink-0 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
+          isOpen ? "bg-volt/15 text-volt" : "bg-bone/10 text-bone/60"
+        }`}>
+          {isOpen ? "Aberta" : "Em breve"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-bone/40">A partir de</div>
+          <div className="text-base font-semibold text-bone tabular-nums">{fmtBRL(token.min_ticket)}</div>
         </div>
         <div>
-          <div className="flex justify-between text-[11px] text-bone/50 mb-1.5">
-            <span>{pct.toFixed(0)}% captado</span>
-            <span className="font-mono tabular-nums">
-              {fmtBRL(token.amount_raised)} {token.total_offering_amount ? `/ ${fmtBRL(token.total_offering_amount)}` : ""}
-            </span>
-          </div>
-          <div className="h-1.5 bg-carbon/80 rounded-full overflow-hidden">
-            <div className="h-full bg-volt rounded-full" style={{ width: `${pct}%` }} />
-          </div>
+          <div className="text-[10px] uppercase tracking-wider text-bone/40">Preço/cota</div>
+          <div className="text-base font-semibold text-bone tabular-nums">{fmtBRL(token.initial_price)}</div>
         </div>
       </div>
-    </Link>
-  );
-}
 
-function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-bone/40">{label}</div>
-      <div className={`text-sm text-bone ${mono ? "font-mono tabular-nums" : ""}`}>{value}</div>
-    </div>
+      <div>
+        <div className="flex justify-between text-[11px] text-bone/50 mb-1.5">
+          <span>{pct.toFixed(0)}% captado</span>
+          {token.total_offering_amount && (
+            <span className="font-mono tabular-nums">{fmtBRL(token.total_offering_amount)}</span>
+          )}
+        </div>
+        <div className="h-1.5 bg-carbon/80 rounded-full overflow-hidden border border-bone/5">
+          <div className="h-full bg-volt rounded-full transition-all" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between text-sm">
+        <span className="text-bone/60">Ver detalhes</span>
+        <ArrowRight className="w-4 h-4 text-volt group-hover:translate-x-1 transition-transform" />
+      </div>
+    </Link>
   );
 }
