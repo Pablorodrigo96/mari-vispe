@@ -578,7 +578,7 @@ export default function EquityPlannerAssessment() {
                   <XAxis dataKey="name" tick={{ fill: "#aaa", fontSize: 11 }} />
                   <YAxis tick={{ fill: "#aaa", fontSize: 11 }} tickFormatter={(v) => brl(v)} />
                   <Tooltip
-                    contentStyle={{ background: "#1a1a1a", border: "1px solid #D9F564" }}
+                    contentStyle={{ background: "#1a1a1a", border: "1px solid #D9F564", color: "#FAFAF7" }} itemStyle={{ color: "#FAFAF7" }} labelStyle={{ color: "#D9F564" }}
                     formatter={(v: any) => brl(v as number)}
                   />
                   <Bar dataKey="valor" fill="#D9F564" />
@@ -832,7 +832,7 @@ export default function EquityPlannerAssessment() {
                     <XAxis dataKey="data" tick={{ fill: "#aaa", fontSize: 11 }} />
                     <YAxis yAxisId="left" tick={{ fill: "#aaa", fontSize: 11 }} domain={[0, 100]} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fill: "#aaa", fontSize: 11 }} />
-                    <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #D9F564" }} />
+                    <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #D9F564", color: "#FAFAF7" }} itemStyle={{ color: "#FAFAF7" }} labelStyle={{ color: "#D9F564" }} />
                     <Legend />
                     <Line yAxisId="left" type="monotone" dataKey="IPE" stroke="#D9F564" strokeWidth={2} />
                     <Line yAxisId="right" type="monotone" dataKey="Valor" stroke="#60a5fa" strokeWidth={2} name="Valor (R$ mil)" />
