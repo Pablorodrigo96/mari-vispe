@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, Trophy, ArrowRight, User, Building2, Calculator, Banknote } from 'lucide-react';
+import { CheckCircle2, Trophy, ArrowRight, User, Building2, Calculator, Banknote, Target } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
