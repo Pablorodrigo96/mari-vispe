@@ -1604,6 +1604,9 @@ export type Database = {
           ipe_composto: number | null
           migracao_arquetipo_sugerida: Json | null
           parent_assessment_id: string | null
+          promoted_at: string | null
+          promoted_by: string | null
+          promoted_mandate_id: string | null
           raw_intake: Json | null
           rodada: number | null
           source: string
@@ -1624,6 +1627,9 @@ export type Database = {
           ipe_composto?: number | null
           migracao_arquetipo_sugerida?: Json | null
           parent_assessment_id?: string | null
+          promoted_at?: string | null
+          promoted_by?: string | null
+          promoted_mandate_id?: string | null
           raw_intake?: Json | null
           rodada?: number | null
           source?: string
@@ -1644,6 +1650,9 @@ export type Database = {
           ipe_composto?: number | null
           migracao_arquetipo_sugerida?: Json | null
           parent_assessment_id?: string | null
+          promoted_at?: string | null
+          promoted_by?: string | null
+          promoted_mandate_id?: string | null
           raw_intake?: Json | null
           rodada?: number | null
           source?: string
@@ -7651,6 +7660,10 @@ export type Database = {
         Returns: number
       }
       profile_completion: { Args: { _user_id: string }; Returns: number }
+      promote_assessment_to_mandate: {
+        Args: { _assessment_id: string }
+        Returns: Json
+      }
       qualify_lead:
         | {
             Args: {
