@@ -62,6 +62,7 @@ const roleConfig: Record<AppRole, { label: string; icon: typeof Shield; variant:
   franchisee: { label: 'Franqueado', icon: Store, variant: 'default' },
   legal: { label: 'Jurídico', icon: Shield, variant: 'outline' },
   observer: { label: 'Observador', icon: UserCog, variant: 'secondary' },
+  investor: { label: 'Investidor', icon: Briefcase, variant: 'default' },
 };
 
 interface FranchiseeRequest {
