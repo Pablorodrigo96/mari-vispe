@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles, FileDown } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles, FileDown, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { DIMENSOES, ARQUETIPOS_LABEL, VEREDITO_LABEL, brl } from "@/lib/equity-planner/constants";
 import EquityDocsUpload from "@/components/equity-planner/EquityDocsUpload";
+import EquityMarketTab from "@/components/equity-planner/EquityMarketTab";
 
 interface Assessment {
   id: string; ipe_composto: number | null; arquetipo_id: string | null;
@@ -46,6 +47,9 @@ export default function EquityPlannerAssessment() {
   const [inits, setInits] = useState<Initiative[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [progresso, setProgresso] = useState<Progresso[]>([]);
+  const [dimBenchmarks, setDimBenchmarks] = useState<any[]>([]);
+  const [compBench, setCompBench] = useState<any | null>(null);
+  const [companyPorte, setCompanyPorte] = useState<string | null>(null);
   const [letterOpen, setLetterOpen] = useState(false);
   const [letterBuyer, setLetterBuyer] = useState<Buyer | null>(null);
   const [letterLoading, setLetterLoading] = useState(false);
@@ -57,18 +61,36 @@ export default function EquityPlannerAssessment() {
     const { data: a } = await supabase.from("equity_assessments").select("*").eq("id", id).single();
     if (!a) { setLoading(false); return; }
     setAssess(a as any);
-    const [d, v, ini, bm, pl] = await Promise.all([
+    const [d, v, ini, bm, pl, comp] = await Promise.all([
       supabase.from("equity_dimension_scores").select("*").eq("assessment_id", id),
       supabase.from("equity_valuations").select("*").eq("assessment_id", id).maybeSingle(),
       supabase.from("equity_initiatives").select("*").eq("assessment_id", id).order("prioridade"),
       supabase.from("equity_buyer_map").select("*").eq("assessment_id", id).order("prioridade"),
       supabase.from("equity_progress_log").select("*").eq("company_id", (a as any).company_id).order("created_at", { ascending: true }),
+      supabase.from("equity_companies").select("porte").eq("id", (a as any).company_id).maybeSingle(),
     ]);
     setDims((d.data as any) || []);
     setVal((v.data as any) || null);
     setInits((ini.data as any) || []);
     setBuyers((bm.data as any) || []);
     setProgresso((pl.data as any) || []);
+    const porte = (comp.data as any)?.porte || null;
+    setCompanyPorte(porte);
+
+    // Onda 7 — benchmarks de mercado
+    if ((a as any).arquetipo_id && porte) {
+      const [dimB, compB] = await Promise.all([
+        supabase.from("equity_dimension_benchmarks").select("*")
+          .eq("arquetipo_id", (a as any).arquetipo_id).eq("porte", porte),
+        supabase.from("equity_comps_benchmarks").select("*")
+          .eq("arquetipo_id", (a as any).arquetipo_id).eq("porte", porte).maybeSingle(),
+      ]);
+      setDimBenchmarks((dimB.data as any) || []);
+      setCompBench((compB.data as any) || null);
+    } else {
+      setDimBenchmarks([]); setCompBench(null);
+    }
+
     if (v.data) {
       const { data: br } = await supabase.from("equity_value_bridge_items").select("*").eq("valuation_id", (v.data as any).id).order("ordem");
       setBridge((br as any) || []);
@@ -330,6 +352,7 @@ export default function EquityPlannerAssessment() {
             <TabsTrigger value="valor"><TrendingUp className="h-4 w-4 mr-1" /> Valor</TabsTrigger>
             <TabsTrigger value="plano"><Target className="h-4 w-4 mr-1" /> Plano</TabsTrigger>
             <TabsTrigger value="compradores"><Users className="h-4 w-4 mr-1" /> Compradores</TabsTrigger>
+            <TabsTrigger value="mercado"><BarChart3 className="h-4 w-4 mr-1" /> Mercado</TabsTrigger>
             <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1" /> Docs</TabsTrigger>
             <TabsTrigger value="progresso"><LineIcon className="h-4 w-4 mr-1" /> Progresso</TabsTrigger>
           </TabsList>
@@ -616,6 +639,21 @@ export default function EquityPlannerAssessment() {
               })}
               {buyers.length === 0 && <p className="text-muted-foreground col-span-3 text-center py-10">Sem buyer map disponível.</p>}
             </div>
+          </TabsContent>
+
+          {/* MERCADO (Onda 7) */}
+          <TabsContent value="mercado" className="mt-4">
+            <EquityMarketTab
+              arquetipoLabel={assess.arquetipo_id ? (ARQUETIPOS_LABEL[assess.arquetipo_id] || assess.arquetipo_id) : "—"}
+              porte={companyPorte}
+              ipe={assess.ipe_composto}
+              multiploAplicado={val?.multiplo_aplicado ?? null}
+              ebitdaNormalizado={val?.ebitda_normalizado ?? null}
+              valorAtual={val?.valor_atual ?? null}
+              dims={dims as any}
+              dimBenchmarks={dimBenchmarks}
+              compBench={compBench}
+            />
           </TabsContent>
 
           {/* DOCS */}
