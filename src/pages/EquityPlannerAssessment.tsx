@@ -503,7 +503,14 @@ export default function EquityPlannerAssessment() {
           )}
         </Card>
 
+        {marketScan && (
+          <Card className="!bg-carbon/90 backdrop-blur-md border-white/10 p-6 sm:p-10">
+            <MarketMappingPanel data={marketScan as MarketMappingPayload} />
+          </Card>
+        )}
+
         <Tabs defaultValue="raiox" className="w-full">
+
           <TabsList className="bg-graphite/60 backdrop-blur border border-white/10 p-1 h-auto flex-wrap gap-1">
             <TabsTrigger value="raiox" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><Activity className="h-4 w-4 mr-1" /> Raio-X</TabsTrigger>
             <TabsTrigger value="modelo" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><Brain className="h-4 w-4 mr-1" /> Modelo & Liquidez</TabsTrigger>
