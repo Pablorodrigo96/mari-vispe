@@ -11,9 +11,10 @@ interface WizardShellProps {
   stepKey: string | number;
   children: ReactNode;
   footer?: ReactNode;
+  statusChip?: ReactNode;
 }
 
-export default function WizardShell({ step, steps, stepKey, children, footer }: WizardShellProps) {
+export default function WizardShell({ step, steps, stepKey, children, footer, statusChip }: WizardShellProps) {
   const pct = Math.round(((step + 1) / steps.length) * 100);
   return (
     <div className="min-h-[100dvh] bg-carbon text-bone relative overflow-hidden">
