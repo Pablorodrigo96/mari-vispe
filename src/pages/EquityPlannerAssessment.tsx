@@ -61,18 +61,36 @@ export default function EquityPlannerAssessment() {
     const { data: a } = await supabase.from("equity_assessments").select("*").eq("id", id).single();
     if (!a) { setLoading(false); return; }
     setAssess(a as any);
-    const [d, v, ini, bm, pl] = await Promise.all([
+    const [d, v, ini, bm, pl, comp] = await Promise.all([
       supabase.from("equity_dimension_scores").select("*").eq("assessment_id", id),
       supabase.from("equity_valuations").select("*").eq("assessment_id", id).maybeSingle(),
       supabase.from("equity_initiatives").select("*").eq("assessment_id", id).order("prioridade"),
       supabase.from("equity_buyer_map").select("*").eq("assessment_id", id).order("prioridade"),
       supabase.from("equity_progress_log").select("*").eq("company_id", (a as any).company_id).order("created_at", { ascending: true }),
+      supabase.from("equity_companies").select("porte").eq("id", (a as any).company_id).maybeSingle(),
     ]);
     setDims((d.data as any) || []);
     setVal((v.data as any) || null);
     setInits((ini.data as any) || []);
     setBuyers((bm.data as any) || []);
     setProgresso((pl.data as any) || []);
+    const porte = (comp.data as any)?.porte || null;
+    setCompanyPorte(porte);
+
+    // Onda 7 — benchmarks de mercado
+    if ((a as any).arquetipo_id && porte) {
+      const [dimB, compB] = await Promise.all([
+        supabase.from("equity_dimension_benchmarks").select("*")
+          .eq("arquetipo_id", (a as any).arquetipo_id).eq("porte", porte),
+        supabase.from("equity_comps_benchmarks").select("*")
+          .eq("arquetipo_id", (a as any).arquetipo_id).eq("porte", porte).maybeSingle(),
+      ]);
+      setDimBenchmarks((dimB.data as any) || []);
+      setCompBench((compB.data as any) || null);
+    } else {
+      setDimBenchmarks([]); setCompBench(null);
+    }
+
     if (v.data) {
       const { data: br } = await supabase.from("equity_value_bridge_items").select("*").eq("valuation_id", (v.data as any).id).order("ordem");
       setBridge((br as any) || []);
