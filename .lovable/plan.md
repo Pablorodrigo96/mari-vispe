@@ -1,77 +1,121 @@
-## Diagnóstico do que aconteceu
+# Equity Planner — Redesign + Aprofundamento por Iniciativa + Plano Tático Anual (E1A)
 
-Olhei seu assessment `cedcd9eb…` no banco. Status = `computed`, mas:
-
-- `equity_valuations`: 1 linha com **tudo zerado** (valor_atual=0, valor_alvo=0, ebitda=0, DCF=0).
-- `equity_initiatives`: **0 linhas** (plano em branco).
-- `equity_buyer_map`: **0 linhas** (compradores em branco).
-- `equity_dimension_scores`: 12 linhas OK (por isso o Raio-X aparece).
-- `archetype_classification._fallback = true` → o classificador também caiu no fallback.
-
-**Causa raiz:** o `equity-planner-compute` chamou a IA, recebeu JSON inválido (Gemini fallback corta texto / quebra estrutura quando Anthropic está sem crédito), e o `catch` do `extractJson` usa um **stub vazio com zeros** que é persistido como se fosse um resultado real. O frontend então mostra a casca do relatório com tudo em branco, exatamente o que você viu.
-
-Confirma também o ponto da entrega "básica vs masterplan": a UI cobre tudo do masterplan (12 dimensões, Value Bridge 5-parcelas, DCF/SDE/Triangulado, addbacks, buyer map ancorado, migração de arquétipo, sprints), mas quando a IA falha e o fallback zera tudo, o relatório vira casca.
-
-E o "letras pretas com fundo escuro" é o empty-state vazando preto nativo (Recharts labels e algumas células sem `text-foreground` explícito sobre os cards `bg-slate-900/60`).
+## Problemas atuais
+1. **Visual** — várias abas (Plano, Compradores, Progresso, Raio-X) ainda têm `text-muted-foreground` em fundo escuro renderizando quase preto/ilegível. Cards inconsistentes, falta hierarquia premium.
+2. **Cards de Sprint são estáticos** — só mostram título + badges, sem profundidade nem interação.
+3. **Faltam dados qualitativos por iniciativa** — IA gera plano genérico porque não tem respostas específicas do dono sobre cada alavanca.
+4. **Não existe Plano Tático Anual (E1A)** — o "Plano em Sprints" hoje é só uma lista de iniciativas, não um cronograma mês a mês acionável.
 
 ---
 
-## Plano de correção — 4 frentes
+## Parte 1 — Redesign visual (toda a página `/equity-planner/:id`)
 
-### 1. Parar de persistir resultado lixo quando a IA falha (raiz)
+Auditoria completa de `EquityPlannerAssessment.tsx` + `EquityPlannerReport.tsx` substituindo cores que não respeitam o tema escuro:
 
-Em `supabase/functions/equity-planner-compute/index.ts`:
+- Trocar `text-muted-foreground` por `text-bone/70` ou `text-white/65` em todos os cards `!bg-slate-900/60`.
+- Cards: padronizar em `!bg-graphite/40 backdrop-blur-md border-white/10` com hover `border-volt/40`.
+- Tabs: pill style com indicador volt; números (IPE, valuation) em `text-volt` com `tabular-nums` e tamanho aumentado.
+- KPIs do topo (Valor atual / Potencial / Hoje / Δ Lucro / Δ Crescimento / Prêmio): refazer como **6 cards bento-grid** com ícone + label uppercase tracking-wider + valor grande em volt + sublabel em white/50.
+- Raio-X: fundo `bg-carbon` + radar em `stroke-volt fill-volt/30`, eixos em `text-white/70`.
+- Tabelas: cabeçalho `bg-volt/5 text-volt uppercase text-[10px] tracking-widest`, linhas com `border-white/5`.
+- Empty states: ilustração + CTA volt em vez de "— sem iniciativas —".
+- Aplicar contraste WCAG AA em tudo (mínimo `text-white/65` em fundo escuro).
 
-- Remover o stub que persiste valuation/iniciativas/buyers zerados.
-- Em caso de `ai_invalid_json` ou JSON sem dimensoes/ebitda/iniciativas:
-  1. **Retry automático 1×** com `temperature: 0`, `max_tokens: 7000`, e prompt encurtado (só arquétipo escolhido + comps + 6 iniciativas-modelo da library + 3 perfis buyer) — corta risco de truncamento.
-  2. Se ainda falhar: **NÃO sobrescrever** linhas antigas; marcar `equity_assessments.status = 'ai_failed'` e devolver 500 com `error: ai_invalid_json` e raw head no log.
-- Validação de saída: exigir `ebitda_normalizado > 0` (ou explicitamente declarado pelo usuário), `iniciativas.length >= 4`, `buyer_map.length >= 2`. Faltou → vira retry, depois `ai_failed`.
-- Também no `equity-planner-classify`: se cair no fallback `_fallback: true`, **não persistir** — devolver 503 e deixar o compute disparar o classify de novo com prompt enxuto.
+## Parte 2 — Cards de iniciativa clicáveis com Q&A profundo
 
-### 2. Recuperação UX do assessment travado
+### UI
+Cada card no grid de Sprints vira clicável → abre `Dialog` (`InitiativeDeepDiveModal`) com:
+- Header: título da iniciativa + dimensão alvo + badges (Δ IPE, Δ Valor, esforço, prazo).
+- Bloco "Diagnóstico atual" (gerado pela IA): 3-5 bullets do porquê essa iniciativa importa para a empresa específica.
+- **Checklist de 6-10 perguntas** específicas àquela iniciativa (geradas pela IA no momento que abre, com base no contexto da empresa + dimensão + arquétipo). Ex.: para "Reduzir dependência do dono" → "Quais decisões só você toma hoje?", "Quem é seu #2?", "Quantas horas/semana você opera o negócio?", etc.
+- Inputs: `Textarea` por pergunta + autosave a cada 2s.
+- Footer: botão **"Salvar e gerar prompt de aceleração"** → IA compila respostas em um **prompt curado** focado em transformar a empresa em "Fábrica de Equity" para aquela alavanca específica.
+- Indicador de progresso na card do sprint: "3/8 perguntas respondidas" + ring volt quando completo.
 
-Em `src/pages/EquityPlannerAssessment.tsx`:
+### Backend
+Nova migration:
+```sql
+create table public.equity_initiative_deepdive (
+  id uuid primary key default gen_random_uuid(),
+  initiative_id uuid not null references public.equity_initiatives(id) on delete cascade,
+  assessment_id uuid not null references public.equity_assessments(id) on delete cascade,
+  questions jsonb not null default '[]'::jsonb,        -- [{id, pergunta, contexto}]
+  answers jsonb not null default '{}'::jsonb,          -- { question_id: resposta }
+  compiled_prompt text,                                -- prompt final gerado pela IA
+  status text not null default 'pendente',             -- pendente | em_andamento | concluida
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+-- + GRANTs (authenticated CRUD, service_role ALL) + RLS via assessment ownership
+-- + trigger updated_at
+-- + unique(initiative_id)
+```
 
-- Quando `status === 'ai_failed'` OU quando valuation existe mas `valor_atual === 0` E não há iniciativas/buyers: esconder o report normal e mostrar **estado de erro dedicado**: "A análise não foi concluída. Re-rodar agora" + botão grande que invoca `equity-planner-compute` de novo.
-- O botão "Re-medir" no header já existe; reforçar com loading + toast claro de sucesso/erro vindo do edge function.
-- Para o seu assessment atual `cedcd9eb…`: após o deploy, basta clicar em "Re-rodar" — o novo compute vai gerar tudo de verdade.
+Duas edge functions novas:
+- `equity-deepdive-questions` — POST `{ initiative_id }` → gera 6-10 perguntas via `google/gemini-3-flash-preview` usando contexto da empresa + iniciativa, salva em `questions`.
+- `equity-deepdive-compile` — POST `{ initiative_id }` → lê respostas, chama `google/gemini-2.5-pro` para gerar `compiled_prompt` focado em "como transformar isto numa fábrica de equity". Marca `status=concluida`.
 
-### 3. Contraste — letra preta em fundo escuro
+## Parte 3 — Plano Tático Anual (E1A — "Equity em 1 Ano")
 
-Sweep dirigido em `EquityPlannerAssessment.tsx`:
+### UI
+Nova aba **"Plano Tático E1A"** após "Plano de Sprints". Estado inicial: card grande com:
+- Título "Equity em 1 Ano — seu plano mês a mês"
+- Texto: "Você completou X/Y diagnósticos profundos. Gere o plano tático que vai transformar sua empresa em ativo vendável."
+- Botão grande volt **"Construir Plano Tático Anual"** (desabilitado até pelo menos 50% das iniciativas terem `compiled_prompt`).
 
-- Adicionar `text-foreground` explícito em todos `<Card>` para herdar cor clara.
-- Recharts: `XAxis`/`YAxis` `tick={{ fill: 'hsl(var(--muted-foreground))' }}`, `Tooltip contentStyle` com `color: 'hsl(var(--foreground))'`, `LabelList` se houver.
-- Empty-states ("Sem buyer map disponível", "— sem iniciativas neste sprint —", "Nenhum destruidor crítico identificado") usar `text-muted-foreground` ao invés de cair no default do `<p>` (que vira preto se algum parent setar `color:black`).
-- Trocar qualquer `text-slate-900`/`text-black`/`text-gray-900` residual por `text-foreground`.
-- Conferir o `WizardShell`/`WizardProgress` durante as perguntas e o `SignupGateCard` (você pediu o ajuste de design no fluxo todo) — passar o mesmo lint visual.
+Após gerar:
+- **Timeline visual 12 meses** (Jan→Dez) com swim lanes por dimensão.
+- Cada mês: 2-4 ações concretas com responsável sugerido, KPI de saída, dependências, link para a iniciativa de origem.
+- Cards expandíveis por mês mostrando: objetivo, entregáveis, métricas, riscos, racional IA.
+- Botão "Exportar plano (PDF)" + "Re-gerar".
 
-### 4. Subir o nível do relatório ao do masterplan
+### Backend
+Migration:
+```sql
+create table public.equity_annual_plan (
+  id uuid primary key default gen_random_uuid(),
+  assessment_id uuid not null references public.equity_assessments(id) on delete cascade,
+  company_id uuid not null,
+  plan_data jsonb not null,    -- { meses: [{ mes, tema, acoes:[...], kpis, riscos }], resumo, north_star }
+  source_prompts jsonb,        -- array dos compiled_prompts usados
+  model_used text,
+  generated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+-- + GRANTs + RLS + unique(assessment_id) para sempre ter o último
+```
 
-Sem mudar arquitetura, três ajustes cirúrgicos no `compute`:
-
-- **Prompt mais explícito sobre obrigatoriedade**: "iniciativas: MÍNIMO 8, MÁXIMO 12, com pelo menos 1 por sprint"; "buyer_map: MÍNIMO 3"; "addbacks: detalhar mesmo que zero"; "summary: 2-3 frases obrigatório"; "veredito_liquidez obrigatório".
-- **Triangulação sempre visível**: garantir que `valor_dcf` e `valor_sde` sejam calculados sempre que `ebitda_normalizado > 0` (já é, mas validar).
-- **Bloco de premissas e veredito no UI**: já temos `assess.summary` e `veredito_liquidez` no banco; renderizar veredito como badge grande no hero do IPE (vendável hoje / 6-12m / 12-24m / inviável) e listar `premissas_valuation` em accordion no tab Valor.
-
----
+Edge function `equity-annual-plan-build`:
+- Lê todos os `compiled_prompt` de `equity_initiative_deepdive` daquele assessment.
+- Lê dimensões, valuation, buyer map, arquétipo.
+- Chama `google/gemini-2.5-pro` com `Output.object` (schema 12 meses × ações estruturadas).
+- Salva em `equity_annual_plan` e retorna.
 
 ## Detalhes técnicos
 
-Arquivos tocados:
+**Arquivos novos:**
+- `src/components/equity-planner/InitiativeDeepDiveModal.tsx`
+- `src/components/equity-planner/AnnualPlanTimeline.tsx`
+- `supabase/functions/equity-deepdive-questions/index.ts`
+- `supabase/functions/equity-deepdive-compile/index.ts`
+- `supabase/functions/equity-annual-plan-build/index.ts`
 
-- `supabase/functions/equity-planner-compute/index.ts` — retry, validação, sem stub lixo, prompt reforçado.
-- `supabase/functions/equity-planner-classify/index.ts` — sem persistir fallback.
-- `src/pages/EquityPlannerAssessment.tsx` — empty-state "ai_failed", contraste, badge de veredito, premissas, tooltip Recharts.
-- `src/components/equity-planner/WizardShell.tsx` + `WizardProgress.tsx` + `SignupGateCard.tsx` — pass de contraste no fluxo do wizard.
+**Arquivos editados:**
+- `src/pages/EquityPlannerAssessment.tsx` — cards clicáveis, nova aba "Plano Tático E1A", redesign visual completo.
+- `src/pages/EquityPlannerReport.tsx` — incluir resumo do plano anual no PDF.
+- `src/lib/equity-planner/constants.ts` — labels novos.
 
-Schema: nenhuma migração necessária (campos já existem).
+**Modelos IA:**
+- Perguntas profundas: `google/gemini-3-flash-preview` (rápido, baixo custo).
+- Compilação de prompt + Plano Anual: `google/gemini-2.5-pro` (raciocínio + qualidade).
 
-Risco: o retry adiciona ~10-20s no pior caso. Aceitável — melhor que persistir zero.
+**Migrations:** 2 (deepdive + annual_plan), com GRANTs + RLS + triggers já no padrão do projeto.
 
----
-
-## Após aprovar
-
-Implemento as 4 frentes em uma rodada, deploy dos edge functions, e te aviso para clicar em "Re-rodar diagnóstico" no assessment travado para regenerar com dados de verdade.
+## Ordem de implementação
+1. Migrations das duas tabelas.
+2. Redesign visual de `EquityPlannerAssessment.tsx` (cores, contraste, KPIs bento).
+3. Edge functions deepdive (questions + compile).
+4. `InitiativeDeepDiveModal` + ligação ao card do sprint com progresso visual.
+5. Edge function annual-plan-build + aba "Plano Tático E1A" com timeline.
+6. Botão "Exportar plano anual" no relatório PDF.
