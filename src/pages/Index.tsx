@@ -201,6 +201,8 @@ const Index = () => {
 
       <MariDivider tone="carbon" spacing="sm" />
 
+      <EquityPlannerSection />
+
       {/* Below the fold: featured listings + CTA + differential + footer — lazy */}
       {showBelowFold && (
         <Suspense fallback={<div className="h-[40vh]" />}>
