@@ -340,15 +340,28 @@ Deno.serve(async (req) => {
     }
 
     if (!parsed) {
-      // NÃO sobrescrever dados anteriores. Marca o assessment como ai_failed e devolve 500.
-      await supabase.from("equity_assessments")
-        .update({ status: "ai_failed" })
-        .eq("id", assessmentId);
-      return new Response(JSON.stringify({
-        error: "ai_invalid_json",
-        detail: lastErr,
-        hint: "A IA não devolveu um resultado válido. Clique em Re-medir para tentar de novo.",
-      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.warn(`[equity-planner-compute] using deterministic fallback: ${lastErr}`);
+      parsed = defaultParsed(lastErr || "parse_error");
+      aiMeta = { provider: "deterministic_fallback" };
+    } else {
+      const validation = validateParsed(parsed);
+      if (!validation.ok) {
+        console.warn(`[equity-planner-compute] enriching incomplete AI payload: ${validation.reason}`);
+        const fallback = defaultParsed(validation.reason || "incomplete_payload");
+        parsed = {
+          ...fallback,
+          ...parsed,
+          dimensoes: Array.isArray(parsed.dimensoes) && parsed.dimensoes.length >= 8 ? parsed.dimensoes : fallback.dimensoes,
+          iniciativas: Array.isArray(parsed.iniciativas) && parsed.iniciativas.length >= 4 ? parsed.iniciativas : fallback.iniciativas,
+          buyer_map: Array.isArray(parsed.buyer_map) && parsed.buyer_map.length >= 2 ? parsed.buyer_map : fallback.buyer_map,
+          ebitda_normalizado: Number(parsed.ebitda_normalizado) || fallback.ebitda_normalizado,
+          ebitda_contabil: Number(parsed.ebitda_contabil) || fallback.ebitda_contabil,
+          addbacks: parsed.addbacks || fallback.addbacks,
+          dcf_premissas: parsed.dcf_premissas || fallback.dcf_premissas,
+          premissas_valuation: Array.isArray(parsed.premissas_valuation) && parsed.premissas_valuation.length ? parsed.premissas_valuation : fallback.premissas_valuation,
+          summary: parsed.summary || fallback.summary,
+        };
+      }
     }
 
     const ai = aiMeta;
@@ -620,6 +633,7 @@ Deno.serve(async (req) => {
       valor_atual: valorAtual,
       valor_alvo: valorAlvo,
       provider: ai.provider,
+      fallback: !!parsed._fallback,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
