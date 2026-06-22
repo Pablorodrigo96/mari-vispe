@@ -490,14 +490,15 @@ export default function EquityPlannerAssessment() {
         </Card>
 
         <Tabs defaultValue="raiox" className="w-full">
-          <TabsList className="bg-slate-900/60 backdrop-blur">
-            <TabsTrigger value="raiox"><Activity className="h-4 w-4 mr-1" /> Raio-X</TabsTrigger>
-            <TabsTrigger value="valor"><TrendingUp className="h-4 w-4 mr-1" /> Valor</TabsTrigger>
-            <TabsTrigger value="plano"><Target className="h-4 w-4 mr-1" /> Plano</TabsTrigger>
-            <TabsTrigger value="compradores"><Users className="h-4 w-4 mr-1" /> Compradores</TabsTrigger>
-            <TabsTrigger value="mercado"><BarChart3 className="h-4 w-4 mr-1" /> Mercado</TabsTrigger>
-            <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1" /> Docs</TabsTrigger>
-            <TabsTrigger value="progresso"><LineIcon className="h-4 w-4 mr-1" /> Progresso</TabsTrigger>
+          <TabsList className="bg-graphite/60 backdrop-blur border border-white/10 p-1 h-auto flex-wrap gap-1">
+            <TabsTrigger value="raiox" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/70"><Activity className="h-4 w-4 mr-1" /> Raio-X</TabsTrigger>
+            <TabsTrigger value="valor" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/70"><TrendingUp className="h-4 w-4 mr-1" /> Valor</TabsTrigger>
+            <TabsTrigger value="plano" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/70"><Target className="h-4 w-4 mr-1" /> Plano</TabsTrigger>
+            <TabsTrigger value="e1a" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/70"><Rocket className="h-4 w-4 mr-1" /> Plano E1A</TabsTrigger>
+            <TabsTrigger value="compradores" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/70"><Users className="h-4 w-4 mr-1" /> Compradores</TabsTrigger>
+            <TabsTrigger value="mercado" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/70"><BarChart3 className="h-4 w-4 mr-1" /> Mercado</TabsTrigger>
+            <TabsTrigger value="docs" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/70"><FileText className="h-4 w-4 mr-1" /> Docs</TabsTrigger>
+            <TabsTrigger value="progresso" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/70"><LineIcon className="h-4 w-4 mr-1" /> Progresso</TabsTrigger>
           </TabsList>
 
           {/* RAIO-X */}
