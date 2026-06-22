@@ -197,14 +197,23 @@ export default function EquityPlannerNew() {
 
       const intakeText = buildIntakeText();
       toast.info("Calculando IPE, valuation e plano…", { duration: 5000 });
-      const { data: out, error: fErr } = await supabase.functions.invoke("equity-planner-compute", {
-        body: {
+      const { data: out, error: fErr } = await invokeWithTimeout<any>(
+        "equity-planner-compute",
+        {
           assessmentId: draftAssessmentId,
           intakeText,
-          companyData: { razao_social: razao, cnpj, setor_livre: setor, porte, uf,
-            faturamento_declarado: faturamento, ebitda_declarado: ebitda },
+          companyData: {
+            razao_social: razao,
+            cnpj,
+            setor_livre: setor,
+            porte,
+            uf,
+            faturamento_declarado: faturamento,
+            ebitda_declarado: ebitda,
+          },
         },
-      });
+        120_000,
+      );
       if (fErr) throw fErr;
       if (out?.error) throw new Error(out.error);
 
