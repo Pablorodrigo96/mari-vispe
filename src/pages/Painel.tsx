@@ -25,6 +25,7 @@ import { ColValuationBuyers } from '@/components/painel/bbg/ColValuationBuyers';
 import { ColFeedAgenda } from '@/components/painel/bbg/ColFeedAgenda';
 import { usePainelBloomberg } from '@/hooks/usePainelBloomberg';
 import { NextActionCard } from '@/components/painel/bbg/NextActionCard';
+import { EquityPlannerCockpitCard } from '@/components/painel/EquityPlannerCockpitCard';
 
 interface ModuleBox {
   title: string;
