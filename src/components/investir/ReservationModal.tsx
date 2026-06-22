@@ -55,36 +55,31 @@ export function ReservationModal({ open, onClose, token }: { open: boolean; onCl
       const { data: ures } = await supabase.auth.getUser();
       const userId = ures.user!.id;
 
-      // 1. log compliance check
+      // 1. compliance check
       const { data: check } = await supabase
         .from("compliance_checks")
         .insert({ user_id: userId, check_type: "eligibility", status: "passed", entity_type: "token", entity_id: token.id })
         .select("id")
         .single();
 
-      // 2. block balance in wallet
-      const newAvailable = (wallet!.available_balance - amountNum).toFixed(2);
-      const { error: wErr } = await supabase
-        .from("financial_wallets")
-        .update({ available_balance: Number(newAvailable), blocked_balance: undefined })
-        .eq("user_id", userId);
-      // Para atualizar blocked usamos RPC-style com select+update — simplificado: faz dois updates
-      await supabase.rpc as any;
+      // 2. read current wallet and shift available -> blocked
+      const { data: cur, error: curErr } = await supabase
+        .from("financial_wallets").select("*").eq("user_id", userId).single();
+      if (curErr || !cur) throw curErr || new Error("Carteira não encontrada");
 
-      // Fallback: leitura atual e update completo
-      const { data: cur } = await supabase.from("financial_wallets").select("*").eq("user_id", userId).single();
-      await supabase.from("financial_wallets").update({
-        available_balance: Number((cur!.available_balance - amountNum).toFixed(2)),
-        blocked_balance: Number((cur!.blocked_balance + amountNum).toFixed(2)),
+      const { error: wErr } = await supabase.from("financial_wallets").update({
+        available_balance: Number((Number(cur.available_balance) - amountNum).toFixed(2)),
+        blocked_balance: Number((Number(cur.blocked_balance) + amountNum).toFixed(2)),
       }).eq("user_id", userId);
+      if (wErr) throw wErr;
 
       // 3. ledger
       await supabase.from("financial_ledger").insert({
         user_id: userId,
         type: "reservation_block",
         amount: amountNum,
-        balance_before: cur!.available_balance,
-        balance_after: cur!.available_balance - amountNum,
+        balance_before: Number(cur.available_balance),
+        balance_after: Number(cur.available_balance) - amountNum,
         reference_type: "token",
         reference_id: token.id,
         description: `Reserva ${token.symbol}`,
@@ -107,7 +102,7 @@ export function ReservationModal({ open, onClose, token }: { open: boolean; onCl
       navigate("/investir/reservas");
     } catch (e: any) {
       toast.error(e.message || "Falha ao reservar");
-      if (wErr) console.error(wErr);
+
     } finally {
       setSubmitting(false);
     }
