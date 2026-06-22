@@ -313,7 +313,11 @@ Deno.serve(async (req) => {
     const porte = (companyData?.porte as string) || "pequena";
     const comp = (comps || []).find((c: any) => c.arquetipo_id === arqId && c.porte === porte)
               || { multiplo_min: arq.faixa_multiplo_min, multiplo_max: arq.faixa_multiplo_max };
-    const ebitda = Math.max(0, Number(parsed.ebitda_normalizado ?? 0));
+    // EBITDA: prioriza o que a IA normalizou; fallback para declarado pelo usuário; último recurso: 15% do faturamento (margem média PME)
+    const ebitdaDeclarado = Number(companyData?.ebitda) || 0;
+    const fatDeclarado = Number(companyData?.faturamento) || 0;
+    const ebitdaAi = Number(parsed.ebitda_normalizado) || 0;
+    const ebitda = Math.max(0, ebitdaAi || ebitdaDeclarado || (fatDeclarado > 0 ? Math.round(fatDeclarado * 0.15) : 0));
     const piso = arq?.piso_liquidez ?? 45;
     const pos = curva(ipeFinal, piso);
     const multiploAtual = Number((comp.multiplo_min + (comp.multiplo_max - comp.multiplo_min) * pos).toFixed(2));
