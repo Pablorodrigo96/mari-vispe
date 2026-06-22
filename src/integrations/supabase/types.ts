@@ -1551,6 +1551,7 @@ export type Database = {
       }
       equity_archetype_migrations: {
         Row: {
+          bloqueadores: string[] | null
           created_at: string
           de_arquetipo_id: string
           delta_multiplo_esperado: number
@@ -1562,6 +1563,7 @@ export type Database = {
           titulo: string
         }
         Insert: {
+          bloqueadores?: string[] | null
           created_at?: string
           de_arquetipo_id: string
           delta_multiplo_esperado?: number
@@ -1573,6 +1575,7 @@ export type Database = {
           titulo: string
         }
         Update: {
+          bloqueadores?: string[] | null
           created_at?: string
           de_arquetipo_id?: string
           delta_multiplo_esperado?: number
