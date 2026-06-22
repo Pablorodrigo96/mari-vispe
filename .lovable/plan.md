@@ -1,103 +1,77 @@
-## Objetivo
+## Diagnóstico do que aconteceu
 
-Dois ajustes em `/equity-planner/novo`:
-1. **Fluxo**: visitante responde o wizard inteiro anônimo; só pede login no final pra desbloquear o resultado.
-2. **Design**: trocar o card cinza atual por um **split-screen imersivo** consistente com a brand mari (Carbon/Volt/Graphite/Bone, glassmorphism), aplicado tanto nas perguntas quanto na página de resultado `/equity-planner/:id`.
+Olhei seu assessment `cedcd9eb…` no banco. Status = `computed`, mas:
 
----
+- `equity_valuations`: 1 linha com **tudo zerado** (valor_atual=0, valor_alvo=0, ebitda=0, DCF=0).
+- `equity_initiatives`: **0 linhas** (plano em branco).
+- `equity_buyer_map`: **0 linhas** (compradores em branco).
+- `equity_dimension_scores`: 12 linhas OK (por isso o Raio-X aparece).
+- `archetype_classification._fallback = true` → o classificador também caiu no fallback.
 
-## Parte 1 — Fluxo sem login até o final
+**Causa raiz:** o `equity-planner-compute` chamou a IA, recebeu JSON inválido (Gemini fallback corta texto / quebra estrutura quando Anthropic está sem crédito), e o `catch` do `extractJson` usa um **stub vazio com zeros** que é persistido como se fosse um resultado real. O frontend então mostra a casca do relatório com tudo em branco, exatamente o que você viu.
 
-### `src/pages/EquityPlannerNew.tsx`
-- **Remover** o `useEffect` que redireciona pra `/auth` e o `if (!user) return null`. Wizard renderiza pra qualquer visitante.
-- **Persistir respostas em `sessionStorage`** (chave `equity_planner_draft_v1`, TTL 1h) a cada mudança: `mode, razao, cnpj, setor, porte, uf, scores, faturamento, ebitda, observ, meetingText, chosenArquetipo, classification, step`. Reidratar no mount.
-- **Anônimo pula classificador IA**: no step 3 → vai direto pro step 5 (gate). `runClassifier()` e `ensureDraft()` só rodam com `user`.
-- **Gate no step 5** (`handleSubmit`): se `!user`, salva rascunho e navega pra `/auth?next=/equity-planner/novo&resume=1&tab=signup`.
-- **Reidratação pós-login**: no mount, se `user` existe e há rascunho com `step >= 3`, restaura estado e dispara automaticamente `runClassifier()` → `handleSubmit()` com overlay "Gerando seu diagnóstico…". Limpa sessionStorage no fim.
+Confirma também o ponto da entrega "básica vs masterplan": a UI cobre tudo do masterplan (12 dimensões, Value Bridge 5-parcelas, DCF/SDE/Triangulado, addbacks, buyer map ancorado, migração de arquétipo, sprints), mas quando a IA falha e o fallback zera tudo, o relatório vira casca.
 
-### Novo `src/components/equity-planner/SignupGateCard.tsx`
-Card mostrado no step 5 quando `!user`, substituindo "Gerar diagnóstico":
-
-> ✓ Diagnóstico completo. **Falta 1 passo pra desbloquear seu plano.**
->
-> Pra garantir a segurança dos seus dados e do seu planejamento, crie uma conta gratuita. Suas respostas ficam salvas — após o cadastro o diagnóstico é gerado automaticamente.
->
-> [Criar conta grátis →] [Já tenho conta]
-
-Combina os dois tons (conquista no topo + segurança no corpo). Estilo card Volt sobre Carbon com borda Volt/30 e ícone de cadeado animado.
-
-### `src/pages/Auth.tsx`
-Confirmar que respeita `?next=` e `?tab=signup` (ajustar se não respeitar).
+E o "letras pretas com fundo escuro" é o empty-state vazando preto nativo (Recharts labels e algumas células sem `text-foreground` explícito sobre os cards `bg-slate-900/60`).
 
 ---
 
-## Parte 2 — Redesign split-screen imersivo
+## Plano de correção — 4 frentes
 
-### Nova estrutura visual em `/equity-planner/novo`
-Substitui o `Card` cinza único por um layout `min-h-screen` com **duas colunas** em desktop, stack em mobile:
+### 1. Parar de persistir resultado lixo quando a IA falha (raiz)
 
-```text
-┌─────────────────────────┬──────────────────────────────────┐
-│  COLUNA ESQUERDA (40%)  │  COLUNA DIREITA (60%)            │
-│  bg-carbon              │  bg-graphite/40 backdrop-blur-xl │
-│  border-r border-volt/10│                                  │
-│                         │                                  │
-│  • logo mari            │  • 1 pergunta em foco            │
-│  • "Equity Planner"     │  • tipografia grande             │
-│  • progresso vertical   │  • inputs sem caixas cinzas      │
-│    com 6 steps          │  • microcopy contextual          │
-│    (volt = atual,       │                                  │
-│     volt/30 = feito)    │                                  │
-│  • subtítulo do step    │  Footer:                         │
-│  • mini citação/dica    │  [Voltar]      [Próximo →]       │
-│  • selo "dados seguros" │                                  │
-└─────────────────────────┴──────────────────────────────────┘
-```
+Em `supabase/functions/equity-planner-compute/index.ts`:
 
-**Mobile**: coluna esquerda colapsa em header sticky (`h-16`) com logo + progresso horizontal compacto.
+- Remover o stub que persiste valuation/iniciativas/buyers zerados.
+- Em caso de `ai_invalid_json` ou JSON sem dimensoes/ebitda/iniciativas:
+  1. **Retry automático 1×** com `temperature: 0`, `max_tokens: 7000`, e prompt encurtado (só arquétipo escolhido + comps + 6 iniciativas-modelo da library + 3 perfis buyer) — corta risco de truncamento.
+  2. Se ainda falhar: **NÃO sobrescrever** linhas antigas; marcar `equity_assessments.status = 'ai_failed'` e devolver 500 com `error: ai_invalid_json` e raw head no log.
+- Validação de saída: exigir `ebitda_normalizado > 0` (ou explicitamente declarado pelo usuário), `iniciativas.length >= 4`, `buyer_map.length >= 2`. Faltou → vira retry, depois `ai_failed`.
+- Também no `equity-planner-classify`: se cair no fallback `_fallback: true`, **não persistir** — devolver 503 e deixar o compute disparar o classify de novo com prompt enxuto.
 
-### Tokens visuais (todos via design system mari, sem hex hardcoded)
-- Fundo geral: `bg-carbon` com radial-gradient `volt/5` sutil no topo.
-- Coluna esquerda: `bg-gradient-to-b from-carbon to-graphite/60`.
-- Coluna direita: `bg-graphite/30 backdrop-blur-xl` com borda interna `volt/10`.
-- Inputs: `bg-transparent border-b-2 border-volt/20 focus:border-volt` (sem caixas — underline style); sliders mantêm volt como track.
-- Botões: primário `bg-volt text-carbon`, secundário `bg-transparent border border-volt/30 text-bone`.
-- Sliders das 12 dimensões viram **lista compacta com label grande + slider inline + número em Volt** (ao invés do bloco com hint embaixo de cada um). Hint vira tooltip `(i)`.
+### 2. Recuperação UX do assessment travado
 
-### Animações (framer-motion já no projeto)
-- Transição entre steps: `AnimatePresence` com `x: 20 → 0` fade.
-- Progresso vertical: barra Volt cresce com `layout` animation.
-- Step ativo: pulse sutil no número/ícone.
+Em `src/pages/EquityPlannerAssessment.tsx`:
 
-### Novos componentes
-- `src/components/equity-planner/WizardShell.tsx` — layout split-screen reutilizável (props: `step, totalSteps, stepLabel, children, footer`).
-- `src/components/equity-planner/WizardProgress.tsx` — progresso vertical com 6 steps + labels.
+- Quando `status === 'ai_failed'` OU quando valuation existe mas `valor_atual === 0` E não há iniciativas/buyers: esconder o report normal e mostrar **estado de erro dedicado**: "A análise não foi concluída. Re-rodar agora" + botão grande que invoca `equity-planner-compute` de novo.
+- O botão "Re-medir" no header já existe; reforçar com loading + toast claro de sucesso/erro vindo do edge function.
+- Para o seu assessment atual `cedcd9eb…`: após o deploy, basta clicar em "Re-rodar" — o novo compute vai gerar tudo de verdade.
 
-### Página de resultado `/equity-planner/:id` (`EquityPlanner.tsx` ou o arquivo equivalente)
-- Aplicar **mesmo split-screen**: esquerda fixa com identidade da empresa + IPE score grande em Volt + tabs de navegação (Raio-X / Valuation / Sprints / Compradores); direita scrollável com o conteúdo da tab.
-- Cards internos: `bg-graphite/40 backdrop-blur-xl border-volt/10` (substitui os "cinzas terríveis").
-- Headline tokens: tipografia da brand (já configurada — Inter/Space Grotesk per memory).
-- Charts/bars com Volt como cor principal.
+### 3. Contraste — letra preta em fundo escuro
+
+Sweep dirigido em `EquityPlannerAssessment.tsx`:
+
+- Adicionar `text-foreground` explícito em todos `<Card>` para herdar cor clara.
+- Recharts: `XAxis`/`YAxis` `tick={{ fill: 'hsl(var(--muted-foreground))' }}`, `Tooltip contentStyle` com `color: 'hsl(var(--foreground))'`, `LabelList` se houver.
+- Empty-states ("Sem buyer map disponível", "— sem iniciativas neste sprint —", "Nenhum destruidor crítico identificado") usar `text-muted-foreground` ao invés de cair no default do `<p>` (que vira preto se algum parent setar `color:black`).
+- Trocar qualquer `text-slate-900`/`text-black`/`text-gray-900` residual por `text-foreground`.
+- Conferir o `WizardShell`/`WizardProgress` durante as perguntas e o `SignupGateCard` (você pediu o ajuste de design no fluxo todo) — passar o mesmo lint visual.
+
+### 4. Subir o nível do relatório ao do masterplan
+
+Sem mudar arquitetura, três ajustes cirúrgicos no `compute`:
+
+- **Prompt mais explícito sobre obrigatoriedade**: "iniciativas: MÍNIMO 8, MÁXIMO 12, com pelo menos 1 por sprint"; "buyer_map: MÍNIMO 3"; "addbacks: detalhar mesmo que zero"; "summary: 2-3 frases obrigatório"; "veredito_liquidez obrigatório".
+- **Triangulação sempre visível**: garantir que `valor_dcf` e `valor_sde` sejam calculados sempre que `ebitda_normalizado > 0` (já é, mas validar).
+- **Bloco de premissas e veredito no UI**: já temos `assess.summary` e `veredito_liquidez` no banco; renderizar veredito como badge grande no hero do IPE (vendável hoje / 6-12m / 12-24m / inviável) e listar `premissas_valuation` em accordion no tab Valor.
 
 ---
 
-## Arquivos afetados
+## Detalhes técnicos
 
-**Editar:**
-- `src/pages/EquityPlannerNew.tsx` (fluxo + uso do novo shell)
-- `src/pages/EquityPlanner.tsx` (redesign do resultado)
-- `src/pages/Auth.tsx` (validar `?next` e `?tab=signup`)
+Arquivos tocados:
 
-**Criar:**
-- `src/components/equity-planner/WizardShell.tsx`
-- `src/components/equity-planner/WizardProgress.tsx`
-- `src/components/equity-planner/SignupGateCard.tsx`
+- `supabase/functions/equity-planner-compute/index.ts` — retry, validação, sem stub lixo, prompt reforçado.
+- `supabase/functions/equity-planner-classify/index.ts` — sem persistir fallback.
+- `src/pages/EquityPlannerAssessment.tsx` — empty-state "ai_failed", contraste, badge de veredito, premissas, tooltip Recharts.
+- `src/components/equity-planner/WizardShell.tsx` + `WizardProgress.tsx` + `SignupGateCard.tsx` — pass de contraste no fluxo do wizard.
 
-**Não muda:** edge functions, schema, RLS, design tokens globais (uso só dos já existentes).
+Schema: nenhuma migração necessária (campos já existem).
+
+Risco: o retry adiciona ~10-20s no pior caso. Aceitável — melhor que persistir zero.
 
 ---
 
-## Fora do escopo
-- Mudar o classificador IA ou as edge functions.
-- Trocar a paleta/tipografia da brand mari (locked em memory).
-- Redesign de outras páginas do app.
+## Após aprovar
+
+Implemento as 4 frentes em uma rodada, deploy dos edge functions, e te aviso para clicar em "Re-rodar diagnóstico" no assessment travado para regenerar com dados de verdade.
