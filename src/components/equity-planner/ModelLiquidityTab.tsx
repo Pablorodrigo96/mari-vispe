@@ -104,15 +104,16 @@ export default function ModelLiquidityTab({
 
       {/* Rota de migração recomendada */}
       {migracaoSugerida?.para_arquetipo_id ? (
-        <Card className="!bg-gradient-to-br from-volt/15 via-volt/5 to-transparent border-volt/40 p-6">
+        <Card className="relative overflow-hidden !bg-carbon/90 backdrop-blur-md border-volt/40 p-6">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-volt/10 via-transparent to-graphite/50" />
           <div className="flex items-start gap-4 flex-wrap">
             <div className="h-12 w-12 rounded-xl bg-volt/20 border border-volt/40 flex items-center justify-center shrink-0">
               <Rocket className="h-6 w-6 text-volt" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="relative flex-1 min-w-0">
               <p className="text-[11px] uppercase tracking-widest text-volt font-semibold">Rota de reestruturação recomendada</p>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <Badge className="bg-white/10 text-white border-white/20 text-xs">
+                <Badge className="bg-bone/10 text-bone border-bone/20 text-xs">
                   {arquetipoId ? (ARQUETIPOS_LABEL[arquetipoId] || arquetipoId) : "—"}
                 </Badge>
                 <ArrowRight className="h-4 w-4 text-volt" />
@@ -126,16 +127,16 @@ export default function ModelLiquidityTab({
                 )}
               </div>
               {migracaoSugerida.racional && (
-                <p className="text-sm text-white/85 mt-3 break-words leading-relaxed border-l-2 border-volt pl-3">
+                <p className="text-sm text-bone/90 mt-3 break-words leading-relaxed border-l-2 border-volt pl-3">
                   {migracaoSugerida.racional}
                 </p>
               )}
               {!!migracaoSugerida.bloqueadores?.length && (
                 <div className="mt-4">
-                  <p className="text-[10px] uppercase text-white/60 tracking-wider font-semibold">Bloqueadores que essa empresa precisa destravar</p>
+                  <p className="text-[10px] uppercase text-bone/60 tracking-wider font-semibold">Bloqueadores que essa empresa precisa destravar</p>
                   <ul className="mt-2 space-y-1">
                     {migracaoSugerida.bloqueadores.map((b: string, i: number) => (
-                      <li key={i} className="text-sm text-white/80 flex gap-2 items-start break-words">
+                      <li key={i} className="text-sm text-bone/85 flex gap-2 items-start break-words">
                         <span className="text-volt mt-1">›</span>
                         <span>{b}</span>
                       </li>
