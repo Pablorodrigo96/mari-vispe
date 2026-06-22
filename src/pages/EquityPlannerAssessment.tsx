@@ -153,6 +153,42 @@ export default function EquityPlannerAssessment() {
     } finally { setCreatingRound(false); }
   };
 
+  // Onda 8 — Ponte EB: promover a mandato
+  const handlePromoteToMandate = async () => {
+    if (!assess) return;
+    if (assess.status !== "computed") {
+      toast.error("Diagnóstico precisa estar computado antes de virar mandato.");
+      return;
+    }
+    setPromoting(true);
+    try {
+      const { data, error } = await supabase.rpc("promote_assessment_to_mandate", {
+        _assessment_id: assess.id,
+      });
+      if (error) throw error;
+      const result = data as any;
+      const mandateId = result?.mandate_id;
+      if (!mandateId) throw new Error("Mandato não foi criado");
+      toast.success(
+        result.already_promoted
+          ? "Mandato já existia — abrindo no EB"
+          : result.reused_existing
+            ? "Mandato vigente reaproveitado no EB"
+            : "Mandato criado no Equity Brain"
+      );
+      await load();
+      window.open(`/equity-brain/crm/mandate/${mandateId}`, "_blank");
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      if (msg.includes("cnpj_invalido")) toast.error("CNPJ da empresa é inválido ou ausente.");
+      else if (msg.includes("not_authorized")) toast.error("Sem permissão para promover este diagnóstico.");
+      else if (msg.includes("not_computed")) toast.error("Compute o diagnóstico antes de promover.");
+      else toast.error("Falha ao promover: " + msg);
+    } finally {
+      setPromoting(false);
+    }
+  };
+
   // Onda 5 — Buyer reverso
   const buyerSelecionado = buyers.find((b) => b.selecionado) || null;
 
