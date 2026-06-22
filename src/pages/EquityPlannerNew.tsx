@@ -79,6 +79,57 @@ export default function EquityPlannerNew() {
   const hydratedRef = useRef(false);
   const autoRunRef = useRef(false);
 
+  // ===== Background market scan =====
+  const [marketScanStatus, setMarketScanStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const marketScanRef = useRef<{ key: string | null; timer: any }>({ key: null, timer: null });
+
+  useEffect(() => {
+    if (!user) return;
+    const cnpjClean = cnpj.replace(/\D/g, "");
+    const hasEnough = (razao && razao.trim().length >= 3) || cnpjClean.length === 14;
+    if (!hasEnough) return;
+    const key = `${razao.trim()}|${cnpjClean}`;
+    if (marketScanRef.current.key === key) return;
+    if (marketScanRef.current.timer) clearTimeout(marketScanRef.current.timer);
+    marketScanRef.current.timer = setTimeout(async () => {
+      marketScanRef.current.key = key;
+      setMarketScanStatus("running");
+      try {
+        const { data, error } = await supabase.functions.invoke("equity-market-scan", {
+          body: {
+            razao_social: razao,
+            cnpj,
+            assessment_id: draftAssessmentId,
+            faturamento_declarado: faturamento,
+          },
+        });
+        if (error || data?.error) {
+          setMarketScanStatus("error");
+        } else {
+          setMarketScanStatus("done");
+        }
+      } catch {
+        setMarketScanStatus("error");
+      }
+    }, 1500);
+    return () => {
+      if (marketScanRef.current.timer) clearTimeout(marketScanRef.current.timer);
+    };
+  }, [razao, cnpj, user, draftAssessmentId, faturamento]);
+
+  // Re-link scan to assessment once draft is created
+  useEffect(() => {
+    if (!draftAssessmentId || !user) return;
+    const cnpjClean = cnpj.replace(/\D/g, "");
+    if (!cnpjClean) return;
+    void supabase
+      .from("equity_market_scans")
+      .update({ assessment_id: draftAssessmentId })
+      .eq("user_id", user.id)
+      .eq("cnpj", cnpjClean)
+      .is("assessment_id", null);
+  }, [draftAssessmentId, cnpj, user]);
+
   // ===== Hydrate from sessionStorage on mount =====
   useEffect(() => {
     if (hydratedRef.current) return;
@@ -245,6 +296,11 @@ export default function EquityPlannerNew() {
       if (fErr) throw fErr;
       if (out?.error) throw new Error(out.error);
 
+      // Se o scan ainda estava rodando, dá uns segundos pro panel já aparecer no diagnóstico
+      if (marketScanStatus === "running") {
+        await new Promise((r) => setTimeout(r, 8000));
+      }
+
       sessionStorage.removeItem(DRAFT_KEY);
       toast.success("Diagnóstico pronto!");
       navigate(`/equity-planner/${id}`);
@@ -364,9 +420,23 @@ export default function EquityPlannerNew() {
     );
   }
 
+  const statusChip = marketScanStatus === "idle" ? null : (
+    <div className={[
+      "flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-medium backdrop-blur-md",
+      marketScanStatus === "running" && "bg-carbon/80 border-volt/30 text-volt",
+      marketScanStatus === "done" && "bg-carbon/80 border-emerald-400/30 text-emerald-300",
+      marketScanStatus === "error" && "bg-carbon/80 border-white/15 text-white/50",
+    ].filter(Boolean).join(" ")}>
+      {marketScanStatus === "running" && <><Loader2 className="h-3 w-3 animate-spin" /> Pesquisando mercado…</>}
+      {marketScanStatus === "done" && <><Sparkles className="h-3 w-3" /> Mapeamento pronto</>}
+      {marketScanStatus === "error" && <>Pesquisa indisponível</>}
+    </div>
+  );
+
   return (
     <TooltipProvider delayDuration={150}>
-      <WizardShell step={step} steps={STEPS} stepKey={step} footer={footer}>
+      <WizardShell step={step} steps={STEPS} stepKey={step} footer={footer} statusChip={statusChip}>
+
         {/* STEP 0 */}
         {step === 0 && (
           <div>

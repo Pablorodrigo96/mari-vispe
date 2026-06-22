@@ -21,6 +21,7 @@ import EquityMarketTab from "@/components/equity-planner/EquityMarketTab";
 import InitiativeDeepDiveModal from "@/components/equity-planner/InitiativeDeepDiveModal";
 import AnnualPlanTimeline from "@/components/equity-planner/AnnualPlanTimeline";
 import ModelLiquidityTab from "@/components/equity-planner/ModelLiquidityTab";
+import MarketMappingPanel, { MarketMappingPayload } from "@/components/equity-planner/MarketMappingPanel";
 
 interface Assessment {
   id: string; ipe_composto: number | null; arquetipo_id: string | null;
@@ -65,6 +66,7 @@ export default function EquityPlannerAssessment() {
   const [deepdiveInitiative, setDeepdiveInitiative] = useState<Initiative | null>(null);
   const [annualPlan, setAnnualPlan] = useState<any | null>(null);
   const [buildingAnnual, setBuildingAnnual] = useState(false);
+  const [marketScan, setMarketScan] = useState<any | null>(null);
 
   const load = async () => {
     if (!id) return;
@@ -121,6 +123,17 @@ export default function EquityPlannerAssessment() {
     });
     setDeepdiveStatus(map);
     setAnnualPlan(planRow || null);
+
+    // Market scan (background research)
+    const { data: scanRow } = await supabase
+      .from("equity_market_scans")
+      .select("payload, status")
+      .eq("assessment_id", id)
+      .eq("status", "done")
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setMarketScan((scanRow as any)?.payload || null);
 
     setLoading(false);
   };
@@ -490,7 +503,14 @@ export default function EquityPlannerAssessment() {
           )}
         </Card>
 
+        {marketScan && (
+          <Card className="!bg-carbon/90 backdrop-blur-md border-white/10 p-6 sm:p-10">
+            <MarketMappingPanel data={marketScan as MarketMappingPayload} />
+          </Card>
+        )}
+
         <Tabs defaultValue="raiox" className="w-full">
+
           <TabsList className="bg-graphite/60 backdrop-blur border border-white/10 p-1 h-auto flex-wrap gap-1">
             <TabsTrigger value="raiox" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><Activity className="h-4 w-4 mr-1" /> Raio-X</TabsTrigger>
             <TabsTrigger value="modelo" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><Brain className="h-4 w-4 mr-1" /> Modelo & Liquidez</TabsTrigger>

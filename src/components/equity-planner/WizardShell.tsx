@@ -11,9 +11,10 @@ interface WizardShellProps {
   stepKey: string | number;
   children: ReactNode;
   footer?: ReactNode;
+  statusChip?: ReactNode;
 }
 
-export default function WizardShell({ step, steps, stepKey, children, footer }: WizardShellProps) {
+export default function WizardShell({ step, steps, stepKey, children, footer, statusChip }: WizardShellProps) {
   const pct = Math.round(((step + 1) / steps.length) * 100);
   return (
     <div className="min-h-[100dvh] bg-carbon text-bone relative overflow-hidden">
@@ -76,7 +77,11 @@ export default function WizardShell({ step, steps, stepKey, children, footer }: 
 
         {/* ===== RIGHT (content) ===== */}
         <main className="relative flex flex-col bg-graphite/20 backdrop-blur-xl">
+          {statusChip && (
+            <div className="absolute top-4 right-4 sm:top-5 sm:right-6 z-30">{statusChip}</div>
+          )}
           <div className="flex-1 px-5 py-8 sm:px-10 lg:px-14 xl:px-20 lg:py-14">
+
             <div className="max-w-2xl mx-auto w-full">
               <AnimatePresence mode="wait">
                 <motion.div
