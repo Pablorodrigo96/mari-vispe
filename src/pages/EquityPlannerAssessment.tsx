@@ -47,6 +47,9 @@ export default function EquityPlannerAssessment() {
   const [inits, setInits] = useState<Initiative[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [progresso, setProgresso] = useState<Progresso[]>([]);
+  const [dimBenchmarks, setDimBenchmarks] = useState<any[]>([]);
+  const [compBench, setCompBench] = useState<any | null>(null);
+  const [companyPorte, setCompanyPorte] = useState<string | null>(null);
   const [letterOpen, setLetterOpen] = useState(false);
   const [letterBuyer, setLetterBuyer] = useState<Buyer | null>(null);
   const [letterLoading, setLetterLoading] = useState(false);
