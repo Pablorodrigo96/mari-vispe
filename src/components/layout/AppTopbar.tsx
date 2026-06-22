@@ -1,5 +1,5 @@
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Menu, ChevronRight, Search, ArrowLeft } from 'lucide-react';
+import { Menu, ChevronRight, Search, ArrowLeft, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { ViewAsSwitcher } from '@/components/layout/ViewAsSwitcher';
@@ -90,6 +90,28 @@ export function AppTopbar({ onMenuClick }: Props) {
             <Search className="h-3.5 w-3.5" />
             <span>Buscar empresas, anúncios…</span>
           </div>
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="hidden md:inline-flex h-8 bg-transparent border-volt/40 text-volt hover:bg-volt/10 hover:text-volt"
+            title="Equity Planner"
+          >
+            <Link to="/equity-planner">
+              <Target className="h-3.5 w-3.5 md:mr-1.5" />
+              <span className="hidden lg:inline">Equity Planner</span>
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="icon"
+            variant="ghost"
+            className="md:hidden h-8 w-8 text-volt"
+            title="Equity Planner"
+            aria-label="Equity Planner"
+          >
+            <Link to="/equity-planner"><Target className="h-4 w-4" /></Link>
+          </Button>
           {eff.isRealAdmin && <ViewAsSwitcher />}
           <NotificationDropdown />
         </div>

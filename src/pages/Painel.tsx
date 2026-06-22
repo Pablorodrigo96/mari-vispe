@@ -25,6 +25,7 @@ import { ColValuationBuyers } from '@/components/painel/bbg/ColValuationBuyers';
 import { ColFeedAgenda } from '@/components/painel/bbg/ColFeedAgenda';
 import { usePainelBloomberg } from '@/hooks/usePainelBloomberg';
 import { NextActionCard } from '@/components/painel/bbg/NextActionCard';
+import { EquityPlannerCockpitCard } from '@/components/painel/EquityPlannerCockpitCard';
 
 interface ModuleBox {
   title: string;
@@ -185,6 +186,11 @@ export default function Painel() {
         {/* Mari origin badge (se veio da calculadora pública) */}
         <div className="mb-5">
           <MariOriginBadge />
+        </div>
+
+        {/* Equity Planner — entry card */}
+        <div className="mb-6">
+          <EquityPlannerCockpitCard />
         </div>
 
         {/* === ABOVE THE FOLD — 3 colunas Bloomberg === */}
