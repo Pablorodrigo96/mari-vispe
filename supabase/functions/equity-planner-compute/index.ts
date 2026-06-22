@@ -32,13 +32,14 @@ const DIM_LABELS: Record<string,string> = {
 
 const SYSTEM = `Você é o orquestrador de um motor de Equity Planner para PMEs brasileiras.
 Sua missão: a partir do intake do empresário, da CLASSIFICAÇÃO DE ARQUÉTIPO já feita, e dos arquétipos/comps/biblioteca/perfis de comprador fornecidos, devolver um JSON estrito com:
-1) scores nas 12 dimensões (0..100) com 1 evidência cada;
-2) ebitda_contabil e ebitda_normalizado em reais, com addbacks DETALHADOS (remuneracao_dono, despesas_pessoais, nao_recorrentes, aluguel_imovel_proprio, outros);
-3) iniciativas (8 a 12) priorizadas em sprints (1..4), cada uma com delta_ipe e delta_valor — ANCORE em PLAYBOOK quando possível;
-4) buyer_map (3 a 5 entradas) ANCORADO nos perfis fornecidos (use perfil_id), com sinergias (3-5 strings), racional_premio (1-2 frases), exemplos_targets (3-5 nomes plausíveis); premio_estimado_pct dentro da faixa típica;
+1) scores nas 12 dimensões (0..100) com 1 evidência cada — OBRIGATÓRIO 12 itens;
+2) ebitda_contabil e ebitda_normalizado em reais (use o ebitda declarado quando não houver melhor sinal — NUNCA devolva 0 se o usuário informou faturamento>0; estime margem típica do arquétipo se faltar), com addbacks DETALHADOS (remuneracao_dono, despesas_pessoais, nao_recorrentes, aluguel_imovel_proprio, outros);
+3) iniciativas — OBRIGATÓRIO MÍNIMO 8, MÁXIMO 12, distribuídas em sprints 1..4 (pelo menos 1 por sprint), cada uma com delta_ipe (>0) e delta_valor (em R$, >0) — ANCORE em PLAYBOOK quando possível;
+4) buyer_map — OBRIGATÓRIO MÍNIMO 3, MÁXIMO 5 entradas ANCORADAS nos perfis fornecidos (use perfil_id), com sinergias (3-5 strings), racional_premio (1-2 frases), exemplos_targets (3-5 nomes plausíveis); premio_estimado_pct dentro da faixa típica;
 5) dcf_premissas: { wacc, cagr_5y, perpetuidade_g, taxa_imposto } — realistas para PME BR (WACC 15-25%, g 3-5%);
-6) veredito_liquidez: vendavel_hoje (IPE>=75), vendavel_6_12m (60-75), vendavel_12_24m (45-60), inviavel_sem_reestruturacao (<45 ou killers);
-7) summary em 2-3 frases pro dono.
+6) veredito_liquidez: vendavel_hoje (IPE>=75), vendavel_6_12m (60-75), vendavel_12_24m (45-60), inviavel_sem_reestruturacao (<45 ou killers) — OBRIGATÓRIO;
+7) summary em 2-3 frases pro dono — OBRIGATÓRIO;
+8) premissas_valuation: lista de 3-6 strings explicando as premissas usadas.
 
 REGRAS DURAS:
 - Não troque o arquétipo do classificador.
@@ -46,7 +47,8 @@ REGRAS DURAS:
 - "DE-RISKING ANTES DE CRESCIMENTO": independencia_dono/higiene_financeira/contingencias nos sprints 1-2.
 - Buyer map: cada item espelha um perfil_id de PERFIS_COMPRADOR_DISPONIVEIS (adapte sinergias/exemplos quando faltar contexto).
 - Não invente CNPJ ou múltiplos fora da faixa.
-- Devolva APENAS o JSON, sem markdown.`;
+- Devolva APENAS o JSON, sem markdown, sem prosa antes ou depois.
+- NUNCA devolva arrays vazios para iniciativas ou buyer_map. Se faltar dado, use defaults conservadores do PLAYBOOK e marque premissa=true nas dimensões correspondentes.`;
 
 function buildPrompt(args: {
   companyData: any;
