@@ -155,6 +155,63 @@ Devolva JSON:
       });
     }
 
+    // ENFORCEMENT: garante vendabilidade_atual e migracao_sugerida p/ arquétipos ilíquidos
+    const ILIQUIDOS = new Set(["servico_profissional", "projeto_obra"]);
+    const VENDABILIDADE_DEFAULT: Record<string, any> = {
+      servico_profissional: {
+        nota_0_100: 35,
+        motivo_baixa_liquidez: "Empresa de serviço profissional sem recorrência: receita depende de horas-homem e da figura do dono, o que afasta o investidor estratégico.",
+        principais_obstaculos: [
+          "Dono é o principal entregador e vendedor",
+          "Receita projeto-a-projeto sem previsibilidade",
+          "Metodologia não documentada/transferível",
+          "Time difícil de reter sem o dono",
+          "Margem espremida por hora-homem"
+        ]
+      },
+      projeto_obra: {
+        nota_0_100: 40,
+        motivo_baixa_liquidez: "Receita lumpy por contrato/obra, capital de giro pesado e dependência de relacionamentos do dono — comprador estratégico pondera caixa, não múltiplo cheio.",
+        principais_obstaculos: [
+          "Backlog volátil e não-recorrente",
+          "Capital de giro alto e variável",
+          "Concentração em poucos clientes/contratos",
+          "Sem linha de serviços contratados pós-obra",
+          "Margens sensíveis a custos de insumos"
+        ]
+      },
+      recorrente: {
+        nota_0_100: 65,
+        motivo_baixa_liquidez: "Modelo recorrente já é atrativo no M&A — o gap está em escala, churn e governança para arrancar prêmio máximo.",
+        principais_obstaculos: [
+          "Churn ainda não controlado",
+          "Governança/financeiro abaixo de DD",
+          "Concentração de receita em poucos clientes"
+        ]
+      }
+    };
+    if (!parsed.vendabilidade_atual || typeof parsed.vendabilidade_atual !== "object") {
+      parsed.vendabilidade_atual = VENDABILIDADE_DEFAULT[parsed.arquetipo_id] || VENDABILIDADE_DEFAULT.servico_profissional;
+    }
+    if (ILIQUIDOS.has(parsed.arquetipo_id) && (!parsed.migracao_sugerida || !parsed.migracao_sugerida.para_arquetipo_id)) {
+      // pega 1a rota disponível para esse arquétipo de origem (prioriza para recorrente)
+      const rotas = (migrations || []).filter((m: any) => m.de_arquetipo_id === parsed.arquetipo_id);
+      const rota = rotas.find((r: any) => r.para_arquetipo_id === "recorrente") || rotas[0];
+      if (rota) {
+        parsed.migracao_sugerida = {
+          rota_id: rota.id,
+          para_arquetipo_id: rota.para_arquetipo_id,
+          racional: rota.descricao_rota,
+          viabilidade: "media",
+          bloqueadores: rota.bloqueadores || [],
+        };
+      }
+    }
+    if (parsed.migracao_sugerida && !parsed.migracao_sugerida.bloqueadores?.length) {
+      const rota = (migrations || []).find((m: any) => m.id === parsed.migracao_sugerida.rota_id);
+      parsed.migracao_sugerida.bloqueadores = rota?.bloqueadores || [];
+    }
+
     // persist
     await supabase.from("equity_assessments").update({
       archetype_classification: parsed,
