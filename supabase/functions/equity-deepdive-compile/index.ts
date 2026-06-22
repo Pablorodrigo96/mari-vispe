@@ -54,7 +54,7 @@ Gere o PROMPT DE ACELERAÇÃO conforme as 6 seções do system.`;
 
     const resp = await callLovableAI(
       {
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: prompt },

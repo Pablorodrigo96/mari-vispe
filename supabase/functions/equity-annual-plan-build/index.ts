@@ -113,7 +113,7 @@ Exatamente 12 meses. Cada mês com 2-4 ações.`;
 
     const resp = await callLovableAI(
       {
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: prompt },
@@ -145,7 +145,7 @@ Exatamente 12 meses. Cada mês com 2-4 ações.`;
       company_id: (assess as any).company_id,
       plan_data: parsed,
       source_prompts: compiledPrompts,
-      model_used: "lovable_ai:google/gemini-2.5-pro",
+      model_used: "lovable_ai:google/gemini-3-flash-preview",
       generated_at: new Date().toISOString(),
     }, { onConflict: "assessment_id" }).select().single();
 

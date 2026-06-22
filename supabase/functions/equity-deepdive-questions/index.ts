@@ -39,7 +39,7 @@ function extractJson(raw: string): any {
 async function callAI(system: string, user: string, userId: string | null, fn: string) {
   const resp = await callLovableAI(
     {
-      model: "google/gemini-2.5-pro",
+      model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
