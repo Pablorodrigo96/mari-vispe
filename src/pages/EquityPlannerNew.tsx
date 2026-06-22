@@ -296,6 +296,12 @@ export default function EquityPlannerNew() {
       if (fErr) throw fErr;
       if (out?.error) throw new Error(out.error);
 
+      // Aguarda scan terminar (máx 10s) para o painel "Mapeamento" já aparecer no diagnóstico
+      const waitStart = Date.now();
+      while (marketScanStatus === "running" && Date.now() - waitStart < 10_000) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
       sessionStorage.removeItem(DRAFT_KEY);
       toast.success("Diagnóstico pronto!");
       navigate(`/equity-planner/${id}`);
