@@ -306,6 +306,16 @@ export default function EquityPlannerAssessment() {
               }>
                 {veredito?.label || "—"}
               </Badge>
+              {assess.promoted_mandate_id && (
+                <Badge
+                  className="bg-emerald-500/15 text-emerald-300 border-emerald-500/40 cursor-pointer hover:bg-emerald-500/25"
+                  onClick={() => window.open(`/equity-brain/crm/mandate/${assess.promoted_mandate_id}`, "_blank")}
+                >
+                  <Briefcase className="h-3 w-3 mr-1" />
+                  Mandato ativo no EB
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </Badge>
+              )}
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -316,6 +326,25 @@ export default function EquityPlannerAssessment() {
               {recomputing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
               Re-medir
             </Button>
+            {assess.promoted_mandate_id ? (
+              <Button
+                variant="outline"
+                className="bg-transparent border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+                onClick={() => window.open(`/equity-brain/crm/mandate/${assess.promoted_mandate_id}`, "_blank")}
+              >
+                <Briefcase className="h-4 w-4 mr-2" /> Abrir mandato
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="bg-transparent border-volt/40 text-volt hover:bg-volt/10"
+                disabled={promoting || assess.status !== "computed"}
+                onClick={handlePromoteToMandate}
+              >
+                {promoting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Briefcase className="h-4 w-4 mr-2" />}
+                Promover a mandato
+              </Button>
+            )}
             <Button className="bg-volt text-carbon hover:bg-volt/90" disabled={creatingRound} onClick={handleNewRound}>
               {creatingRound ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PlusCircle className="h-4 w-4 mr-2" />}
               Nova rodada
