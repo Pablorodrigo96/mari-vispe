@@ -123,6 +123,17 @@ export default function EquityPlannerAssessment() {
     setDeepdiveStatus(map);
     setAnnualPlan(planRow || null);
 
+    // Market scan (background research)
+    const { data: scanRow } = await supabase
+      .from("equity_market_scans")
+      .select("payload, status")
+      .eq("assessment_id", id)
+      .eq("status", "done")
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setMarketScan((scanRow as any)?.payload || null);
+
     setLoading(false);
   };
 
