@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ interface Classification {
 }
 
 export default function EquityPlannerNew() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(0);
   const [mode, setMode] = useState<Mode>("wizard");
@@ -60,10 +60,20 @@ export default function EquityPlannerNew() {
   // Meeting paste
   const [meetingText, setMeetingText] = useState("");
 
-  if (!user) {
-    navigate("/auth?next=/equity-planner/novo");
-    return null;
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth?next=/equity-planner/novo", { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-volt" />
+      </div>
+    );
   }
+  if (!user) return null;
 
   const buildIntakeText = (): string => {
     if (mode === "meeting_paste") return meetingText;
@@ -114,6 +124,22 @@ export default function EquityPlannerNew() {
     return assess.id;
   };
 
+  const invokeWithTimeout = async <T,>(
+    fn: string,
+    body: any,
+    timeoutMs: number,
+  ): Promise<T> => {
+    return await Promise.race([
+      supabase.functions.invoke(fn, { body }) as Promise<T>,
+      new Promise<T>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Tempo esgotado (${Math.round(timeoutMs / 1000)}s). Tente novamente.`)),
+          timeoutMs,
+        ),
+      ),
+    ]);
+  };
+
   const runClassifier = async () => {
     if (!razao && !cnpj) {
       toast.error("Preencha razão social ou CNPJ na etapa 1.");
@@ -123,21 +149,31 @@ export default function EquityPlannerNew() {
     try {
       const id = await ensureDraft();
       const intakeText = buildIntakeText();
-      const { data, error } = await supabase.functions.invoke("equity-planner-classify", {
-        body: {
+      const { data, error } = await invokeWithTimeout<any>(
+        "equity-planner-classify",
+        {
           assessmentId: id,
           intakeText,
-          companyData: { razao_social: razao, cnpj, setor_livre: setor, porte, uf,
-            faturamento_declarado: faturamento, ebitda_declarado: ebitda },
+          companyData: {
+            razao_social: razao,
+            cnpj,
+            setor_livre: setor,
+            porte,
+            uf,
+            faturamento_declarado: faturamento,
+            ebitda_declarado: ebitda,
+          },
         },
-      });
+        60_000,
+      );
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (!data?.classification) throw new Error("Resposta vazia do classificador.");
       setClassification(data.classification);
       setChosenArquetipo(data.classification.arquetipo_id);
       setStep(4);
     } catch (e: any) {
-      console.error(e);
+      console.error("[equity-planner-classify]", e);
       toast.error("Falha ao classificar: " + (e?.message || "erro"));
     } finally {
       setClassifying(false);
@@ -161,14 +197,23 @@ export default function EquityPlannerNew() {
 
       const intakeText = buildIntakeText();
       toast.info("Calculando IPE, valuation e plano…", { duration: 5000 });
-      const { data: out, error: fErr } = await supabase.functions.invoke("equity-planner-compute", {
-        body: {
+      const { data: out, error: fErr } = await invokeWithTimeout<any>(
+        "equity-planner-compute",
+        {
           assessmentId: draftAssessmentId,
           intakeText,
-          companyData: { razao_social: razao, cnpj, setor_livre: setor, porte, uf,
-            faturamento_declarado: faturamento, ebitda_declarado: ebitda },
+          companyData: {
+            razao_social: razao,
+            cnpj,
+            setor_livre: setor,
+            porte,
+            uf,
+            faturamento_declarado: faturamento,
+            ebitda_declarado: ebitda,
+          },
         },
-      });
+        120_000,
+      );
       if (fErr) throw fErr;
       if (out?.error) throw new Error(out.error);
 
