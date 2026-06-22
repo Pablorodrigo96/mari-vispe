@@ -21,8 +21,9 @@ export default function AnnualPlanTimeline({ plan }: Props) {
   return (
     <div className="space-y-5">
       {/* North star */}
-      <Card className="!bg-gradient-to-br from-volt/15 via-volt/5 to-transparent border-volt/40 p-6">
-        <div className="flex items-start gap-4 flex-wrap">
+      <Card className="!bg-carbon/90 backdrop-blur-md border-volt/40 p-0 overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-volt/15 via-volt/5 to-transparent pointer-events-none" />
+        <div className="relative p-6 flex items-start gap-4 flex-wrap">
           <div className="h-12 w-12 rounded-xl bg-volt/20 border border-volt/40 flex items-center justify-center shrink-0">
             <Target className="h-6 w-6 text-volt" />
           </div>
@@ -31,20 +32,22 @@ export default function AnnualPlanTimeline({ plan }: Props) {
             <p className="text-xl md:text-2xl font-bold text-bone mt-1 break-words leading-snug">{north_star?.tese_central}</p>
             <div className="grid grid-cols-3 gap-4 mt-4">
               <div>
-                <p className="text-[10px] uppercase text-white/50 tracking-wider">IPE alvo 12m</p>
+                <p className="text-[10px] uppercase text-bone/60 tracking-wider">IPE alvo 12m</p>
                 <p className="text-2xl font-bold text-volt tabular-nums">{north_star?.ipe_alvo_12m ?? "—"}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase text-white/50 tracking-wider">Valor alvo 12m</p>
+                <p className="text-[10px] uppercase text-bone/60 tracking-wider">Valor alvo 12m</p>
                 <p className="text-2xl font-bold text-bone tabular-nums">{brl(north_star?.valor_alvo_12m)}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase text-white/50 tracking-wider">Δ vs hoje</p>
+                <p className="text-[10px] uppercase text-bone/60 tracking-wider">Δ vs hoje</p>
                 <p className="text-2xl font-bold text-emerald-400 tabular-nums">+{north_star?.delta_valor_pct ?? 0}%</p>
               </div>
             </div>
             {resumo_executivo && (
-              <p className="text-sm text-bone/80 mt-4 break-words leading-relaxed border-l-2 border-volt pl-3">{resumo_executivo}</p>
+              <div className="mt-4 rounded-md bg-carbon/60 border-l-2 border-volt pl-3 py-2 pr-3">
+                <p className="text-sm text-bone/90 break-words leading-relaxed">{resumo_executivo}</p>
+              </div>
             )}
           </div>
         </div>
