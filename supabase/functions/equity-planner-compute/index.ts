@@ -257,21 +257,15 @@ Deno.serve(async (req) => {
     let parsed: any = null;
     let aiMeta: any = null;
     let lastErr: string = "";
-    for (const attempt of [
-      { temperature: 0.3, max_tokens: 5500 },
-      { temperature: 0,   max_tokens: 7500 },
-    ]) {
-      try {
-        const r = await callAndParse(attempt.temperature, attempt.max_tokens);
-        const v = validateParsed(r.parsed);
-        if (!v.ok) { lastErr = `validation:${v.reason}`; continue; }
-        parsed = r.parsed;
-        aiMeta = r.ai;
-        break;
-      } catch (e) {
-        lastErr = (e as Error).message || "parse_error";
-        console.warn(`[equity-planner-compute] attempt failed: ${lastErr}`);
-      }
+    // ÚNICA tentativa para caber no timeout de 150s (Anthropic em fallback p/ Gemini é lento).
+    try {
+      const r = await callAndParse(0.2, 4500);
+      const v = validateParsed(r.parsed);
+      if (v.ok) { parsed = r.parsed; aiMeta = r.ai; }
+      else { lastErr = `validation:${v.reason}`; parsed = r.parsed; aiMeta = r.ai; }
+    } catch (e) {
+      lastErr = (e as Error).message || "parse_error";
+      console.warn(`[equity-planner-compute] attempt failed: ${lastErr}`);
     }
 
     if (!parsed) {
