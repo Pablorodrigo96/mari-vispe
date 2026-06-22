@@ -273,7 +273,7 @@ export default function EquityPlannerAssessment() {
   }, [inits, buyerSelecionado, dimsBoost]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-volt" /></div>;
-  if (!assess) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Diagnóstico não encontrado.</div>;
+  if (!assess) return <div className="min-h-screen flex items-center justify-center text-white/70">Diagnóstico não encontrado.</div>;
 
   const radarData = DIMENSOES.map((d) => ({
     dim: d.label.split(" ")[0],
@@ -294,7 +294,7 @@ export default function EquityPlannerAssessment() {
         <Card className="!bg-slate-900/70 backdrop-blur-md border-amber-500/40 p-8 max-w-xl text-center">
           <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
           <h2 className="text-2xl font-bold mb-2 text-bone">Análise não concluída</h2>
-          <p className="text-muted-foreground mb-6 break-words">
+          <p className="text-white/70 mb-6 break-words">
             A IA não devolveu um resultado válido na última execução, então o relatório
             ficou sem valuation, plano e compradores. Re-rode agora — leva ~30 segundos
             e regenera tudo do zero com base nas suas respostas.
@@ -323,7 +323,7 @@ export default function EquityPlannerAssessment() {
         {/* Header */}
         <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
           <div>
-            <Link to="/meus-equity-planners" className="text-sm text-muted-foreground hover:text-volt inline-flex items-center gap-1 mb-2">
+            <Link to="/meus-equity-planners" className="text-sm text-white/70 hover:text-volt inline-flex items-center gap-1 mb-2">
               <ArrowLeft className="h-3 w-3" /> Meus diagnósticos
             </Link>
             <h1 className="text-3xl font-bold break-words">Raio-X de Equity</h1>
@@ -390,25 +390,25 @@ export default function EquityPlannerAssessment() {
         <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/20 p-6 mb-6">
           <div className="grid md:grid-cols-3 gap-6">
             <div>
-              <p className="text-xs uppercase text-muted-foreground tracking-wider">Índice de Prontidão (IPE)</p>
+              <p className="text-xs uppercase text-white/70 tracking-wider">Índice de Prontidão (IPE)</p>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-5xl font-bold text-volt">{assess.ipe_composto ?? "—"}</span>
-                <span className="text-muted-foreground">/100</span>
+                <span className="text-white/70">/100</span>
               </div>
               <Progress value={assess.ipe_composto || 0} className="mt-3 h-2" />
-              <p className="text-xs text-muted-foreground mt-2">Piso de liquidez: {piso}</p>
+              <p className="text-xs text-white/70 mt-2">Piso de liquidez: {piso}</p>
             </div>
             <div>
-              <p className="text-xs uppercase text-muted-foreground tracking-wider">Valor atual</p>
+              <p className="text-xs uppercase text-white/70 tracking-wider">Valor atual</p>
               <div className="text-3xl font-bold mt-1">{brl(val?.valor_atual)}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-white/70 mt-1">
                 EBITDA {brl(val?.ebitda_normalizado)} × {val?.multiplo_aplicado ?? "—"}x
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase text-muted-foreground tracking-wider">Valor potencial</p>
+              <p className="text-xs uppercase text-white/70 tracking-wider">Valor potencial</p>
               <div className="text-3xl font-bold mt-1 text-volt">{brl(val?.valor_alvo)}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-white/70 mt-1">
                 Δ {brl((val?.valor_alvo || 0) - (val?.valor_atual || 0))} via execução do plano
               </p>
             </div>
@@ -418,8 +418,8 @@ export default function EquityPlannerAssessment() {
           {val && (
             <div className="mt-6 pt-5 border-t border-volt/10">
               <div className="flex justify-between items-center mb-2">
-                <p className="text-xs uppercase text-muted-foreground tracking-wider">Posição na faixa de múltiplo do arquétipo</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs uppercase text-white/70 tracking-wider">Posição na faixa de múltiplo do arquétipo</p>
+                <p className="text-xs text-white/70">
                   {val.faixa_min}x — <span className="text-volt font-bold">{val.multiplo_aplicado}x hoje</span> — {val.faixa_max}x
                 </p>
               </div>
@@ -435,7 +435,7 @@ export default function EquityPlannerAssessment() {
                   }}
                 />
               </div>
-              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+              <div className="flex justify-between text-[10px] text-white/70 mt-1">
                 <span>zona invendável</span>
                 <span>vendável com desconto</span>
                 <span>topo da faixa + prêmio estratégico</span>
@@ -444,7 +444,7 @@ export default function EquityPlannerAssessment() {
           )}
 
           {assess.summary && (
-            <p className="mt-5 text-muted-foreground break-words border-l-2 border-volt pl-4">{assess.summary}</p>
+            <p className="mt-5 text-white/70 break-words border-l-2 border-volt pl-4">{assess.summary}</p>
           )}
         </Card>
 
@@ -487,12 +487,12 @@ export default function EquityPlannerAssessment() {
                           <span className="text-rose-400 font-mono text-sm">{d.score}/100</span>
                         </div>
                         {d.evidencias?.[0]?.texto && (
-                          <p className="text-xs text-muted-foreground mt-1 break-words">{d.evidencias[0].texto}</p>
+                          <p className="text-xs text-white/70 mt-1 break-words">{d.evidencias[0].texto}</p>
                         )}
                       </li>
                     );
                   })}
-                  {topDestruidores.length === 0 && <p className="text-sm text-muted-foreground">Nenhum destruidor crítico identificado.</p>}
+                  {topDestruidores.length === 0 && <p className="text-sm text-white/70">Nenhum destruidor crítico identificado.</p>}
                 </ul>
               </Card>
             </div>
@@ -506,31 +506,31 @@ export default function EquityPlannerAssessment() {
                 <h3 className="font-semibold mb-3">Triangulação de valor — sanity check</h3>
                 <div className="grid md:grid-cols-4 gap-3">
                   <div className="p-3 rounded border border-volt/30 bg-volt/5">
-                    <p className="text-xs uppercase text-muted-foreground">Múltiplos (âncora)</p>
+                    <p className="text-xs uppercase text-white/70">Múltiplos (âncora)</p>
                     <p className="text-xl font-bold text-volt mt-1">{brl(val.valor_atual)}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">EBITDA × {val.multiplo_aplicado}x</p>
+                    <p className="text-[10px] text-white/70 mt-1">EBITDA × {val.multiplo_aplicado}x</p>
                   </div>
                   {!!val.valor_dcf && (
                     <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
-                      <p className="text-xs uppercase text-muted-foreground">DCF (5 anos + perpetuidade)</p>
+                      <p className="text-xs uppercase text-white/70">DCF (5 anos + perpetuidade)</p>
                       <p className="text-xl font-bold mt-1">{brl(val.valor_dcf)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
+                      <p className="text-[10px] text-white/70 mt-1">
                         WACC {(val.dcf_premissas?.wacc*100).toFixed(0)}% · CAGR {(val.dcf_premissas?.cagr_5y*100).toFixed(0)}% · g {(val.dcf_premissas?.perpetuidade_g*100).toFixed(1)}%
                       </p>
                     </div>
                   )}
                   {!!val.valor_sde && (
                     <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
-                      <p className="text-xs uppercase text-muted-foreground">SDE (dono-operador)</p>
+                      <p className="text-xs uppercase text-white/70">SDE (dono-operador)</p>
                       <p className="text-xl font-bold mt-1">{brl(val.valor_sde)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">EBITDA + pró-labore × múltiplo de micro</p>
+                      <p className="text-[10px] text-white/70 mt-1">EBITDA + pró-labore × múltiplo de micro</p>
                     </div>
                   )}
                   {!!val.valor_triangulado && (
                     <div className="p-3 rounded border border-emerald-500/30 bg-emerald-500/5">
-                      <p className="text-xs uppercase text-muted-foreground">Triangulado</p>
+                      <p className="text-xs uppercase text-white/70">Triangulado</p>
                       <p className="text-xl font-bold text-emerald-400 mt-1">{brl(val.valor_triangulado)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">Mix ponderado dos métodos</p>
+                      <p className="text-[10px] text-white/70 mt-1">Mix ponderado dos métodos</p>
                     </div>
                   )}
                 </div>
@@ -546,12 +546,12 @@ export default function EquityPlannerAssessment() {
                     <table className="w-full text-sm">
                       <tbody>
                         <tr className="border-b border-volt/10">
-                          <td className="py-2 text-muted-foreground">EBITDA contábil</td>
+                          <td className="py-2 text-white/70">EBITDA contábil</td>
                           <td className="py-2 text-right font-mono">{brl(val.ebitda_contabil)}</td>
                         </tr>
                         {Object.entries(val.addbacks).filter(([_,v]) => Number(v) > 0).map(([k, v]) => (
                           <tr key={k} className="border-b border-volt/5">
-                            <td className="py-2 text-xs text-muted-foreground">+ {k.replace(/_/g, " ")}</td>
+                            <td className="py-2 text-xs text-white/70">+ {k.replace(/_/g, " ")}</td>
                             <td className="py-2 text-right font-mono text-volt">{brl(Number(v))}</td>
                           </tr>
                         ))}
@@ -562,7 +562,7 @@ export default function EquityPlannerAssessment() {
                       </tbody>
                     </table>
                   </div>
-                  <div className="text-xs text-muted-foreground space-y-2">
+                  <div className="text-xs text-white/70 space-y-2">
                     <p><strong className="text-volt">Por que normalizar?</strong> Compradores aplicam o múltiplo sobre o EBITDA "limpo" — descontando custos pessoais do dono, gastos não-recorrentes e remunerações fora do mercado.</p>
                     <p>Cada R$ de addback bem-documentado vale múltiplo × R$ de preço de venda. Documente em planilha auditável com lastro.</p>
                   </div>
@@ -587,9 +587,9 @@ export default function EquityPlannerAssessment() {
               <div className="grid md:grid-cols-3 gap-3 mt-5">
                 {bridge.map((b) => (
                   <div key={b.parcela} className="p-3 rounded border border-volt/10 bg-slate-950/40">
-                    <p className="text-xs uppercase text-muted-foreground">{b.parcela.replace(/_/g," ")}</p>
+                    <p className="text-xs uppercase text-white/70">{b.parcela.replace(/_/g," ")}</p>
                     <p className="text-lg font-bold text-volt mt-1">{brl(b.delta_valor)}</p>
-                    <p className="text-xs text-muted-foreground mt-1 break-words">{b.descricao}</p>
+                    <p className="text-xs text-white/70 mt-1 break-words">{b.descricao}</p>
                   </div>
                 ))}
               </div>
@@ -609,10 +609,10 @@ export default function EquityPlannerAssessment() {
                         {ARQUETIPOS_LABEL[assess.arquetipo_id || ""] || assess.arquetipo_id} → {ARQUETIPOS_LABEL[assess.migracao_arquetipo_sugerida.para_arquetipo_id] || assess.migracao_arquetipo_sugerida.para_arquetipo_id}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground break-words">
+                    <p className="text-sm text-white/70 break-words">
                       {assess.migracao_arquetipo_sugerida.racional}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs text-white/70 mt-2">
                       Viabilidade: <span className="text-volt font-medium">{assess.migracao_arquetipo_sugerida.viabilidade}</span>
                     </p>
                   </div>
@@ -627,7 +627,7 @@ export default function EquityPlannerAssessment() {
                     <p className="text-sm font-semibold break-words">
                       Plano em engenharia reversa para: <span className="text-volt">{buyerSelecionado.nome_alvo || buyerSelecionado.arquetipo_comprador}</span>
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1 break-words">
+                    <p className="text-xs text-white/70 mt-1 break-words">
                       Iniciativas que destravam sinergias deste comprador foram priorizadas no topo.
                       {dimsBoost.size > 0 && (
                         <> Dimensões em foco: {Array.from(dimsBoost).map((d) => DIMENSOES.find((x) => x.key === d)?.label || d).join(" · ")}.</>
@@ -645,7 +645,7 @@ export default function EquityPlannerAssessment() {
                 <Card key={sp} className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-4">
                   <h4 className="font-semibold mb-3 flex items-center justify-between">
                     <span>Sprint {sp}</span>
-                    <span className="text-xs text-muted-foreground">Q{sp}</span>
+                    <span className="text-xs text-white/70">Q{sp}</span>
                   </h4>
                   <div className="space-y-2">
                     {sprintInits.map((i) => {
@@ -653,7 +653,7 @@ export default function EquityPlannerAssessment() {
                       return (
                       <div key={i.id} className={`p-3 rounded border ${boosted ? "border-volt/60 bg-volt/10 ring-1 ring-volt/30" : i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" : "border-volt/10 bg-slate-950/40"}`}>
                         <p className="font-medium text-sm break-words">{i.titulo}</p>
-                        {i.descricao && <p className="text-xs text-muted-foreground mt-1 break-words">{i.descricao}</p>}
+                        {i.descricao && <p className="text-xs text-white/70 mt-1 break-words">{i.descricao}</p>}
                         <div className="flex flex-wrap gap-1 mt-2 text-[10px]">
                           <Badge variant="outline" className="border-volt/30 text-volt">+{i.delta_ipe} IPE</Badge>
                           <Badge variant="outline" className="border-volt/30">{brl(i.delta_valor)}</Badge>
@@ -666,7 +666,7 @@ export default function EquityPlannerAssessment() {
                       );
                     })}
                     {sprintInits.length === 0 && (
-                      <p className="text-xs text-muted-foreground">— sem iniciativas neste sprint —</p>
+                      <p className="text-xs text-white/70">— sem iniciativas neste sprint —</p>
                     )}
                   </div>
                 </Card>
@@ -688,15 +688,15 @@ export default function EquityPlannerAssessment() {
                       <Badge className="bg-volt/10 text-volt border-volt/30 capitalize">{b.arquetipo_comprador}</Badge>
                       <div className="flex items-center gap-1">
                         {b.selecionado && <Badge className="bg-volt text-carbon text-[10px]"><Crosshair className="h-3 w-3 mr-0.5" />Alvo</Badge>}
-                        {b.setor_alvo && <span className="text-[10px] uppercase text-muted-foreground tracking-wider">{b.setor_alvo}</span>}
+                        {b.setor_alvo && <span className="text-[10px] uppercase text-white/70 tracking-wider">{b.setor_alvo}</span>}
                       </div>
                     </div>
                     {b.nome_alvo && <h4 className="font-semibold break-words">{b.nome_alvo}</h4>}
-                    <p className="text-sm text-muted-foreground mt-2 break-words">{b.tese_aquisicao}</p>
+                    <p className="text-sm text-white/70 mt-2 break-words">{b.tese_aquisicao}</p>
 
                     {!!b.sinergias?.length && (
                       <div className="mt-3">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Sinergias capturáveis</p>
+                        <p className="text-[10px] uppercase tracking-wider text-white/70 mb-1">Sinergias capturáveis</p>
                         <ul className="space-y-1">
                           {b.sinergias.slice(0, 5).map((s, idx) => (
                             <li key={idx} className="text-xs flex gap-1 break-words"><span className="text-volt">▸</span>{s}</li>
@@ -714,10 +714,10 @@ export default function EquityPlannerAssessment() {
                     )}
 
                     <div className="mt-4 pt-3 border-t border-volt/10">
-                      <p className="text-xs text-muted-foreground">Prêmio estimado vs. múltiplo base</p>
+                      <p className="text-xs text-white/70">Prêmio estimado vs. múltiplo base</p>
                       <p className="text-lg font-bold text-volt">{b.premio_estimado_pct?.toFixed(0)}% · {brl(b.premio_estimado_valor)}</p>
                       {b.racional_premio && (
-                        <p className="text-[11px] text-muted-foreground mt-1 break-words italic">{b.racional_premio}</p>
+                        <p className="text-[11px] text-white/70 mt-1 break-words italic">{b.racional_premio}</p>
                       )}
                     </div>
 
@@ -739,7 +739,7 @@ export default function EquityPlannerAssessment() {
                   </Card>
                 );
               })}
-              {buyers.length === 0 && <p className="text-muted-foreground col-span-3 text-center py-10">Sem buyer map disponível.</p>}
+              {buyers.length === 0 && <p className="text-white/70 col-span-3 text-center py-10">Sem buyer map disponível.</p>}
             </div>
           </TabsContent>
 
@@ -765,7 +765,7 @@ export default function EquityPlannerAssessment() {
               companyId={assess.company_id}
               onExtracted={() => { /* hint: user can hit Re-medir to re-run compute with new doc context */ }}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-white/70">
               Após anexar novos documentos, clique em <span className="text-volt">Re-medir</span> no topo para recalcular o diagnóstico incorporando os fatos extraídos.
             </p>
           </TabsContent>
@@ -780,38 +780,38 @@ export default function EquityPlannerAssessment() {
               const dValor = (Number(last.valor) || 0) - (Number(prev.valor) || 0);
               const dAlvo = (Number(last.valor_alvo) || 0) - (Number(prev.valor_alvo) || 0);
               const dias = Math.max(1, Math.round((+new Date(last.created_at) - +new Date(prev.created_at)) / 86400000));
-              const Tone = ({ v }: { v: number }) => v > 0 ? <TrendingUp className="h-4 w-4 text-emerald-400" /> : v < 0 ? <TrendingDown className="h-4 w-4 text-rose-400" /> : <Minus className="h-4 w-4 text-muted-foreground" />;
-              const cls = (v: number) => v > 0 ? "text-emerald-400" : v < 0 ? "text-rose-400" : "text-muted-foreground";
+              const Tone = ({ v }: { v: number }) => v > 0 ? <TrendingUp className="h-4 w-4 text-emerald-400" /> : v < 0 ? <TrendingDown className="h-4 w-4 text-rose-400" /> : <Minus className="h-4 w-4 text-white/70" />;
+              const cls = (v: number) => v > 0 ? "text-emerald-400" : v < 0 ? "text-rose-400" : "text-white/70";
               return (
                 <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/20 p-5">
                   <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
                     <h3 className="font-semibold">Evolução vs. medição anterior</h3>
-                    <span className="text-xs text-muted-foreground">Janela: {dias} dia(s)</span>
+                    <span className="text-xs text-white/70">Janela: {dias} dia(s)</span>
                   </div>
                   <div className="grid md:grid-cols-3 gap-3">
                     <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
-                      <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Δ IPE</p>
+                      <p className="text-[10px] uppercase text-white/70 tracking-wider">Δ IPE</p>
                       <div className="flex items-baseline gap-2 mt-1">
                         <span className={`text-2xl font-bold ${cls(dIPE)}`}>{dIPE > 0 ? "+" : ""}{dIPE}</span>
                         <Tone v={dIPE} />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{prev.ipe} → {last.ipe}</p>
+                      <p className="text-xs text-white/70 mt-1">{prev.ipe} → {last.ipe}</p>
                     </div>
                     <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
-                      <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Δ Valor atual</p>
+                      <p className="text-[10px] uppercase text-white/70 tracking-wider">Δ Valor atual</p>
                       <div className="flex items-baseline gap-2 mt-1">
                         <span className={`text-2xl font-bold ${cls(dValor)}`}>{dValor >= 0 ? "+" : ""}{brl(dValor)}</span>
                         <Tone v={dValor} />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{brl(prev.valor)} → {brl(last.valor)}</p>
+                      <p className="text-xs text-white/70 mt-1">{brl(prev.valor)} → {brl(last.valor)}</p>
                     </div>
                     <div className="p-3 rounded border border-volt/10 bg-slate-950/40">
-                      <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Δ Valor potencial</p>
+                      <p className="text-[10px] uppercase text-white/70 tracking-wider">Δ Valor potencial</p>
                       <div className="flex items-baseline gap-2 mt-1">
                         <span className={`text-2xl font-bold ${cls(dAlvo)}`}>{dAlvo >= 0 ? "+" : ""}{brl(dAlvo)}</span>
                         <Tone v={dAlvo} />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{brl(prev.valor_alvo)} → {brl(last.valor_alvo)}</p>
+                      <p className="text-xs text-white/70 mt-1">{brl(prev.valor_alvo)} → {brl(last.valor_alvo)}</p>
                     </div>
                   </div>
                 </Card>
@@ -822,7 +822,7 @@ export default function EquityPlannerAssessment() {
             <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
               <h3 className="font-semibold mb-3">Loop de re-medição</h3>
               {progresso.length < 2 ? (
-                <p className="text-sm text-muted-foreground py-8 text-center">
+                <p className="text-sm text-white/70 py-8 text-center">
                   Re-meça o IPE após executar iniciativas para ver a curva de evolução.
                 </p>
               ) : (
@@ -858,7 +858,7 @@ export default function EquityPlannerAssessment() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="text-left text-xs uppercase text-muted-foreground border-b border-volt/10">
+                        <tr className="text-left text-xs uppercase text-white/70 border-b border-volt/10">
                           <th className="py-2 font-medium">Dimensão</th>
                           <th className="py-2 font-medium text-right">Antes</th>
                           <th className="py-2 font-medium text-right">Agora</th>
@@ -868,11 +868,11 @@ export default function EquityPlannerAssessment() {
                       </thead>
                       <tbody>
                         {rows.map(r => {
-                          const tone = r.delta > 0 ? "text-emerald-400" : r.delta < 0 ? "text-rose-400" : "text-muted-foreground";
+                          const tone = r.delta > 0 ? "text-emerald-400" : r.delta < 0 ? "text-rose-400" : "text-white/70";
                           return (
                             <tr key={r.key} className="border-b border-volt/5">
                               <td className="py-2 break-words">{r.label}</td>
-                              <td className="py-2 text-right font-mono text-muted-foreground">{r.prev}</td>
+                              <td className="py-2 text-right font-mono text-white/70">{r.prev}</td>
                               <td className="py-2 text-right font-mono">{r.last}</td>
                               <td className={`py-2 text-right font-mono font-bold ${tone}`}>{r.delta > 0 ? "+" : ""}{r.delta}</td>
                               <td className="py-2">
@@ -904,8 +904,8 @@ export default function EquityPlannerAssessment() {
                         {p.assessment_id === assess.id && <Badge className="bg-volt text-carbon text-[10px]">Esta rodada</Badge>}
                       </div>
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-muted-foreground">IPE <span className="text-volt font-mono font-bold">{p.ipe}</span></span>
-                        <span className="text-muted-foreground">{brl(p.valor)}</span>
+                        <span className="text-white/70">IPE <span className="text-volt font-mono font-bold">{p.ipe}</span></span>
+                        <span className="text-white/70">{brl(p.valor)}</span>
                         {p.assessment_id && p.assessment_id !== assess.id && (
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => navigate(`/equity-planner/${p.assessment_id}`)}>Abrir</Button>
                         )}
@@ -928,7 +928,7 @@ export default function EquityPlannerAssessment() {
               </DialogTitle>
             </DialogHeader>
             {letterLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-white/70">
                 <Loader2 className="h-6 w-6 animate-spin text-volt" />
                 <p className="text-sm">Gerando carta personalizada com IA…</p>
               </div>
@@ -939,7 +939,7 @@ export default function EquityPlannerAssessment() {
                   onChange={(e) => setLetterText(e.target.value)}
                   className="w-full h-80 p-4 rounded border border-volt/20 bg-slate-950/60 text-sm font-mono leading-relaxed resize-none focus:border-volt focus:outline-none break-words"
                 />
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[11px] text-white/70">
                   Texto blind (sem razão social). Você pode editar antes de enviar.
                 </p>
               </>
