@@ -10,14 +10,17 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const SYSTEM = `Você é o Classificador de Arquétipo do Equity Planner.
-Sua única tarefa: dado o intake (texto livre e/ou auto-avaliação) de uma PME, identificar o ARQUÉTIPO DE MODELO DE NEGÓCIO atual da empresa entre os disponíveis e, se existir, apontar uma MIGRAÇÃO DE ARQUÉTIPO que seria a maior alavanca de valor.
+Sua tarefa: dado o intake (texto livre e/ou auto-avaliação) de uma PME, identificar o ARQUÉTIPO DE MODELO DE NEGÓCIO atual e, OBRIGATORIAMENTE para arquétipos de baixa liquidez (servico_profissional, projeto_obra), apontar a MIGRAÇÃO DE MODELO mais valiosa.
 
 Setor é metadado — o que importa é o modelo econômico:
-- servico_profissional: people-based, hora-homem, projeto sob demanda, dependência do dono típica (consultoria, advocacia, agência, contabilidade)
-- projeto_obra: receita lumpy por contrato/obra, capital de giro pesado (construtora, integrador em modelo projeto, engenharia)
-- recorrente: MRR/ARR, contratos mensais, churn como métrica-chave (SaaS, MSP, manutenção contratada, mensalidade)
+- servico_profissional: people-based, hora-homem, projeto sob demanda, dependência do dono típica (consultoria, advocacia, agência, contabilidade) — BAIXA LIQUIDEZ
+- projeto_obra: receita lumpy por contrato/obra, capital de giro pesado (construtora, integrador em modelo projeto, engenharia) — BAIXA LIQUIDEZ
+- recorrente: MRR/ARR, contratos mensais, churn como métrica-chave (SaaS, MSP, manutenção contratada, mensalidade) — ALTA LIQUIDEZ
 
-Devolva APENAS JSON estrito sem markdown.`;
+REGRAS DURAS:
+- Se arquetipo_id ∈ {servico_profissional, projeto_obra}, "migracao_sugerida" é OBRIGATÓRIO (não pode ser null) — escolha a melhor rota das ROTAS DE MIGRAÇÃO disponíveis.
+- "vendabilidade_atual" é SEMPRE obrigatório, com nota 0-100 honesta (consultoria pura ~30-40, projeto obra ~35-45, recorrente saudável 65+) e 3-5 obstáculos concretos.
+- Devolva APENAS JSON estrito sem markdown.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
