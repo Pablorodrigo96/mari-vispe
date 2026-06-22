@@ -32,7 +32,7 @@ interface Classification {
 }
 
 export default function EquityPlannerNew() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(0);
   const [mode, setMode] = useState<Mode>("wizard");
@@ -60,10 +60,20 @@ export default function EquityPlannerNew() {
   // Meeting paste
   const [meetingText, setMeetingText] = useState("");
 
-  if (!user) {
-    navigate("/auth?next=/equity-planner/novo");
-    return null;
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth?next=/equity-planner/novo", { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-volt" />
+      </div>
+    );
   }
+  if (!user) return null;
 
   const buildIntakeText = (): string => {
     if (mode === "meeting_paste") return meetingText;
