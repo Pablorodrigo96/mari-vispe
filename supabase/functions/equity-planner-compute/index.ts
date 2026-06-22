@@ -506,7 +506,8 @@ Deno.serve(async (req) => {
       { valuation_id: valIns.id, parcela: "valor_alvo", descricao: "Valor potencial pós-execução do plano", delta_valor: valorAlvo, ordem: 5 },
     ]);
 
-    // initiatives — força migração de arquétipo no topo se sugerida pelo classificador
+    // initiatives — força migração de arquétipo + reestruturação de modelo p/ arquétipos ilíquidos
+    const ILIQUIDOS = new Set(["servico_profissional", "projeto_obra"]);
     const migrSug = classification?.migracao_sugerida;
     let allInits: any[] = (parsed.iniciativas || []).slice();
     const hasMigracao = allInits.some((i: any) => i.tipo === "migracao_arquetipo");
@@ -515,7 +516,7 @@ Deno.serve(async (req) => {
       const deltaMult = Number(rota?.delta_multiplo_esperado || 2.5);
       allInits.unshift({
         library_id: null,
-        titulo: rota?.titulo || `Migrar para ${migrSug.para_arquetipo_id}`,
+        titulo: rota?.titulo || `Migrar modelo para ${migrSug.para_arquetipo_id}`,
         descricao: rota?.descricao_rota || migrSug.racional,
         dimensao_alvo: "qualidade_receita",
         delta_ipe: 15,
@@ -525,6 +526,49 @@ Deno.serve(async (req) => {
         sprint: 1,
         tipo: "migracao_arquetipo",
       });
+    }
+
+    // Para arquétipos ilíquidos, GARANTE 2 iniciativas de reestruturação de modelo no Sprint 1
+    if (ILIQUIDOS.has(arqId)) {
+      const hasRecorrencia = allInits.some((i: any) =>
+        /recorr|retainer|contrato\s+mensal|MRR|ARR|assinatura/i.test(`${i.titulo} ${i.descricao || ""}`)
+      );
+      const hasIndepDono = allInits.some((i: any) =>
+        i.dimensao_alvo === "independencia_dono" ||
+        /dono|second\b|segundo\s+nível|playbook|delegar|sucessão/i.test(`${i.titulo} ${i.descricao || ""}`)
+      );
+      if (!hasRecorrencia) {
+        allInits.unshift({
+          library_id: null,
+          titulo: arqId === "servico_profissional"
+            ? "Criar oferta retainer mensal sobre a base atual"
+            : "Lançar linha de serviços contratados pós-projeto (manutenção/SLA)",
+          descricao: arqId === "servico_profissional"
+            ? "Empacotar 30-40% do escopo atual em contrato mensal recorrente (retainer) para clientes-chave — vira MRR previsível."
+            : "Toda obra entregue passa a abrir contrato anual de manutenção/operação com SLA — receita lumpy ganha cauda recorrente.",
+          dimensao_alvo: "qualidade_receita",
+          delta_ipe: 10,
+          delta_valor: Math.round(0.8 * Math.max(0, ebitda)),
+          esforco: "medio",
+          prazo_meses: 4,
+          sprint: 1,
+          tipo: "reestruturacao_modelo",
+        });
+      }
+      if (!hasIndepDono) {
+        allInits.unshift({
+          library_id: null,
+          titulo: "Tirar o dono do funil: estruturar #2 comercial e operacional",
+          descricao: "Mapear o que só o dono faz hoje (vendas, entrega-chave, decisões), formar segundo nível com playbook e CRM, e fazer o dono sair de 1-2 frentes em 90 dias.",
+          dimensao_alvo: "independencia_dono",
+          delta_ipe: 12,
+          delta_valor: Math.round(0.6 * Math.max(0, ebitda)),
+          esforco: "medio",
+          prazo_meses: 6,
+          sprint: 1,
+          tipo: "reestruturacao_modelo",
+        });
+      }
     }
 
     // Priorização: derisk (independencia/higiene/contingencias) primeiro,
