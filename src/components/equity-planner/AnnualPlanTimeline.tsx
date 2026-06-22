@@ -15,7 +15,8 @@ export default function AnnualPlanTimeline({ plan }: Props) {
   const [openMes, setOpenMes] = useState<number | null>(1);
 
   if (!plan?.plan_data) return null;
-  const { north_star, resumo_executivo, meses } = plan.plan_data;
+  const { north_star, resumo_executivo, meses, trilha_vendabilidade } = plan.plan_data;
+  const trilhaAtiva = !!trilha_vendabilidade?.ativa && Array.isArray(trilha_vendabilidade?.marcos_mensais) && trilha_vendabilidade.marcos_mensais.length > 0;
 
   return (
     <div className="space-y-5">
