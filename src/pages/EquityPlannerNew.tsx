@@ -124,6 +124,22 @@ export default function EquityPlannerNew() {
     return assess.id;
   };
 
+  const invokeWithTimeout = async <T,>(
+    fn: string,
+    body: any,
+    timeoutMs: number,
+  ): Promise<T> => {
+    return await Promise.race([
+      supabase.functions.invoke(fn, { body }) as Promise<T>,
+      new Promise<T>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Tempo esgotado (${Math.round(timeoutMs / 1000)}s). Tente novamente.`)),
+          timeoutMs,
+        ),
+      ),
+    ]);
+  };
+
   const runClassifier = async () => {
     if (!razao && !cnpj) {
       toast.error("Preencha razão social ou CNPJ na etapa 1.");
@@ -133,21 +149,31 @@ export default function EquityPlannerNew() {
     try {
       const id = await ensureDraft();
       const intakeText = buildIntakeText();
-      const { data, error } = await supabase.functions.invoke("equity-planner-classify", {
-        body: {
+      const { data, error } = await invokeWithTimeout<any>(
+        "equity-planner-classify",
+        {
           assessmentId: id,
           intakeText,
-          companyData: { razao_social: razao, cnpj, setor_livre: setor, porte, uf,
-            faturamento_declarado: faturamento, ebitda_declarado: ebitda },
+          companyData: {
+            razao_social: razao,
+            cnpj,
+            setor_livre: setor,
+            porte,
+            uf,
+            faturamento_declarado: faturamento,
+            ebitda_declarado: ebitda,
+          },
         },
-      });
+        60_000,
+      );
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (!data?.classification) throw new Error("Resposta vazia do classificador.");
       setClassification(data.classification);
       setChosenArquetipo(data.classification.arquetipo_id);
       setStep(4);
     } catch (e: any) {
-      console.error(e);
+      console.error("[equity-planner-classify]", e);
       toast.error("Falha ao classificar: " + (e?.message || "erro"));
     } finally {
       setClassifying(false);
