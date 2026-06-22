@@ -201,25 +201,30 @@ export default function EquityPlannerNew() {
       const id = await ensureDraft(user.id);
       const intakeText = buildIntakeText();
 
-      // 1) classificar
-      const { data: clsData, error: clsErr } = await invokeWithTimeout<any>(
-        "equity-planner-classify",
-        {
-          assessmentId: id,
-          intakeText,
-          companyData: {
-            razao_social: razao, cnpj, setor_livre: setor, porte, uf,
-            faturamento_declarado: faturamento, ebitda_declarado: ebitda,
+      // 1) classificar — falha não bloqueia o compute
+      try {
+        const { data: clsData, error: clsErr } = await invokeWithTimeout<any>(
+          "equity-planner-classify",
+          {
+            assessmentId: id,
+            intakeText,
+            companyData: {
+              razao_social: razao, cnpj, setor_livre: setor, porte, uf,
+              faturamento_declarado: faturamento, ebitda_declarado: ebitda,
+            },
           },
-        },
-        60_000,
-      );
-      if (clsErr) throw clsErr;
-      if (clsData?.error) throw new Error(clsData.error);
-      const cls: Classification | null = clsData?.classification || null;
-      if (cls) {
-        setClassification(cls);
-        if (!chosenArquetipo) setChosenArquetipo(cls.arquetipo_id);
+          60_000,
+        );
+        if (clsErr) throw clsErr;
+        if (clsData?.error) throw new Error(clsData.error);
+        const cls: Classification | null = clsData?.classification || null;
+        if (cls) {
+          setClassification(cls);
+          if (!chosenArquetipo) setChosenArquetipo(cls.arquetipo_id);
+        }
+      } catch (clsFail: any) {
+        console.warn("classify failed, continuing with default", clsFail);
+        toast.message("Classificação automática indisponível — seguindo com arquétipo padrão.");
       }
       setClassifying(false);
 
