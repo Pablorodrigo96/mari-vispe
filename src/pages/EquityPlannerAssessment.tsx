@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles, FileDown, BarChart3 } from "lucide-react";
+import { Loader2, RefreshCw, ArrowLeft, TrendingUp, TrendingDown, Minus, Users, Activity, Target, LineChart as LineIcon, AlertTriangle, FileText, PlusCircle, Mail, Crosshair, Copy, MessageCircle, Sparkles, FileDown, BarChart3, Briefcase, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +25,8 @@ interface Assessment {
   company_id: string; confianca_arquetipo: number | null;
   migracao_arquetipo_sugerida: any | null;
   archetype_classification: any | null;
+  promoted_mandate_id: string | null;
+  promoted_at: string | null;
 }
 interface DimScore { dimensao: string; score: number; peso: number; destruidor_top: boolean; evidencias: any; }
 interface Valuation { id: string; ebitda_contabil: number | null; ebitda_normalizado: number; addbacks: any; multiplo_aplicado: number; faixa_min: number; faixa_max: number; valor_atual: number; valor_alvo: number; valor_dcf: number | null; valor_sde: number | null; valor_triangulado: number | null; dcf_premissas: any; }
@@ -40,6 +42,7 @@ export default function EquityPlannerAssessment() {
   const [loading, setLoading] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
   const [creatingRound, setCreatingRound] = useState(false);
+  const [promoting, setPromoting] = useState(false);
   const [assess, setAssess] = useState<Assessment | null>(null);
   const [dims, setDims] = useState<DimScore[]>([]);
   const [val, setVal] = useState<Valuation | null>(null);
@@ -148,6 +151,42 @@ export default function EquityPlannerAssessment() {
     } catch (e: any) {
       toast.error("Falha ao criar rodada: " + e.message);
     } finally { setCreatingRound(false); }
+  };
+
+  // Onda 8 — Ponte EB: promover a mandato
+  const handlePromoteToMandate = async () => {
+    if (!assess) return;
+    if (assess.status !== "computed") {
+      toast.error("Diagnóstico precisa estar computado antes de virar mandato.");
+      return;
+    }
+    setPromoting(true);
+    try {
+      const { data, error } = await supabase.rpc("promote_assessment_to_mandate", {
+        _assessment_id: assess.id,
+      });
+      if (error) throw error;
+      const result = data as any;
+      const mandateId = result?.mandate_id;
+      if (!mandateId) throw new Error("Mandato não foi criado");
+      toast.success(
+        result.already_promoted
+          ? "Mandato já existia — abrindo no EB"
+          : result.reused_existing
+            ? "Mandato vigente reaproveitado no EB"
+            : "Mandato criado no Equity Brain"
+      );
+      await load();
+      window.open(`/equity-brain/crm/mandate/${mandateId}`, "_blank");
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      if (msg.includes("cnpj_invalido")) toast.error("CNPJ da empresa é inválido ou ausente.");
+      else if (msg.includes("not_authorized")) toast.error("Sem permissão para promover este diagnóstico.");
+      else if (msg.includes("not_computed")) toast.error("Compute o diagnóstico antes de promover.");
+      else toast.error("Falha ao promover: " + msg);
+    } finally {
+      setPromoting(false);
+    }
   };
 
   // Onda 5 — Buyer reverso
@@ -267,6 +306,16 @@ export default function EquityPlannerAssessment() {
               }>
                 {veredito?.label || "—"}
               </Badge>
+              {assess.promoted_mandate_id && (
+                <Badge
+                  className="bg-emerald-500/15 text-emerald-300 border-emerald-500/40 cursor-pointer hover:bg-emerald-500/25"
+                  onClick={() => window.open(`/equity-brain/crm/mandate/${assess.promoted_mandate_id}`, "_blank")}
+                >
+                  <Briefcase className="h-3 w-3 mr-1" />
+                  Mandato ativo no EB
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </Badge>
+              )}
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -277,6 +326,25 @@ export default function EquityPlannerAssessment() {
               {recomputing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
               Re-medir
             </Button>
+            {assess.promoted_mandate_id ? (
+              <Button
+                variant="outline"
+                className="bg-transparent border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+                onClick={() => window.open(`/equity-brain/crm/mandate/${assess.promoted_mandate_id}`, "_blank")}
+              >
+                <Briefcase className="h-4 w-4 mr-2" /> Abrir mandato
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="bg-transparent border-volt/40 text-volt hover:bg-volt/10"
+                disabled={promoting || assess.status !== "computed"}
+                onClick={handlePromoteToMandate}
+              >
+                {promoting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Briefcase className="h-4 w-4 mr-2" />}
+                Promover a mandato
+              </Button>
+            )}
             <Button className="bg-volt text-carbon hover:bg-volt/90" disabled={creatingRound} onClick={handleNewRound}>
               {creatingRound ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PlusCircle className="h-4 w-4 mr-2" />}
               Nova rodada
