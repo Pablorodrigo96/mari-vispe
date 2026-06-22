@@ -136,23 +136,17 @@ Devolva JSON:
         parsed = JSON.parse(repaired);
       }
     } catch (e) {
-      // Fallback soft: classificação default p/ não travar o wizard
+      // Fallback soft: classificação default p/ não travar o wizard.
+      // NÃO retorna aqui — segue para o bloco de enforcement abaixo
+      // para popular vendabilidade_atual e migracao_sugerida via defaults.
       console.warn("[equity-planner-classify] invalid_json:", (e as Error).message, "head:", (ai.text || "").slice(0, 200));
-      const fallback = {
+      parsed = {
         arquetipo_id: "servico_profissional",
         confianca: 0.4,
         racional: "Classificação automática indisponível — usando default conservador. O compute refinará no próximo passo.",
         migracao_sugerida: null,
         _fallback: true,
       };
-      await supabase.from("equity_assessments").update({
-        archetype_classification: fallback,
-        arquetipo_sugerido: fallback.arquetipo_id,
-        confianca_arquetipo: fallback.confianca,
-      }).eq("id", assessmentId);
-      return new Response(JSON.stringify({ ok: true, classification: fallback, provider: ai.provider, fallback: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
     // ENFORCEMENT: garante vendabilidade_atual e migracao_sugerida p/ arquétipos ilíquidos
