@@ -1922,7 +1922,12 @@ export type Database = {
           metrica: string
           multiplo_max: number
           multiplo_min: number
+          multiplo_p25: number | null
+          multiplo_p50: number | null
+          multiplo_p75: number | null
+          multiplo_top10: number | null
           porte: string
+          sample_n: number | null
           setor: string | null
           vigencia: string | null
         }
@@ -1934,7 +1939,12 @@ export type Database = {
           metrica?: string
           multiplo_max: number
           multiplo_min: number
+          multiplo_p25?: number | null
+          multiplo_p50?: number | null
+          multiplo_p75?: number | null
+          multiplo_top10?: number | null
           porte: string
+          sample_n?: number | null
           setor?: string | null
           vigencia?: string | null
         }
@@ -1946,7 +1956,12 @@ export type Database = {
           metrica?: string
           multiplo_max?: number
           multiplo_min?: number
+          multiplo_p25?: number | null
+          multiplo_p50?: number | null
+          multiplo_p75?: number | null
+          multiplo_top10?: number | null
           porte?: string
+          sample_n?: number | null
           setor?: string | null
           vigencia?: string | null
         }
@@ -1959,6 +1974,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      equity_dimension_benchmarks: {
+        Row: {
+          arquetipo_id: string
+          created_at: string
+          dimensao_key: string
+          fonte: string
+          id: string
+          p25: number
+          p50: number
+          p75: number
+          p90: number
+          porte: string
+          sample_n: number
+          vigencia: string
+        }
+        Insert: {
+          arquetipo_id: string
+          created_at?: string
+          dimensao_key: string
+          fonte?: string
+          id?: string
+          p25: number
+          p50: number
+          p75: number
+          p90: number
+          porte: string
+          sample_n?: number
+          vigencia?: string
+        }
+        Update: {
+          arquetipo_id?: string
+          created_at?: string
+          dimensao_key?: string
+          fonte?: string
+          id?: string
+          p25?: number
+          p50?: number
+          p75?: number
+          p90?: number
+          porte?: string
+          sample_n?: number
+          vigencia?: string
+        }
+        Relationships: []
       }
       equity_dimension_scores: {
         Row: {
