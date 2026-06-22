@@ -101,6 +101,10 @@ export default function EquityPlannerAssessment() {
       setDimBenchmarks([]); setCompBench(null);
     }
 
+    if (v.data) {
+      const { data: br } = await supabase.from("equity_value_bridge_items").select("*").eq("valuation_id", (v.data as any).id).order("ordem");
+      setBridge((br as any) || []);
+    }
 
     // Onda 9 — deep dive progress + plano anual
     const [{ data: ddRows }, { data: planRow }] = await Promise.all([
