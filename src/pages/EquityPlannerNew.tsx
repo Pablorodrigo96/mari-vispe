@@ -79,6 +79,57 @@ export default function EquityPlannerNew() {
   const hydratedRef = useRef(false);
   const autoRunRef = useRef(false);
 
+  // ===== Background market scan =====
+  const [marketScanStatus, setMarketScanStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const marketScanRef = useRef<{ key: string | null; timer: any }>({ key: null, timer: null });
+
+  useEffect(() => {
+    if (!user) return;
+    const cnpjClean = cnpj.replace(/\D/g, "");
+    const hasEnough = (razao && razao.trim().length >= 3) || cnpjClean.length === 14;
+    if (!hasEnough) return;
+    const key = `${razao.trim()}|${cnpjClean}`;
+    if (marketScanRef.current.key === key) return;
+    if (marketScanRef.current.timer) clearTimeout(marketScanRef.current.timer);
+    marketScanRef.current.timer = setTimeout(async () => {
+      marketScanRef.current.key = key;
+      setMarketScanStatus("running");
+      try {
+        const { data, error } = await supabase.functions.invoke("equity-market-scan", {
+          body: {
+            razao_social: razao,
+            cnpj,
+            assessment_id: draftAssessmentId,
+            faturamento_declarado: faturamento,
+          },
+        });
+        if (error || data?.error) {
+          setMarketScanStatus("error");
+        } else {
+          setMarketScanStatus("done");
+        }
+      } catch {
+        setMarketScanStatus("error");
+      }
+    }, 1500);
+    return () => {
+      if (marketScanRef.current.timer) clearTimeout(marketScanRef.current.timer);
+    };
+  }, [razao, cnpj, user, draftAssessmentId, faturamento]);
+
+  // Re-link scan to assessment once draft is created
+  useEffect(() => {
+    if (!draftAssessmentId || !user) return;
+    const cnpjClean = cnpj.replace(/\D/g, "");
+    if (!cnpjClean) return;
+    void supabase
+      .from("equity_market_scans")
+      .update({ assessment_id: draftAssessmentId })
+      .eq("user_id", user.id)
+      .eq("cnpj", cnpjClean)
+      .is("assessment_id", null);
+  }, [draftAssessmentId, cnpj, user]);
+
   // ===== Hydrate from sessionStorage on mount =====
   useEffect(() => {
     if (hydratedRef.current) return;
