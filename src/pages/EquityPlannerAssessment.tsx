@@ -542,6 +542,20 @@ export default function EquityPlannerAssessment() {
             </div>
           </TabsContent>
 
+          {/* MODELO & LIQUIDEZ */}
+          <TabsContent value="modelo" className="mt-4">
+            <ModelLiquidityTab
+              arquetipoId={assess.arquetipo_id}
+              classification={assess.archetype_classification}
+              migracaoSugerida={assess.migracao_arquetipo_sugerida}
+              initiatives={inits}
+              onOpenInitiative={(i) => { setDeepdiveInitiative(i); setDeepdiveOpen(true); }}
+              onBuildAnnualPlan={handleBuildAnnual}
+              buildingAnnual={buildingAnnual}
+              hasAnnualPlan={!!annualPlan}
+            />
+          </TabsContent>
+
           {/* VALOR */}
           <TabsContent value="valor" className="mt-4 space-y-4">
             {/* Triangulação de métodos */}
