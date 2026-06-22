@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { DIMENSOES, ARQUETIPOS_LABEL, VEREDITO_LABEL, brl } from "@/lib/equity-planner/constants";
 import EquityDocsUpload from "@/components/equity-planner/EquityDocsUpload";
+import EquityMarketTab from "@/components/equity-planner/EquityMarketTab";
 
 interface Assessment {
   id: string; ipe_composto: number | null; arquetipo_id: string | null;
