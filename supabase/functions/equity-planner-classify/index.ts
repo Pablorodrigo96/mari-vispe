@@ -65,11 +65,17 @@ Devolva JSON:
   "confianca": 0.0,
   "justificativa": "1-2 frases explicando por quê",
   "sinais_detectados": ["string","string"],
+  "vendabilidade_atual": {
+    "nota_0_100": 0,
+    "motivo_baixa_liquidez": "1-2 frases sobre por que essa empresa é (ou não) líquida hoje no mercado de M&A",
+    "principais_obstaculos": ["3 a 5 obstáculos concretos que travam a venda dessa empresa específica"]
+  },
   "migracao_sugerida": {
-    "rota_id": null | "uuid da rota acima",
-    "para_arquetipo_id": null | "id",
-    "racional": "se aplicável, por que essa migração é a maior alavanca de valor desta empresa em específico",
-    "viabilidade": "alta|media|baixa"
+    "rota_id": "uuid da rota acima (OBRIGATÓRIO p/ servico_profissional/projeto_obra)",
+    "para_arquetipo_id": "id do arquétipo destino",
+    "racional": "por que essa migração é a maior alavanca de valor desta empresa em específico",
+    "viabilidade": "alta|media|baixa",
+    "bloqueadores": ["3 bloqueadores concretos para essa migração nesta empresa"]
   } | null
 }`;
 
