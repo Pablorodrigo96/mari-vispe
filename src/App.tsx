@@ -204,6 +204,19 @@ const App = () => (
             <Route path="/investors" element={<Investors />} />
             <Route path="/comprar" element={<Investors />} />
 
+            {/* /investir — porta de entrada B2C tokenizada (sem AppShell) */}
+            <Route path="/investir" element={<InvestirHome />} />
+            <Route path="/investir/empresas" element={<InvestirListagem />} />
+            <Route path="/investir/ativo/:symbol" element={<InvestirAtivo />} />
+            <Route path="/investir/auth" element={<InvestirAuth />} />
+            <Route path="/investir/painel" element={<InvestirDashboard />} />
+            <Route path="/investir/carteira" element={<InvestirWallet />} />
+            <Route path="/investir/reservas" element={<InvestirReservas />} />
+            <Route path="/investir/onboarding/kyc" element={<InvestirKYC />} />
+            <Route path="/investir/onboarding/suitability" element={<InvestirSuitability />} />
+            <Route path="/investir/como-funciona" element={<InvestirComoFunciona />} />
+            <Route path="/investir/riscos" element={<InvestirRiscos />} />
+
             {/* Hybrid routes: AppShell wraps them; for visitors AppShell renders the page raw */}
             <Route element={<AppShell />}>
               {/* Tools (work for both visitors and logged-in users) */}
