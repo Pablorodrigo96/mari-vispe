@@ -101,12 +101,42 @@ export default function EquityPlannerAssessment() {
       setDimBenchmarks([]); setCompBench(null);
     }
 
-    if (v.data) {
-      const { data: br } = await supabase.from("equity_value_bridge_items").select("*").eq("valuation_id", (v.data as any).id).order("ordem");
-      setBridge((br as any) || []);
-    }
+
+    // Onda 9 — deep dive progress + plano anual
+    const [{ data: ddRows }, { data: planRow }] = await Promise.all([
+      supabase.from("equity_initiative_deepdive").select("initiative_id, status, questions, answers").eq("assessment_id", id),
+      supabase.from("equity_annual_plan").select("*").eq("assessment_id", id).maybeSingle(),
+    ]);
+    const map: Record<string, { status: string; answered: number; total: number }> = {};
+    ((ddRows as any) || []).forEach((r: any) => {
+      const total = Array.isArray(r.questions) ? r.questions.length : 0;
+      const ans = r.answers || {};
+      const answered = Object.values(ans).filter((v: any) => (v || "").toString().trim().length > 3).length;
+      map[r.initiative_id] = { status: r.status, answered, total };
+    });
+    setDeepdiveStatus(map);
+    setAnnualPlan(planRow || null);
+
     setLoading(false);
   };
+
+  const handleBuildAnnual = async () => {
+    if (!assess) return;
+    setBuildingAnnual(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("equity-annual-plan-build", {
+        body: { assessment_id: assess.id },
+      });
+      if (error) throw error;
+      setAnnualPlan((data as any)?.plan || null);
+      toast.success("Plano Tático Anual gerado");
+    } catch (e: any) {
+      toast.error("Falha ao gerar plano anual: " + e.message);
+    } finally {
+      setBuildingAnnual(false);
+    }
+  };
+
 
   useEffect(() => { load(); }, [id]);
 
