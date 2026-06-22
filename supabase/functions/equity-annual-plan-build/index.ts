@@ -16,6 +16,7 @@ Regras:
 - Cada ação deve ser executável por um sócio/dono de PME (não consultoria abstrata).
 - Conecte iniciativas: se "reduzir dependência do dono" depende de "estruturar #2", coloque na ordem.
 - North star: target de IPE final + delta de valor projetado.
+- Se houver ROTA DE MIGRAÇÃO de modelo ativa, o plano DEVE conter uma TRILHA DE VENDABILIDADE paralela com marco mensal explícito (M1..M12) da transição de modelo, meta trimestral de % de receita recorrente e checklist de exit-readiness no M12 (governança, finanças, contratos, equipe, dossiê).
 - Devolva APENAS JSON estrito, sem markdown.`;
 
 function extractJson(raw: string): any {
