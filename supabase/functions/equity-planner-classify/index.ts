@@ -115,15 +115,35 @@ Devolva JSON:
         }
         if (end > firstBrace) jsonStr = stripped.slice(firstBrace, end + 1);
       }
-      parsed = JSON.parse(jsonStr);
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        // Repair: trailing commas, smart quotes, control chars
+        const repaired = jsonStr
+          .replace(/,\s*([}\]])/g, "$1")
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\x00-\x1F]+/g, " ");
+        parsed = JSON.parse(repaired);
+      }
     } catch (e) {
-      // NÃO persiste fallback — devolve 503 para o caller (compute) decidir
+      // Fallback soft: classificação default p/ não travar o wizard
       console.warn("[equity-planner-classify] invalid_json:", (e as Error).message, "head:", (ai.text || "").slice(0, 200));
-      return new Response(JSON.stringify({
-        error: "ai_invalid_json",
-        detail: (e as Error).message,
-        provider: ai.provider,
-      }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const fallback = {
+        arquetipo_id: "servico_profissional",
+        confianca: 0.4,
+        racional: "Classificação automática indisponível — usando default conservador. O compute refinará no próximo passo.",
+        migracao_sugerida: null,
+        _fallback: true,
+      };
+      await supabase.from("equity_assessments").update({
+        archetype_classification: fallback,
+        arquetipo_sugerido: fallback.arquetipo_id,
+        confianca_arquetipo: fallback.confianca,
+      }).eq("id", assessmentId);
+      return new Response(JSON.stringify({ ok: true, classification: fallback, provider: ai.provider, fallback: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // persist
