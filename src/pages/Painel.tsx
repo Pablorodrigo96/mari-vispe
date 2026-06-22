@@ -188,6 +188,11 @@ export default function Painel() {
           <MariOriginBadge />
         </div>
 
+        {/* Equity Planner — entry card */}
+        <div className="mb-6">
+          <EquityPlannerCockpitCard />
+        </div>
+
         {/* === ABOVE THE FOLD — 3 colunas Bloomberg === */}
         <div className="grid grid-cols-1 lg:grid-cols-[24%_52%_24%] gap-4 mb-8">
           <ColEmpresa
