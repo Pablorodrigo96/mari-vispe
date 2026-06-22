@@ -641,6 +641,21 @@ export default function EquityPlannerAssessment() {
             </div>
           </TabsContent>
 
+          {/* MERCADO (Onda 7) */}
+          <TabsContent value="mercado" className="mt-4">
+            <EquityMarketTab
+              arquetipoLabel={assess.arquetipo_id ? (ARQUETIPOS_LABEL[assess.arquetipo_id] || assess.arquetipo_id) : "—"}
+              porte={companyPorte}
+              ipe={assess.ipe_composto}
+              multiploAplicado={val?.multiplo_aplicado ?? null}
+              ebitdaNormalizado={val?.ebitda_normalizado ?? null}
+              valorAtual={val?.valor_atual ?? null}
+              dims={dims as any}
+              dimBenchmarks={dimBenchmarks}
+              compBench={compBench}
+            />
+          </TabsContent>
+
           {/* DOCS */}
           <TabsContent value="docs" className="mt-4 space-y-3">
             <EquityDocsUpload
