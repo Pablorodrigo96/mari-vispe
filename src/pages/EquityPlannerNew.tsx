@@ -415,9 +415,23 @@ export default function EquityPlannerNew() {
     );
   }
 
+  const statusChip = marketScanStatus === "idle" ? null : (
+    <div className={[
+      "flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-medium backdrop-blur-md",
+      marketScanStatus === "running" && "bg-carbon/80 border-volt/30 text-volt",
+      marketScanStatus === "done" && "bg-carbon/80 border-emerald-400/30 text-emerald-300",
+      marketScanStatus === "error" && "bg-carbon/80 border-white/15 text-white/50",
+    ].filter(Boolean).join(" ")}>
+      {marketScanStatus === "running" && <><Loader2 className="h-3 w-3 animate-spin" /> Pesquisando mercado…</>}
+      {marketScanStatus === "done" && <><Sparkles className="h-3 w-3" /> Mapeamento pronto</>}
+      {marketScanStatus === "error" && <>Pesquisa indisponível</>}
+    </div>
+  );
+
   return (
     <TooltipProvider delayDuration={150}>
-      <WizardShell step={step} steps={STEPS} stepKey={step} footer={footer}>
+      <WizardShell step={step} steps={STEPS} stepKey={step} footer={footer} statusChip={statusChip}>
+
         {/* STEP 0 */}
         {step === 0 && (
           <div>
