@@ -199,20 +199,9 @@ Deno.serve(async (req) => {
       migrations: migrations || [], buyerArchetypes: buyerArchs || [],
     });
 
-    const ai = await callAnthropic({
-      model: "claude-sonnet-4-6",
-      system: SYSTEM,
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 5500,
-      temperature: 0.3,
-      function_name: "equity-planner-compute",
-      feature: "equity_planner",
-      user_id: assess.user_id,
-    });
-
-    // Extrair JSON (robusto: strip fences, extrai primeiro {...} balanceado, repara vírgulas finais)
+    // Extrator JSON robusto
     function extractJson(raw: string): any {
-      let s = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+      let s = (raw || "").trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
       const first = s.indexOf("{");
       if (first === -1) throw new Error("no_json_object");
       let depth = 0, end = -1, inStr = false, esc = false;
@@ -230,28 +219,69 @@ Deno.serve(async (req) => {
       }
       let candidate = end > first ? s.slice(first, end + 1) : s.slice(first);
       try { return JSON.parse(candidate); } catch {}
-      // Repara vírgulas finais antes de } ou ]
       const repaired = candidate.replace(/,\s*([}\]])/g, "$1");
       return JSON.parse(repaired);
     }
 
-    let parsed: any;
-    try {
-      parsed = extractJson(ai.text || "");
-    } catch (e) {
-      console.error("[equity-planner-compute] ai_invalid_json, usando fallback. Raw head:", (ai.text || "").slice(0, 400));
-      parsed = {
-        dimensoes: DIMENSOES.map((d) => ({ dimensao: d, score: 50, evidencia: "Dados insuficientes — estimativa base.", premissa: true })),
-        ebitda_normalizado: 0,
-        ajustes_ebitda: [],
-        diagnostico_executivo: "Diagnóstico parcial — a análise detalhada não pôde ser gerada agora. Refaça em alguns minutos para o resultado completo.",
-        plano_90d: [],
-        plano_12m: [],
-        plano_36m: [],
-        riscos: [],
-        buyer_map: [],
-      };
+    function validateParsed(p: any): { ok: boolean; reason?: string } {
+      if (!p || typeof p !== "object") return { ok: false, reason: "not_object" };
+      const dims = Array.isArray(p.dimensoes) ? p.dimensoes : [];
+      const inits = Array.isArray(p.iniciativas) ? p.iniciativas : [];
+      const buyers = Array.isArray(p.buyer_map) ? p.buyer_map : [];
+      if (dims.length < 8) return { ok: false, reason: `dimensoes_curtas:${dims.length}` };
+      if (inits.length < 4) return { ok: false, reason: `iniciativas_curtas:${inits.length}` };
+      if (buyers.length < 2) return { ok: false, reason: `buyers_curtos:${buyers.length}` };
+      return { ok: true };
     }
+
+    async function callAndParse(temperature: number, maxTokens: number) {
+      const ai = await callAnthropic({
+        model: "claude-sonnet-4-6",
+        system: SYSTEM,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: maxTokens,
+        temperature,
+        function_name: "equity-planner-compute",
+        feature: "equity_planner",
+        user_id: assess.user_id,
+      });
+      const parsed = extractJson(ai.text || "");
+      return { parsed, ai };
+    }
+
+    let parsed: any = null;
+    let aiMeta: any = null;
+    let lastErr: string = "";
+    for (const attempt of [
+      { temperature: 0.3, max_tokens: 5500 },
+      { temperature: 0,   max_tokens: 7500 },
+    ]) {
+      try {
+        const r = await callAndParse(attempt.temperature, attempt.max_tokens);
+        const v = validateParsed(r.parsed);
+        if (!v.ok) { lastErr = `validation:${v.reason}`; continue; }
+        parsed = r.parsed;
+        aiMeta = r.ai;
+        break;
+      } catch (e) {
+        lastErr = (e as Error).message || "parse_error";
+        console.warn(`[equity-planner-compute] attempt failed: ${lastErr}`);
+      }
+    }
+
+    if (!parsed) {
+      // NÃO sobrescrever dados anteriores. Marca o assessment como ai_failed e devolve 500.
+      await supabase.from("equity_assessments")
+        .update({ status: "ai_failed" })
+        .eq("id", assessmentId);
+      return new Response(JSON.stringify({
+        error: "ai_invalid_json",
+        detail: lastErr,
+        hint: "A IA não devolveu um resultado válido. Clique em Re-medir para tentar de novo.",
+      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const ai = aiMeta;
 
     // 4) Calcular IPE composto (arqId já vem da classificação)
     const arq = (archetypes || []).find((a: any) => a.id === arqId) || (archetypes || [])[0];
