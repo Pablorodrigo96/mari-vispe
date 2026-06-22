@@ -73,6 +73,18 @@ Deno.serve(async (req) => {
     const { data: company } = await supabase.from("equity_companies").select("nome_empresa, setor, porte, faturamento_anual").eq("id", assess.company_id).maybeSingle();
     const { data: dim } = await supabase.from("equity_dimension_scores").select("*").eq("assessment_id", assess.id).eq("dimensao", (init as any).dimensao_alvo).maybeSingle();
 
+    const isModelo = ["migracao_arquetipo", "reestruturacao_modelo"].includes((init as any).tipo);
+    const blocoModelo = isModelo ? `
+ATENÇÃO — ESTA INICIATIVA É DE REESTRUTURAÇÃO DE MODELO DE NEGÓCIO.
+Suas perguntas DEVEM cobrir OBRIGATORIAMENTE:
+- % atual de receita recorrente vs projeto/avulsa (em R$ e em %)
+- Ticket médio, ciclo de venda, taxa de fechamento e churn (se houver)
+- Quantas horas/semana o dono gasta entregando, vendendo e tomando decisão operacional
+- Ativos transferíveis: metodologia documentada, marca, base instalada, tecnologia, IP
+- Apetite real do dono e da equipe para a mudança de modelo (0-10) e prazo viável
+- Maior medo do dono em relação à transição
+` : "";
+
     const prompt = `EMPRESA: ${JSON.stringify(company || {})}
 ARQUÉTIPO: ${assess.arquetipo_id || "—"}
 RESUMO DO DIAGNÓSTICO: ${assess.summary || "—"}
@@ -81,6 +93,7 @@ INICIATIVA:
 Título: ${(init as any).titulo}
 Descrição: ${(init as any).descricao || "—"}
 Dimensão-alvo: ${(init as any).dimensao_alvo}
+Tipo: ${(init as any).tipo}
 Δ IPE estimado: ${(init as any).delta_ipe}
 Δ Valor estimado: ${(init as any).delta_valor}
 Esforço: ${(init as any).esforco} · Prazo: ${(init as any).prazo_meses}m · Sprint: ${(init as any).sprint}
@@ -88,7 +101,7 @@ Esforço: ${(init as any).esforco} · Prazo: ${(init as any).prazo_meses}m · Sp
 DIAGNÓSTICO ATUAL DA DIMENSÃO:
 Score: ${dim?.score ?? "—"}/100
 Evidências: ${JSON.stringify(dim?.evidencias || [])}
-
+${blocoModelo}
 Devolva JSON ESTRITO:
 {
   "diagnostico": ["3 a 5 bullets explicando por que essa iniciativa é crítica para esta empresa específica"],
