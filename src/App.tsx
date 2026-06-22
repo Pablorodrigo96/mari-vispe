@@ -156,6 +156,20 @@ const DealPairDetailPage = lazy(() => import("./pages/equity-brain/DealPairDetai
 const NboWizardPage = lazy(() => import("./pages/equity-brain/NboWizardPage"));
 const LegalLibraryPage = lazy(() => import("./pages/equity-brain/LegalLibraryPage"));
 
+// /investir — porta de entrada B2C de ativos tokenizados
+const InvestirHome = lazy(() => import("./pages/investir/InvestirHome"));
+const InvestirListagem = lazy(() => import("./pages/investir/InvestirListagem"));
+const InvestirAtivo = lazy(() => import("./pages/investir/InvestirAtivo"));
+const InvestirAuth = lazy(() => import("./pages/investir/InvestirAuth"));
+const InvestirDashboard = lazy(() => import("./pages/investir/InvestirDashboard"));
+const InvestirWallet = lazy(() => import("./pages/investir/InvestirWallet"));
+const InvestirReservas = lazy(() => import("./pages/investir/InvestirReservas"));
+const InvestirKYC = lazy(() => import("./pages/investir/onboarding/InvestirKYC"));
+const InvestirSuitability = lazy(() => import("./pages/investir/onboarding/InvestirSuitability"));
+const InvestirComoFunciona = lazy(() => import("./pages/investir/InvestirComoFunciona"));
+const InvestirRiscos = lazy(() => import("./pages/investir/InvestirRiscos"));
+const AdminTokenizacao = lazy(() => import("./pages/admin/AdminTokenizacao"));
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
 });
