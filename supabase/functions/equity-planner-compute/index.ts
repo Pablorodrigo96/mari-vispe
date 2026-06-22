@@ -208,14 +208,47 @@ Deno.serve(async (req) => {
       user_id: assess.user_id,
     });
 
-    // Extrair JSON
+    // Extrair JSON (robusto: strip fences, extrai primeiro {...} balanceado, repara vírgulas finais)
+    function extractJson(raw: string): any {
+      let s = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+      const first = s.indexOf("{");
+      if (first === -1) throw new Error("no_json_object");
+      let depth = 0, end = -1, inStr = false, esc = false;
+      for (let i = first; i < s.length; i++) {
+        const ch = s[i];
+        if (inStr) {
+          if (esc) esc = false;
+          else if (ch === "\\") esc = true;
+          else if (ch === '"') inStr = false;
+        } else {
+          if (ch === '"') inStr = true;
+          else if (ch === "{") depth++;
+          else if (ch === "}") { depth--; if (depth === 0) { end = i; break; } }
+        }
+      }
+      let candidate = end > first ? s.slice(first, end + 1) : s.slice(first);
+      try { return JSON.parse(candidate); } catch {}
+      // Repara vírgulas finais antes de } ou ]
+      const repaired = candidate.replace(/,\s*([}\]])/g, "$1");
+      return JSON.parse(repaired);
+    }
+
     let parsed: any;
     try {
-      const txt = ai.text.trim();
-      const jsonStr = txt.startsWith("{") ? txt : txt.replace(/^```json\s*|\s*```$/g, "");
-      parsed = JSON.parse(jsonStr);
+      parsed = extractJson(ai.text || "");
     } catch (e) {
-      throw new Error("ai_invalid_json: " + (e as Error).message);
+      console.error("[equity-planner-compute] ai_invalid_json, usando fallback. Raw head:", (ai.text || "").slice(0, 400));
+      parsed = {
+        dimensoes: DIMENSOES.map((d) => ({ dimensao: d, score: 50, evidencia: "Dados insuficientes — estimativa base.", premissa: true })),
+        ebitda_normalizado: 0,
+        ajustes_ebitda: [],
+        diagnostico_executivo: "Diagnóstico parcial — a análise detalhada não pôde ser gerada agora. Refaça em alguns minutos para o resultado completo.",
+        plano_90d: [],
+        plano_12m: [],
+        plano_36m: [],
+        riscos: [],
+        buyer_map: [],
+      };
     }
 
     // 4) Calcular IPE composto (arqId já vem da classificação)
