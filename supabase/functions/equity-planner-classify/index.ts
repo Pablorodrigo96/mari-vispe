@@ -117,16 +117,13 @@ Devolva JSON:
       }
       parsed = JSON.parse(jsonStr);
     } catch (e) {
-      // graceful degradation: skip classification, let compute pick default arquétipo
-      console.warn("[equity-planner-classify] invalid_json fallback to default:", (e as Error).message);
-      parsed = {
-        arquetipo_id: "servico_profissional",
-        confianca: 0.4,
-        justificativa: "Classificação automática indisponível no momento — usando arquétipo padrão. Você pode ajustar manualmente.",
-        sinais_detectados: [],
-        migracao_sugerida: null,
-        _fallback: true,
-      };
+      // NÃO persiste fallback — devolve 503 para o caller (compute) decidir
+      console.warn("[equity-planner-classify] invalid_json:", (e as Error).message, "head:", (ai.text || "").slice(0, 200));
+      return new Response(JSON.stringify({
+        error: "ai_invalid_json",
+        detail: (e as Error).message,
+        provider: ai.provider,
+      }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // persist
