@@ -81,13 +81,52 @@ Devolva JSON:
       user_id: assess.user_id,
     });
 
+    // Robust JSON extraction — Gemini fallback sometimes wraps with markdown
+    // or returns trailing prose. Extract the first balanced { ... } block.
     let parsed: any;
     try {
-      const txt = ai.text.trim();
-      const jsonStr = txt.startsWith("{") ? txt : txt.replace(/^```json\s*|\s*```$/g, "");
+      const raw = (ai.text || "").trim();
+      // strip ```json fences if present
+      const stripped = raw
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```\s*$/i, "")
+        .trim();
+      let jsonStr = stripped;
+      const firstBrace = stripped.indexOf("{");
+      if (firstBrace >= 0) {
+        let depth = 0;
+        let inStr = false;
+        let esc = false;
+        let end = -1;
+        for (let i = firstBrace; i < stripped.length; i++) {
+          const ch = stripped[i];
+          if (inStr) {
+            if (esc) { esc = false; continue; }
+            if (ch === "\\") { esc = true; continue; }
+            if (ch === '"') inStr = false;
+            continue;
+          }
+          if (ch === '"') { inStr = true; continue; }
+          if (ch === "{") depth++;
+          else if (ch === "}") {
+            depth--;
+            if (depth === 0) { end = i; break; }
+          }
+        }
+        if (end > firstBrace) jsonStr = stripped.slice(firstBrace, end + 1);
+      }
       parsed = JSON.parse(jsonStr);
     } catch (e) {
-      throw new Error("classifier_invalid_json: " + (e as Error).message);
+      // graceful degradation: skip classification, let compute pick default arquétipo
+      console.warn("[equity-planner-classify] invalid_json fallback to default:", (e as Error).message);
+      parsed = {
+        arquetipo_id: "servico_profissional",
+        confianca: 0.4,
+        justificativa: "Classificação automática indisponível no momento — usando arquétipo padrão. Você pode ajustar manualmente.",
+        sinais_detectados: [],
+        migracao_sugerida: null,
+        _fallback: true,
+      };
     }
 
     // persist
