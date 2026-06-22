@@ -407,6 +407,45 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          admin_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       buyer_deal_access: {
         Row: {
           access_level: string
@@ -825,6 +864,42 @@ export type Database = {
           cached_at?: string
           cnpj?: string
           data?: Json
+        }
+        Relationships: []
+      }
+      compliance_checks: {
+        Row: {
+          check_type: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          metadata: Json | null
+          reason: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          check_type: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          reason?: string | null
+          status: string
+          user_id: string
+        }
+        Update: {
+          check_type?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          reason?: string | null
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2505,6 +2580,81 @@ export type Database = {
           },
         ]
       }
+      financial_ledger: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      financial_wallets: {
+        Row: {
+          available_balance: number
+          blocked_balance: number
+          created_at: string
+          currency: string
+          id: string
+          pending_settlement_balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          available_balance?: number
+          blocked_balance?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          pending_settlement_balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          available_balance?: number
+          blocked_balance?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          pending_settlement_balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       franchisee_regions: {
         Row: {
           categories: string[] | null
@@ -2690,6 +2840,60 @@ export type Database = {
           },
         ]
       }
+      investor_kyc: {
+        Row: {
+          address: Json | null
+          birth_date: string | null
+          cpf: string | null
+          created_at: string
+          documents: Json | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: Json | null
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          documents?: Json | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: Json | null
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          documents?: Json | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investor_sim_attempts: {
         Row: {
           abandoned: boolean
@@ -2735,6 +2939,69 @@ export type Database = {
           score_final?: number
           total_questions?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      investor_suitability: {
+        Row: {
+          answers: Json
+          created_at: string
+          id: string
+          profile: string
+          score: number
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          profile: string
+          score?: number
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          profile?: string
+          score?: number
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      investor_terms_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          ip_address: string | null
+          term_type: string
+          user_agent: string | null
+          user_id: string
+          version: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          term_type: string
+          user_agent?: string | null
+          user_id: string
+          version: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          term_type?: string
+          user_agent?: string | null
+          user_id?: string
+          version?: string
         }
         Relationships: []
       }
@@ -3013,6 +3280,7 @@ export type Database = {
           id: string
           images: string[] | null
           iptu_value: number | null
+          is_tokenizable: boolean
           neighborhood: string | null
           plan: string | null
           rent_value: number | null
@@ -3049,6 +3317,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           iptu_value?: number | null
+          is_tokenizable?: boolean
           neighborhood?: string | null
           plan?: string | null
           rent_value?: number | null
@@ -3085,6 +3354,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           iptu_value?: number | null
+          is_tokenizable?: boolean
           neighborhood?: string | null
           plan?: string | null
           rent_value?: number | null
@@ -3609,6 +3879,62 @@ export type Database = {
         }
         Relationships: []
       }
+      primary_reservations: {
+        Row: {
+          allocated_at: string | null
+          allocated_by: string | null
+          compliance_check_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          quantity: number
+          status: string
+          token_id: string
+          total_amount: number
+          unit_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allocated_at?: string | null
+          allocated_by?: string | null
+          compliance_check_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity: number
+          status?: string
+          token_id: string
+          total_amount: number
+          unit_price: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allocated_at?: string | null
+          allocated_by?: string | null
+          compliance_check_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          status?: string
+          token_id?: string
+          total_amount?: number
+          unit_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "primary_reservations_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -4057,6 +4383,184 @@ export type Database = {
           viewer_id?: string | null
         }
         Relationships: []
+      }
+      token_positions: {
+        Row: {
+          amount_invested: number
+          average_price: number
+          created_at: string
+          custody_type: string
+          id: string
+          locked_quantity: number
+          quantity: number
+          token_id: string
+          updated_at: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          amount_invested?: number
+          average_price?: number
+          created_at?: string
+          custody_type?: string
+          id?: string
+          locked_quantity?: number
+          quantity?: number
+          token_id: string
+          updated_at?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          amount_invested?: number
+          average_price?: number
+          created_at?: string
+          custody_type?: string
+          id?: string
+          locked_quantity?: number
+          quantity?: number
+          token_id?: string
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_positions_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tokens: {
+        Row: {
+          amount_raised: number
+          blockchain_network: string | null
+          circulating_supply: number
+          created_at: string
+          current_reference_price: number | null
+          documents: Json
+          economic_rights: string | null
+          eligibility_restrictions: string | null
+          expected_liquidity: string | null
+          id: string
+          initial_price: number
+          instrument_type: string
+          issued_at: string | null
+          legal_instrument: string | null
+          listing_id: string | null
+          metadata: Json
+          min_ticket: number
+          name: string
+          offering_closes_at: string | null
+          offering_opens_at: string | null
+          political_rights: string | null
+          risk_level: string | null
+          smart_contract_address: string | null
+          status: string
+          symbol: string
+          token_standard: string | null
+          total_offering_amount: number | null
+          total_supply: number
+          transfer_rules: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_raised?: number
+          blockchain_network?: string | null
+          circulating_supply?: number
+          created_at?: string
+          current_reference_price?: number | null
+          documents?: Json
+          economic_rights?: string | null
+          eligibility_restrictions?: string | null
+          expected_liquidity?: string | null
+          id?: string
+          initial_price?: number
+          instrument_type?: string
+          issued_at?: string | null
+          legal_instrument?: string | null
+          listing_id?: string | null
+          metadata?: Json
+          min_ticket?: number
+          name: string
+          offering_closes_at?: string | null
+          offering_opens_at?: string | null
+          political_rights?: string | null
+          risk_level?: string | null
+          smart_contract_address?: string | null
+          status?: string
+          symbol: string
+          token_standard?: string | null
+          total_offering_amount?: number | null
+          total_supply?: number
+          transfer_rules?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_raised?: number
+          blockchain_network?: string | null
+          circulating_supply?: number
+          created_at?: string
+          current_reference_price?: number | null
+          documents?: Json
+          economic_rights?: string | null
+          eligibility_restrictions?: string | null
+          expected_liquidity?: string | null
+          id?: string
+          initial_price?: number
+          instrument_type?: string
+          issued_at?: string | null
+          legal_instrument?: string | null
+          listing_id?: string | null
+          metadata?: Json
+          min_ticket?: number
+          name?: string
+          offering_closes_at?: string | null
+          offering_opens_at?: string | null
+          political_rights?: string | null
+          risk_level?: string | null
+          smart_contract_address?: string | null
+          status?: string
+          symbol?: string
+          token_standard?: string | null
+          total_offering_amount?: number | null
+          total_supply?: number
+          transfer_rules?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tokens_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tokens_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings_blind"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tokens_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "partner_opportunity_pool"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tokens_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -7639,6 +8143,10 @@ export type Database = {
       }
       expire_old_reservations: { Args: never; Returns: undefined }
       find_user_by_meta_name: { Args: { search_name: string }; Returns: string }
+      fn_allocate_reservation: {
+        Args: { _reservation_id: string }
+        Returns: undefined
+      }
       fn_promote_vertical_lead: {
         Args: { p_import_id: string }
         Returns: string
@@ -7912,6 +8420,7 @@ export type Database = {
         | "franchisee"
         | "legal"
         | "observer"
+        | "investor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -8047,6 +8556,7 @@ export const Constants = {
         "franchisee",
         "legal",
         "observer",
+        "investor",
       ],
     },
   },
