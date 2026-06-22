@@ -85,6 +85,16 @@ export function ProfileQuests({ userId, profileCompletion }: Props) {
       ctaLabel: counts.capital > 0 ? 'Acompanhar' : 'Simular agora',
       ctaTo: counts.capital > 0 ? '/minhas-captacoes' : '/capital',
     },
+    {
+      key: 'equity-planner',
+      title: 'Faça seu Equity Planner',
+      description: 'Diagnóstico 360° + plano pra fechar o gap pro topo do setor',
+      reward: '+ Selo Estrategista',
+      icon: Target,
+      done: counts.equityPlanners > 0,
+      ctaLabel: counts.equityPlanners > 0 ? `${counts.equityPlanners} diagnóstico(s)` : 'Começar',
+      ctaTo: counts.equityPlanners > 0 ? '/meus-equity-planners' : '/equity-planner/novo',
+    },
   ];
 
   const doneCount = quests.filter((q) => q.done).length;
