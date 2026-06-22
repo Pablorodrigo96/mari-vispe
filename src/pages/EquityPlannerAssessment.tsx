@@ -42,6 +42,7 @@ export default function EquityPlannerAssessment() {
   const [loading, setLoading] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
   const [creatingRound, setCreatingRound] = useState(false);
+  const [promoting, setPromoting] = useState(false);
   const [assess, setAssess] = useState<Assessment | null>(null);
   const [dims, setDims] = useState<DimScore[]>([]);
   const [val, setVal] = useState<Valuation | null>(null);
