@@ -2,7 +2,7 @@
 // POST { initiative_id }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { callAnthropic } from "../_shared/anthropicGateway.ts";
+import { callLovableAI } from "../_shared/apiTrack.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -34,6 +34,24 @@ function extractJson(raw: string): any {
     const repaired = slice.replace(/,\s*([}\]])/g, "$1").replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/[\x00-\x1F]+/g, " ");
     return JSON.parse(repaired);
   }
+}
+
+async function callAI(system: string, user: string, userId: string | null, fn: string) {
+  const resp = await callLovableAI(
+    {
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      temperature: 0.4,
+      response_format: { type: "json_object" },
+    },
+    { function_name: fn, feature: "equity_planner", user_id: userId },
+  );
+  if (!resp.ok) throw new Error(`ai_http_${resp.status}`);
+  const data = await resp.json();
+  return data?.choices?.[0]?.message?.content ?? "";
 }
 
 Deno.serve(async (req) => {
@@ -71,33 +89,25 @@ DIAGNÓSTICO ATUAL DA DIMENSÃO:
 Score: ${dim?.score ?? "—"}/100
 Evidências: ${JSON.stringify(dim?.evidencias || [])}
 
-Devolva JSON:
+Devolva JSON ESTRITO:
 {
   "diagnostico": ["3 a 5 bullets explicando por que essa iniciativa é crítica para esta empresa específica"],
   "perguntas": [
-    { "id": "p1", "pergunta": "texto", "contexto": "por que pergunto isso (1 frase)", "tipo": "texto|numero" }
+    { "id": "p1", "pergunta": "texto", "contexto": "por que pergunto isso (1 frase)", "tipo": "texto" }
   ]
 }`;
 
-    const ai = await callAnthropic({
-      model: "claude-haiku-4-5",
-      system: SYSTEM,
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 1500,
-      temperature: 0.4,
-      function_name: "equity-deepdive-questions",
-      feature: "equity_planner",
-      user_id: assess.user_id,
-    });
-
     let parsed: any;
-    try { parsed = extractJson(ai.text); }
-    catch {
+    try {
+      const text = await callAI(SYSTEM, prompt, assess.user_id, "equity-deepdive-questions");
+      parsed = extractJson(text);
+    } catch (e) {
+      console.warn("[deepdive-questions] AI failure, using fallback:", (e as Error).message);
       parsed = {
         diagnostico: ["Diagnóstico automático indisponível — responda as perguntas para gerar o prompt de aceleração."],
         perguntas: [
           { id: "p1", pergunta: `Qual é a situação atual em "${(init as any).titulo}"?`, contexto: "Baseline", tipo: "texto" },
-          { id: "p2", pergunta: "Qual o principal obstáculo hoje?", contexto: "Identifica bloqueios", tipo: "texto" },
+          { id: "p2", pergunta: "Qual o principal obstáculo hoje?", contexto: "Bloqueios", tipo: "texto" },
           { id: "p3", pergunta: "Quem é o responsável por essa frente na empresa?", contexto: "Accountability", tipo: "texto" },
           { id: "p4", pergunta: "Que dado/indicador você acompanha (se algum)?", contexto: "Métrica de saída", tipo: "texto" },
           { id: "p5", pergunta: "Em quanto tempo realista isso pode ser resolvido?", contexto: "Prazo prático", tipo: "texto" },
@@ -107,7 +117,6 @@ Devolva JSON:
       };
     }
 
-    // upsert deepdive
     const { data: existing } = await supabase.from("equity_initiative_deepdive").select("id, answers, status").eq("initiative_id", initiative_id).maybeSingle();
     if (existing) {
       await supabase.from("equity_initiative_deepdive").update({ questions: parsed.perguntas || [], status: (existing as any).status === "concluida" ? "concluida" : "em_andamento" }).eq("id", (existing as any).id);

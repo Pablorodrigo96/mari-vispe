@@ -2,7 +2,7 @@
 // prompts compilados das iniciativas. POST { assessment_id }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { callAnthropic } from "../_shared/anthropicGateway.ts";
+import { callLovableAI } from "../_shared/apiTrack.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -111,21 +111,32 @@ Devolva JSON:
 
 Exatamente 12 meses. Cada mês com 2-4 ações.`;
 
-    const ai = await callAnthropic({
-      model: "claude-sonnet-4-6",
-      system: SYSTEM,
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 8000,
-      temperature: 0.35,
-      function_name: "equity-annual-plan-build",
-      feature: "equity_planner",
-      user_id: (assess as any).user_id,
-      timeout_ms: 140000,
-    });
+    const resp = await callLovableAI(
+      {
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: SYSTEM },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.35,
+        response_format: { type: "json_object" },
+      },
+      {
+        function_name: "equity-annual-plan-build",
+        feature: "equity_planner",
+        user_id: (assess as any).user_id,
+      },
+    );
+    if (!resp.ok) {
+      const t = await resp.text().catch(() => "");
+      throw new Error(`ai_http_${resp.status}: ${t.slice(0, 200)}`);
+    }
+    const aiData = await resp.json();
+    const aiText: string = aiData?.choices?.[0]?.message?.content ?? "";
 
     let parsed: any;
-    try { parsed = extractJson(ai.text); } catch (e) {
-      console.error("[annual-plan-build] invalid JSON:", (ai.text || "").slice(0, 400));
+    try { parsed = extractJson(aiText); } catch (_e) {
+      console.error("[annual-plan-build] invalid JSON:", aiText.slice(0, 400));
       throw new Error("ai_invalid_json");
     }
 
@@ -134,7 +145,7 @@ Exatamente 12 meses. Cada mês com 2-4 ações.`;
       company_id: (assess as any).company_id,
       plan_data: parsed,
       source_prompts: compiledPrompts,
-      model_used: `${ai.provider}:${ai.model}`,
+      model_used: "lovable_ai:google/gemini-3-flash-preview",
       generated_at: new Date().toISOString(),
     }, { onConflict: "assessment_id" }).select().single();
 

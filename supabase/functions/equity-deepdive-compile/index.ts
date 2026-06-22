@@ -2,7 +2,7 @@
 // POST { initiative_id }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { callAnthropic } from "../_shared/anthropicGateway.ts";
+import { callLovableAI } from "../_shared/apiTrack.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -52,18 +52,24 @@ ${qaList.map((qa, i) => `${i + 1}. ${qa.pergunta}\n   R: ${qa.resposta}`).join("
 
 Gere o PROMPT DE ACELERAÇÃO conforme as 6 seções do system.`;
 
-    const ai = await callAnthropic({
-      model: "claude-sonnet-4-6",
-      system: SYSTEM,
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 2500,
-      temperature: 0.3,
-      function_name: "equity-deepdive-compile",
-      feature: "equity_planner",
-      user_id: assess.user_id,
-    });
-
-    const compiled = (ai.text || "").trim();
+    const resp = await callLovableAI(
+      {
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: SYSTEM },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.3,
+      },
+      { function_name: "equity-deepdive-compile", feature: "equity_planner", user_id: assess.user_id },
+    );
+    if (!resp.ok) {
+      const t = await resp.text().catch(() => "");
+      throw new Error(`ai_http_${resp.status}: ${t.slice(0, 200)}`);
+    }
+    const data = await resp.json();
+    const compiled = (data?.choices?.[0]?.message?.content ?? "").trim();
+    if (!compiled) throw new Error("empty_ai_response");
 
     await supabase.from("equity_initiative_deepdive").update({
       compiled_prompt: compiled,
