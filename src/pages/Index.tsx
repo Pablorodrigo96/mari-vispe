@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useViewAs } from '@/contexts/ViewAsContext';
 
 const HomeBelowFold = lazy(() => import('@/components/home/HomeBelowFold'));
+import { EquityPlannerSection } from '@/components/home/EquityPlannerSection';
 
 const ease = [0.25, 0.46, 0.45, 0.94] as const;
 
