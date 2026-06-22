@@ -23,20 +23,21 @@ interface Quest {
 }
 
 export function ProfileQuests({ userId, profileCompletion }: Props) {
-  const [counts, setCounts] = useState({ listings: 0, valuations: 0, capital: 0 });
+  const [counts, setCounts] = useState({ listings: 0, valuations: 0, capital: 0, equityPlanners: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [l, v, c] = await Promise.all([
+        const [l, v, c, ep] = await Promise.all([
           supabase.from('listings').select('id', { count: 'exact', head: true }).eq('user_id', userId),
           supabase.from('valuation_history' as any).select('id', { count: 'exact', head: true }).eq('user_id', userId),
           supabase.from('capital_requests').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+          supabase.from('equity_assessments' as any).select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'computado'),
         ]);
         if (cancelled) return;
-        setCounts({ listings: l.count || 0, valuations: v.count || 0, capital: c.count || 0 });
+        setCounts({ listings: l.count || 0, valuations: v.count || 0, capital: c.count || 0, equityPlanners: ep.count || 0 });
       } catch { /* ignore */ }
       finally { if (!cancelled) setLoading(false); }
     })();
