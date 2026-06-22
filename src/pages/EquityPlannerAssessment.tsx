@@ -684,31 +684,61 @@ export default function EquityPlannerAssessment() {
               {[1,2,3,4].map((sp) => {
                 const sprintInits = initsReordered.filter((i) => i.sprint === sp);
                 return (
-                <Card key={sp} className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-4">
-                  <h4 className="font-semibold mb-3 flex items-center justify-between">
+                <Card key={sp} className="!bg-graphite/40 backdrop-blur-md border-white/10 p-4">
+                  <h4 className="font-semibold mb-3 flex items-center justify-between text-bone">
                     <span>Sprint {sp}</span>
-                    <span className="text-xs text-white/70">Q{sp}</span>
+                    <span className="text-xs text-white/50 font-mono">Q{sp}</span>
                   </h4>
                   <div className="space-y-2">
                     {sprintInits.map((i) => {
                       const boosted = !!buyerSelecionado && dimsBoost.has(i.dimensao_alvo);
+                      const dd = deepdiveStatus[i.id];
+                      const isDone = dd?.status === "concluida";
+                      const pct = dd && dd.total > 0 ? Math.round((dd.answered / dd.total) * 100) : 0;
                       return (
-                      <div key={i.id} className={`p-3 rounded border ${boosted ? "border-volt/60 bg-volt/10 ring-1 ring-volt/30" : i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" : i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" : "border-volt/10 bg-slate-950/40"}`}>
-                        <p className="font-medium text-sm break-words">{i.titulo}</p>
-                        {i.descricao && <p className="text-xs text-white/70 mt-1 break-words">{i.descricao}</p>}
+                      <button
+                        type="button"
+                        key={i.id}
+                        onClick={() => { setDeepdiveInitiative(i); setDeepdiveOpen(true); }}
+                        className={`w-full text-left p-3 rounded-lg border transition-all hover:scale-[1.01] hover:shadow-lg ${
+                          isDone ? "border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/20" :
+                          boosted ? "border-volt/60 bg-volt/10 ring-1 ring-volt/30" :
+                          i.tipo === "migracao_arquetipo" ? "border-volt/60 bg-volt/5" :
+                          i.tipo === "derisk" ? "border-amber-500/30 bg-amber-500/5" :
+                          "border-white/10 bg-carbon/40 hover:border-volt/40"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-medium text-sm break-words text-bone flex-1">{i.titulo}</p>
+                          <Brain className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${isDone ? "text-emerald-400" : dd ? "text-volt" : "text-white/40"}`} />
+                        </div>
+                        {i.descricao && <p className="text-xs text-white/65 mt-1 break-words line-clamp-2">{i.descricao}</p>}
                         <div className="flex flex-wrap gap-1 mt-2 text-[10px]">
-                          <Badge variant="outline" className="border-volt/30 text-volt">+{i.delta_ipe} IPE</Badge>
-                          <Badge variant="outline" className="border-volt/30">{brl(i.delta_valor)}</Badge>
-                          <Badge variant="outline">{i.esforco}</Badge>
+                          <Badge variant="outline" className="border-volt/30 text-volt bg-volt/5">+{i.delta_ipe} IPE</Badge>
+                          <Badge variant="outline" className="border-volt/30 text-volt bg-volt/5">{brl(i.delta_valor)}</Badge>
+                          <Badge variant="outline" className="border-white/20 text-white/80 bg-transparent">{i.esforco}</Badge>
                           {i.tipo === "migracao_arquetipo" && <Badge className="bg-volt text-carbon text-[10px]">Migração</Badge>}
                           {i.tipo === "derisk" && <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px]">De-risk</Badge>}
                           {boosted && <Badge className="bg-volt/20 text-volt border-volt/40 text-[10px]"><Crosshair className="h-3 w-3 mr-0.5" />Alvo</Badge>}
                         </div>
-                      </div>
+                        {dd && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                              <div className={`h-full ${isDone ? "bg-emerald-400" : "bg-volt"}`} style={{ width: `${isDone ? 100 : pct}%` }} />
+                            </div>
+                            <span className="text-[10px] text-white/60 tabular-nums">
+                              {isDone ? <><CheckCircle2 className="inline h-3 w-3 text-emerald-400" /> pronto</> : `${dd.answered}/${dd.total}`}
+                            </span>
+                          </div>
+                        )}
+                        {!dd && (
+                          <p className="text-[10px] text-volt/80 mt-2 flex items-center gap-1"><Brain className="h-3 w-3" /> Clique para aprofundar</p>
+                        )}
+                      </button>
                       );
                     })}
                     {sprintInits.length === 0 && (
-                      <p className="text-xs text-white/70">— sem iniciativas neste sprint —</p>
+                      <p className="text-xs text-white/50 italic py-4 text-center">— sem iniciativas neste sprint —</p>
                     )}
                   </div>
                 </Card>
@@ -716,6 +746,71 @@ export default function EquityPlannerAssessment() {
               })}
             </div>
           </TabsContent>
+
+          {/* PLANO TÁTICO ANUAL (E1A) */}
+          <TabsContent value="e1a" className="mt-4">
+            {(() => {
+              const totalInits = inits.length;
+              const compiledCount = Object.values(deepdiveStatus).filter((d) => d.status === "concluida").length;
+              const pctReady = totalInits > 0 ? Math.round((compiledCount / totalInits) * 100) : 0;
+              const ready = totalInits > 0 && compiledCount >= Math.max(1, Math.ceil(totalInits * 0.5));
+
+              if (!annualPlan) {
+                return (
+                  <Card className="!bg-gradient-to-br from-volt/10 via-graphite/40 to-carbon backdrop-blur-md border-volt/30 p-8 md:p-12 text-center">
+                    <div className="max-w-2xl mx-auto">
+                      <div className="h-16 w-16 rounded-2xl bg-volt/20 border border-volt/40 flex items-center justify-center mx-auto mb-5">
+                        <Rocket className="h-8 w-8 text-volt" />
+                      </div>
+                      <h2 className="text-2xl md:text-3xl font-bold text-bone mb-3">Equity em 1 Ano</h2>
+                      <p className="text-bone/80 mb-6 leading-relaxed break-words">
+                        A IA vai consolidar todos os seus diagnósticos profundos num <span className="text-volt font-semibold">plano tático mês a mês</span> que transforma sua empresa numa verdadeira <span className="text-volt font-semibold">fábrica de equity</span> — vendável com liquidez e prêmio.
+                      </p>
+
+                      <div className="bg-carbon/60 rounded-xl border border-white/10 p-4 mb-6 text-left">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[11px] uppercase tracking-widest text-white/60 font-semibold">Diagnósticos profundos concluídos</p>
+                          <p className="text-sm text-volt font-bold tabular-nums">{compiledCount}/{totalInits}</p>
+                        </div>
+                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-volt transition-all" style={{ width: `${pctReady}%` }} />
+                        </div>
+                        <p className="text-xs text-white/60 mt-2">
+                          {ready ? "✓ Você já tem profundidade suficiente para gerar o plano anual." : `Conclua pelo menos ${Math.ceil(totalInits * 0.5)} aprofundamentos na aba "Plano" para liberar a geração.`}
+                        </p>
+                      </div>
+
+                      <Button
+                        size="lg"
+                        disabled={!ready || buildingAnnual}
+                        onClick={handleBuildAnnual}
+                        className="bg-volt text-carbon hover:bg-volt/90 h-14 px-8 text-base font-bold rounded-xl shadow-volt"
+                      >
+                        {buildingAnnual ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Rocket className="h-5 w-5 mr-2" />}
+                        Construir Plano Tático Anual
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <p className="text-xs text-white/60">
+                      Gerado em {new Date(annualPlan.generated_at).toLocaleString("pt-BR")} · {annualPlan.model_used}
+                    </p>
+                    <Button variant="outline" className="bg-transparent border-volt/30 text-volt hover:bg-volt/10" disabled={buildingAnnual} onClick={handleBuildAnnual}>
+                      {buildingAnnual ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      Re-gerar
+                    </Button>
+                  </div>
+                  <AnnualPlanTimeline plan={annualPlan} />
+                </div>
+              );
+            })()}
+          </TabsContent>
+
 
           {/* COMPRADORES */}
           <TabsContent value="compradores" className="mt-4">
