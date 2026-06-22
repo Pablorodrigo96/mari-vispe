@@ -21,6 +21,7 @@ import EquityMarketTab from "@/components/equity-planner/EquityMarketTab";
 import InitiativeDeepDiveModal from "@/components/equity-planner/InitiativeDeepDiveModal";
 import AnnualPlanTimeline from "@/components/equity-planner/AnnualPlanTimeline";
 import ModelLiquidityTab from "@/components/equity-planner/ModelLiquidityTab";
+import MarketMappingPanel, { MarketMappingPayload } from "@/components/equity-planner/MarketMappingPanel";
 
 interface Assessment {
   id: string; ipe_composto: number | null; arquetipo_id: string | null;
