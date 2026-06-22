@@ -214,7 +214,14 @@ Deno.serve(async (req) => {
       }
       let candidate = end > first ? s.slice(first, end + 1) : s.slice(first);
       try { return JSON.parse(candidate); } catch {}
-      const repaired = candidate.replace(/,\s*([}\]])/g, "$1");
+      const repaired = candidate
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/,\s*([}\]])/g, "$1")
+        .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":')
+        .replace(/:\s*NaN\b/g, ": null")
+        .replace(/:\s*Infinity\b/g, ": null")
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]+/g, " ");
       return JSON.parse(repaired);
     }
 
@@ -227,6 +234,80 @@ Deno.serve(async (req) => {
       if (inits.length < 4) return { ok: false, reason: `iniciativas_curtas:${inits.length}` };
       if (buyers.length < 2) return { ok: false, reason: `buyers_curtos:${buyers.length}` };
       return { ok: true };
+    }
+
+    function defaultParsed(reason: string) {
+      const faturamento = Number(companyData?.faturamento) || 0;
+      const ebitdaDeclarado = Number(companyData?.ebitda) || 0;
+      const ebitdaBase = Math.max(ebitdaDeclarado, faturamento > 0 ? Math.round(faturamento * 0.15) : 120000);
+      const dimBase: Record<string, number> = {
+        independencia_dono: 48, qualidade_receita: 58, margem: 56, higiene_financeira: 50,
+        concentracao: 52, motor_comercial: 54, gestao: 50, processos: 49, contingencias: 55,
+        narrativa: 57, atratividade: 60, societario: 53,
+      };
+      const dimensoes = DIMENSOES.map((d) => ({
+        dimensao: d,
+        score: dimBase[d] ?? 52,
+        evidencia: `Diagnóstico estimado por heurística Mari porque a resposta da IA veio inválida (${reason}).`,
+        premissa: true,
+      }));
+      const lib = Array.isArray(library) ? library : [];
+      const fallbackTitles = [
+        ["Reduzir dependência do dono", "Documentar decisões-chave, delegar rotinas críticas e criar rituais de gestão semanal.", "independencia_dono", "derisk", 1],
+        ["Organizar demonstrações financeiras", "Padronizar DRE gerencial, conciliação mensal e pacote financeiro auditável.", "higiene_financeira", "derisk", 1],
+        ["Mapear contingências prioritárias", "Levantar riscos trabalhistas, tributários e contratuais com plano de mitigação.", "contingencias", "derisk", 1],
+        ["Formalizar motor comercial", "Criar funil, metas por etapa, cadência de prospecção e taxa de conversão por canal.", "motor_comercial", "execucao", 2],
+        ["Melhorar qualidade da receita", "Aumentar contratos recorrentes, retenção e previsibilidade do faturamento.", "qualidade_receita", "execucao", 2],
+        ["Elevar margem operacional", "Reprecificar ofertas, revisar custos diretos e eliminar serviços de baixa contribuição.", "margem", "execucao", 3],
+        ["Implantar processos replicáveis", "Transformar conhecimento tácito em playbooks operacionais e indicadores por área.", "processos", "execucao", 3],
+        ["Construir narrativa de equity story", "Consolidar tese de crescimento, mercado endereçável e diferenciais defensáveis.", "narrativa", "execucao", 4],
+      ];
+      const iniciativas = fallbackTitles.map(([titulo, descricao, dim, tipo, sprint], idx) => {
+        const anchor = lib.find((i: any) => i.dimensao === dim) || lib[idx];
+        return {
+          library_id: anchor?.id || null,
+          titulo: anchor?.titulo || titulo,
+          descricao: anchor?.descricao || descricao,
+          dimensao_alvo: dim,
+          delta_ipe: Math.max(4, Number(anchor?.delta_ipe_padrao) || (idx < 3 ? 7 : 5)),
+          delta_valor: Math.round(ebitdaBase * (idx < 3 ? 0.35 : 0.25)),
+          esforco: anchor?.esforco || (idx < 3 ? "medio" : "alto"),
+          prazo_meses: Number(anchor?.prazo_meses) || (idx < 3 ? 3 : 6),
+          sprint,
+          tipo,
+          custom_justificativa: "Fallback determinístico usado para manter o relatório acionável.",
+        };
+      });
+      const buyerDefaults = (Array.isArray(buyerArchs) && buyerArchs.length ? buyerArchs.slice(0, 5) : [
+        { id: null, arquetipo_comprador: "estrategico", nome_perfil: "Comprador estratégico setorial", setor_alvo: companyData?.setor || "setor relacionado", tese_padrao: "Consolidação regional e captura de sinergias comerciais.", premio_tipico_min: 8, premio_tipico_max: 18, sinergias_padrao: ["base de clientes", "cross-sell", "ganho de escala"], exemplos_targets: ["Grupo estratégico regional", "concorrente consolidado", "operador adjacente"] },
+        { id: null, arquetipo_comprador: "financeiro", nome_perfil: "Investidor financeiro de PME", setor_alvo: "PMEs rentáveis", tese_padrao: "Compra com profissionalização, governança e expansão orgânica.", premio_tipico_min: 5, premio_tipico_max: 12, sinergias_padrao: ["governança", "margem", "processos"], exemplos_targets: ["search fund", "family office", "holding de investimentos"] },
+        { id: null, arquetipo_comprador: "individual", nome_perfil: "Executivo comprador", setor_alvo: "negócios operáveis", tese_padrao: "Aquisição por operador com experiência no setor.", premio_tipico_min: 0, premio_tipico_max: 8, sinergias_padrao: ["sucessão", "operação direta", "relacionamento local"], exemplos_targets: ["executivo do setor", "empreendedor serial", "operador regional"] },
+      ]).slice(0, 5);
+      const buyer_map = buyerDefaults.map((b: any) => ({
+        perfil_id: b.id || null,
+        arquetipo_comprador: b.arquetipo_comprador || "estrategico",
+        tese_aquisicao: b.tese_padrao || "Aquisição com tese de sinergia e profissionalização.",
+        racional_premio: "Prêmio estimado condicionado à redução de riscos e melhoria da previsibilidade financeira.",
+        premio_estimado_pct: Math.round(((Number(b.premio_tipico_min) || 5) + (Number(b.premio_tipico_max) || 15)) / 2),
+        nome_alvo: b.nome_perfil || "Comprador estratégico",
+        setor_alvo: b.setor_alvo || companyData?.setor || "setor relacionado",
+        sinergias: b.sinergias_padrao || ["escala", "cross-sell", "profissionalização"],
+        exemplos_targets: b.exemplos_targets || ["comprador estratégico", "holding setorial", "investidor financeiro"],
+      }));
+      return {
+        dimensoes,
+        ebitda_contabil: ebitdaDeclarado || Math.round(ebitdaBase * 0.85),
+        ebitda_normalizado: ebitdaBase,
+        addbacks: { remuneracao_dono: Math.round(ebitdaBase * 0.10), despesas_pessoais: 0, nao_recorrentes: 0, aluguel_imovel_proprio: 0, outros: 0 },
+        dcf_premissas: { wacc: 0.20, cagr_5y: 0.10, perpetuidade_g: 0.04, taxa_imposto: 0.27 },
+        premissas_valuation: ["Resposta da IA indisponível; relatório gerado por heurística conservadora Mari.", "EBITDA estimado por dado declarado ou 15% do faturamento quando ausente.", "Prêmios de compradores usam perfis cadastrados e faixas médias."],
+        veredito_liquidez: "vendavel_12_24m",
+        summary: "O diagnóstico foi gerado com premissas conservadoras porque a IA devolveu JSON inválido. Ainda assim, o plano prioriza redução de risco, melhoria de previsibilidade e preparação para compradores estratégicos.",
+        iniciativas,
+        buyer_map,
+        _fallback: true,
+        _fallback_reason: reason,
+      };
     }
 
     async function callAndParse(temperature: number, maxTokens: number) {
