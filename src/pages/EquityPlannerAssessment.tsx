@@ -59,6 +59,11 @@ export default function EquityPlannerAssessment() {
   const [letterBuyer, setLetterBuyer] = useState<Buyer | null>(null);
   const [letterLoading, setLetterLoading] = useState(false);
   const [letterText, setLetterText] = useState<string>("");
+  const [deepdiveStatus, setDeepdiveStatus] = useState<Record<string, { status: string; answered: number; total: number }>>({});
+  const [deepdiveOpen, setDeepdiveOpen] = useState(false);
+  const [deepdiveInitiative, setDeepdiveInitiative] = useState<Initiative | null>(null);
+  const [annualPlan, setAnnualPlan] = useState<any | null>(null);
+  const [buildingAnnual, setBuildingAnnual] = useState(false);
 
   const load = async () => {
     if (!id) return;
