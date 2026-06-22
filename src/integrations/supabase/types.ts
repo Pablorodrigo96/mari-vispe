@@ -1505,6 +1505,50 @@ export type Database = {
         }
         Relationships: []
       }
+      equity_annual_plan: {
+        Row: {
+          assessment_id: string
+          company_id: string
+          created_at: string
+          generated_at: string
+          id: string
+          model_used: string | null
+          plan_data: Json
+          source_prompts: Json | null
+          updated_at: string
+        }
+        Insert: {
+          assessment_id: string
+          company_id: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          model_used?: string | null
+          plan_data: Json
+          source_prompts?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string
+          company_id?: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          model_used?: string | null
+          plan_data?: Json
+          source_prompts?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_annual_plan_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: true
+            referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equity_archetype_migrations: {
         Row: {
           created_at: string
@@ -2066,6 +2110,60 @@ export type Database = {
             columns: ["assessment_id"]
             isOneToOne: false
             referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equity_initiative_deepdive: {
+        Row: {
+          answers: Json
+          assessment_id: string
+          compiled_prompt: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          initiative_id: string
+          questions: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          assessment_id: string
+          compiled_prompt?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          initiative_id: string
+          questions?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          assessment_id?: string
+          compiled_prompt?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          initiative_id?: string
+          questions?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_initiative_deepdive_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equity_initiative_deepdive_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: true
+            referencedRelation: "equity_initiatives"
             referencedColumns: ["id"]
           },
         ]
