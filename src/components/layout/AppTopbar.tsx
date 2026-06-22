@@ -1,5 +1,5 @@
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Menu, ChevronRight, Search, ArrowLeft } from 'lucide-react';
+import { Menu, ChevronRight, Search, ArrowLeft, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { ViewAsSwitcher } from '@/components/layout/ViewAsSwitcher';
