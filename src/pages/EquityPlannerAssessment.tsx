@@ -927,6 +927,7 @@ export default function EquityPlannerAssessment() {
           </DialogContent>
         </Dialog>
       </div>
+      </div>
     </div>
   );
 }
