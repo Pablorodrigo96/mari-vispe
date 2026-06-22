@@ -2283,6 +2283,59 @@ export type Database = {
           },
         ]
       }
+      equity_market_scans: {
+        Row: {
+          assessment_id: string | null
+          cnpj: string | null
+          completed_at: string | null
+          created_at: string
+          error_msg: string | null
+          id: string
+          payload: Json | null
+          razao_social: string | null
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          cnpj?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_msg?: string | null
+          id?: string
+          payload?: Json | null
+          razao_social?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assessment_id?: string | null
+          cnpj?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_msg?: string | null
+          id?: string
+          payload?: Json | null
+          razao_social?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equity_market_scans_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "equity_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equity_progress_log: {
         Row: {
           arquetipo_id: string | null
