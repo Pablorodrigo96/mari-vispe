@@ -1,98 +1,80 @@
 
-# Redesign /investir — porta clara para o investidor PF + compra estilo Rico
+# Plano: Humanizar o portal /investir
 
-## Objetivo
-Hoje o `/investir` está institucional/denso demais para o usuário final e o "Home Broker" interno (modal de reserva + aba Oferta) está cheio de jargão técnico (supply, token standard, smart contract, blockchain network, instrumento jurídico) que assusta investidor leigo. Vamos:
+Objetivo: deixar o /investir menos "black opaco", mais acolhedor e didático, inspirado em **Rico** (narrativa simples, perguntas guiadas, "abra sua conta", simulador) e **KTO** (alta energia visual, blocos coloridos, banners promocionais, CTAs grandes). Mantém identidade **mari** (Carbon + Volt + Bone) mas quebra o preto com **superfícies claras (Bone), fotos humanas e blocos Volt vibrantes**.
 
-1. Reorganizar a **home /investir** com caminho lógico de leitura (XP/Rico-like): herói direto → benefícios em cards → ofertas em destaque → como funciona em 4 passos visuais → prova social/segurança → CTA.
-2. Simplificar a **página do ativo `/investir/ativo/:symbol`** com linguagem coloquial e um painel de compra à direita estilo boleta Rico (Quanto quero investir → Quantas cotas → Confirmar).
-3. Reescrever o **ReservationModal (boleta de compra)** num formato de 2 passos super simples: valor → confirmação, com resumo claro ("Você vai investir R$ X e receber Y cotas de NomeEmpresa"), saldo da carteira no topo, atalho rápido +R$100/+R$500/+R$1.000 e botão único grande "Confirmar reserva".
+## 1. Identidade visual evoluída (sem trocar tokens)
 
-Identidade visual continua mari (Carbon/Volt/Bone). Sem novas tabelas, sem migrations, sem mudança de backend — só frontend e copy.
+- Manter Carbon/Volt/Bone, mas inverter a hierarquia: hoje tudo é Carbon escuro → passar a alternar **bandas Bone (claras) + bandas Carbon (escuras) + acentos Volt**, igual Rico (bandas brancas e roxas) e KTO (bandas brancas + verde-limão).
+- Acrescentar **fotos reais** (pessoas brasileiras diversas, ambientes de negócio: padaria, oficina, escritório, varejo) via Unsplash, para humanizar. Criar `src/components/investir/HumanPhoto.tsx` com curadoria de fotos (lista de URLs Unsplash determinísticas por contexto: empreendedor, família, jovem investidor, padaria, indústria leve).
+- Componente `SectionBand` com variantes `bone | carbon | volt` para alternar fundos por seção.
 
-## Mudanças por tela
+## 2. Nova InvestirHome.tsx (estrutura inspirada Rico + KTO)
 
-### 1. `/investir` — Home
-Caminho de leitura novo:
+Substituir a home atual por composição em bandas alternadas:
 
-```text
-[HERO]
- "Invista em empresas reais a partir de R$ 100."
- subtítulo curto + 2 CTAs (Quero começar / Ver empresas)
- prova: "+X empresas · ticket a partir de R$100 · 100% digital"
+1. **Hero (Carbon + foto humana à direita)** — headline curta tipo Rico: *"Invista em empresas brasileiras de verdade. A partir de R$ 100."*. Dois CTAs: `Abrir conta grátis` (Volt) e `Ver oportunidades`. Selo de compliance discreto abaixo.
+2. **Faixa KTO-style (Volt sólido)** — 3 mini-cards horizontais: "+R$100 mínimo", "Sem taxa de abertura", "100% digital". Texto Carbon sobre Volt, ícones grandes.
+3. **"Como funciona em 3 passos" (Bone)** — cards brancos com ilustração/foto e número grande Volt. Linguagem Rico: *"1. Crie sua conta · 2. Escolha a empresa · 3. Receba seus rendimentos"*.
+4. **Ofertas em destaque (Carbon)** — grid de cards (já existe), mas reforçar foto da empresa, % captado, ticket mínimo, badge "Aberta" Volt pulsante.
+5. **"Pra quem é?" / Perfis (Bone)** — 3 cards com foto + persona: *"Quero começar pequeno"*, *"Quero diversificar"*, *"Quero apoiar negócios brasileiros"*. Cada um leva para listagem filtrada.
+6. **Simulador rápido (Carbon + Volt)** — bloco inspirado no simulador Rico: input `Quanto quero investir?` + slider `Por quanto tempo?` → mostra projeção estimada (cálculo simples client-side, com disclaimer claro de não-garantia).
+7. **Segurança e regulação (Bone)** — selos: CVM/regulação, MP 2.200-2, LGPD, custódia. Tom institucional mas acolhedor.
+8. **Depoimentos / prova social (Carbon com fotos)** — 3 cards de empreendedores que captaram (placeholder com fotos Unsplash + nome empresa).
+9. **FAQ (Bone)** — accordion com 6 perguntas reais ("É seguro?", "Como recebo?", "Posso vender depois?", "Quanto pago de imposto?", "Mínimo?", "Quem regula?").
+10. **CTA final (Volt full-bleed)** — "Abra sua conta em 3 minutos" botão Carbon grande.
 
-[POR QUE INVESTIR AQUI] - 4 cards grandes, ícone+título+1 frase
- · Ticket baixo  · Empresas curadas  · 100% digital  · Você no controle
+## 3. Páginas internas (visual + narrativa Rico)
 
-[OFERTAS EM DESTAQUE] - até 6 cards (já existe, manter)
+- **InvestirComoFunciona.tsx**: virar página tipo "Sobre nós" da Rico — bandas alternadas, foto humana grande no topo, blocos didáticos ("O que é tokenização?", "Como recebo retorno?", "O que é uma oferta primária?"), tom de conversa.
+- **InvestirRiscos.tsx**: manter rigor regulatório mas com layout Bone + cards e ícones (não wall-of-text Carbon).
+- **InvestirAuth.tsx** (login/cadastro): copiar padrão Rico — banda Carbon à esquerda com headline motivacional + foto, formulário Bone à direita.
+- **Onboarding (KYC + Suitability)**: já existe; aplicar layout Rico do suitability (stepper 1-2-3 no topo, pergunta grande Volt, opções em cards grandes brancos com borda Volt quando selecionado, botões `Voltar` outline + `Próximo` Volt). Reescrever microcopy em pt-BR conversacional.
 
-[COMO FUNCIONA] - 4 passos com número grande
- 1 Crie sua conta (2 min)
- 2 Confirme seus dados
- 3 Deposite via Pix
- 4 Escolha e invista
+## 4. Home Broker interno (InvestirDashboard + reserva)
 
-[SEGURANÇA & TRANSPARÊNCIA] - 3 selos: KYC, custódia, documentação
+Refatorar `InvestirDashboard.tsx` para parecer **app de corretora retail (Rico/XP)**:
 
-[FAQ rápido] - 4 perguntas dobráveis (linguagem leiga)
+- Topbar com saldo grande em Bone, badges: "Disponível", "Reservado", "Investido".
+- Tabs principais: `Minha carteira` · `Oportunidades` · `Minhas reservas` · `Extrato`.
+- Cards de posição com mini-gráfico, % variação Volt/vermelho, ações 1-clique: `Aportar mais` / `Vender cota` (mesmo que vender abra modal "em breve mercado secundário").
+- Boleta lateral persistente (mobile: bottom-sheet) já existe no Ativo — replicar consistência visual.
 
-[CTA final]
-```
+## 5. Imagens
 
-Trocar copy: nada de "private equity digital", "ativos tokenizados", "primary_open" — usar "empresas", "cotas", "oferta aberta".
+Usar Unsplash via URLs determinísticas (sem download), curadas em `src/lib/investirPhotos.ts`:
+- hero: empreendedora brasileira sorrindo em loja
+- como funciona: pessoa usando celular
+- perfis: 3 personas distintas
+- depoimentos: 3 empreendedores
+- ofertas fallback: padaria, oficina, indústria, varejo, tech
 
-### 2. `/investir/ativo/:symbol` — Página do ativo
-- Hero mais simples: nome grande, 1 linha sobre o negócio, badge "Oferta aberta", 3 números grandes (Preço por cota · Mínimo · Quanto já foi captado).
-- Abas reduzidas de 5 → 3: **Sobre a empresa · A oferta · Documentos** (Riscos vira accordion no rodapé do "A oferta"; aba "Empresa" funde com "Sobre a empresa").
-- Aba "A oferta" **sem jargão de blockchain por padrão** (esconde Supply/Smart contract/Rede atrás de toggle "Detalhes técnicos"). Mostrar: o que você recebe, como recebe retorno, prazo, liquidez esperada — em frases curtas.
-- Painel lateral vira **boleta estilo Rico**:
+Disclaimer: fotos ilustrativas (rodapé pequeno).
 
-```text
-┌──────────────────────────┐
-│ Saldo disponível         │
-│ R$ 2.350,00               │
-├──────────────────────────┤
-│ Quanto quero investir    │
-│ [ R$ 500,00          ]   │
-│ [+100] [+500] [+1.000]   │
-│                          │
-│ Você recebe: 5 cotas     │
-│ Preço por cota: R$ 100   │
-│                          │
-│ [ Investir agora ]       │
-│ ⓘ Reserva sujeita a KYC  │
-└──────────────────────────┘
-```
+## 6. Escopo técnico
 
-### 3. ReservationModal — boleta 2 passos
-Substituir layout atual por:
+Arquivos a criar:
+- `src/components/investir/SectionBand.tsx`
+- `src/components/investir/HumanPhoto.tsx`
+- `src/components/investir/SimuladorRapido.tsx`
+- `src/components/investir/PersonaCard.tsx`
+- `src/components/investir/DepoimentoCard.tsx`
+- `src/lib/investirPhotos.ts`
 
-- **Passo 1 — Valor**:
-  - Topo: "Você está investindo em **NomeEmpresa**"
-  - Card saldo disponível
-  - Input grande de valor com máscara BRL
-  - Chips rápidos: +R$100, +R$500, +R$1.000, "tudo"
-  - Resumo dinâmico: "Você recebe **X cotas** a R$ Y cada"
-  - Validações inline (abaixo do mínimo / saldo insuficiente) com link "Adicionar saldo" → `/investir/carteira`
-  - Botão "Continuar"
+Arquivos a reescrever:
+- `src/pages/investir/InvestirHome.tsx` (nova composição em bandas)
+- `src/pages/investir/InvestirComoFunciona.tsx`
+- `src/pages/investir/InvestirAuth.tsx` (split layout)
+- `src/pages/investir/InvestirDashboard.tsx` (cara de corretora)
+- `src/pages/investir/onboarding/InvestirKYC.tsx` (stepper Rico)
+- `src/pages/investir/onboarding/InvestirSuitability.tsx` (stepper Rico)
 
-- **Passo 2 — Confirmação**:
-  - Resumo grande em 3 linhas: Empresa · Valor · Cotas
-  - Aviso curto LGPD/risco em 1 linha
-  - Checkbox "Li e concordo com os documentos da oferta" (link Docs)
-  - Botão único "Confirmar reserva" (mesma lógica de backend que já existe)
-  - Estados de erro (KYC pendente, suitability faltando, não-autenticado) viram telas dedicadas dentro do modal com 1 CTA cada — não inline texts.
-
-Backend / RPC / tabelas: **nada muda**. Mesma chamada `compliance_checks` + update de wallet + insert ledger + insert reservation já existente.
-
-## Arquivos afetados
-- `src/pages/investir/InvestirHome.tsx` — reescrita de seções e copy.
-- `src/pages/investir/InvestirAtivo.tsx` — abas reduzidas, copy simplificada, toggle técnico, painel lateral mais limpo.
-- `src/components/investir/ReservationModal.tsx` — refator para 2 passos com boleta tipo Rico.
-- (Opcional, se sobrar) `src/components/investir/InvestirShell.tsx` — pequena revisão do header (menu mais simples).
+Não mexer em: rotas, backend, migrations, lógica de reserva, ReservationModal (já refeito).
 
 ## Fora de escopo
-- Não cria tabelas novas, não mexe em RLS, não mexe em edge functions.
-- Não muda fluxo de Pix/Stripe da carteira.
-- Não toca `/painel`, `/equity-brain` nem áreas internas (advisor/admin).
-- Sem mudanças em `/investir/empresas` (listagem) e `/investir/carteira` nesta rodada — se você quiser que eu também simplifique essas duas, me avise e eu incluo.
+
+- Mercado secundário real
+- Novas tabelas/edge functions
+- Mudança de tokens de cor globais (mari permanece)
+
+Posso seguir?

@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { InvestirShell } from "@/components/investir/InvestirShell";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ShieldCheck, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 
 export default function InvestirKYC() {
   const navigate = useNavigate();
@@ -35,7 +34,6 @@ export default function InvestirKYC() {
           address_cep: addr.cep || "",
         });
       }
-
     })();
   }, [navigate]);
 
@@ -58,7 +56,7 @@ export default function InvestirKYC() {
         ? await supabase.from("investor_kyc").update(payload).eq("user_id", userId)
         : await supabase.from("investor_kyc").insert(payload);
       if (error) throw error;
-      toast.success("KYC enviado para análise.");
+      toast.success("Dados enviados! Vamos para o próximo passo.");
       navigate("/investir/onboarding/suitability");
     } catch (e: any) {
       toast.error(e.message);
@@ -69,51 +67,92 @@ export default function InvestirKYC() {
 
   return (
     <InvestirShell authed>
-      <div className="max-w-2xl mx-auto px-6 py-12">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-full bg-volt/15 grid place-items-center">
-            <ShieldCheck className="w-5 h-5 text-volt" />
-          </div>
-          <div>
-            <div className="text-[11px] uppercase tracking-wider text-volt/80">Passo 1 de 2</div>
-            <h1 className="text-2xl font-semibold text-bone">Verificação de identidade (KYC)</h1>
-          </div>
-        </div>
-
-        {existing && (
-          <div className="mb-6 mt-4 px-4 py-3 rounded-lg border border-bone/10 bg-graphite/40 text-sm">
-            Status atual:{" "}
-            <span className="text-volt font-medium">
-              {{ pending:"Pendente", in_review:"Em análise", approved:"Aprovado", rejected:"Rejeitado", expired:"Expirado" }[existing.status as string] || existing.status}
-            </span>
-            {existing.rejection_reason && <div className="mt-1 text-amber-400 text-xs">Motivo: {existing.rejection_reason}</div>}
-          </div>
-        )}
-
-        <div className="bg-graphite/40 border border-bone/10 rounded-2xl p-6 space-y-4">
-          <Field label="Nome completo"><Input value={form.full_name} onChange={e=>setForm({...form,full_name:e.target.value})} className="bg-carbon border-bone/10 text-bone" disabled={approved} /></Field>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label="CPF"><Input value={form.cpf} onChange={e=>setForm({...form,cpf:e.target.value})} placeholder="000.000.000-00" className="bg-carbon border-bone/10 text-bone" disabled={approved} /></Field>
-            <Field label="Data de nascimento"><Input type="date" value={form.birth_date} onChange={e=>setForm({...form,birth_date:e.target.value})} className="bg-carbon border-bone/10 text-bone" disabled={approved} /></Field>
-          </div>
-          <Field label="Telefone"><Input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} placeholder="(11) 99999-9999" className="bg-carbon border-bone/10 text-bone" disabled={approved} /></Field>
-          <div className="text-[11px] uppercase tracking-wider text-bone/40 pt-2">Endereço</div>
-          <Field label="Rua"><Input value={form.address_street} onChange={e=>setForm({...form,address_street:e.target.value})} className="bg-carbon border-bone/10 text-bone" disabled={approved} /></Field>
-          <div className="grid md:grid-cols-3 gap-4">
-            <Field label="Cidade"><Input value={form.address_city} onChange={e=>setForm({...form,address_city:e.target.value})} className="bg-carbon border-bone/10 text-bone" disabled={approved} /></Field>
-            <Field label="UF"><Input value={form.address_state} onChange={e=>setForm({...form,address_state:e.target.value})} maxLength={2} className="bg-carbon border-bone/10 text-bone" disabled={approved} /></Field>
-            <Field label="CEP"><Input value={form.address_cep} onChange={e=>setForm({...form,address_cep:e.target.value})} className="bg-carbon border-bone/10 text-bone" disabled={approved} /></Field>
-          </div>
-          <div className="text-xs text-bone/40 pt-2">
-            Upload de documentos (RG/CNH, comprovante e selfie) será adicionado em breve. Por ora envie os dados básicos — nossa equipe entrará em contato.
+      <div className="min-h-[calc(100vh-3.5rem)] bg-carbon">
+        {/* Stepper */}
+        <div className="border-b border-bone/10 bg-carbon/95 sticky top-14 z-30">
+          <div className="max-w-3xl mx-auto px-6 py-5">
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-8 h-8 rounded-full grid place-items-center text-xs font-semibold bg-volt text-carbon ring-4 ring-volt/20">1</div>
+              <div className="w-12 h-px bg-bone/15" />
+              <div className="w-8 h-8 rounded-full grid place-items-center text-xs font-semibold bg-bone/10 text-bone/40">2</div>
+            </div>
+            <div className="text-center text-xs text-bone/50 mt-3">
+              Passo 1 de 2 · Verificação de identidade
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
-          <Button onClick={()=>navigate("/investir/painel")} variant="outline" className="border-bone/20 text-bone bg-transparent hover:bg-bone/5">Mais tarde</Button>
-          <Button onClick={submit} disabled={loading || approved} className="flex-1 bg-volt hover:bg-volt/90 text-carbon font-semibold">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : approved ? "Já aprovado" : "Enviar para análise"}
-          </Button>
+        <div className="max-w-3xl mx-auto px-6 py-12 md:py-16">
+          <h1 className="text-3xl md:text-5xl font-semibold text-volt tracking-tight text-center leading-tight">
+            Precisamos conhecer você melhor
+          </h1>
+          <p className="mt-5 text-bone/60 text-center max-w-2xl mx-auto leading-relaxed">
+            Pra abrir sua conta de investidor, a CVM exige que confirmemos sua identidade.
+            Os dados ficam seguros e são usados só pra validar seu cadastro.
+          </p>
+
+          {existing && (
+            <div className="mt-8 max-w-2xl mx-auto px-5 py-3 rounded-full border border-volt/30 bg-volt/5 text-sm text-bone text-center">
+              Status atual: <span className="text-volt font-medium">
+                {{ pending: "Pendente", in_review: "Em análise", approved: "Aprovado", rejected: "Rejeitado", expired: "Expirado" }[existing.status as string] || existing.status}
+              </span>
+              {existing.rejection_reason && <div className="mt-1 text-amber-400 text-xs">Motivo: {existing.rejection_reason}</div>}
+            </div>
+          )}
+
+          <div className="mt-10 max-w-2xl mx-auto bg-[#FAFAF7] rounded-3xl p-6 md:p-8 space-y-5">
+            <Field label="Nome completo">
+              <Input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} className="bg-white border-carbon/15 text-carbon h-12 rounded-xl" disabled={approved} />
+            </Field>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field label="CPF">
+                <Input value={form.cpf} onChange={e => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" className="bg-white border-carbon/15 text-carbon h-12 rounded-xl" disabled={approved} />
+              </Field>
+              <Field label="Data de nascimento">
+                <Input type="date" value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} className="bg-white border-carbon/15 text-carbon h-12 rounded-xl" disabled={approved} />
+              </Field>
+            </div>
+            <Field label="Telefone">
+              <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-9999" className="bg-white border-carbon/15 text-carbon h-12 rounded-xl" disabled={approved} />
+            </Field>
+
+            <div className="text-[11px] uppercase tracking-wider text-carbon/40 pt-2">Endereço</div>
+            <Field label="Rua e número">
+              <Input value={form.address_street} onChange={e => setForm({ ...form, address_street: e.target.value })} className="bg-white border-carbon/15 text-carbon h-12 rounded-xl" disabled={approved} />
+            </Field>
+            <div className="grid md:grid-cols-3 gap-4">
+              <Field label="Cidade">
+                <Input value={form.address_city} onChange={e => setForm({ ...form, address_city: e.target.value })} className="bg-white border-carbon/15 text-carbon h-12 rounded-xl" disabled={approved} />
+              </Field>
+              <Field label="UF">
+                <Input value={form.address_state} onChange={e => setForm({ ...form, address_state: e.target.value })} maxLength={2} className="bg-white border-carbon/15 text-carbon h-12 rounded-xl" disabled={approved} />
+              </Field>
+              <Field label="CEP">
+                <Input value={form.address_cep} onChange={e => setForm({ ...form, address_cep: e.target.value })} className="bg-white border-carbon/15 text-carbon h-12 rounded-xl" disabled={approved} />
+              </Field>
+            </div>
+
+            <div className="text-xs text-carbon/50 pt-2 leading-relaxed">
+              💡 Upload de documentos (RG/CNH, comprovante e selfie) será solicitado em breve.
+              Por agora, envie os dados básicos — nossa equipe valida e libera sua conta.
+            </div>
+          </div>
+
+          <div className="mt-10 max-w-2xl mx-auto flex items-center justify-center gap-4">
+            <button
+              onClick={() => navigate("/investir/painel")}
+              className="inline-flex items-center gap-2 border-2 border-bone/20 text-bone hover:bg-bone/5 px-7 py-3.5 rounded-full font-medium transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" /> Mais tarde
+            </button>
+            <button
+              onClick={submit}
+              disabled={loading || approved || !form.full_name || !form.cpf}
+              className="inline-flex items-center gap-2 bg-volt hover:bg-volt/90 text-carbon disabled:bg-bone/10 disabled:text-bone/30 px-9 py-3.5 rounded-full font-semibold transition-colors"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : approved ? "Já aprovado" : <>Próximo <ArrowRight className="w-4 h-4" /></>}
+            </button>
+          </div>
         </div>
       </div>
     </InvestirShell>
@@ -123,7 +162,7 @@ export default function InvestirKYC() {
 function Field({ label, children }: any) {
   return (
     <div>
-      <label className="text-xs text-bone/50 mb-1.5 block">{label}</label>
+      <label className="text-xs text-carbon/60 mb-1.5 block font-medium">{label}</label>
       {children}
     </div>
   );
