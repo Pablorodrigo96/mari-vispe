@@ -12,7 +12,7 @@ export default function InvestirComoFunciona() {
         <div>
           <div className="text-xs uppercase tracking-wider text-carbon/50 mb-3">Como funciona</div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-carbon tracking-tight leading-tight">
-            Investir em empresas brasileiras, <span className="text-volt-foreground">passo a passo.</span>
+            Investir em empresas brasileiras, <span className="text-carbon">passo a passo.</span>
           </h1>
           <p className="mt-5 text-carbon/65 text-lg leading-relaxed max-w-lg">
             A gente conecta você a empresas privadas reais. Sem corretora, sem papelada, sem termos difíceis —
@@ -91,7 +91,7 @@ export default function InvestirComoFunciona() {
                 "Suporte humano por WhatsApp e e-mail",
               ].map(t => (
                 <li key={t} className="flex items-center gap-3 text-carbon/80">
-                  <CheckCircle2 className="w-5 h-5 text-volt-foreground shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-carbon shrink-0" />
                   <span>{t}</span>
                 </li>
               ))}
