@@ -134,7 +134,7 @@ export default function InvestirHome() {
           <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wider text-carbon/60 bg-carbon/5 px-3 py-1 rounded-full mb-4">
             Simples
           </div>
-          <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-carbon">
+          <h2 className="text-2xl md:text-5xl font-semibold tracking-tight text-carbon">
             Comece em 3 passos.
           </h2>
           <p className="mt-3 text-carbon/60 max-w-xl mx-auto">
@@ -167,7 +167,7 @@ export default function InvestirHome() {
         <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
           <div>
             <div className="text-xs uppercase tracking-wider text-volt mb-2">Disponível agora</div>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-bone">
+            <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-bone">
               Empresas abertas para investimento
             </h2>
           </div>
@@ -194,7 +194,7 @@ export default function InvestirHome() {
       {/* 5. PRA QUEM É (perfis) — Bone */}
       <SectionBand tone="bone">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-carbon">
+          <h2 className="text-2xl md:text-5xl font-semibold tracking-tight text-carbon">
             Pra quem é a mari<span className="text-volt">.invest</span>?
           </h2>
           <p className="mt-3 text-carbon/60">Escolha o perfil que mais combina com você.</p>
@@ -227,7 +227,7 @@ export default function InvestirHome() {
         <div className="grid lg:grid-cols-[1fr_1.1fr] gap-10 items-center">
           <div>
             <div className="text-xs uppercase tracking-wider text-volt mb-3">Simulador</div>
-            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-bone">
+            <h2 className="text-2xl md:text-5xl font-semibold tracking-tight text-bone">
               Quanto seu dinheiro pode <span className="text-volt">render?</span>
             </h2>
             <p className="mt-4 text-bone/65 text-lg leading-relaxed">
@@ -251,7 +251,7 @@ export default function InvestirHome() {
         <div className="grid md:grid-cols-[1fr_1.3fr] gap-12 items-center">
           <div>
             <div className="text-xs uppercase tracking-wider text-carbon/50 mb-3">Segurança</div>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-carbon">
+            <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-carbon">
               Seu dinheiro protegido. Regras claras.
             </h2>
             <p className="mt-4 text-carbon/60 leading-relaxed">
@@ -284,7 +284,7 @@ export default function InvestirHome() {
       <SectionBand tone="carbon">
         <div className="text-center mb-12">
           <div className="text-xs uppercase tracking-wider text-volt mb-3">Quem está aqui</div>
-          <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-bone">
+          <h2 className="text-2xl md:text-5xl font-semibold tracking-tight text-bone">
             Empresas brasileiras de verdade.
           </h2>
         </div>
@@ -311,7 +311,7 @@ export default function InvestirHome() {
 
       {/* 9. FAQ — Bone */}
       <SectionBand tone="bone" innerClassName="max-w-[820px] mx-auto">
-        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-carbon text-center mb-10">
+        <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-carbon text-center mb-10">
           Perguntas frequentes
         </h2>
         <div className="divide-y divide-carbon/10 border-y border-carbon/10">
@@ -330,7 +330,7 @@ export default function InvestirHome() {
       <section className="bg-volt">
         <div className="max-w-[1100px] mx-auto px-6 py-16 md:py-20 grid md:grid-cols-[1.3fr_1fr] gap-10 items-center">
           <div>
-            <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-carbon">
+            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-carbon">
               Pronto pra ser sócio?
             </h2>
             <p className="mt-4 text-carbon/75 text-lg max-w-lg">
