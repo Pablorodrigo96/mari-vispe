@@ -358,6 +358,19 @@ export default function InvestirHome() {
           Fotos meramente ilustrativas. Investimentos em empresas privadas envolvem risco de perda total.
         </div>
       </section>
+
+      {/* Sticky CTA mobile (público) */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-carbon/95 backdrop-blur-xl border-t border-bone/10 pb-[env(safe-area-inset-bottom)]">
+        <div className="px-4 py-3">
+          <Link
+            to="/investir/auth?mode=signup"
+            className="block w-full text-center bg-volt hover:bg-volt/90 text-carbon font-semibold py-3.5 rounded-xl text-sm"
+          >
+            Abrir conta grátis em 3 minutos
+          </Link>
+        </div>
+      </div>
+      <div className="md:hidden h-20" aria-hidden />
     </InvestirShell>
   );
 }
