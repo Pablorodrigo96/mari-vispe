@@ -168,6 +168,7 @@ const InvestirKYC = lazy(() => import("./pages/investir/onboarding/InvestirKYC")
 const InvestirSuitability = lazy(() => import("./pages/investir/onboarding/InvestirSuitability"));
 const InvestirComoFunciona = lazy(() => import("./pages/investir/InvestirComoFunciona"));
 const InvestirRiscos = lazy(() => import("./pages/investir/InvestirRiscos"));
+const InvestirRegulamentacao = lazy(() => import("./pages/investir/InvestirRegulamentacao"));
 const AdminTokenizacao = lazy(() => import("./pages/admin/AdminTokenizacao"));
 
 const queryClient = new QueryClient({
@@ -216,6 +217,7 @@ const App = () => (
             <Route path="/investir/onboarding/suitability" element={<InvestirSuitability />} />
             <Route path="/investir/como-funciona" element={<InvestirComoFunciona />} />
             <Route path="/investir/riscos" element={<InvestirRiscos />} />
+            <Route path="/investir/regulamentacao" element={<InvestirRegulamentacao />} />
 
             {/* Hybrid routes: AppShell wraps them; for visitors AppShell renders the page raw */}
             <Route element={<AppShell />}>

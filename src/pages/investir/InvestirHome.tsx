@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { photos, sectorPhoto } from "@/lib/investirPhotos";
+import { PartnersStrip } from "@/components/investir/PartnersStrip";
 
 type Token = {
   id: string; symbol: string; name: string; instrument_type: string;
@@ -325,6 +326,9 @@ export default function InvestirHome() {
           ].map((item, i) => <FaqItem key={i} {...item} />)}
         </div>
       </SectionBand>
+
+      {/* 9.5 PARCEIROS / REGULAMENTAÇÃO */}
+      <PartnersStrip />
 
       {/* 10. CTA FINAL — Volt full-bleed */}
       <section className="bg-volt">
