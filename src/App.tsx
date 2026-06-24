@@ -169,6 +169,29 @@ const InvestirSuitability = lazy(() => import("./pages/investir/onboarding/Inves
 const InvestirComoFunciona = lazy(() => import("./pages/investir/InvestirComoFunciona"));
 const InvestirRiscos = lazy(() => import("./pages/investir/InvestirRiscos"));
 const InvestirRegulamentacao = lazy(() => import("./pages/investir/InvestirRegulamentacao"));
+const InvestirSobre = lazy(() => import("./pages/investir/sobre/InvestirSobre"));
+const InvestirAMari = lazy(() => import("./pages/investir/sobre/InvestirAMari"));
+const InvestirQuemSomos = lazy(() => import("./pages/investir/sobre/InvestirQuemSomos"));
+const InvestirVantagens = lazy(() => import("./pages/investir/sobre/InvestirVantagens"));
+const InvestirPoliticas = lazy(() => import("./pages/investir/politicas/InvestirPoliticas"));
+const InvestirPrivacidade = lazy(() => import("./pages/investir/politicas/InvestirPrivacidade"));
+const InvestirCookies = lazy(() => import("./pages/investir/politicas/InvestirCookies"));
+const InvestirCarreiras = lazy(() => import("./pages/investir/InvestirCarreiras"));
+const InvestirProdutos = lazy(() => import("./pages/investir/produtos/InvestirProdutos"));
+const InvestirInvestimentos = lazy(() => import("./pages/investir/produtos/InvestirInvestimentos"));
+const InvestirSimulador = lazy(() => import("./pages/investir/produtos/InvestirSimulador"));
+const InvestirFerramentas = lazy(() => import("./pages/investir/ferramentas/InvestirFerramentas"));
+const InvestirApp = lazy(() => import("./pages/investir/ferramentas/InvestirApp"));
+const InvestirHomeBroker = lazy(() => import("./pages/investir/ferramentas/InvestirHomeBroker"));
+const InvestirCartao = lazy(() => import("./pages/investir/servicos/InvestirCartao"));
+const InvestirBlog = lazy(() => import("./pages/investir/InvestirBlog"));
+const InvestirCustos = lazy(() => import("./pages/investir/InvestirCustos"));
+const InvestirAjuda = lazy(() => import("./pages/investir/InvestirAjuda"));
+const InvestirDicionario = lazy(() => import("./pages/investir/InvestirDicionario"));
+const InvestirAtendimento = lazy(() => import("./pages/investir/atendimento/InvestirAtendimento"));
+const InvestirAtendimentoCVM = lazy(() => import("./pages/investir/atendimento/InvestirAtendimentoCVM"));
+const InvestirAtendimentoRMP = lazy(() => import("./pages/investir/atendimento/InvestirAtendimentoRMP"));
+const InvestirOuvidoria = lazy(() => import("./pages/investir/atendimento/InvestirOuvidoria"));
 const AdminTokenizacao = lazy(() => import("./pages/admin/AdminTokenizacao"));
 
 const queryClient = new QueryClient({
@@ -218,6 +241,29 @@ const App = () => (
             <Route path="/investir/como-funciona" element={<InvestirComoFunciona />} />
             <Route path="/investir/riscos" element={<InvestirRiscos />} />
             <Route path="/investir/regulamentacao" element={<InvestirRegulamentacao />} />
+            <Route path="/investir/sobre" element={<InvestirSobre />} />
+            <Route path="/investir/sobre/a-mari" element={<InvestirAMari />} />
+            <Route path="/investir/sobre/quem-somos" element={<InvestirQuemSomos />} />
+            <Route path="/investir/sobre/vantagens" element={<InvestirVantagens />} />
+            <Route path="/investir/politicas" element={<InvestirPoliticas />} />
+            <Route path="/investir/politicas/privacidade" element={<InvestirPrivacidade />} />
+            <Route path="/investir/politicas/cookies" element={<InvestirCookies />} />
+            <Route path="/investir/carreiras" element={<InvestirCarreiras />} />
+            <Route path="/investir/produtos" element={<InvestirProdutos />} />
+            <Route path="/investir/produtos/investimentos" element={<InvestirInvestimentos />} />
+            <Route path="/investir/produtos/simulador" element={<InvestirSimulador />} />
+            <Route path="/investir/ferramentas" element={<InvestirFerramentas />} />
+            <Route path="/investir/ferramentas/app" element={<InvestirApp />} />
+            <Route path="/investir/ferramentas/home-broker" element={<InvestirHomeBroker />} />
+            <Route path="/investir/servicos/cartao" element={<InvestirCartao />} />
+            <Route path="/investir/blog" element={<InvestirBlog />} />
+            <Route path="/investir/custos" element={<InvestirCustos />} />
+            <Route path="/investir/ajuda" element={<InvestirAjuda />} />
+            <Route path="/investir/ajuda/dicionario" element={<InvestirDicionario />} />
+            <Route path="/investir/atendimento" element={<InvestirAtendimento />} />
+            <Route path="/investir/atendimento/cvm" element={<InvestirAtendimentoCVM />} />
+            <Route path="/investir/atendimento/rmp" element={<InvestirAtendimentoRMP />} />
+            <Route path="/investir/atendimento/ouvidoria" element={<InvestirOuvidoria />} />
 
             {/* Hybrid routes: AppShell wraps them; for visitors AppShell renders the page raw */}
             <Route element={<AppShell />}>

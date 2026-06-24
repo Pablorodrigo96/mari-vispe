@@ -96,25 +96,63 @@ export function DisclaimerBar() {
 export function InvestirFooter() {
   return (
     <footer className="border-t border-bone/10 bg-carbon mt-16">
-      <div className="max-w-[1400px] mx-auto px-5 md:px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
-        <div className="col-span-2 md:col-span-1">
+      <div className="max-w-[1400px] mx-auto px-5 md:px-6 py-12 grid grid-cols-2 md:grid-cols-6 gap-8 text-sm">
+        <div className="col-span-2 md:col-span-2">
           <div className="flex items-center gap-2 font-semibold text-bone mb-3">
             <div className="w-6 h-6 rounded bg-volt grid place-items-center">
               <span className="text-carbon font-black text-xs">m</span>
             </div>
             mari.invest
           </div>
-          <p className="text-bone/50 text-xs leading-relaxed">
-            Plataforma regulada para acesso a ativos privados tokenizados.
+          <p className="text-bone/50 text-xs leading-relaxed max-w-xs">
+            Plataforma regulada para acesso a ativos privados tokenizados. Parte do Grupo Vispe.
           </p>
         </div>
-        <FooterCol title="Investir" links={[["Empresas", "/investir/empresas"], ["Como funciona", "/investir/como-funciona"]]} />
-        <FooterCol title="Compliance" links={[["Riscos", "/investir/riscos"], ["Termos", "/terms"]]} />
-        <FooterCol title="Conta" links={[["Entrar", "/investir/auth"], ["Criar conta", "/investir/auth?mode=signup"]]} />
+        <FooterCol
+          title="Sobre"
+          links={[
+            ["A mari", "/investir/sobre/a-mari"],
+            ["Quem somos", "/investir/sobre/quem-somos"],
+            ["Vantagens", "/investir/sobre/vantagens"],
+            ["Carreiras", "/investir/carreiras"],
+            ["Blog", "/investir/blog"],
+          ]}
+        />
+        <FooterCol
+          title="Produtos"
+          links={[
+            ["Investimentos", "/investir/produtos/investimentos"],
+            ["Simulador", "/investir/produtos/simulador"],
+            ["App mari", "/investir/ferramentas/app"],
+            ["Home Broker", "/investir/ferramentas/home-broker"],
+            ["Cartão (em breve)", "/investir/servicos/cartao"],
+          ]}
+        />
+        <FooterCol
+          title="Ajuda"
+          links={[
+            ["Central de atendimento", "/investir/ajuda"],
+            ["Dicionário", "/investir/ajuda/dicionario"],
+            ["Custos", "/investir/custos"],
+            ["Como funciona", "/investir/como-funciona"],
+            ["Riscos", "/investir/riscos"],
+          ]}
+        />
+        <FooterCol
+          title="Atendimento"
+          links={[
+            ["Ouvidoria", "/investir/atendimento/ouvidoria"],
+            ["RMP", "/investir/atendimento/rmp"],
+            ["CVM", "/investir/atendimento/cvm"],
+            ["Regulamentação", "/investir/regulamentacao"],
+            ["Privacidade", "/investir/politicas/privacidade"],
+            ["Cookies", "/investir/politicas/cookies"],
+          ]}
+        />
       </div>
       <DisclaimerBar />
       <div className="border-t border-bone/10 py-4 text-center text-[11px] text-bone/40">
-        © {new Date().getFullYear()} mari · Grupo Vispe.
+        © {new Date().getFullYear()} mari · Grupo Vispe. Plataforma regulada pela CVM 88.
       </div>
     </footer>
   );
