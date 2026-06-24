@@ -1,53 +1,74 @@
-# Logos CVM/Capitare + Página de Regulamentação
+# Páginas institucionais do portal /investir
 
-## 1. Faixa "Regulamentação & Parceiros" no final do InvestirHome
+Vou criar todas as páginas listadas como rotas reais dentro do namespace `/investir/*`, reaproveitando o shell público (`InvestirShell`), `SectionBand`, `PartnersStrip` e tokens da mari (Carbon/Volt/Bone/Graphite). Nome da empresa = **mari** (já é o branding do projeto).
 
-Acrescentar uma nova `<SectionBand tone="bone">` logo antes do CTA final (Volt), com:
+## Rotas a criar
 
-- Título: "Regulado pela CVM. Operado em parceria com a Capitare."
-- Texto curto: a mari.invest opera ofertas públicas sob a Resolução CVM 88 (crowdfunding de investimento) em parceria com a Capitare, plataforma especializada em ofertas reguladas white label.
-- Dois cards lado a lado (stack no mobile):
-  - **CVM** — logo + "Comissão de Valores Mobiliários · Regulação Resolução 88" + link externo para o site da CVM
-  - **Capitare** — logo + "Parceira de infraestrutura regulada · CVM88" + link externo `https://capitare.io/cvm88`
-- Botão primário: `Entenda nossa regulamentação →` que leva para `/investir/regulamentacao`
+Institucional
+- `/investir/sobre` — Sobre a mari (hub que linka as 3 abaixo)
+- `/investir/sobre/a-mari` — A mari (história, missão, números)
+- `/investir/sobre/quem-somos` — Time, fundadores, conselho
+- `/investir/sobre/vantagens` — Vantagens mari (vs corretora tradicional)
 
-Logos via `lovable-assets`:
-- `src/assets/cvm-logo.png.asset.json` (a partir de `/mnt/user-uploads/327430ec-...png`)
-- `src/assets/capitare-logo.svg.asset.json` — buscado da home da Capitare (ou texto-logo como fallback se download falhar)
+Políticas
+- `/investir/politicas` — Hub
+- `/investir/politicas/privacidade` — Política de Privacidade (LGPD)
+- `/investir/politicas/cookies` — Política de Cookies
 
-## 2. Nova página `/investir/regulamentacao` (`InvestirRegulamentacao.tsx`)
+Carreiras
+- `/investir/carreiras` — Trabalhe conosco + vagas mock
 
-Estrutura (mobile-first, mesmo padrão `InvestirShell` + `SectionBand`), conteúdo baseado em capitare.io/cvm88:
+Produtos
+- `/investir/produtos` — Hub
+- `/investir/produtos/investimentos` — Todos os investimentos (Equity, Dívida, Tokens) → linka `/investir/listagem`
+- `/investir/produtos/simulador` — Simulador de investimento (reusa `SimuladorRapido`)
 
-1. **Hero Carbon** — "Como a mari.invest é regulada." + subtítulo sobre CVM 88 + selo CVM/Capitare
-2. **O que é a CVM 88** (bone) — explicação simples: Resolução CVM 88 (ex-Instrução 588) permite ofertas públicas de pequeno porte (até R$ 15M) via plataformas eletrônicas autorizadas (crowdfunding de investimento), sem necessidade de registro completo de oferta.
-3. **Como funciona na prática** (carbon) — 5 passos adaptados do Capitare: Estruturação → Registro CVM → Plataforma → Captação → Liquidação, com prazos.
-4. **O que você pode investir** (bone) — 2 cards: Equity (cotas/participações) e Dívida (debêntures, notas comerciais), limites e características.
-5. **Proteções ao investidor** (carbon) — KYC obrigatório, suitability, limites por investidor (R$20k/ano para varejo conforme CVM 88), custódia segregada, documentação completa, direito de arrependimento de 5 dias.
-6. **Nossa parceira Capitare** (bone) — explicação do white label: a Capitare provê infraestrutura regulada, a mari opera a marca/curadoria. Link externo.
-7. **FAQ regulatório** (bone) — perguntas: "Quem é responsável pela oferta?", "Posso perder dinheiro?", "Quanto posso investir por ano?", "Onde reclamar?", "O que é direito de arrependimento?"
-8. **CTA Volt** — "Pronto para investir com segurança?" → `/investir/auth?mode=signup`
+Ferramentas
+- `/investir/ferramentas` — Todas as plataformas
+- `/investir/ferramentas/app` — Aplicativo mari (mockups mobile)
+- `/investir/ferramentas/home-broker` — Home Broker mari
 
-## 3. Rota
+Serviços
+- `/investir/servicos/cartao` — Cartão de crédito mari (em breve)
 
-Adicionar em `src/App.tsx`:
-- `const InvestirRegulamentacao = lazy(() => import("./pages/investir/InvestirRegulamentacao"));`
-- `<Route path="/investir/regulamentacao" element={<InvestirRegulamentacao />} />`
+Conteúdo
+- `/investir/blog` — Blog (lista de 6 posts mock com imagens)
 
-## 4. Link extra
+Custos
+- `/investir/custos` — Custos operacionais (tabela transparente: 0 corretagem, taxa de performance, etc.)
 
-Adicionar referência à página `/investir/regulamentacao` também no item de FAQ "Quem regula a plataforma?" do `InvestirHome` (substituir texto puro por link "Saiba mais sobre nossa regulamentação →").
+Ajuda
+- `/investir/ajuda` — Central de atendimento (FAQ + busca + canais)
+- `/investir/ajuda/dicionario` — Dicionário de finanças (A–Z, ~30 termos)
 
-## Detalhes técnicos
+Atendimento
+- `/investir/atendimento` — Hub
+- `/investir/atendimento/cvm` — Atendimento CVM (link cvm.gov.br + explicação)
+- `/investir/atendimento/rmp` — Atendimento RMP (Resolução de Mediação e Prevenção)
+- `/investir/atendimento/ouvidoria` — Ouvidoria (formulário + prazos)
 
-- Logos hospedadas via `lovable-assets create --file ... > .asset.json`; importadas como JSON e usadas em `<img src={asset.url} />`.
-- Card CVM com fundo branco (logo verde precisa de contraste); card Capitare com fundo carbon (logo branca).
-- Sem mudanças em backend, schema ou edge functions.
-- Mobile-first: cards empilhados < md, lado a lado >= md; mesmas tokens (`bone`, `carbon`, `volt`, `graphite`).
-- Disclaimers de risco mantidos.
+## Componentes novos (mínimos)
 
-## Fora do escopo
+- `src/components/investir/InstitutionalHero.tsx` — hero reaproveitável (título, kicker, imagem opcional 16:9, breadcrumb)
+- `src/components/investir/InvestirFooter.tsx` — footer mega-menu agrupando todas as rotas acima (substitui/expande o footer atual no `InvestirShell`)
+- `src/components/investir/HubGrid.tsx` — grid de cards para páginas-hub (Sobre, Políticas, Produtos, Ferramentas, Atendimento)
 
-- Não alterar fluxos de KYC/Suitability/auth.
-- Não criar página institucional sobre a Capitare além do que estiver no `/investir/regulamentacao`.
-- Não adicionar logos em outras áreas do app (mari principal).
+## Implementação
+
+- Cada página: shell + `InstitutionalHero` + 2–4 `SectionBand` com conteúdo, FAQ quando fizer sentido, CTA final (`Abrir conta` ou voltar para `/investir`).
+- Mobile-first: tipografia escala `text-2xl md:text-4xl`, paddings `py-10 md:py-20`, grids `grid-cols-1 md:grid-cols-2/3`.
+- Imagens via Unsplash (já é padrão do `investirPhotos.ts`) para humanizar — pessoas, escritório, mãos no celular.
+- Lazy loading de todas as rotas em `src/App.tsx` (mesmo padrão da `InvestirRegulamentacao`).
+- Atualizar footer do `InvestirShell` para linkar as novas rotas em colunas: **Sobre · Produtos · Ferramentas · Ajuda · Políticas**.
+- Todo conteúdo é placeholder coerente em pt-BR — datas, números e bios fictícios mas plausíveis, sem inventar certificações específicas (seguir trust-page-generation: nada de "certificado SOC2" etc.). Política de Privacidade/Cookies em linguagem LGPD genérica com aviso de que o texto deve ser revisado pelo jurídico.
+
+## Fora de escopo
+
+- Backend, tabelas, edge functions (tudo estático).
+- Sistema de blog real (CMS) — apenas página com posts mock.
+- Formulários funcionais (ouvidoria, candidatura) — UI apenas, sem submit.
+- Tradução / i18n.
+
+## Entrega
+
+~20 arquivos de página + 3 componentes + edição de `App.tsx` e `InvestirShell.tsx` (footer). Sem mudanças em rotas existentes nem em backend.
