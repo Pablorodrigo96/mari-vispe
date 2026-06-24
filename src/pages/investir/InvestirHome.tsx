@@ -107,21 +107,21 @@ export default function InvestirHome() {
         </div>
       </section>
 
-      {/* 2. FAIXA KTO — Volt sólido com 3 promessas */}
+      {/* 2. FAIXA KTO — Volt sólido */}
       <section className="bg-volt">
-        <div className="max-w-[1200px] mx-auto px-6 py-8 md:py-10 grid sm:grid-cols-3 gap-6">
+        <div className="max-w-[1200px] mx-auto px-5 md:px-6 py-6 md:py-10 grid grid-cols-3 gap-3 md:gap-6">
           {[
-            { icon: Wallet, t: `A partir de ${fmtBRL(minTicket)}`, d: "Ticket baixo para começar" },
-            { icon: Smartphone, t: "100% digital", d: "Do cadastro à compra, no celular" },
-            { icon: ShieldCheck, t: "Sem mensalidade", d: "Cancele quando quiser" },
+            { icon: Wallet, t: `A partir de ${fmtBRL(minTicket)}`, d: "Ticket baixo" },
+            { icon: Smartphone, t: "100% digital", d: "Pelo celular" },
+            { icon: ShieldCheck, t: "Sem mensalidade", d: "Conta grátis" },
           ].map((b, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-carbon grid place-items-center shrink-0">
-                <b.icon className="w-5 h-5 text-volt" />
+            <div key={i} className="flex flex-col md:flex-row items-center md:items-center text-center md:text-left gap-2 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-carbon grid place-items-center shrink-0">
+                <b.icon className="w-4 h-4 md:w-5 md:h-5 text-volt" />
               </div>
-              <div>
-                <div className="text-carbon font-bold text-base leading-tight">{b.t}</div>
-                <div className="text-carbon/70 text-sm">{b.d}</div>
+              <div className="min-w-0">
+                <div className="text-carbon font-bold text-[11px] md:text-base leading-tight">{b.t}</div>
+                <div className="text-carbon/70 text-[10px] md:text-sm hidden md:block">{b.d}</div>
               </div>
             </div>
           ))}
