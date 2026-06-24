@@ -1,80 +1,76 @@
+# Mobile-first /investir + Home Broker XP/Rico
 
-# Plano: Humanizar o portal /investir
+Hoje as páginas de `/investir` foram pensadas em desktop e "encolhem" no celular. Como a maioria dos investidores PF entra pelo celular, vamos inverter: desenhar tudo pensando em tela de ~375px e depois "expandir" para desktop. Internamente (área logada), vamos copiar a lógica visual dos apps de corretora (XP, Rico, NuInvest): ação em destaque, botões grandes Comprar/Vender fixos, números limpos, sem poluição.
 
-Objetivo: deixar o /investir menos "black opaco", mais acolhedor e didático, inspirado em **Rico** (narrativa simples, perguntas guiadas, "abra sua conta", simulador) e **KTO** (alta energia visual, blocos coloridos, banners promocionais, CTAs grandes). Mantém identidade **mari** (Carbon + Volt + Bone) mas quebra o preto com **superfícies claras (Bone), fotos humanas e blocos Volt vibrantes**.
+## Escopo (somente frontend / UI)
 
-## 1. Identidade visual evoluída (sem trocar tokens)
+### 1. Páginas públicas (mobile-first)
+Aplicar em `InvestirHome.tsx`, `InvestirComoFunciona.tsx`, `InvestirRiscos.tsx`, `InvestirAuth.tsx`:
+- Hero: foto humana ocupando toda a largura, headline grande (text-3xl mobile / text-5xl desktop), 1 CTA primário Volt full-width + 1 CTA secundário, prova social em chips horizontais com scroll.
+- Bandas de seção empilhadas (não mais grids de 3 colunas que viram coluna única feia). Cada banda com padding vertical generoso (py-12 mobile).
+- "Como funciona em 3 passos": carrossel horizontal com snap no mobile, grid no desktop.
+- Simulador: input grande, slider com thumb gordo, resultado em card destacado abaixo (não lateral).
+- Ofertas em destaque: cards full-width empilhados, imagem 16:9 no topo, badge Volt, KPIs em 2 colunas, CTA Volt full-width.
+- FAQ: accordion nativo já é mobile-friendly, só revisar tipografia.
+- Tipografia escalada com clamp/responsive (text-2xl md:text-4xl etc).
+- Sticky CTA bar opcional no rodapé mobile ("Quero investir") nas páginas públicas.
 
-- Manter Carbon/Volt/Bone, mas inverter a hierarquia: hoje tudo é Carbon escuro → passar a alternar **bandas Bone (claras) + bandas Carbon (escuras) + acentos Volt**, igual Rico (bandas brancas e roxas) e KTO (bandas brancas + verde-limão).
-- Acrescentar **fotos reais** (pessoas brasileiras diversas, ambientes de negócio: padaria, oficina, escritório, varejo) via Unsplash, para humanizar. Criar `src/components/investir/HumanPhoto.tsx` com curadoria de fotos (lista de URLs Unsplash determinísticas por contexto: empreendedor, família, jovem investidor, padaria, indústria leve).
-- Componente `SectionBand` com variantes `bone | carbon | volt` para alternar fundos por seção.
+### 2. Onboarding (KYC + Suitability)
+- Tela cheia mobile (h-[100dvh]), 1 pergunta por vez, progress bar fina no topo.
+- Opções como cards grandes empilhados (min-h-16, tap target ≥44px).
+- Botão "Continuar" fixo no rodapé (sticky bottom-0) com safe-area.
+- Voltar como ícone seta no topo, não botão de texto.
 
-## 2. Nova InvestirHome.tsx (estrutura inspirada Rico + KTO)
+### 3. Home Broker interno (estilo XP/Rico)
+Reorganizar `InvestirShell.tsx`, `InvestirDashboard.tsx`, `InvestirListagem.tsx`, `InvestirAtivo.tsx`, `InvestirWallet.tsx`, `InvestirReservas.tsx`:
 
-Substituir a home atual por composição em bandas alternadas:
+**Shell mobile:**
+- Topbar fina com saldo escondível (ícone olho) + avatar.
+- Bottom tab navigation fixa (5 itens: Início, Ofertas, Carteira, Reservas, Mais) — padrão app de banco.
+- No desktop, manter sidebar lateral.
 
-1. **Hero (Carbon + foto humana à direita)** — headline curta tipo Rico: *"Invista em empresas brasileiras de verdade. A partir de R$ 100."*. Dois CTAs: `Abrir conta grátis` (Volt) e `Ver oportunidades`. Selo de compliance discreto abaixo.
-2. **Faixa KTO-style (Volt sólido)** — 3 mini-cards horizontais: "+R$100 mínimo", "Sem taxa de abertura", "100% digital". Texto Carbon sobre Volt, ícones grandes.
-3. **"Como funciona em 3 passos" (Bone)** — cards brancos com ilustração/foto e número grande Volt. Linguagem Rico: *"1. Crie sua conta · 2. Escolha a empresa · 3. Receba seus rendimentos"*.
-4. **Ofertas em destaque (Carbon)** — grid de cards (já existe), mas reforçar foto da empresa, % captado, ticket mínimo, badge "Aberta" Volt pulsante.
-5. **"Pra quem é?" / Perfis (Bone)** — 3 cards com foto + persona: *"Quero começar pequeno"*, *"Quero diversificar"*, *"Quero apoiar negócios brasileiros"*. Cada um leva para listagem filtrada.
-6. **Simulador rápido (Carbon + Volt)** — bloco inspirado no simulador Rico: input `Quanto quero investir?` + slider `Por quanto tempo?` → mostra projeção estimada (cálculo simples client-side, com disclaimer claro de não-garantia).
-7. **Segurança e regulação (Bone)** — selos: CVM/regulação, MP 2.200-2, LGPD, custódia. Tom institucional mas acolhedor.
-8. **Depoimentos / prova social (Carbon com fotos)** — 3 cards de empreendedores que captaram (placeholder com fotos Unsplash + nome empresa).
-9. **FAQ (Bone)** — accordion com 6 perguntas reais ("É seguro?", "Como recebo?", "Posso vender depois?", "Quanto pago de imposto?", "Mínimo?", "Quem regula?").
-10. **CTA final (Volt full-bleed)** — "Abra sua conta em 3 minutos" botão Carbon grande.
+**Dashboard ("Início" tipo home XP):**
+- Card saldo total no topo (número GIGANTE, Bone sobre Carbon), variação do dia colorida (verde/vermelho).
+- Botões circulares de ação rápida em linha horizontal: Aportar, Sacar, Investir, Extrato (ícone + label curta) — igual home do app Rico.
+- "Suas posições" lista compacta: logo/imagem 40px + nome + qtd, à direita preço atual + variação %. Tap → InvestirAtivo.
+- "Ofertas pra você" carrossel horizontal de cards 70vw com snap.
+- "Movimentações recentes" lista simples.
 
-## 3. Páginas internas (visual + narrativa Rico)
+**Listagem de ofertas:**
+- Barra de filtro horizontal scrollável (chips: Todos, Tech, Saúde, etc).
+- Cards empilhados full-width, imagem 16:9, badge de status, mini-KPIs em linha (Meta / Reservado / %).
 
-- **InvestirComoFunciona.tsx**: virar página tipo "Sobre nós" da Rico — bandas alternadas, foto humana grande no topo, blocos didáticos ("O que é tokenização?", "Como recebo retorno?", "O que é uma oferta primária?"), tom de conversa.
-- **InvestirRiscos.tsx**: manter rigor regulatório mas com layout Bone + cards e ícones (não wall-of-text Carbon).
-- **InvestirAuth.tsx** (login/cadastro): copiar padrão Rico — banda Carbon à esquerda com headline motivacional + foto, formulário Bone à direita.
-- **Onboarding (KYC + Suitability)**: já existe; aplicar layout Rico do suitability (stepper 1-2-3 no topo, pergunta grande Volt, opções em cards grandes brancos com borda Volt quando selecionado, botões `Voltar` outline + `Próximo` Volt). Reescrever microcopy em pt-BR conversacional.
+**InvestirAtivo (tela de detalhe = "tela de boleta"):**
+- Imagem hero 16:9 + nome + ticker/codename.
+- Tabs horizontais: Resumo, Indicadores, Documentos, Riscos.
+- KPIs em grid 2x2 mobile / 4x1 desktop.
+- **Footer fixo sticky** com 2 botões grandes: `Vender` (outline) | `Comprar` (Volt sólido) — exatamente como boleta XP/Rico. Tap → abre `ReservationModal` em sheet (drawer bottom) no mobile.
 
-## 4. Home Broker interno (InvestirDashboard + reserva)
+**ReservationModal:**
+- No mobile vira bottom sheet (drawer) que sobe, ocupa ~85vh, com handle no topo. Input de valor grande (text-4xl), teclado numérico (inputMode="decimal"), botões de valor sugerido (R$ 1k / 5k / 10k), CTA confirmar full-width Volt fixo no fundo.
 
-Refatorar `InvestirDashboard.tsx` para parecer **app de corretora retail (Rico/XP)**:
+**Carteira:**
+- Card patrimônio total grande no topo, gráfico de pizza/donut simples (alocação por ativo).
+- Lista de posições idêntica à do dashboard.
 
-- Topbar com saldo grande em Bone, badges: "Disponível", "Reservado", "Investido".
-- Tabs principais: `Minha carteira` · `Oportunidades` · `Minhas reservas` · `Extrato`.
-- Cards de posição com mini-gráfico, % variação Volt/vermelho, ações 1-clique: `Aportar mais` / `Vender cota` (mesmo que vender abra modal "em breve mercado secundário").
-- Boleta lateral persistente (mobile: bottom-sheet) já existe no Ativo — replicar consistência visual.
+### 4. Componentes novos / ajustes
+- `BottomTabBar.tsx` (novo) — nav mobile fixa.
+- `QuickActionButton.tsx` (novo) — botão circular ícone+label.
+- `PositionRow.tsx` (novo) — linha compacta de posição reusada em Dashboard e Carteira.
+- `StickyBuyBar.tsx` (novo) — footer fixo Comprar/Vender no InvestirAtivo.
+- `ReservationModal` adaptado para usar `Sheet` (shadcn) com `side="bottom"` no mobile via media query.
+- `SectionBand` ganha props de padding mobile reduzido.
 
-## 5. Imagens
+## Fora do escopo
+- Lógica de compra/venda real, secondary market, novas tabelas, edge functions.
+- Tokens globais de cor (Carbon/Volt/Bone mantidos).
+- Mudanças em rotas (mantém `/investir/*`).
 
-Usar Unsplash via URLs determinísticas (sem download), curadas em `src/lib/investirPhotos.ts`:
-- hero: empreendedora brasileira sorrindo em loja
-- como funciona: pessoa usando celular
-- perfis: 3 personas distintas
-- depoimentos: 3 empreendedores
-- ofertas fallback: padaria, oficina, indústria, varejo, tech
-
-Disclaimer: fotos ilustrativas (rodapé pequeno).
-
-## 6. Escopo técnico
-
-Arquivos a criar:
-- `src/components/investir/SectionBand.tsx`
-- `src/components/investir/HumanPhoto.tsx`
-- `src/components/investir/SimuladorRapido.tsx`
-- `src/components/investir/PersonaCard.tsx`
-- `src/components/investir/DepoimentoCard.tsx`
-- `src/lib/investirPhotos.ts`
-
-Arquivos a reescrever:
-- `src/pages/investir/InvestirHome.tsx` (nova composição em bandas)
-- `src/pages/investir/InvestirComoFunciona.tsx`
-- `src/pages/investir/InvestirAuth.tsx` (split layout)
-- `src/pages/investir/InvestirDashboard.tsx` (cara de corretora)
-- `src/pages/investir/onboarding/InvestirKYC.tsx` (stepper Rico)
-- `src/pages/investir/onboarding/InvestirSuitability.tsx` (stepper Rico)
-
-Não mexer em: rotas, backend, migrations, lógica de reserva, ReservationModal (já refeito).
-
-## Fora de escopo
-
-- Mercado secundário real
-- Novas tabelas/edge functions
-- Mudança de tokens de cor globais (mari permanece)
+## Detalhes técnicos
+- Tailwind: usar prefixos `md:` para desktop, base = mobile.
+- Drawer mobile: `@/components/ui/sheet` com `side="bottom"`.
+- Safe area: `pb-[env(safe-area-inset-bottom)]` em barras fixas.
+- Bottom tab condicional: renderizar só em `<md` via `md:hidden`.
+- Tap targets mínimos 44x44px.
 
 Posso seguir?
