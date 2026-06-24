@@ -49,59 +49,57 @@ export default function InvestirHome() {
 
   return (
     <InvestirShell>
-      {/* 1. HERO — split com foto humana */}
+      {/* 1. HERO mobile-first */}
       <section className="relative overflow-hidden bg-carbon border-b border-bone/5">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(217,245,100,0.15),transparent_55%)]" />
-        <div className="relative max-w-[1300px] mx-auto px-6 pt-16 pb-12 md:pt-24 md:pb-20 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center">
-          <div>
-            <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-volt bg-volt/10 border border-volt/25 px-3 py-1.5 rounded-full mb-6">
-              <Sparkles className="w-3 h-3" /> Novo · investir em empresas brasileiras
+        <div className="relative max-w-[1300px] mx-auto px-5 md:px-6 pt-8 pb-8 md:pt-24 md:pb-20 grid lg:grid-cols-[1.1fr_1fr] gap-8 lg:gap-16 items-center">
+          <div className="order-2 lg:order-1">
+            <span className="inline-flex items-center gap-2 text-[11px] md:text-xs uppercase tracking-wider text-volt bg-volt/10 border border-volt/25 px-3 py-1.5 rounded-full mb-4 md:mb-6">
+              <Sparkles className="w-3 h-3" /> Empresas brasileiras
             </span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05] text-bone">
-              Invista em empresas brasileiras{" "}
-              <span className="text-volt">de verdade.</span>
+            <h1 className="text-[34px] leading-[1.05] md:text-5xl lg:text-6xl font-semibold tracking-tight text-bone">
+              Invista em empresas brasileiras <span className="text-volt">de verdade.</span>
             </h1>
-            <p className="mt-5 text-lg text-bone/70 leading-relaxed max-w-xl">
-              A partir de <strong className="text-bone">{fmtBRL(minTicket)}</strong> você vira sócio de negócios reais —
-              padarias, oficinas, indústrias, tech. Cadastro grátis, sem mensalidade, 100% pelo celular.
+            <p className="mt-4 md:mt-5 text-base md:text-lg text-bone/70 leading-relaxed max-w-xl">
+              A partir de <strong className="text-bone">{fmtBRL(minTicket)}</strong> você vira sócio de negócios reais. Cadastro grátis, 100% pelo celular.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 md:mt-8 flex flex-col sm:flex-row gap-2.5 sm:gap-3">
               <Link
                 to="/investir/auth?mode=signup"
-                className="inline-flex items-center gap-2 bg-volt hover:bg-volt/90 text-carbon font-semibold px-7 py-4 rounded-full text-base transition-all"
+                className="inline-flex items-center justify-center gap-2 bg-volt hover:bg-volt/90 text-carbon font-semibold px-6 py-3.5 md:px-7 md:py-4 rounded-full text-base transition-all"
               >
                 Abrir conta grátis <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/investir/empresas"
-                className="inline-flex items-center gap-2 border border-bone/25 hover:bg-bone/10 text-bone font-medium px-7 py-4 rounded-full text-base transition-all"
+                className="inline-flex items-center justify-center gap-2 border border-bone/25 hover:bg-bone/10 text-bone font-medium px-6 py-3.5 md:px-7 md:py-4 rounded-full text-base transition-all"
               >
                 Ver oportunidades
               </Link>
             </div>
-            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-bone/55">
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt" />Sem taxa de abertura</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt" />Aprovação em 1 dia</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt" />Pix instantâneo</span>
+            <div className="mt-6 md:mt-8 grid grid-cols-3 md:flex md:flex-wrap gap-x-3 md:gap-x-6 gap-y-2 text-[11px] md:text-xs text-bone/55">
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt shrink-0" />Sem taxa</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt shrink-0" />Aprovação 1 dia</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt shrink-0" />Pix instantâneo</span>
             </div>
           </div>
 
-          <div className="relative">
-            <div className="relative rounded-3xl overflow-hidden border border-bone/10 aspect-[4/5] max-w-md mx-auto lg:max-w-none">
+          <div className="relative order-1 lg:order-2">
+            <div className="relative rounded-2xl md:rounded-3xl overflow-hidden border border-bone/10 aspect-[16/10] md:aspect-[4/5] max-w-md mx-auto lg:max-w-none">
               <img
                 src={photos.heroEmpreendedora}
-                alt="Empreendedora brasileira em sua loja"
+                alt="Empreendedora brasileira"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-carbon/80 via-transparent to-transparent" />
-              <div className="absolute bottom-5 left-5 right-5 bg-carbon/85 backdrop-blur-md border border-bone/10 rounded-2xl p-4">
+              <div className="absolute bottom-3 left-3 right-3 md:bottom-5 md:left-5 md:right-5 bg-carbon/85 backdrop-blur-md border border-bone/10 rounded-xl md:rounded-2xl p-3 md:p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-volt grid place-items-center text-carbon font-bold">+</div>
-                  <div className="flex-1">
-                    <div className="text-bone text-sm font-medium">{companies > 0 ? `${companies}+ empresas` : "Empresas curadas"}</div>
+                  <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-volt grid place-items-center text-carbon font-bold">+</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-bone text-sm font-medium truncate">{companies > 0 ? `${companies}+ empresas` : "Empresas curadas"}</div>
                     <div className="text-bone/55 text-xs">prontas para receber investimento</div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-volt" />
+                  <ArrowRight className="w-4 h-4 text-volt shrink-0" />
                 </div>
               </div>
             </div>
@@ -109,21 +107,21 @@ export default function InvestirHome() {
         </div>
       </section>
 
-      {/* 2. FAIXA KTO — Volt sólido com 3 promessas */}
+      {/* 2. FAIXA KTO — Volt sólido */}
       <section className="bg-volt">
-        <div className="max-w-[1200px] mx-auto px-6 py-8 md:py-10 grid sm:grid-cols-3 gap-6">
+        <div className="max-w-[1200px] mx-auto px-5 md:px-6 py-6 md:py-10 grid grid-cols-3 gap-3 md:gap-6">
           {[
-            { icon: Wallet, t: `A partir de ${fmtBRL(minTicket)}`, d: "Ticket baixo para começar" },
-            { icon: Smartphone, t: "100% digital", d: "Do cadastro à compra, no celular" },
-            { icon: ShieldCheck, t: "Sem mensalidade", d: "Cancele quando quiser" },
+            { icon: Wallet, t: `A partir de ${fmtBRL(minTicket)}`, d: "Ticket baixo" },
+            { icon: Smartphone, t: "100% digital", d: "Pelo celular" },
+            { icon: ShieldCheck, t: "Sem mensalidade", d: "Conta grátis" },
           ].map((b, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-carbon grid place-items-center shrink-0">
-                <b.icon className="w-5 h-5 text-volt" />
+            <div key={i} className="flex flex-col md:flex-row items-center md:items-center text-center md:text-left gap-2 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-carbon grid place-items-center shrink-0">
+                <b.icon className="w-4 h-4 md:w-5 md:h-5 text-volt" />
               </div>
-              <div>
-                <div className="text-carbon font-bold text-base leading-tight">{b.t}</div>
-                <div className="text-carbon/70 text-sm">{b.d}</div>
+              <div className="min-w-0">
+                <div className="text-carbon font-bold text-[11px] md:text-base leading-tight">{b.t}</div>
+                <div className="text-carbon/70 text-[10px] md:text-sm hidden md:block">{b.d}</div>
               </div>
             </div>
           ))}
@@ -136,7 +134,7 @@ export default function InvestirHome() {
           <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wider text-carbon/60 bg-carbon/5 px-3 py-1 rounded-full mb-4">
             Simples
           </div>
-          <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-carbon">
+          <h2 className="text-2xl md:text-5xl font-semibold tracking-tight text-carbon">
             Comece em 3 passos.
           </h2>
           <p className="mt-3 text-carbon/60 max-w-xl mx-auto">
@@ -169,7 +167,7 @@ export default function InvestirHome() {
         <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
           <div>
             <div className="text-xs uppercase tracking-wider text-volt mb-2">Disponível agora</div>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-bone">
+            <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-bone">
               Empresas abertas para investimento
             </h2>
           </div>
@@ -196,7 +194,7 @@ export default function InvestirHome() {
       {/* 5. PRA QUEM É (perfis) — Bone */}
       <SectionBand tone="bone">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-carbon">
+          <h2 className="text-2xl md:text-5xl font-semibold tracking-tight text-carbon">
             Pra quem é a mari<span className="text-volt">.invest</span>?
           </h2>
           <p className="mt-3 text-carbon/60">Escolha o perfil que mais combina com você.</p>
@@ -229,7 +227,7 @@ export default function InvestirHome() {
         <div className="grid lg:grid-cols-[1fr_1.1fr] gap-10 items-center">
           <div>
             <div className="text-xs uppercase tracking-wider text-volt mb-3">Simulador</div>
-            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-bone">
+            <h2 className="text-2xl md:text-5xl font-semibold tracking-tight text-bone">
               Quanto seu dinheiro pode <span className="text-volt">render?</span>
             </h2>
             <p className="mt-4 text-bone/65 text-lg leading-relaxed">
@@ -253,7 +251,7 @@ export default function InvestirHome() {
         <div className="grid md:grid-cols-[1fr_1.3fr] gap-12 items-center">
           <div>
             <div className="text-xs uppercase tracking-wider text-carbon/50 mb-3">Segurança</div>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-carbon">
+            <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-carbon">
               Seu dinheiro protegido. Regras claras.
             </h2>
             <p className="mt-4 text-carbon/60 leading-relaxed">
@@ -286,7 +284,7 @@ export default function InvestirHome() {
       <SectionBand tone="carbon">
         <div className="text-center mb-12">
           <div className="text-xs uppercase tracking-wider text-volt mb-3">Quem está aqui</div>
-          <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-bone">
+          <h2 className="text-2xl md:text-5xl font-semibold tracking-tight text-bone">
             Empresas brasileiras de verdade.
           </h2>
         </div>
@@ -313,7 +311,7 @@ export default function InvestirHome() {
 
       {/* 9. FAQ — Bone */}
       <SectionBand tone="bone" innerClassName="max-w-[820px] mx-auto">
-        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-carbon text-center mb-10">
+        <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-carbon text-center mb-10">
           Perguntas frequentes
         </h2>
         <div className="divide-y divide-carbon/10 border-y border-carbon/10">
@@ -332,7 +330,7 @@ export default function InvestirHome() {
       <section className="bg-volt">
         <div className="max-w-[1100px] mx-auto px-6 py-16 md:py-20 grid md:grid-cols-[1.3fr_1fr] gap-10 items-center">
           <div>
-            <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-carbon">
+            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-carbon">
               Pronto pra ser sócio?
             </h2>
             <p className="mt-4 text-carbon/75 text-lg max-w-lg">
@@ -360,6 +358,19 @@ export default function InvestirHome() {
           Fotos meramente ilustrativas. Investimentos em empresas privadas envolvem risco de perda total.
         </div>
       </section>
+
+      {/* Sticky CTA mobile (público) */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-carbon/95 backdrop-blur-xl border-t border-bone/10 pb-[env(safe-area-inset-bottom)]">
+        <div className="px-4 py-3">
+          <Link
+            to="/investir/auth?mode=signup"
+            className="block w-full text-center bg-volt hover:bg-volt/90 text-carbon font-semibold py-3.5 rounded-xl text-sm"
+          >
+            Abrir conta grátis em 3 minutos
+          </Link>
+        </div>
+      </div>
+      <div className="md:hidden h-20" aria-hidden />
     </InvestirShell>
   );
 }

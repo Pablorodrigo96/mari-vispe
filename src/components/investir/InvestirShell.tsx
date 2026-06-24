@@ -1,7 +1,8 @@
-import { Outlet, Link, useLocation, NavLink } from "react-router-dom";
+import { Outlet, Link, NavLink } from "react-router-dom";
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Shield, ChevronRight, Sparkles } from "lucide-react";
+import { BottomTabBar } from "./BottomTabBar";
 
 const nav = [
   { to: "/investir/empresas", label: "Empresas" },
@@ -18,12 +19,17 @@ const authedNav = [
 export function InvestirHeader({ authed }: { authed?: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-bone/10 bg-carbon/90 backdrop-blur-xl">
-      <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center gap-8">
-        <Link to="/investir" className="flex items-center gap-2 font-semibold tracking-tight text-bone">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-14 flex items-center gap-4 md:gap-8">
+        <Link
+          to={authed ? "/investir/painel" : "/investir"}
+          className="flex items-center gap-2 font-semibold tracking-tight text-bone"
+        >
           <div className="w-7 h-7 rounded-md bg-volt grid place-items-center">
             <span className="text-carbon font-black text-sm">m</span>
           </div>
-          <span className="text-[15px]">mari<span className="text-volt">.</span>invest</span>
+          <span className="text-[15px]">
+            mari<span className="text-volt">.</span>invest
+          </span>
         </Link>
         <nav className="hidden md:flex items-center gap-1 text-sm">
           {(authed ? authedNav : nav).map((n) => (
@@ -33,7 +39,7 @@ export function InvestirHeader({ authed }: { authed?: boolean }) {
               className={({ isActive }) =>
                 cn(
                   "px-3 py-1.5 rounded-md transition-colors",
-                  isActive ? "bg-bone/10 text-bone" : "text-bone/60 hover:text-bone hover:bg-bone/5"
+                  isActive ? "bg-bone/10 text-bone" : "text-bone/60 hover:text-bone hover:bg-bone/5",
                 )
               }
             >
@@ -44,18 +50,24 @@ export function InvestirHeader({ authed }: { authed?: boolean }) {
         <div className="ml-auto flex items-center gap-2">
           {!authed ? (
             <>
-              <Link to="/investir/auth" className="text-sm text-bone/70 hover:text-bone px-3 py-1.5">
+              <Link
+                to="/investir/auth"
+                className="text-sm text-bone/70 hover:text-bone px-2.5 md:px-3 py-1.5"
+              >
                 Entrar
               </Link>
               <Link
                 to="/investir/auth?mode=signup"
-                className="text-sm bg-volt hover:bg-volt/90 text-carbon font-medium px-3.5 py-1.5 rounded-md transition-colors"
+                className="text-sm bg-volt hover:bg-volt/90 text-carbon font-semibold px-3 md:px-3.5 py-1.5 rounded-md transition-colors"
               >
                 Criar conta
               </Link>
             </>
           ) : (
-            <Link to="/investir/carteira" className="text-xs text-bone/60 hover:text-bone">
+            <Link
+              to="/investir/carteira"
+              className="text-xs text-bone/60 hover:text-bone hidden md:inline-flex items-center"
+            >
               Minha carteira <ChevronRight className="inline w-3 h-3" />
             </Link>
           )}
@@ -68,12 +80,14 @@ export function InvestirHeader({ authed }: { authed?: boolean }) {
 export function DisclaimerBar() {
   return (
     <div className="border-t border-bone/10 bg-graphite/40 text-[11px] text-bone/50 leading-relaxed">
-      <div className="max-w-[1400px] mx-auto px-6 py-3 flex flex-wrap gap-x-6 gap-y-1">
-        <span><Shield className="inline w-3 h-3 mr-1 text-volt/70" />Plataforma regulada</span>
-        <span>• Investimentos em empresas privadas envolvem risco de perda total do capital</span>
-        <span>• Ativos privados podem ter baixa liquidez</span>
-        <span>• Rentabilidade passada ou projetada não representa garantia de retorno</span>
-        <span>• Leia os documentos da oferta antes de investir</span>
+      <div className="max-w-[1400px] mx-auto px-5 md:px-6 py-3 flex flex-wrap gap-x-6 gap-y-1">
+        <span>
+          <Shield className="inline w-3 h-3 mr-1 text-volt/70" />
+          Plataforma regulada
+        </span>
+        <span className="hidden md:inline">• Investimentos em empresas privadas envolvem risco de perda total</span>
+        <span className="hidden md:inline">• Ativos privados podem ter baixa liquidez</span>
+        <span className="md:hidden">• Risco de perda total. Leia os documentos da oferta.</span>
       </div>
     </div>
   );
@@ -82,8 +96,8 @@ export function DisclaimerBar() {
 export function InvestirFooter() {
   return (
     <footer className="border-t border-bone/10 bg-carbon mt-16">
-      <div className="max-w-[1400px] mx-auto px-6 py-10 grid md:grid-cols-4 gap-8 text-sm">
-        <div>
+      <div className="max-w-[1400px] mx-auto px-5 md:px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
+        <div className="col-span-2 md:col-span-1">
           <div className="flex items-center gap-2 font-semibold text-bone mb-3">
             <div className="w-6 h-6 rounded bg-volt grid place-items-center">
               <span className="text-carbon font-black text-xs">m</span>
@@ -91,28 +105,16 @@ export function InvestirFooter() {
             mari.invest
           </div>
           <p className="text-bone/50 text-xs leading-relaxed">
-            Plataforma regulada para acesso a ativos privados tokenizados. Empresas reais,
-            ambiente seguro, transparência total.
+            Plataforma regulada para acesso a ativos privados tokenizados.
           </p>
         </div>
-        <FooterCol title="Investir" links={[
-          ["Empresas", "/investir/empresas"],
-          ["Como funciona", "/investir/como-funciona"],
-          ["Tokenização", "/investir/como-funciona#tokenizacao"],
-        ]} />
-        <FooterCol title="Compliance" links={[
-          ["Riscos", "/investir/riscos"],
-          ["Termos", "/terms"],
-          ["Privacidade", "/terms#privacidade"],
-        ]} />
-        <FooterCol title="Conta" links={[
-          ["Entrar", "/investir/auth"],
-          ["Criar conta", "/investir/auth?mode=signup"],
-        ]} />
+        <FooterCol title="Investir" links={[["Empresas", "/investir/empresas"], ["Como funciona", "/investir/como-funciona"]]} />
+        <FooterCol title="Compliance" links={[["Riscos", "/investir/riscos"], ["Termos", "/terms"]]} />
+        <FooterCol title="Conta" links={[["Entrar", "/investir/auth"], ["Criar conta", "/investir/auth?mode=signup"]]} />
       </div>
       <DisclaimerBar />
       <div className="border-t border-bone/10 py-4 text-center text-[11px] text-bone/40">
-        © {new Date().getFullYear()} mari · Grupo Vispe. Todos os direitos reservados.
+        © {new Date().getFullYear()} mari · Grupo Vispe.
       </div>
     </footer>
   );
@@ -125,7 +127,9 @@ function FooterCol({ title, links }: { title: string; links: [string, string][] 
       <ul className="space-y-2">
         {links.map(([label, to]) => (
           <li key={to}>
-            <Link to={to} className="text-bone/60 hover:text-volt text-sm transition-colors">{label}</Link>
+            <Link to={to} className="text-bone/60 hover:text-volt text-sm transition-colors">
+              {label}
+            </Link>
           </li>
         ))}
       </ul>
@@ -133,14 +137,23 @@ function FooterCol({ title, links }: { title: string; links: [string, string][] 
   );
 }
 
-export function InvestirShell({ authed = false, children }: { authed?: boolean; children?: ReactNode }) {
+export function InvestirShell({
+  authed = false,
+  children,
+  hideFooter = false,
+}: {
+  authed?: boolean;
+  children?: ReactNode;
+  hideFooter?: boolean;
+}) {
   return (
     <div className="min-h-screen bg-carbon text-bone flex flex-col">
       <InvestirHeader authed={authed} />
-      <main className="flex-1">
+      <main className={cn("flex-1", authed && "pb-20 md:pb-0")}>
         {children ?? <Outlet />}
       </main>
-      <InvestirFooter />
+      {!hideFooter && <InvestirFooter />}
+      {authed && <BottomTabBar />}
     </div>
   );
 }
