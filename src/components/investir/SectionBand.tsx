@@ -16,16 +16,24 @@ export function SectionBand({
   innerClassName,
   children,
   id,
+  compact = false,
 }: {
   tone?: Tone;
   className?: string;
   innerClassName?: string;
   children: ReactNode;
   id?: string;
+  compact?: boolean;
 }) {
   return (
     <section id={id} className={cn(toneClass[tone], className)}>
-      <div className={cn("max-w-[1200px] mx-auto px-6 py-16 md:py-24", innerClassName)}>
+      <div
+        className={cn(
+          "max-w-[1200px] mx-auto px-5 md:px-6",
+          compact ? "py-10 md:py-14" : "py-12 md:py-24",
+          innerClassName,
+        )}
+      >
         {children}
       </div>
     </section>
