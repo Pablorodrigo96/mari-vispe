@@ -49,59 +49,57 @@ export default function InvestirHome() {
 
   return (
     <InvestirShell>
-      {/* 1. HERO — split com foto humana */}
+      {/* 1. HERO mobile-first */}
       <section className="relative overflow-hidden bg-carbon border-b border-bone/5">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(217,245,100,0.15),transparent_55%)]" />
-        <div className="relative max-w-[1300px] mx-auto px-6 pt-16 pb-12 md:pt-24 md:pb-20 grid lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center">
-          <div>
-            <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-volt bg-volt/10 border border-volt/25 px-3 py-1.5 rounded-full mb-6">
-              <Sparkles className="w-3 h-3" /> Novo · investir em empresas brasileiras
+        <div className="relative max-w-[1300px] mx-auto px-5 md:px-6 pt-8 pb-8 md:pt-24 md:pb-20 grid lg:grid-cols-[1.1fr_1fr] gap-8 lg:gap-16 items-center">
+          <div className="order-2 lg:order-1">
+            <span className="inline-flex items-center gap-2 text-[11px] md:text-xs uppercase tracking-wider text-volt bg-volt/10 border border-volt/25 px-3 py-1.5 rounded-full mb-4 md:mb-6">
+              <Sparkles className="w-3 h-3" /> Empresas brasileiras
             </span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05] text-bone">
-              Invista em empresas brasileiras{" "}
-              <span className="text-volt">de verdade.</span>
+            <h1 className="text-[34px] leading-[1.05] md:text-5xl lg:text-6xl font-semibold tracking-tight text-bone">
+              Invista em empresas brasileiras <span className="text-volt">de verdade.</span>
             </h1>
-            <p className="mt-5 text-lg text-bone/70 leading-relaxed max-w-xl">
-              A partir de <strong className="text-bone">{fmtBRL(minTicket)}</strong> você vira sócio de negócios reais —
-              padarias, oficinas, indústrias, tech. Cadastro grátis, sem mensalidade, 100% pelo celular.
+            <p className="mt-4 md:mt-5 text-base md:text-lg text-bone/70 leading-relaxed max-w-xl">
+              A partir de <strong className="text-bone">{fmtBRL(minTicket)}</strong> você vira sócio de negócios reais. Cadastro grátis, 100% pelo celular.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 md:mt-8 flex flex-col sm:flex-row gap-2.5 sm:gap-3">
               <Link
                 to="/investir/auth?mode=signup"
-                className="inline-flex items-center gap-2 bg-volt hover:bg-volt/90 text-carbon font-semibold px-7 py-4 rounded-full text-base transition-all"
+                className="inline-flex items-center justify-center gap-2 bg-volt hover:bg-volt/90 text-carbon font-semibold px-6 py-3.5 md:px-7 md:py-4 rounded-full text-base transition-all"
               >
                 Abrir conta grátis <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/investir/empresas"
-                className="inline-flex items-center gap-2 border border-bone/25 hover:bg-bone/10 text-bone font-medium px-7 py-4 rounded-full text-base transition-all"
+                className="inline-flex items-center justify-center gap-2 border border-bone/25 hover:bg-bone/10 text-bone font-medium px-6 py-3.5 md:px-7 md:py-4 rounded-full text-base transition-all"
               >
                 Ver oportunidades
               </Link>
             </div>
-            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-bone/55">
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt" />Sem taxa de abertura</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt" />Aprovação em 1 dia</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt" />Pix instantâneo</span>
+            <div className="mt-6 md:mt-8 grid grid-cols-3 md:flex md:flex-wrap gap-x-3 md:gap-x-6 gap-y-2 text-[11px] md:text-xs text-bone/55">
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt shrink-0" />Sem taxa</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt shrink-0" />Aprovação 1 dia</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-volt shrink-0" />Pix instantâneo</span>
             </div>
           </div>
 
-          <div className="relative">
-            <div className="relative rounded-3xl overflow-hidden border border-bone/10 aspect-[4/5] max-w-md mx-auto lg:max-w-none">
+          <div className="relative order-1 lg:order-2">
+            <div className="relative rounded-2xl md:rounded-3xl overflow-hidden border border-bone/10 aspect-[16/10] md:aspect-[4/5] max-w-md mx-auto lg:max-w-none">
               <img
                 src={photos.heroEmpreendedora}
-                alt="Empreendedora brasileira em sua loja"
+                alt="Empreendedora brasileira"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-carbon/80 via-transparent to-transparent" />
-              <div className="absolute bottom-5 left-5 right-5 bg-carbon/85 backdrop-blur-md border border-bone/10 rounded-2xl p-4">
+              <div className="absolute bottom-3 left-3 right-3 md:bottom-5 md:left-5 md:right-5 bg-carbon/85 backdrop-blur-md border border-bone/10 rounded-xl md:rounded-2xl p-3 md:p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-volt grid place-items-center text-carbon font-bold">+</div>
-                  <div className="flex-1">
-                    <div className="text-bone text-sm font-medium">{companies > 0 ? `${companies}+ empresas` : "Empresas curadas"}</div>
+                  <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-volt grid place-items-center text-carbon font-bold">+</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-bone text-sm font-medium truncate">{companies > 0 ? `${companies}+ empresas` : "Empresas curadas"}</div>
                     <div className="text-bone/55 text-xs">prontas para receber investimento</div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-volt" />
+                  <ArrowRight className="w-4 h-4 text-volt shrink-0" />
                 </div>
               </div>
             </div>
