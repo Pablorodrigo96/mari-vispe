@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { X, ChevronLeft, ChevronRight, BadgeCheck } from "lucide-react";
 import type { StoryItem } from "@/types/social";
 
-const SLIDE_MS = 5000;
+const SLIDE_MS_DEFAULT = 5000;
+const SLIDE_MS_EMBED = 9000;
 
 export function StoryViewer({
   stories,
@@ -45,18 +46,21 @@ export function StoryViewer({
     }
   }, [i, slide, stories]);
 
+  const slideMs = current?.kind === "instagram_embed" ? SLIDE_MS_EMBED : SLIDE_MS_DEFAULT;
+
   useEffect(() => {
     if (paused) return;
+    if (current?.kind === "real_video") return; // vídeo controla o avanço
     function tick() {
       const elapsed = performance.now() - startRef.current;
-      const p = Math.min(1, elapsed / SLIDE_MS);
+      const p = Math.min(1, elapsed / slideMs);
       setProgress(p);
       if (p >= 1) { nextSlide(); return; }
       rafRef.current = requestAnimationFrame(tick);
     }
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [paused, nextSlide, i, slide]);
+  }, [paused, nextSlide, i, slide, slideMs, current?.kind]);
 
   useEffect(() => {
     function k(e: KeyboardEvent) {
