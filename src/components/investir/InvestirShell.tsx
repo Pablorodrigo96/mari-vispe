@@ -45,12 +45,13 @@ export function InvestirHeader({ authed }: { authed?: boolean }) {
           to={authed ? "/investir/painel" : "/investir"}
           className="flex items-center gap-2 font-semibold tracking-tight text-bone"
         >
-          <div className="w-7 h-7 rounded-md bg-volt grid place-items-center">
+          <div className="keep-volt w-7 h-7 rounded-md bg-volt grid place-items-center">
             <span className="text-carbon font-black text-sm">m</span>
           </div>
           <span className="text-[15px]">
-            mari<span className="text-volt">.</span>invest
+            mari<span className="keep-volt text-volt">.</span>invest
           </span>
+
         </Link>
         <nav className="hidden md:flex items-center gap-1 text-sm">
           {(authed ? authedNav : nav).map((n) => (
@@ -69,6 +70,8 @@ export function InvestirHeader({ authed }: { authed?: boolean }) {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
+
           {!authed ? (
             <>
               <Link
