@@ -425,3 +425,146 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+/* ============================================================
+   MARI WHITE THEME — Light skin scoped to /investir shell
+   Activated by adding `.mari-light` to the shell root.
+   Remaps hard-coded Carbon/Volt/Bone palette → Instagram-like
+   white surface with black CTAs. Does NOT touch the rest of app.
+   ============================================================ */
+.mari-light {
+  color-scheme: light;
+  background-color: #ffffff;
+  color: #0a0a0a;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 4%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 35%;
+  --border: 0 0% 92%;
+  --input: 0 0% 92%;
+}
+
+/* Backgrounds: Carbon/Graphite/Black → white/light gray */
+.mari-light .bg-carbon,
+.mari-light .bg-black,
+.mari-light .bg-\[\#0A0A0A\],
+.mari-light .bg-\[\#0a0a0a\],
+.mari-light .bg-\[\#000\],
+.mari-light .bg-\[\#000000\] { background-color: #ffffff !important; }
+
+.mari-light .bg-carbon\/90,
+.mari-light .bg-carbon\/80,
+.mari-light .bg-carbon\/70,
+.mari-light .bg-black\/90,
+.mari-light .bg-black\/80,
+.mari-light .bg-black\/70 { background-color: rgba(255,255,255,0.92) !important; }
+
+.mari-light .bg-carbon\/60,
+.mari-light .bg-carbon\/50,
+.mari-light .bg-carbon\/40,
+.mari-light .bg-black\/60,
+.mari-light .bg-black\/50,
+.mari-light .bg-black\/40 { background-color: rgba(255,255,255,0.75) !important; }
+
+.mari-light .bg-graphite,
+.mari-light .bg-\[\#2A2A2A\],
+.mari-light .bg-\[\#1a1a1a\],
+.mari-light .bg-\[\#111\],
+.mari-light .bg-\[\#111111\] { background-color: #f4f4f5 !important; }
+
+.mari-light .bg-graphite\/40,
+.mari-light .bg-graphite\/30,
+.mari-light .bg-graphite\/50,
+.mari-light .bg-graphite\/60,
+.mari-light .bg-graphite\/70,
+.mari-light .bg-graphite\/80 { background-color: #fafafa !important; }
+
+.mari-light .bg-bone\/5,
+.mari-light .bg-bone\/10,
+.mari-light .bg-white\/5,
+.mari-light .bg-white\/10 { background-color: rgba(0,0,0,0.04) !important; }
+.mari-light .bg-bone\/15,
+.mari-light .bg-bone\/20,
+.mari-light .bg-white\/15,
+.mari-light .bg-white\/20 { background-color: rgba(0,0,0,0.07) !important; }
+
+/* Text: Bone/White → near-black */
+.mari-light .text-bone,
+.mari-light .text-white,
+.mari-light .text-\[\#FAFAF7\],
+.mari-light .text-\[\#fafaf7\],
+.mari-light .text-\[\#fff\],
+.mari-light .text-\[\#ffffff\] { color: #0a0a0a !important; }
+
+.mari-light .text-bone\/90,
+.mari-light .text-white\/90 { color: rgba(10,10,10,0.92) !important; }
+.mari-light .text-bone\/80,
+.mari-light .text-white\/80,
+.mari-light .text-bone\/70,
+.mari-light .text-white\/70 { color: rgba(10,10,10,0.75) !important; }
+.mari-light .text-bone\/60,
+.mari-light .text-white\/60,
+.mari-light .text-bone\/50,
+.mari-light .text-white\/50 { color: rgba(10,10,10,0.6) !important; }
+.mari-light .text-bone\/40,
+.mari-light .text-white\/40,
+.mari-light .text-bone\/30,
+.mari-light .text-white\/30 { color: rgba(10,10,10,0.45) !important; }
+
+/* Borders */
+.mari-light .border-bone\/10,
+.mari-light .border-bone\/20,
+.mari-light .border-white\/10,
+.mari-light .border-white\/20 { border-color: rgba(0,0,0,0.09) !important; }
+.mari-light .border-bone\/5,
+.mari-light .border-white\/5 { border-color: rgba(0,0,0,0.05) !important; }
+.mari-light .border-bone\/30,
+.mari-light .border-white\/30 { border-color: rgba(0,0,0,0.14) !important; }
+.mari-light .divide-bone\/10 > * + *,
+.mari-light .divide-white\/10 > * + * { border-color: rgba(0,0,0,0.09) !important; }
+
+/* Volt CTAs → Instagram-style black button */
+.mari-light .bg-volt,
+.mari-light .bg-volt\/90,
+.mari-light .hover\:bg-volt\/90:hover,
+.mari-light .bg-\[\#D9F564\],
+.mari-light .bg-\[\#d9f564\] {
+  background-color: #0a0a0a !important;
+  color: #ffffff !important;
+}
+.mari-light .bg-volt\/20,
+.mari-light .bg-volt\/15,
+.mari-light .bg-volt\/10 { background-color: rgba(10,10,10,0.06) !important; }
+
+.mari-light .text-volt,
+.mari-light .text-volt\/90,
+.mari-light .text-volt\/80,
+.mari-light .text-volt\/70,
+.mari-light .text-\[\#D9F564\],
+.mari-light .text-\[\#d9f564\] { color: #6b8e1a !important; }
+
+.mari-light .border-volt,
+.mari-light .border-\[\#D9F564\] { border-color: #0a0a0a !important; }
+
+/* Gradients */
+.mari-light .from-volt,
+.mari-light .from-\[\#D9F564\] { --tw-gradient-from: #f4f4f5 !important; --tw-gradient-to: rgba(244,244,245,0) !important; }
+.mari-light .to-volt,
+.mari-light .to-\[\#D9F564\] { --tw-gradient-to: #ffffff !important; }
+.mari-light .from-carbon,
+.mari-light .from-black { --tw-gradient-from: #ffffff !important; --tw-gradient-to: rgba(255,255,255,0) !important; }
+.mari-light .to-carbon,
+.mari-light .to-black { --tw-gradient-to: rgba(0,0,0,0.04) !important; }
+.mari-light .via-carbon,
+.mari-light .via-black { --tw-gradient-via: rgba(0,0,0,0.04) !important; }
+
+/* Logo chip inside header keeps Volt accent for brand recall */
+.mari-light .keep-volt.bg-volt,
+.mari-light .keep-volt .bg-volt { background-color: #d9f564 !important; color: #0a0a0a !important; }
+.mari-light .keep-volt.text-volt,
+.mari-light .keep-volt .text-volt { color: #0a0a0a !important; }
+
