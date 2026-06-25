@@ -166,6 +166,7 @@ const Fantasy = lazy(() => import("./pages/investir/Fantasy"));
 const Lives = lazy(() => import("./pages/investir/Lives"));
 const Quiz = lazy(() => import("./pages/investir/Quiz"));
 const Comparar = lazy(() => import("./pages/investir/Comparar"));
+const StoriesManager = lazy(() => import("./pages/investir/founder/StoriesManager"));
 const InvestirAMariLanding = lazy(() => import("./pages/investir/sobre/InvestirAMariLanding"));
 // Legacy /investir pages (mantidas pra rotas regulatórias e fluxo de reserva)
 const InvestirListagem = lazy(() => import("./pages/investir/InvestirListagem"));
@@ -242,6 +243,7 @@ const App = () => (
             {/* /investir — Rede social patrimonial */}
             <Route path="/investir" element={<FeedHome />} />
             <Route path="/investir/empresa/:symbol" element={<PerfilEmpresa />} />
+            <Route path="/investir/empresa/:symbol/stories" element={<StoriesManager />} />
             <Route path="/investir/descobrir" element={<Descobrir />} />
             <Route path="/investir/missoes" element={<Missoes />} />
             <Route path="/investir/ligas" element={<Ligas />} />
