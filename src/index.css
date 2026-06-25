@@ -137,6 +137,19 @@
   }
 }
 
+/* Light-mode legibility overrides: bright Volt (#D9F564) is unreadable as text
+   on light surfaces. Keep `bg-volt` bright (button accent) but force text and
+   borders that use Volt into the darker accent shade. Dark mode is untouched. */
+:root:not(.dark) .text-volt,
+:root:not(.dark) .hover\:text-volt:hover,
+:root:not(.dark) .group-hover\:text-volt:hover {
+  color: hsl(74 75% 22%);
+}
+:root:not(.dark) .border-volt,
+:root:not(.dark) [class*="border-volt/"] {
+  border-color: hsl(74 70% 32% / 0.55);
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
