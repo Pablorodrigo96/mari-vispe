@@ -93,25 +93,25 @@ export function CommentsThread({ initial, tokenId, founderUserId }: Props) {
   }
 
   return (
-    <section id="comentarios" className="bg-graphite/30 border border-bone/10 rounded-2xl p-5 md:p-6">
-      <h3 className="text-bone font-semibold text-base md:text-lg mb-4">Comunidade</h3>
+    <section id="comentarios" className="m-card p-5 md:p-6">
+      <h3 className="text-bone font-bold text-base md:text-lg mb-4">Comunidade</h3>
       <ul className="space-y-4 mb-4">
         {comments.map((c) => (
           <li key={c.id} className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-volt/20 grid place-items-center text-volt text-xs font-bold shrink-0">
+            <div className={`w-8 h-8 rounded-full grid place-items-center text-xs font-bold shrink-0 ${c.isFounder ? "bg-[var(--m-pink-bg,rgba(190,24,93,0.2))] text-[var(--m-pink,#BE185D)]" : "bg-bone/10 text-bone"}`}>
               {c.author[0]?.toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-bone font-medium text-sm">{c.author}</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-bone font-semibold text-sm">{c.author}</span>
                 {c.isFounder && (
-                  <span className="inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider bg-volt/20 text-volt px-1.5 py-0.5 rounded">
+                  <span className="m-chip m-chip-pink">
                     <BadgeCheck className="w-2.5 h-2.5" /> fundador
                   </span>
                 )}
-                <span className="text-bone/35 text-[10px]">· {c.createdAt}</span>
+                <span className="text-bone/45 text-[10px]">· {c.createdAt}</span>
               </div>
-              <p className={`text-sm leading-snug mt-0.5 break-words ${c.isFounder ? "text-bone" : "text-bone/80"}`}>
+              <p className={`text-sm leading-snug mt-0.5 break-words ${c.isFounder ? "text-bone font-medium" : "text-bone/85"}`}>
                 {c.body}
               </p>
             </div>
@@ -126,12 +126,12 @@ export function CommentsThread({ initial, tokenId, founderUserId }: Props) {
           onKeyDown={(e) => e.key === "Enter" && !sending && send()}
           placeholder={userId ? "Comente, faça uma pergunta…" : "Entre na Mari para comentar"}
           disabled={!userId || sending}
-          className="flex-1 bg-carbon/40 border border-bone/10 rounded-full px-4 py-2 text-sm text-bone placeholder:text-bone/35 focus:outline-none focus:border-volt/50 disabled:opacity-50"
+          className="flex-1 bg-bone/10 border border-bone/15 rounded-full px-4 py-2 text-sm text-bone placeholder:text-bone/45 focus:outline-none focus:border-bone focus:ring-2 focus:ring-bone/10 disabled:opacity-50"
         />
         <button
           onClick={send}
           disabled={!userId || sending || !text.trim()}
-          className="bg-volt text-carbon font-semibold p-2 rounded-full hover:bg-volt/90 transition-colors disabled:opacity-40"
+          className="m-cta px-3 py-2 disabled:opacity-40"
           aria-label="Enviar"
         >
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -140,3 +140,4 @@ export function CommentsThread({ initial, tokenId, founderUserId }: Props) {
     </section>
   );
 }
+
