@@ -247,6 +247,8 @@ const App = () => (
             <Route path="/investir/ligas" element={<Ligas />} />
             <Route path="/investir/fantasy" element={<Fantasy />} />
             <Route path="/investir/lives" element={<Lives />} />
+            <Route path="/investir/quiz" element={<Quiz />} />
+            <Route path="/investir/comparar" element={<Comparar />} />
             <Route path="/investir/sobre-a-mari" element={<InvestirAMariLanding />} />
             {/* Legacy redirects */}
             <Route path="/investir/empresas" element={<InvestirListagem />} />
