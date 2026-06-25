@@ -867,6 +867,124 @@ export type Database = {
         }
         Relationships: []
       }
+      company_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_founder: boolean
+          parent_id: string | null
+          token_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_founder?: boolean
+          parent_id?: string | null
+          token_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_founder?: boolean
+          parent_id?: string | null
+          token_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "company_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_comments_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_follows: {
+        Row: {
+          created_at: string
+          token_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          token_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          token_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_follows_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_posts: {
+        Row: {
+          body: string | null
+          category: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          kind: string
+          media_url: string | null
+          metrics: Json | null
+          title: string | null
+          token_id: string
+        }
+        Insert: {
+          body?: string | null
+          category?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          kind: string
+          media_url?: string | null
+          metrics?: Json | null
+          title?: string | null
+          token_id: string
+        }
+        Update: {
+          body?: string | null
+          category?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          media_url?: string | null
+          metrics?: Json | null
+          title?: string | null
+          token_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_posts_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_checks: {
         Row: {
           check_type: string
@@ -3439,6 +3557,35 @@ export type Database = {
         }
         Relationships: []
       }
+      mari_company_summaries: {
+        Row: {
+          bullets: Json | null
+          generated_at: string
+          summary: string
+          token_id: string
+        }
+        Insert: {
+          bullets?: Json | null
+          generated_at?: string
+          summary: string
+          token_id: string
+        }
+        Update: {
+          bullets?: Json | null
+          generated_at?: string
+          summary?: string
+          token_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mari_company_summaries_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: true
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mari_leads: {
         Row: {
           cidade: string | null
@@ -3515,6 +3662,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mari_social_xp: {
+        Row: {
+          last_activity_at: string | null
+          level: string
+          streak_days: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          last_activity_at?: string | null
+          level?: string
+          streak_days?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          last_activity_at?: string | null
+          level?: string
+          streak_days?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
       }
       messages: {
         Row: {
