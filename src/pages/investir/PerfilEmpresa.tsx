@@ -26,11 +26,11 @@ export default function PerfilEmpresa() {
   const [loading, setLoading] = useState(true);
   const [authed, setAuthed] = useState(false);
   const [reserveOpen, setReserveOpen] = useState(false);
+  const [aiResumo, setAiResumo] = useState<{ summary: string; bullets: { label: string; body: string }[] } | null>(null);
 
   useEffect(() => {
     if (!symbol) return;
     (async () => {
-      const seed = seedCompanies.find((s) => s.symbol === symbol);
       const { data: tk } = await supabase.from("tokens").select("*").eq("symbol", symbol).maybeSingle();
       if (tk) {
         setToken(tk);
@@ -38,8 +38,25 @@ export default function PerfilEmpresa() {
           const { data: l } = await supabase.from("listings").select("*").eq("id", tk.listing_id).maybeSingle();
           setListing(l);
         }
-      } else if (!seed) {
-        // nem token real nem seed
+        // Resumo IA — cache-first leitura direta, fallback edge function
+        const { data: cached } = await supabase
+          .from("mari_company_summaries")
+          .select("summary,bullets,generated_at")
+          .eq("token_id", tk.id)
+          .maybeSingle();
+        const fresh =
+          cached?.generated_at &&
+          Date.now() - new Date(cached.generated_at).getTime() < 6 * 3600 * 1000;
+        if (cached && fresh) {
+          setAiResumo({ summary: cached.summary, bullets: (cached.bullets as any) || [] });
+        } else {
+          supabase.functions
+            .invoke("mari-resumo-empresa", { body: { token_id: tk.id } })
+            .then(({ data }) => {
+              if (data?.summary) setAiResumo({ summary: data.summary, bullets: data.bullets || [] });
+            })
+            .catch(() => {});
+        }
       }
       const { data: u } = await supabase.auth.getUser();
       setAuthed(!!u.user);
@@ -126,13 +143,21 @@ export default function PerfilEmpresa() {
 
           {/* 3. Resumo IA */}
           <ResumoIA
-            summary={`${company.name} apresenta evolução consistente nos últimos meses, com crescimento de receita, governança auditada e comunicação ativa com a comunidade.`}
-            bullets={[
-              { label: "Mudanças", body: "Nova unidade inaugurada e time +60%." },
-              { label: "Indicadores", body: "Receita +41% e NPS estável em 78." },
-              { label: "Riscos", body: "Pressão de custo de insumos mitigada parcialmente." },
-            ]}
+            summary={
+              aiResumo?.summary ||
+              `${company.name} apresenta evolução consistente nos últimos meses, com crescimento de receita, governança auditada e comunicação ativa com a comunidade.`
+            }
+            bullets={
+              aiResumo?.bullets && aiResumo.bullets.length > 0
+                ? aiResumo.bullets
+                : [
+                    { label: "Mudanças", body: "Nova unidade inaugurada e time +60%." },
+                    { label: "Indicadores", body: "Receita +41% e NPS estável em 78." },
+                    { label: "Riscos", body: "Pressão de custo de insumos mitigada parcialmente." },
+                  ]
+            }
           />
+
 
           {/* 4. Timeline */}
           <TimelineMarcos items={seedTimeline} />
