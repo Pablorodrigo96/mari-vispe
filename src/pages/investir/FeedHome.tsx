@@ -87,6 +87,52 @@ export default function FeedHome() {
     })();
   }, []);
 
+  // Stories reais (importados pelo fundador via /investir/empresa/:symbol/stories)
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("company_stories")
+        .select("id, token_id, slide_order, media_type, media_url, caption, published_at, expires_at, tokens:token_id(id, symbol, name, risk_level)")
+        .gt("expires_at", new Date().toISOString())
+        .order("token_id")
+        .order("slide_order");
+      if (!data?.length) return;
+      const byToken = new Map<string, any[]>();
+      data.forEach((r: any) => {
+        const list = byToken.get(r.token_id) || [];
+        list.push(r);
+        byToken.set(r.token_id, list);
+      });
+      const realStories: StoryItem[] = [];
+      byToken.forEach((rows) => {
+        const t = rows[0].tokens || {};
+        if (!t.symbol) return;
+        const comp: CompanyMini = {
+          id: t.id, symbol: t.symbol, name: t.name,
+          sector: t.risk_level, cover: sectorToCover(t.risk_level), avatar: sectorToCover(t.risk_level),
+        };
+        const slides = rows.map((r: any) => ({
+          media: r.media_url,
+          kind: r.media_type === "video" ? "real_video" as const
+              : r.media_type === "instagram_embed" ? "instagram_embed" as const
+              : "real_image" as const,
+          title: r.caption || comp.name,
+        }));
+        realStories.push({
+          id: `live-${rows[0].token_id}`, company: comp, actor: "company",
+          slides, isLive: true,
+          media: slides[0].media, kind: slides[0].kind, title: slides[0].title,
+          createdAt: rows[0].published_at,
+        });
+      });
+      // Stories ao vivo entram primeiro, deduplicando pelo symbol
+      setStories((prev) => {
+        const liveSymbols = new Set(realStories.map((s) => s.company.symbol));
+        return [...realStories, ...prev.filter((s) => !liveSymbols.has(s.company.symbol))];
+      });
+    })();
+  }, []);
+
   // Atualizações recentes (company_posts reais)
   useEffect(() => {
     (async () => {

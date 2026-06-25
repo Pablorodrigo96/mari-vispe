@@ -1,114 +1,89 @@
-## Auditoria do prompt mestre — o que já está pronto e o que falta
 
-### Já entregue (confirmado no código)
-- Feed Home social com saudação, StoriesBar, CategoryStrip humanas, FeedCards, faixas "Em alta" e "Perto de concluir", bloco Missões/Ligas/Lives.
-- Perfil da empresa na ordem da espec (História → Vídeo → Resumo IA → Timeline → Diário → Score → Comentários → Investir por último).
-- Componentes sociais: StoriesBar, FeedCard, CompanyHero, ResumoIA, ScoreMari (multi-eixo + nível), TimelineMarcos, DiarioFeed, CommentsThread, FollowButton.
-- Páginas: Descobrir (categorias humanas), Missões (XP por comportamento + streak + níveis Bronze→Platina), Ligas por setor, Fantasy Business, Lives (calendário estático).
-- Bottom tab social: Início · Descobrir · Missões · Ligas · Minha Mari.
-- Tabelas Supabase com RLS: `company_follows`, `company_posts`, `company_comments`, `mari_social_xp`, `mari_company_summaries`.
-- Tema White (toggle sol/lua) acabado de entregar.
-- Discurso reescrito: hero "Empresas reais crescendo agora", CTA principal "Quero ser sócio", `/investir/sobre-a-mari` recolocando o material comercial antigo.
+# Stories reais: importação manual pelo fundador
 
-### Lacunas vs prompt mestre (o que falta)
+Sem scraping, sem OAuth do Instagram. O fundador da empresa cola o link/print do story dele e a Mari espelha como slide nativo nas bolinhas do topo do feed. Stories reais convivem com os mockados de `socialSeed.ts` — empresa que tiver story importado nas últimas 24h aparece com anel "AO VIVO" e abre os slides reais; o resto continua mostrando o seed.
 
-1. **Story Viewer fullscreen** — hoje clicar num story só leva pro perfil. Falta o player estilo Instagram (tela cheia, vídeo/foto/texto/indicador, auto-advance 5s, barrinhas no topo, swipe entre stories da mesma empresa e entre empresas, tap para pausar).
-2. **Stories do fundador** — espec separa "stories da empresa" de "stories do fundador". Hoje só temos um conjunto por empresa.
-3. **Onboarding de interesses** — não existe `/investir/onboarding/interesses`. Espec exige perguntar antes de KYC: "Quais negócios você gosta? Você é empresário? Setor? Cidade? Empresas que conhece?". Hoje o fluxo entra direto em KYC.
-4. **Edge function de Resumo IA real** (`mari-resumo-empresa`) — várias `mari-*` existem para CRM, mas nenhuma gera o resumo 30s + bullets para perfil de empresa a partir de `company_posts`. Hoje o `ResumoIA` no perfil é texto fixo.
-5. **Notificações de acontecimento** — espec lista: "Empresa abriu nova unidade", "Fundador publicou atualização", "Empresa concluiu rodada", "Empresa atingiu meta", "Novo contrato". Tabela `notifications` existe, mas sem trigger/conexão com `company_posts` nem com mudanças em `tokens`.
-6. **Faixas de feed faltantes** — espec lista 8 faixas; só temos 2. Faltam: "Da sua região", "Que você segue", "Recém adicionadas", "Atingindo metas", "Lives programadas (in-feed)", "Atualizações recentes".
-7. **Comentários persistidos de verdade** — `CommentsThread` só usa estado local; não lê nem grava em `company_comments` (que já existe com RLS).
-8. **Quiz diário + Comparador de empresas** — missões mencionam "responder quiz" e "comparar empresas"; nenhuma das duas telas existe.
-9. **Calendário de lives funcional** — `Lives.tsx` é estático; sem persistência, sem botão "Lembrar" funcional, sem detalhe de live, sem badge "AO VIVO" no feed/perfil.
-10. **Editor do fundador (postar story/diário/live)** — sem UI para founder publicar nada. Tabelas existem, mas sem CMS mínimo.
-11. **Badges de sequência/nível no perfil do usuário** — XP existe na tela Missões mas o painel/perfil do usuário não exibe medalhas, streak nem nível.
-12. **Sweep de copy comercial residual** — varredura final em páginas institucionais/Wallet/Reservas/Painel para remover termos "home broker", "tokenização", "equity crowdfunding" da superfície (mantendo nas páginas regulatórias).
+## O que muda pro usuário
 
----
+- **Fundador (dono da empresa)**: novo bloco "Stories do Instagram" no editor da empresa. Cola URL do story público OU faz upload de imagem/vídeo (print/recorte), escreve legenda opcional, marca como "AO VIVO 24h". Pode adicionar até 5 slides por vez.
+- **Investidor (feed)**: as bolinhas no topo do `FeedHome` priorizam empresas com stories reais ativos (não expirados). Visualmente ganham um ring extra (já temos gradiente Volt — adiciona um pulse sutil). Ao tocar, o `StoryViewer` mostra os slides reais antes (ou no lugar) dos mockados.
+- **Expiração**: stories somem automaticamente 24h após o `published_at`, igual Instagram. Job de limpeza roda no fetch (filtra `expires_at > now()`).
 
-## Plano de execução (em ordem)
+## Arquitetura
 
-### Fase 1 — Conteúdo vivo e relacionamento (alto impacto, baixo risco)
+### 1. Banco — nova tabela `company_stories`
 
-**1.1 Story Viewer fullscreen**
-- Novo componente `StoryViewer.tsx` (overlay 100vh, barrinhas de progresso, auto-advance, tap esquerda/direita, swipe entre empresas, ESC fecha).
-- Integrar no `StoriesBar`: clicar abre o viewer em vez de navegar pro perfil.
-- Adicionar campo `founder_avatar` opcional no seed e botão "Conhecer empresa" no rodapé do viewer.
+```text
+company_stories
+├── id uuid pk
+├── token_id uuid → tokens(id)   (qual empresa)
+├── author_id uuid → auth.users   (quem postou — fundador/advisor)
+├── slide_order int               (ordem dentro do conjunto)
+├── media_type text               ('image' | 'video' | 'text')
+├── media_url text                (storage público OU URL externa)
+├── caption text                  (legenda opcional)
+├── source text                   ('manual_upload' | 'instagram_link')
+├── source_url text               (link original do IG, se houver)
+├── published_at timestamptz default now()
+├── expires_at timestamptz        (default now() + 24h, trigger)
+└── created_at, updated_at
+```
 
-**1.2 Stories do fundador (separados)**
-- `StoryItem` ganha `actor: 'company' | 'founder'`.
-- `StoriesBar` mostra anel diferente para fundador (gradiente Volt+rosa) e legenda "Fundador".
+- **Grants + RLS**: SELECT público (`anon` + `authenticated`) para slides não expirados; INSERT/UPDATE/DELETE apenas para `author_id = auth.uid()` E (dono do token via `tokens.owner_id` OU role advisor/admin via `has_role`).
+- **Storage bucket** `company-stories` (público, 10MB por arquivo, image/* e video/mp4).
+- **Trigger** que seta `expires_at = published_at + interval '24 hours'`.
 
-**1.3 Onboarding de interesses**
-- Nova página `/investir/onboarding/interesses` com 4 micro-steps: setores favoritos (chips), é empresário?, cidade, empresas que admira (autocomplete dos seeds).
-- Persistir em `profiles` (campo `interests jsonb`) — migração curta.
-- `InvestirAuth.tsx` redireciona para `interesses` antes de `kyc` quando user novo.
-- Feed Home lê interesses pra ordenar faixas (região, setores escolhidos).
+### 2. Editor do fundador — `src/pages/investir/founder/StoriesManager.tsx` (novo)
 
-**1.4 Faixas de feed faltantes**
-- Em `FeedHome.tsx` adicionar `HighlightStrip` para: "📍 Perto de você" (filtra por cidade/UF do profile), "👀 Empresas que você segue", "🆕 Recém-chegadas na Mari" (order by created_at), "🎯 Atingindo metas" (token com `pct >= 90`), "📅 Lives agendadas" (lê tabela `lives` ou seed por enquanto), "🔔 Atualizações recentes" (últimos `company_posts` tipo `diario`).
+Acessível em `/investir/empresa/:symbol/stories` (só para owner/advisor). Layout:
 
-**1.5 Comentários persistidos**
-- `CommentsThread` lê/escreve em `company_comments` quando há `company_id`; mantém fallback local para seeds.
-- Mostra `is_founder` automaticamente quando o autor é founder do listing.
+```text
+┌─────────────────────────────────────┐
+│  Stories ativos (próximas 24h)      │
+│  [thumb1] [thumb2] [+ adicionar]    │
+├─────────────────────────────────────┤
+│  Novo slide                         │
+│  ○ Upload (imagem/vídeo)            │
+│  ○ Link público do Instagram        │
+│  [campo URL ou dropzone]            │
+│  [legenda opcional]                 │
+│  [publicar]                         │
+└─────────────────────────────────────┘
+```
 
-### Fase 2 — Inteligência e notificações
+- Upload vai pro bucket `company-stories`, devolve `media_url`.
+- Para link IG: tentamos extrair o ID do post (`/p/`, `/reel/`, `/stories/<user>/<id>`) e salvamos como `source='instagram_link'`. O StoryViewer renderiza um `<iframe>` do embed oficial do Instagram (`https://www.instagram.com/p/<id>/embed`) — funciona pra posts/reels públicos sem API. Stories propriamente ditos do IG **não têm embed público**; nesses casos a UI obriga upload de print/vídeo.
 
-**2.1 Edge function `mari-resumo-empresa`**
-- Nova função em `supabase/functions/mari-resumo-empresa/index.ts` usando Lovable AI Gateway (`google/gemini-2.5-flash`).
-- Input: `company_id`. Lê últimos 10 `company_posts` + dados do `tokens/listings`. Output: `{ summary, bullets[3] }`.
-- Grava em `mari_company_summaries` com TTL 24h. `ResumoIA` consome essa cache via RPC.
+### 3. Feed e StoryViewer — alterações
 
-**2.2 Notificações de acontecimento**
-- Trigger em `company_posts` (after insert) → cria notification para todos os `company_follows`.
-- Edge function `mari-event-notify` para eventos de `tokens` (rodada concluída, meta atingida).
-- Mensagens em linguagem humana: "🏗️ Empresa X inaugurou nova unidade", "💬 Fundador publicou uma atualização", etc.
+- `src/components/investir/social/StoriesBar.tsx`: nova query que busca `company_stories` agrupado por `token_id` com `expires_at > now()`, junta com tokens, e mistura com o seed. Empresas com story real vão pro topo com ring `animate-pulse`.
+- `src/components/investir/social/StoryViewer.tsx`: aceita um novo tipo de `StorySlide` (`real_image`, `real_video`, `instagram_embed`). Vídeos pausam o auto-advance até terminar; embeds IG ficam 8s no ar.
+- `src/types/social.ts`: estende `StorySlide` com os 3 novos kinds.
+- `src/data/socialSeed.ts`: passa a ser fallback — usado só quando a empresa não tem stories reais ativos.
 
-### Fase 3 — Gamificação e descoberta
+### 4. Painel do fundador
 
-**3.1 Quiz diário**
-- Nova rota `/investir/quiz` com 3 perguntas/dia sobre empresas seguidas. Acerto = +25 XP, grava em `mari_social_xp`.
-- Card "Quiz de hoje" no topo de `/investir/missoes`.
-
-**3.2 Comparador de empresas**
-- Nova rota `/investir/comparar` (até 3 empresas lado a lado: Score Mari por eixo, rodada, setor, indicadores). +20 XP por comparação salva.
-
-**3.3 Badges no perfil do usuário**
-- Componente `UserBadgesStrip` (Bronze/Prata/Ouro/Platina, streak 7d/30d, primeiro comentário, primeiro seguidor, primeira reserva).
-- Renderiza no `/investir/painel` topo.
-
-### Fase 4 — Lives reais
-
-**4.1 Tabela `lives` (id, company_id, scheduled_at, status, embed_url)** + RLS.
-**4.2 Página de detalhe `/investir/live/:id`** com placeholder de player (iframe/YouTube live) + chat usando `company_comments`.
-**4.3 Botão "Lembrar"** persistido em tabela `live_reminders` + notification 30min antes.
-**4.4 Badge "AO VIVO"** no `StoriesBar`, `FeedCard` e `CompanyHero` quando `live.status='live'`.
-
-### Fase 5 — Editor do fundador (mínimo)
-
-**5.1 `/investir/empresa/:symbol/postar`** (gate: só founder do listing). Form simples: tipo (story/diário/live), categoria, mídia, texto. Grava em `company_posts`.
-**5.2 Botão "Publicar atualização"** no `CompanyHero` quando user é o founder.
-
-### Fase 6 — Sweep de discurso
-
-**6.1 Varredura `rg`** por: "home broker", "crowdfunding", "tokenização", "token de", "security token", "ativo digital". Substituir na superfície mantendo nas páginas regulatórias.
-**6.2 Microcopy de erros/empty states** em pt-BR humano.
-
----
+Adiciona card "Stories" no `/investir/empresa/:symbol` quando `useIsOwner()` for true, mostrando contador "X stories ativos · expira em Yh" e CTA "Gerenciar stories".
 
 ## Detalhes técnicos
 
-- **Migrações novas**: `profiles.interests jsonb`, `lives` table + RLS + GRANTs, `live_reminders` table + RLS + GRANTs. Triggers em `company_posts` para notification fanout (com função SECURITY DEFINER).
-- **Edge functions novas**: `mari-resumo-empresa`, `mari-event-notify`. Ambas com `verify_jwt = false` quando consumidas em página pública; chamadas server-side via RPC quando precisar de auth.
-- **Sem mudança em**: ReservationModal, KYC/Suitability, ledger, wallet, compliance, sidebar PME.B3, qualquer rota fora de `/investir`.
-- **Tema White**: continua aplicado automaticamente; novos componentes seguem padrão `text-bone/bg-graphite/bg-volt` que a camada `.mari-light` já remapeia.
-- **Performance**: Story Viewer carrega lazy; faixas extras do feed usam mesmas queries já feitas (apenas filtros adicionais em memória).
+- **Sem edge function nova** — tudo client → Supabase direto. Upload usa `supabase.storage.from('company-stories').upload(...)`.
+- **Validação** com zod: URL Instagram (regex `instagram.com/(p|reel|stories)/`), arquivo ≤10MB, caption ≤200 chars.
+- **Limpeza**: não precisa cron — basta filtrar `expires_at > now()` em todo `select`. Opcionalmente, migration adiciona um cron `pg_cron` que `delete from company_stories where expires_at < now() - interval '7 days'` (mantém histórico curto pra analytics).
+- **Embed do Instagram**: usar `<iframe src="https://www.instagram.com/p/<id>/embed/captioned" />` (sem necessidade de script oficial). Adicionar `loading="lazy"` e `sandbox`.
+- **Realtime opcional** (fora desta fase): assinatura no `StoriesBar` pra atualizar ao vivo quando fundador publica.
 
-## Ordem de entrega sugerida
+## Fora de escopo (intencional)
 
-Fase 1 (1.1 → 1.5) entrega 80% do "wow" social visível. Fase 2 entrega inteligência. Fases 3–5 podem ser fatiadas em PRs separados. Fase 6 fecha o discurso.
+- Importação automática do feed @ do Instagram.
+- OAuth/Graph API.
+- Métricas de visualização (quem viu o story) — fica pra fase de analytics.
+- Stories com stickers/menções/sondagens.
 
-## Pergunta antes de começar
+## Entregáveis
 
-Quer que eu entregue **tudo de uma vez** (PR grande, ~12–15 arquivos novos + 2 migrações + 2 edge functions) ou prefere fatiar **fase por fase** com checkpoint visual entre elas?
+1. Migration: tabela `company_stories` + bucket `company-stories` + RLS + trigger expires_at.
+2. `StoriesManager.tsx` (editor) + rota.
+3. Atualizações em `StoriesBar.tsx`, `StoryViewer.tsx`, `socialSeed.ts`, `types/social.ts`.
+4. Card "Stories" em `PerfilEmpresa.tsx` para owner/advisor.
+5. Item "Stories" no `FounderEditor` se já existir esse hub, senão link direto do perfil da empresa.

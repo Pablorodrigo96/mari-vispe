@@ -985,6 +985,62 @@ export type Database = {
           },
         ]
       }
+      company_stories: {
+        Row: {
+          author_id: string
+          caption: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          media_type: string
+          media_url: string
+          published_at: string
+          slide_order: number
+          source: string
+          source_url: string | null
+          token_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_type: string
+          media_url: string
+          published_at?: string
+          slide_order?: number
+          source?: string
+          source_url?: string | null
+          token_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_type?: string
+          media_url?: string
+          published_at?: string
+          slide_order?: number
+          source?: string
+          source_url?: string | null
+          token_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_stories_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_checks: {
         Row: {
           check_type: string
@@ -8125,6 +8181,10 @@ export type Database = {
       }
       can_advance_stage: {
         Args: { _deal_id: string; _from_stage: string }
+        Returns: boolean
+      }
+      can_manage_company_stories: {
+        Args: { _token_id: string; _user_id: string }
         Returns: boolean
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }

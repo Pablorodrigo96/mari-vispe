@@ -20,17 +20,24 @@ export function StoriesBar({ stories }: { stories: StoryItem[] }) {
                 >
                   <div
                     className={`p-[2px] rounded-full ${
-                      isFounder
+                      s.isLive
+                        ? "bg-gradient-to-tr from-pink-500 via-volt to-rose-400 animate-pulse"
+                        : isFounder
                         ? "bg-gradient-to-tr from-pink-400 via-volt to-amber-300"
                         : "bg-gradient-to-tr from-volt via-volt to-amber-300"
                     }`}
                   >
-                    <div className="p-[2px] rounded-full bg-carbon">
+                    <div className="p-[2px] rounded-full bg-carbon relative">
                       <img
                         src={(isFounder && s.founderAvatar) || s.company.avatar || s.media}
                         alt={s.company.name}
                         className="w-[70px] h-[70px] md:w-[80px] md:h-[80px] rounded-full object-cover"
                       />
+                      {s.isLive && (
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] uppercase tracking-wider bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded-full">
+                          ao vivo
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="mt-1.5 text-[11px] md:text-xs text-bone/85 text-center truncate group-hover:text-volt transition-colors">
