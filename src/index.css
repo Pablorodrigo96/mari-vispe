@@ -146,7 +146,7 @@
   color: hsl(74 75% 22%);
 }
 :root:not(.dark) .border-volt,
-:root:not(.dark) [class*="border-volt\/"] {
+:root:not(.dark) [class*="border-volt/"] {
   border-color: hsl(74 70% 32% / 0.55);
 }
 
