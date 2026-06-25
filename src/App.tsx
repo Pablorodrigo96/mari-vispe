@@ -156,8 +156,16 @@ const DealPairDetailPage = lazy(() => import("./pages/equity-brain/DealPairDetai
 const NboWizardPage = lazy(() => import("./pages/equity-brain/NboWizardPage"));
 const LegalLibraryPage = lazy(() => import("./pages/equity-brain/LegalLibraryPage"));
 
-// /investir — porta de entrada B2C de ativos tokenizados
-const InvestirHome = lazy(() => import("./pages/investir/InvestirHome"));
+// /investir — REDE SOCIAL PATRIMONIAL (feed, perfis, ligas, missões)
+const FeedHome = lazy(() => import("./pages/investir/FeedHome"));
+const PerfilEmpresa = lazy(() => import("./pages/investir/PerfilEmpresa"));
+const Descobrir = lazy(() => import("./pages/investir/Descobrir"));
+const Missoes = lazy(() => import("./pages/investir/Missoes"));
+const Ligas = lazy(() => import("./pages/investir/Ligas"));
+const Fantasy = lazy(() => import("./pages/investir/Fantasy"));
+const Lives = lazy(() => import("./pages/investir/Lives"));
+const InvestirAMariLanding = lazy(() => import("./pages/investir/sobre/InvestirAMariLanding"));
+// Legacy /investir pages (mantidas pra rotas regulatórias e fluxo de reserva)
 const InvestirListagem = lazy(() => import("./pages/investir/InvestirListagem"));
 const InvestirAtivo = lazy(() => import("./pages/investir/InvestirAtivo"));
 const InvestirAuth = lazy(() => import("./pages/investir/InvestirAuth"));
@@ -228,8 +236,16 @@ const App = () => (
             <Route path="/investors" element={<Investors />} />
             <Route path="/comprar" element={<Investors />} />
 
-            {/* /investir — porta de entrada B2C tokenizada (sem AppShell) */}
-            <Route path="/investir" element={<InvestirHome />} />
+            {/* /investir — Rede social patrimonial */}
+            <Route path="/investir" element={<FeedHome />} />
+            <Route path="/investir/empresa/:symbol" element={<PerfilEmpresa />} />
+            <Route path="/investir/descobrir" element={<Descobrir />} />
+            <Route path="/investir/missoes" element={<Missoes />} />
+            <Route path="/investir/ligas" element={<Ligas />} />
+            <Route path="/investir/fantasy" element={<Fantasy />} />
+            <Route path="/investir/lives" element={<Lives />} />
+            <Route path="/investir/sobre-a-mari" element={<InvestirAMariLanding />} />
+            {/* Legacy redirects */}
             <Route path="/investir/empresas" element={<InvestirListagem />} />
             <Route path="/investir/ativo/:symbol" element={<InvestirAtivo />} />
             <Route path="/investir/auth" element={<InvestirAuth />} />
