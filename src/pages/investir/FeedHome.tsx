@@ -87,16 +87,20 @@ export default function FeedHome() {
     })();
   }, []);
 
-  // Stories reais (importados pelo fundador via /investir/empresa/:symbol/stories)
+  // Stories reais (importados pelo fundador) + AUTO-gerados por IA
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("company_stories")
-        .select("id, token_id, slide_order, media_type, media_url, caption, published_at, expires_at, tokens:token_id(id, symbol, name, risk_level)")
+        .select("id, token_id, slide_order, slide_index, media_type, media_url, caption, overlay, source, published_at, expires_at, tokens:token_id(id, symbol, name, risk_level)")
         .gt("expires_at", new Date().toISOString())
         .order("token_id")
+        .order("slide_index", { nullsFirst: false })
         .order("slide_order");
-      if (!data?.length) return;
+      if (!data?.length) {
+        await maybeTriggerAutoGen();
+        return;
+      }
       const byToken = new Map<string, any[]>();
       data.forEach((r: any) => {
         const list = byToken.get(r.token_id) || [];
@@ -107,31 +111,68 @@ export default function FeedHome() {
       byToken.forEach((rows) => {
         const t = rows[0].tokens || {};
         if (!t.symbol) return;
+        const isAuto = rows.every((r) => r.source === "auto_generated");
+        const isLive = rows.some((r) => r.source !== "auto_generated");
         const comp: CompanyMini = {
           id: t.id, symbol: t.symbol, name: t.name,
-          sector: t.risk_level, cover: sectorToCover(t.risk_level), avatar: sectorToCover(t.risk_level),
+          sector: t.risk_level, cover: sectorToCover(t.risk_level),
+          avatar: sectorToCover(t.risk_level),
         };
-        const slides = rows.map((r: any) => ({
-          media: r.media_url,
-          kind: r.media_type === "video" ? "real_video" as const
-              : r.media_type === "instagram_embed" ? "instagram_embed" as const
-              : "real_image" as const,
-          title: r.caption || comp.name,
-        }));
+        const slides = rows.map((r: any) => {
+          if (r.source === "auto_generated") {
+            return {
+              media: r.media_url,
+              kind: "auto" as const,
+              title: r.overlay?.headline || r.caption || comp.name,
+              overlay: r.overlay || undefined,
+            };
+          }
+          return {
+            media: r.media_url,
+            kind: r.media_type === "video" ? "real_video" as const
+                : r.media_type === "instagram_embed" ? "instagram_embed" as const
+                : "real_image" as const,
+            title: r.caption || comp.name,
+          };
+        });
         realStories.push({
-          id: `live-${rows[0].token_id}`, company: comp, actor: "company",
-          slides, isLive: true,
+          id: `${isAuto ? "auto" : "live"}-${rows[0].token_id}`,
+          company: comp, actor: "company",
+          slides, isLive, isAuto,
           media: slides[0].media, kind: slides[0].kind, title: slides[0].title,
           createdAt: rows[0].published_at,
         });
       });
-      // Stories ao vivo entram primeiro, deduplicando pelo symbol
+      // Ordem: manual (live) primeiro, depois auto
+      realStories.sort((a, b) => (a.isLive === b.isLive ? 0 : a.isLive ? -1 : 1));
       setStories((prev) => {
         const liveSymbols = new Set(realStories.map((s) => s.company.symbol));
         return [...realStories, ...prev.filter((s) => !liveSymbols.has(s.company.symbol))];
       });
+      await maybeTriggerAutoGen();
     })();
   }, []);
+
+  // Dispara geração auto pra até 3 tokens ativos sem stories
+  async function maybeTriggerAutoGen() {
+    const { data: tokens } = await supabase
+      .from("tokens")
+      .select("id")
+      .in("status", ["primary_open", "approved", "issued"])
+      .limit(6);
+    if (!tokens?.length) return;
+    const { data: existing } = await supabase
+      .from("company_stories")
+      .select("token_id")
+      .in("token_id", tokens.map((t: any) => t.id))
+      .gt("expires_at", new Date().toISOString());
+    const have = new Set((existing || []).map((r: any) => r.token_id));
+    const missing = tokens.filter((t: any) => !have.has(t.id)).slice(0, 3);
+    missing.forEach((t: any) => {
+      supabase.functions.invoke("generate-company-stories", { body: { token_id: t.id } }).catch(() => {});
+    });
+  }
+
 
   // Atualizações recentes (company_posts reais)
   useEffect(() => {

@@ -987,14 +987,16 @@ export type Database = {
       }
       company_stories: {
         Row: {
-          author_id: string
+          author_id: string | null
           caption: string | null
           created_at: string
           expires_at: string
           id: string
           media_type: string
           media_url: string
+          overlay: Json | null
           published_at: string
+          slide_index: number | null
           slide_order: number
           source: string
           source_url: string | null
@@ -1002,14 +1004,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          author_id: string
+          author_id?: string | null
           caption?: string | null
           created_at?: string
           expires_at?: string
           id?: string
           media_type: string
           media_url: string
+          overlay?: Json | null
           published_at?: string
+          slide_index?: number | null
           slide_order?: number
           source?: string
           source_url?: string | null
@@ -1017,14 +1021,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          author_id?: string
+          author_id?: string | null
           caption?: string | null
           created_at?: string
           expires_at?: string
           id?: string
           media_type?: string
           media_url?: string
+          overlay?: Json | null
           published_at?: string
+          slide_index?: number | null
           slide_order?: number
           source?: string
           source_url?: string | null

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { X, ChevronLeft, ChevronRight, BadgeCheck } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, BadgeCheck, Zap } from "lucide-react";
 import type { StoryItem } from "@/types/social";
+import { StoryAutoOverlay } from "./StoryAutoOverlay";
 
 const SLIDE_MS_DEFAULT = 5000;
 const SLIDE_MS_EMBED = 9000;
@@ -189,23 +190,48 @@ export function StoryViewer({
 
         {/* conteúdo */}
         <div className="absolute inset-x-0 bottom-0 p-5 pb-7 z-10 text-white">
-          {current.kind === "indicator" && current.indicator && (
-            <div className="mb-3 inline-flex items-baseline gap-2 bg-white/10 backdrop-blur px-3 py-2 rounded-2xl">
-              <span className="text-white/70 text-[11px] uppercase tracking-wider">{current.indicator.label}</span>
-              <span className="text-white font-bold text-2xl tabular-nums">{current.indicator.value}</span>
-              {current.indicator.delta && <span className="text-volt text-xs font-semibold">{current.indicator.delta}</span>}
-            </div>
+          {current.kind === "auto" && current.overlay ? (
+            <StoryAutoOverlay overlay={current.overlay} />
+          ) : (
+            <>
+              {current.kind === "indicator" && current.indicator && (
+                <div className="mb-3 inline-flex items-baseline gap-2 bg-white/10 backdrop-blur px-3 py-2 rounded-2xl">
+                  <span className="text-white/70 text-[11px] uppercase tracking-wider">{current.indicator.label}</span>
+                  <span className="text-white font-bold text-2xl tabular-nums">{current.indicator.value}</span>
+                  {current.indicator.delta && <span className="text-volt text-xs font-semibold">{current.indicator.delta}</span>}
+                </div>
+              )}
+              <h3 className="text-white font-semibold text-lg md:text-xl leading-snug">{current.title}</h3>
+              {current.body && <p className="text-white/80 text-sm mt-1.5 leading-relaxed">{current.body}</p>}
+            </>
           )}
-          <h3 className="text-white font-semibold text-lg md:text-xl leading-snug">{current.title}</h3>
-          {current.body && <p className="text-white/80 text-sm mt-1.5 leading-relaxed">{current.body}</p>}
 
-          <Link
-            to={`/investir/empresa/${story.company.symbol}`}
-            onClick={onClose}
-            className="mt-4 inline-flex items-center justify-center w-full bg-white text-carbon font-semibold py-3 rounded-full text-sm hover:bg-volt transition-colors"
-          >
-            Conhecer {story.company.name}
-          </Link>
+          {story.isAuto ? (
+            <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+              <Link
+                to={`/investir/empresa/${story.company.symbol}`}
+                onClick={onClose}
+                className="inline-flex items-center justify-center bg-white text-carbon font-semibold py-3 rounded-full text-sm hover:bg-white/90 transition-colors truncate px-4"
+              >
+                Conhecer {story.company.name}
+              </Link>
+              <Link
+                to={`/investir/empresa/${story.company.symbol}?reservar=50#investir`}
+                onClick={onClose}
+                className="inline-flex items-center justify-center gap-1.5 bg-volt text-carbon font-bold py-3 px-4 rounded-full text-sm hover:bg-volt/90 transition-colors whitespace-nowrap"
+              >
+                <Zap className="w-3.5 h-3.5" /> Investir R$ 50
+              </Link>
+            </div>
+          ) : (
+            <Link
+              to={`/investir/empresa/${story.company.symbol}`}
+              onClick={onClose}
+              className="mt-4 inline-flex items-center justify-center w-full bg-white text-carbon font-semibold py-3 rounded-full text-sm hover:bg-volt transition-colors"
+            >
+              Conhecer {story.company.name}
+            </Link>
+          )}
         </div>
       </div>
     </div>

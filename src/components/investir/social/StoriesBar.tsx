@@ -22,6 +22,8 @@ export function StoriesBar({ stories }: { stories: StoryItem[] }) {
                     className={`p-[2.5px] rounded-full ${
                       s.isLive
                         ? "m-ring-live animate-pulse"
+                        : s.isAuto
+                        ? "m-ring-live"
                         : isFounder
                         ? "m-ring-company"
                         : "m-ring-default"

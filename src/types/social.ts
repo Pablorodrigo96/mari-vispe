@@ -11,12 +11,20 @@ export type CompanyMini = {
 
 export type StorySlide = {
   media: string;
-  kind: "photo" | "video" | "milestone" | "text" | "indicator" | "real_image" | "real_video" | "instagram_embed";
+  kind: "photo" | "video" | "milestone" | "text" | "indicator" | "real_image" | "real_video" | "instagram_embed" | "auto";
   title: string;
   body?: string;
   indicator?: { label: string; value: string; delta?: string };
   /** Para slides reais importados pelo fundador */
   realSourceUrl?: string;
+  /** Overlay narrativo dos stories auto-gerados */
+  overlay?: {
+    kpi_label?: string;
+    kpi_value?: string;
+    delta?: string;
+    headline?: string;
+    sub?: string;
+  };
 };
 
 export type StoryItem = {
@@ -28,13 +36,15 @@ export type StoryItem = {
   slides: StorySlide[];
   // legado (1 slide compat)
   media: string;
-  kind: "photo" | "video" | "milestone" | "text" | "indicator" | "real_image" | "real_video" | "instagram_embed";
+  kind: "photo" | "video" | "milestone" | "text" | "indicator" | "real_image" | "real_video" | "instagram_embed" | "auto";
   title: string;
   body?: string;
   ctaLabel?: string;
   createdAt: string;
   /** Marca quando slides vieram de import real (não-seed) — anel pulsante "AO VIVO" */
   isLive?: boolean;
+  /** Stories auto-gerados por IA (5 slides, ticket R$50) */
+  isAuto?: boolean;
 };
 
 export type FeedPost = {
