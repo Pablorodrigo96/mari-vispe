@@ -255,10 +255,10 @@ function HighlightStrip({ icon, title, items }: { icon?: React.ReactNode; title:
   return (
     <section className="max-w-[1100px] mx-auto px-5 md:px-6 py-2">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-bone font-semibold text-base md:text-lg inline-flex items-center gap-2">
+        <h2 className="text-bone font-bold text-base md:text-lg inline-flex items-center gap-2">
           {icon}{title}
         </h2>
-        <Link to="/investir/descobrir" className="text-xs text-bone/55 hover:text-volt">Ver mais</Link>
+        <Link to="/investir/descobrir" className="text-xs text-bone/65 hover:text-bone font-semibold underline-offset-2 hover:underline">Ver mais</Link>
       </div>
       <div className="overflow-x-auto no-scrollbar -mx-5 md:-mx-6 px-5 md:px-6">
         <ul className="flex gap-3 min-w-min pb-2">
@@ -266,17 +266,17 @@ function HighlightStrip({ icon, title, items }: { icon?: React.ReactNode; title:
             <li key={p.id} className="shrink-0 w-[240px] md:w-[280px]">
               <Link
                 to={`/investir/empresa/${p.company.symbol}`}
-                className="block rounded-2xl overflow-hidden border border-bone/10 bg-graphite/40 hover:border-volt/40 transition-colors"
+                className="m-card m-card-hover block overflow-hidden"
               >
                 <div className="aspect-[4/3] overflow-hidden bg-carbon">
                   <img src={p.media} alt={p.company.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="p-3">
-                  <div className="text-[10px] uppercase tracking-wider text-volt">{p.category}</div>
-                  <div className="text-bone font-medium text-sm mt-0.5 truncate">{p.company.name}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-volt font-bold">{p.category}</div>
+                  <div className="text-bone font-semibold text-sm mt-0.5 truncate">{p.company.name}</div>
                   {p.rodadaPct !== undefined && (
                     <div className="mt-2 h-1.5 bg-bone/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-volt" style={{ width: `${p.rodadaPct}%` }} />
+                      <div className="h-full bg-volt rounded-full" style={{ width: `${p.rodadaPct}%` }} />
                     </div>
                   )}
                 </div>
@@ -286,5 +286,6 @@ function HighlightStrip({ icon, title, items }: { icon?: React.ReactNode; title:
         </ul>
       </div>
     </section>
+
   );
 }
