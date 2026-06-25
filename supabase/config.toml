@@ -67,3 +67,6 @@ verify_jwt = false
 
 [functions.deal-closing-notify]
 verify_jwt = false
+
+[functions.generate-company-stories]
+verify_jwt = false
