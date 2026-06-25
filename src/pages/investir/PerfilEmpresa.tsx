@@ -143,13 +143,21 @@ export default function PerfilEmpresa() {
 
           {/* 3. Resumo IA */}
           <ResumoIA
-            summary={`${company.name} apresenta evolução consistente nos últimos meses, com crescimento de receita, governança auditada e comunicação ativa com a comunidade.`}
-            bullets={[
-              { label: "Mudanças", body: "Nova unidade inaugurada e time +60%." },
-              { label: "Indicadores", body: "Receita +41% e NPS estável em 78." },
-              { label: "Riscos", body: "Pressão de custo de insumos mitigada parcialmente." },
-            ]}
+            summary={
+              aiResumo?.summary ||
+              `${company.name} apresenta evolução consistente nos últimos meses, com crescimento de receita, governança auditada e comunicação ativa com a comunidade.`
+            }
+            bullets={
+              aiResumo?.bullets && aiResumo.bullets.length > 0
+                ? aiResumo.bullets
+                : [
+                    { label: "Mudanças", body: "Nova unidade inaugurada e time +60%." },
+                    { label: "Indicadores", body: "Receita +41% e NPS estável em 78." },
+                    { label: "Riscos", body: "Pressão de custo de insumos mitigada parcialmente." },
+                  ]
+            }
           />
+
 
           {/* 4. Timeline */}
           <TimelineMarcos items={seedTimeline} />
