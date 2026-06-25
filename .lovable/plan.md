@@ -1,89 +1,129 @@
 
-# Stories reais: importação manual pelo fundador
+# Mari Light v2 — Feed Instagram/TikTok, não "inverter cores"
 
-Sem scraping, sem OAuth do Instagram. O fundador da empresa cola o link/print do story dele e a Mari espelha como slide nativo nas bolinhas do topo do feed. Stories reais convivem com os mockados de `socialSeed.ts` — empresa que tiver story importado nas últimas 24h aparece com anel "AO VIVO" e abre os slides reais; o resto continua mostrando o seed.
+A v1 atual é só um remap global com `!important` em cima das classes escuras. Resultado: texto cinza-claro sobre branco-claro, Volt vira um verde-oliva lavado (#6b8e1a) que some no fundo, cards sem borda e sem sombra. Nada parece feed social.
 
-## O que muda pro usuário
+A v2 abandona o "inverter tudo" e constrói um **design system claro próprio**, pensado como Instagram/TikTok: superfície branca quente, hierarquia por sombra leve, acentos saturados (rosa→laranja gradiente Instagram + verde-folha para CTA), bordas e contraste medidos.
 
-- **Fundador (dono da empresa)**: novo bloco "Stories do Instagram" no editor da empresa. Cola URL do story público OU faz upload de imagem/vídeo (print/recorte), escreve legenda opcional, marca como "AO VIVO 24h". Pode adicionar até 5 slides por vez.
-- **Investidor (feed)**: as bolinhas no topo do `FeedHome` priorizam empresas com stories reais ativos (não expirados). Visualmente ganham um ring extra (já temos gradiente Volt — adiciona um pulse sutil). Ao tocar, o `StoryViewer` mostra os slides reais antes (ou no lugar) dos mockados.
-- **Expiração**: stories somem automaticamente 24h após o `published_at`, igual Instagram. Job de limpeza roda no fetch (filtra `expires_at > now()`).
+## Princípios
 
-## Arquitetura
+1. **Texto sempre escuro de verdade.** `#0F0F10` (titulo) e `#5A5A60` (secundário). Nada de `rgba(0,0,0,0.45)` em corpo de texto — vira ilegível.
+2. **Volt vira acento, não fundo.** Verde-folha saturado `#22A06B` (estilo "ao vivo") só em badges, contadores e bordas — nunca em fundo de botão grande.
+3. **CTA principal preto Instagram** (`#0F0F10` com `#FFFFFF`), CTA secundário tem **outline de 1.5px** preto. Stories ao vivo ganham o **gradient IG oficial** (rosa → laranja → amarelo).
+4. **Cards têm contorno + sombra.** `border: 1px solid #ECECEE` + `shadow: 0 1px 2px rgba(15,15,16,0.04), 0 8px 24px -16px rgba(15,15,16,0.08)`.
+5. **Hierarquia por chip colorido**, não por opacidade. Categoria, setor, "ao vivo", "rodada aberta" — cada um com par bg/fg definido.
 
-### 1. Banco — nova tabela `company_stories`
-
-```text
-company_stories
-├── id uuid pk
-├── token_id uuid → tokens(id)   (qual empresa)
-├── author_id uuid → auth.users   (quem postou — fundador/advisor)
-├── slide_order int               (ordem dentro do conjunto)
-├── media_type text               ('image' | 'video' | 'text')
-├── media_url text                (storage público OU URL externa)
-├── caption text                  (legenda opcional)
-├── source text                   ('manual_upload' | 'instagram_link')
-├── source_url text               (link original do IG, se houver)
-├── published_at timestamptz default now()
-├── expires_at timestamptz        (default now() + 24h, trigger)
-└── created_at, updated_at
-```
-
-- **Grants + RLS**: SELECT público (`anon` + `authenticated`) para slides não expirados; INSERT/UPDATE/DELETE apenas para `author_id = auth.uid()` E (dono do token via `tokens.owner_id` OU role advisor/admin via `has_role`).
-- **Storage bucket** `company-stories` (público, 10MB por arquivo, image/* e video/mp4).
-- **Trigger** que seta `expires_at = published_at + interval '24 hours'`.
-
-### 2. Editor do fundador — `src/pages/investir/founder/StoriesManager.tsx` (novo)
-
-Acessível em `/investir/empresa/:symbol/stories` (só para owner/advisor). Layout:
+## Paleta semântica (substitui o bloco `.mari-light` em `src/index.css`)
 
 ```text
-┌─────────────────────────────────────┐
-│  Stories ativos (próximas 24h)      │
-│  [thumb1] [thumb2] [+ adicionar]    │
-├─────────────────────────────────────┤
-│  Novo slide                         │
-│  ○ Upload (imagem/vídeo)            │
-│  ○ Link público do Instagram        │
-│  [campo URL ou dropzone]            │
-│  [legenda opcional]                 │
-│  [publicar]                         │
-└─────────────────────────────────────┘
+Surface
+  --m-bg          #FFFFFF        fundo página
+  --m-bg-soft     #FAFAFB        faixas/strips
+  --m-surface     #FFFFFF        card
+  --m-surface-2   #F4F4F6        card secundário, input
+  --m-overlay     rgba(15,15,16,0.04)
+
+Text
+  --m-text        #0F0F10        títulos, números
+  --m-text-2      #3A3A40        corpo
+  --m-text-3      #6E6E76        meta, timestamps
+  --m-text-4      #9A9AA2        placeholders, ícones inativos
+
+Border
+  --m-border      #ECECEE        card/divider
+  --m-border-2    #E0E0E4        input/hover
+  --m-border-3    #0F0F10        outline button
+
+Brand & status
+  --m-accent      #0F0F10        CTA primário (Instagram-black)
+  --m-accent-fg   #FFFFFF
+  --m-live        #22A06B        "ao vivo", crescendo, success
+  --m-live-bg     #E6F6EE
+  --m-warn        #F59E0B
+  --m-danger      #E11D48
+  --m-info        #3B82F6
+  --m-gradient-ig linear-gradient(45deg,#F58529 0%,#DD2A7B 40%,#8134AF 70%,#515BD4 100%)
+  --m-volt-deep   #2F7A1F        (mantido só para texto pequeno "Volt" se necessário)
 ```
 
-- Upload vai pro bucket `company-stories`, devolve `media_url`.
-- Para link IG: tentamos extrair o ID do post (`/p/`, `/reel/`, `/stories/<user>/<id>`) e salvamos como `source='instagram_link'`. O StoryViewer renderiza um `<iframe>` do embed oficial do Instagram (`https://www.instagram.com/p/<id>/embed`) — funciona pra posts/reels públicos sem API. Stories propriamente ditos do IG **não têm embed público**; nesses casos a UI obriga upload de print/vídeo.
+Para evitar regressão, mantemos `--volt` etc. mas com **valores recalculados em modo claro** (`--volt: 145 65% 38%` → vira o verde-folha) — assim componentes que ainda usam Tailwind `text-volt` ganham contraste sem cada um precisar trocar de classe.
 
-### 3. Feed e StoryViewer — alterações
+## Componentes que ganham tratamento explícito
 
-- `src/components/investir/social/StoriesBar.tsx`: nova query que busca `company_stories` agrupado por `token_id` com `expires_at > now()`, junta com tokens, e mistura com o seed. Empresas com story real vão pro topo com ring `animate-pulse`.
-- `src/components/investir/social/StoryViewer.tsx`: aceita um novo tipo de `StorySlide` (`real_image`, `real_video`, `instagram_embed`). Vídeos pausam o auto-advance até terminar; embeds IG ficam 8s no ar.
-- `src/types/social.ts`: estende `StorySlide` com os 3 novos kinds.
-- `src/data/socialSeed.ts`: passa a ser fallback — usado só quando a empresa não tem stories reais ativos.
+### Header / TopBar (`InvestirShell`)
+- Fundo branco com `backdrop-blur` e borda inferior `#ECECEE`.
+- Logo Mari: chip permanece preto sobre branco (não fica verde nem inverte).
+- Toggle dark/light vira um pill `[Dark · Light]` em vez de ícone solto.
 
-### 4. Painel do fundador
+### StoriesBar (bolinhas)
+- **Ring de story ao vivo** = `--m-gradient-ig` (rosa→roxo→azul IG) com pulse, igual Instagram.
+- Story de empresa (não-live) = ring `#E0E0E4` 2px.
+- Story de fundador (não-live) = ring duotone preto→`#22A06B`.
+- Badge "ao vivo" embaixo do avatar = `#DC2743` fundo, texto branco, font-bold.
+- Nome embaixo: `#0F0F10` 12px, fundador em itálico `#3A3A40`.
 
-Adiciona card "Stories" no `/investir/empresa/:symbol` quando `useIsOwner()` for true, mostrando contador "X stories ativos · expira em Yh" e CTA "Gerenciar stories".
+### FeedCard
+- Card branco com borda+sombra (token acima), `rounded-2xl`, **sem** `bg-graphite/40`.
+- Header do card: avatar circular 36px + nome 14/600 `#0F0F10` + cidade 12/400 `#6E6E76` + chip de categoria à direita.
+- Chips de categoria com pares definidos (`Rodada aberta` = `#FFF1E6/#C2410C`, `Atualização` = `#E6F6EE/#15803D`, `Live` = `#FCE7F3/#BE185D`, `Conquista` = `#FEF3C7/#92400E`).
+- Métricas: número grande `#0F0F10` 22/700 tabular-nums + delta `#15803D` 12/600 (se positivo) ou `#BE123C`.
+- Bottom bar: 💬 comments · 👥 followers · 🎯 investors — ícones outline 16px `#3A3A40`, números `#0F0F10`.
+- Botão "Conhecer empresa" = preto sólido full width.
 
-## Detalhes técnicos
+### HighlightStrip (carrosséis horizontais)
+- Título da seção 16/700 `#0F0F10` com ícone à esquerda em `#22A06B`.
+- "Ver mais" como link `#0F0F10` underline-on-hover.
+- Cards 240px: borda `#ECECEE`, hover `#0F0F10`, foto sem overlay (claras).
+- Barra de progresso da rodada: track `#F4F4F6` + fill `#22A06B`.
 
-- **Sem edge function nova** — tudo client → Supabase direto. Upload usa `supabase.storage.from('company-stories').upload(...)`.
-- **Validação** com zod: URL Instagram (regex `instagram.com/(p|reel|stories)/`), arquivo ≤10MB, caption ≤200 chars.
-- **Limpeza**: não precisa cron — basta filtrar `expires_at > now()` em todo `select`. Opcionalmente, migration adiciona um cron `pg_cron` que `delete from company_stories where expires_at < now() - interval '7 days'` (mantém histórico curto pra analytics).
-- **Embed do Instagram**: usar `<iframe src="https://www.instagram.com/p/<id>/embed/captioned" />` (sem necessidade de script oficial). Adicionar `loading="lazy"` e `sandbox`.
-- **Realtime opcional** (fora desta fase): assinatura no `StoriesBar` pra atualizar ao vivo quando fundador publica.
+### StoryViewer
+- Mantém fundo preto (igual IG mesmo no app light — story é imersivo).
+- Botão CTA do final: muda de "branco com texto preto" para "preto com texto branco + hover gradient IG".
 
-## Fora de escopo (intencional)
+### Greeting + título "Empresas reais crescendo agora"
+- "Empresas reais" em `#0F0F10`, "crescendo agora" recebe `background-clip: text` do `--m-gradient-ig` (rosa→roxo→azul). Sem mais verde lavado.
 
-- Importação automática do feed @ do Instagram.
-- OAuth/Graph API.
-- Métricas de visualização (quem viu o story) — fica pra fase de analytics.
-- Stories com stickers/menções/sondagens.
+### Banner Sparkles "Instagram aproxima pessoas…"
+- Fundo `#FAFAFB`, borda `#ECECEE`, ícone preto, palavra "Mari" com gradient IG.
+
+### CategoryStrip (chips de setor)
+- Pílulas brancas com borda `#E0E0E4`, ativa = fundo `#0F0F10` texto branco. Emoji mantido.
+
+### CommentsThread / inputs
+- Input: bg `#F4F4F6`, focus `border #0F0F10` + ring `rgba(15,15,16,0.08)`.
+- Comentário do fundador: pílula `#FCE7F3/#BE185D` "Fundador" (mesma cor do Live IG).
+
+### Tab bar / Bottom nav mobile
+- Branco com borda superior `#ECECEE`, ícones `#9A9AA2` inativos, ativo `#0F0F10` + dot `#DC2743` embaixo.
+
+## Implementação técnica
+
+1. **Reescrever `src/index.css` linhas 429–569** trocando o bloco "MARI WHITE THEME" inteiro. Manter o seletor `.mari-light` como gate (já está aplicado em `InvestirShell`).
+2. Os overrides param de usar `!important` em escala — passamos os novos tokens via CSS vars e deixamos as classes Tailwind herdarem. `!important` fica reservado para os 5 casos legados que continuam usando hex hardcoded.
+3. Adicionar utilities no `@layer components`:
+   ```text
+   .m-card           → bg + border + shadow
+   .m-card-hover     → hover:border-#0F0F10
+   .m-chip-{tone}    → 5 variantes (live, round, update, milestone, info)
+   .m-cta            → CTA preto
+   .m-cta-outline    → CTA outline
+   .m-text-gradient  → background-clip text + gradient IG
+   .m-ring-live      → ring com gradient IG + animate-pulse
+   ```
+4. **Trocar classes nos componentes-chave** (sem refatorar tudo): `FeedCard`, `StoriesBar`, `HighlightStrip`, `FeedHome` (banner + greeting + título), `CategoryStrip`, `CommentsThread`. Onde a v1 dependia de `text-bone`, troca por `text-[hsl(var(--foreground))]` (já mapeado).
+5. **Logo Mari**: garantir que continua legível — chip preto sobre branco no light, chip Volt sobre carbon no dark.
+6. **Toggle**: trocar o ícone solto por um segmented control `Escuro · Claro` no header, ao lado do avatar.
+7. **QA visual**: rodar Playwright em 3 telas (`/investir`, `/investir/empresa/:symbol`, story viewer) em ambos os temas, screenshot lado a lado, conferir contraste com pytesseract não é necessário — verificação visual basta.
+
+## Fora de escopo desta passagem
+
+- Não mexer em telas fora de `/investir` (admin, valuation, equity-brain etc.).
+- Não mudar o dark theme.
+- Não trocar fontes — só cor, borda, sombra, chip.
 
 ## Entregáveis
 
-1. Migration: tabela `company_stories` + bucket `company-stories` + RLS + trigger expires_at.
-2. `StoriesManager.tsx` (editor) + rota.
-3. Atualizações em `StoriesBar.tsx`, `StoryViewer.tsx`, `socialSeed.ts`, `types/social.ts`.
-4. Card "Stories" em `PerfilEmpresa.tsx` para owner/advisor.
-5. Item "Stories" no `FounderEditor` se já existir esse hub, senão link direto do perfil da empresa.
+1. Bloco `.mari-light` reescrito em `src/index.css` com tokens semânticos + utilities `m-*`.
+2. Refactor visual de 6 componentes: `StoriesBar.tsx`, `FeedCard.tsx`, `HighlightStrip` (inline em `FeedHome.tsx`), `CategoryStrip.tsx`, header do `InvestirShell`, `CommentsThread.tsx`.
+3. Segmented toggle Dark/Light no header.
+4. Screenshots antes/depois nos 2 temas como verificação.
