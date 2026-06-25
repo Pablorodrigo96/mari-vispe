@@ -329,7 +329,8 @@ async function logUsage(args: {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const auth = await requireAuth(req, { requireAnyRole: ["admin", "advisor"] });
+  // Inteligência de Mercado é acessível a qualquer usuário autenticado.
+  const auth = await requireAuth(req);
   if (!auth.ok) return authErrorResponse(auth, corsHeaders);
 
 
