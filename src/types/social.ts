@@ -9,11 +9,24 @@ export type CompanyMini = {
   city?: string;
 };
 
+export type StorySlide = {
+  media: string;
+  kind: "photo" | "video" | "milestone" | "text" | "indicator";
+  title: string;
+  body?: string;
+  indicator?: { label: string; value: string; delta?: string };
+};
+
 export type StoryItem = {
   id: string;
   company: CompanyMini;
+  actor: "company" | "founder";
+  founderName?: string;
+  founderAvatar?: string;
+  slides: StorySlide[];
+  // legado (1 slide compat)
   media: string;
-  kind: "photo" | "video" | "milestone";
+  kind: "photo" | "video" | "milestone" | "text" | "indicator";
   title: string;
   body?: string;
   ctaLabel?: string;
