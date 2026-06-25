@@ -14,7 +14,7 @@ import {
 } from "@/data/socialSeed";
 import type { CompanyMini } from "@/types/social";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, PlayCircle } from "lucide-react";
+import { FileText, PlayCircle, Sparkles } from "lucide-react";
 
 const fmtBRL = (n: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(n || 0);
@@ -27,6 +27,8 @@ export default function PerfilEmpresa() {
   const [authed, setAuthed] = useState(false);
   const [reserveOpen, setReserveOpen] = useState(false);
   const [aiResumo, setAiResumo] = useState<{ summary: string; bullets: { label: string; body: string }[] } | null>(null);
+  const [canManageStories, setCanManageStories] = useState(false);
+  const [activeStoriesCount, setActiveStoriesCount] = useState(0);
 
   useEffect(() => {
     if (!symbol) return;
@@ -60,6 +62,18 @@ export default function PerfilEmpresa() {
       }
       const { data: u } = await supabase.auth.getUser();
       setAuthed(!!u.user);
+      if (u.user && tk) {
+        const { data: can } = await supabase.rpc("can_manage_company_stories", {
+          _token_id: tk.id, _user_id: u.user.id,
+        });
+        setCanManageStories(!!can);
+        const { count } = await supabase
+          .from("company_stories")
+          .select("id", { count: "exact", head: true })
+          .eq("token_id", tk.id)
+          .gt("expires_at", new Date().toISOString());
+        setActiveStoriesCount(count || 0);
+      }
       setLoading(false);
     })();
   }, [symbol]);
