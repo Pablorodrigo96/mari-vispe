@@ -131,6 +131,30 @@ export default function PerfilEmpresa() {
         symbol={company.symbol}
       />
 
+      {canManageStories && (
+        <div className="max-w-[1100px] mx-auto px-5 md:px-6 mt-4">
+          <Link
+            to={`/investir/empresa/${company.symbol}/stories`}
+            className="flex items-center justify-between gap-3 rounded-2xl border border-volt/30 bg-gradient-to-r from-volt/10 via-volt/5 to-transparent px-4 py-3 hover:border-volt transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full grid place-items-center bg-volt text-carbon">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-bone font-semibold text-sm">
+                  {activeStoriesCount > 0 ? `${activeStoriesCount} stories ativos` : "Publique seu primeiro story"}
+                </div>
+                <div className="text-bone/65 text-xs">
+                  Espelhe os stories do Instagram aqui — ficam 24h no topo do feed.
+                </div>
+              </div>
+            </div>
+            <span className="text-volt text-sm font-medium">Gerenciar →</span>
+          </Link>
+        </div>
+      )}
+
       <div className="max-w-[1100px] mx-auto px-5 md:px-6 pt-8 md:pt-10 pb-28 md:pb-16 grid lg:grid-cols-[1fr_340px] gap-6 md:gap-10">
         <div className="space-y-6">
           {/* 1. História */}
