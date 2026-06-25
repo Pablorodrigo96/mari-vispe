@@ -229,22 +229,23 @@ export default function FeedHome() {
 
       {/* Bloco gamificação */}
       <section className="max-w-[1100px] mx-auto px-5 md:px-6 py-10 grid sm:grid-cols-3 gap-3">
-        <Link to="/investir/missoes" className="rounded-2xl border border-bone/10 hover:border-volt bg-graphite/30 p-5 transition-colors">
+        <Link to="/investir/missoes" className="m-card m-card-hover p-5">
           <Flame className="w-5 h-5 text-volt mb-2" />
           <div className="text-bone font-semibold text-sm">Missões diárias</div>
           <div className="text-bone/55 text-xs mt-1">Ganhe XP acompanhando empresas, sem investir.</div>
         </Link>
-        <Link to="/investir/ligas" className="rounded-2xl border border-bone/10 hover:border-volt bg-graphite/30 p-5 transition-colors">
+        <Link to="/investir/ligas" className="m-card m-card-hover p-5">
           <Trophy className="w-5 h-5 text-volt mb-2" />
           <div className="text-bone font-semibold text-sm">Ligas por setor</div>
           <div className="text-bone/55 text-xs mt-1">Suba no ranking de quem mais conhece cada setor.</div>
         </Link>
-        <Link to="/investir/lives" className="rounded-2xl border border-bone/10 hover:border-volt bg-graphite/30 p-5 transition-colors">
+        <Link to="/investir/lives" className="m-card m-card-hover p-5">
           <Radio className="w-5 h-5 text-volt mb-2" />
           <div className="text-bone font-semibold text-sm">Lives da semana</div>
           <div className="text-bone/55 text-xs mt-1">Fundadores ao vivo respondendo perguntas reais.</div>
         </Link>
       </section>
+
     </InvestirShell>
   );
 }
