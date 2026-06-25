@@ -11,10 +11,12 @@ export type CompanyMini = {
 
 export type StorySlide = {
   media: string;
-  kind: "photo" | "video" | "milestone" | "text" | "indicator";
+  kind: "photo" | "video" | "milestone" | "text" | "indicator" | "real_image" | "real_video" | "instagram_embed";
   title: string;
   body?: string;
   indicator?: { label: string; value: string; delta?: string };
+  /** Para slides reais importados pelo fundador */
+  realSourceUrl?: string;
 };
 
 export type StoryItem = {
@@ -26,11 +28,13 @@ export type StoryItem = {
   slides: StorySlide[];
   // legado (1 slide compat)
   media: string;
-  kind: "photo" | "video" | "milestone" | "text" | "indicator";
+  kind: "photo" | "video" | "milestone" | "text" | "indicator" | "real_image" | "real_video" | "instagram_embed";
   title: string;
   body?: string;
   ctaLabel?: string;
   createdAt: string;
+  /** Marca quando slides vieram de import real (não-seed) — anel pulsante "AO VIVO" */
+  isLive?: boolean;
 };
 
 export type FeedPost = {
