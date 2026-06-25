@@ -144,7 +144,7 @@ export default function PerfilEmpresa() {
           <ScoreMari eixos={seedScore} />
 
           {/* 7. Comentários */}
-          <CommentsThread initial={seedComments} />
+          <CommentsThread initial={seedComments} tokenId={token?.id || null} founderUserId={listing?.user_id || null} />
 
           {/* 8. Investir — sempre último */}
           <section id="investir" className="bg-gradient-to-br from-volt/10 to-transparent border border-volt/30 rounded-2xl p-6 md:p-8 text-center">
