@@ -1,8 +1,28 @@
 import { Outlet, Link, NavLink } from "react-router-dom";
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { Shield, ChevronRight, Sparkles } from "lucide-react";
+import { Shield, ChevronRight, Sparkles, Sun, Moon } from "lucide-react";
 import { BottomTabBar } from "./BottomTabBar";
+import { MariThemeProvider, useMariTheme } from "@/contexts/MariThemeContext";
+
+function ThemeToggle({ className }: { className?: string }) {
+  const { theme, toggle } = useMariTheme();
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={theme === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro"}
+      title={theme === "dark" ? "Tema claro" : "Tema escuro"}
+      className={cn(
+        "w-8 h-8 grid place-items-center rounded-full text-bone/70 hover:text-bone hover:bg-bone/10 transition-colors",
+        className,
+      )}
+    >
+      {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+    </button>
+  );
+}
+
 
 const nav = [
   { to: "/investir/descobrir", label: "Descobrir" },
