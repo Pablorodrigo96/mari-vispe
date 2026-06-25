@@ -40,11 +40,13 @@ export default function FeedHome() {
       }));
       // injeta stories reais à frente
       setStories((prev) => [
-        ...real.map((c, i) => ({
+        ...real.map<StoryItem>((c, i) => ({
           id: `r-story-${i}`,
           company: c,
+          actor: "company",
+          slides: [{ media: c.cover!, kind: "milestone", title: `Novidades de ${c.name}` }],
           media: c.cover!,
-          kind: "milestone" as const,
+          kind: "milestone",
           title: `Novidades de ${c.name}`,
           createdAt: new Date().toISOString(),
         })),

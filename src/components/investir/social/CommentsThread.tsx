@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 type Props = {
   initial: Comment[];
-  companyId?: string | null;
+  tokenId?: string | null;
   founderUserId?: string | null;
 };
 
@@ -18,7 +18,7 @@ const timeAgo = (iso: string) => {
   const d = Math.floor(h / 24); return `${d}d`;
 };
 
-export function CommentsThread({ initial, companyId, founderUserId }: Props) {
+export function CommentsThread({ initial, tokenId, founderUserId }: Props) {
   const [comments, setComments] = useState<Comment[]>(initial);
   const [text, setText] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
@@ -29,32 +29,41 @@ export function CommentsThread({ initial, companyId, founderUserId }: Props) {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
       setUserId(data.user.id);
-      const { data: p } = await supabase.from("profiles").select("full_name").eq("user_id", data.user.id).maybeSingle();
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
       if (p?.full_name) setUserName(p.full_name);
     });
   }, []);
 
-  // Carrega comentários reais quando há companyId
   useEffect(() => {
-    if (!companyId) return;
+    if (!tokenId) return;
     (async () => {
       const { data } = await supabase
         .from("company_comments")
-        .select("id, user_id, body, created_at, profiles:user_id(full_name)")
-        .eq("company_id", companyId)
+        .select("id, user_id, body, created_at")
+        .eq("token_id", tokenId)
         .order("created_at", { ascending: true })
         .limit(50);
       if (!data?.length) return;
+      const ids = Array.from(new Set(data.map((c: any) => c.user_id)));
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", ids);
+      const nameById = new Map((profs || []).map((p: any) => [p.user_id, p.full_name]));
       const mapped: Comment[] = data.map((c: any) => ({
         id: c.id,
-        author: c.profiles?.full_name || "Investidor",
+        author: nameById.get(c.user_id) || "Investidor",
         body: c.body,
-        isFounder: founderUserId && c.user_id === founderUserId,
+        isFounder: !!(founderUserId && c.user_id === founderUserId),
         createdAt: timeAgo(c.created_at),
       }));
       setComments(mapped);
     })();
-  }, [companyId, founderUserId]);
+  }, [tokenId, founderUserId]);
 
   async function send() {
     const v = text.trim();
@@ -71,9 +80,9 @@ export function CommentsThread({ initial, companyId, founderUserId }: Props) {
     setComments((c) => [...c, optimistic]);
     setText("");
 
-    if (companyId) {
+    if (tokenId) {
       const { error } = await supabase.from("company_comments").insert({
-        company_id: companyId, user_id: userId, body: v,
+        token_id: tokenId, user_id: userId, body: v,
       });
       if (error) {
         setComments((c) => c.filter((x) => x.id !== optimistic.id));
