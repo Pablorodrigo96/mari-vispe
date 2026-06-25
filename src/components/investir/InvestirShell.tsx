@@ -199,6 +199,28 @@ function FooterCol({ title, links }: { title: string; links: [string, string][] 
   );
 }
 
+function InvestirShellInner({
+  authed,
+  children,
+  hideFooter,
+}: {
+  authed?: boolean;
+  children?: ReactNode;
+  hideFooter?: boolean;
+}) {
+  const { theme } = useMariTheme();
+  return (
+    <div className={cn("min-h-screen bg-carbon text-bone flex flex-col", theme === "light" && "mari-light")}>
+      <InvestirHeader authed={authed} />
+      <main className="flex-1 pb-20 md:pb-0">
+        {children ?? <Outlet />}
+      </main>
+      {!hideFooter && <InvestirFooter />}
+      <BottomTabBar />
+    </div>
+  );
+}
+
 export function InvestirShell({
   authed = false,
   children,
@@ -209,16 +231,14 @@ export function InvestirShell({
   hideFooter?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-carbon text-bone flex flex-col">
-      <InvestirHeader authed={authed} />
-      <main className="flex-1 pb-20 md:pb-0">
-        {children ?? <Outlet />}
-      </main>
-      {!hideFooter && <InvestirFooter />}
-      <BottomTabBar />
-    </div>
+    <MariThemeProvider>
+      <InvestirShellInner authed={authed} hideFooter={hideFooter}>
+        {children}
+      </InvestirShellInner>
+    </MariThemeProvider>
   );
 }
+
 
 export function SectionEyebrow({ children }: { children: ReactNode }) {
   return (
