@@ -1,17 +1,21 @@
 import { InvestirShell } from "@/components/investir/InvestirShell";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Flame, CheckCircle2, Sparkles, Users, MessageCircle, BookOpen, Award } from "lucide-react";
+import { BadgesCard } from "@/components/investir/social/BadgesCard";
+import { Flame, CheckCircle2, Sparkles, Users, MessageCircle, BookOpen, Award, GitCompareArrows, ArrowRight } from "lucide-react";
 
-type Missao = { id: string; titulo: string; xp: number; done: boolean; icon: any };
+type Missao = { id: string; titulo: string; xp: number; done: boolean; icon: any; href?: string };
 
 const defaults: Missao[] = [
+  { id: "m5", titulo: "Responder o quiz do dia (+25 XP)", xp: 25, done: false, icon: Award, href: "/investir/quiz" },
   { id: "m1", titulo: "Assistir a um Resumo Mari", xp: 10, done: false, icon: Sparkles },
   { id: "m2", titulo: "Comentar em uma empresa", xp: 15, done: false, icon: MessageCircle },
   { id: "m3", titulo: "Seguir 3 empresas novas", xp: 20, done: false, icon: Users },
   { id: "m4", titulo: "Ler um Diário completo", xp: 15, done: false, icon: BookOpen },
-  { id: "m5", titulo: "Responder o quiz do dia", xp: 25, done: false, icon: Award },
+  { id: "m6", titulo: "Comparar 2 empresas lado a lado", xp: 15, done: false, icon: GitCompareArrows, href: "/investir/comparar" },
 ];
+
 
 export default function Missoes() {
   const [missoes, setMissoes] = useState<Missao[]>(defaults);
