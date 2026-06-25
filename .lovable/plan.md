@@ -1,117 +1,114 @@
-## Objetivo
+## Auditoria do prompt mestre — o que já está pronto e o que falta
 
-Adicionar uma versão **White** (clara, estilo Instagram/Threads) ao portal `/investir`, mantendo a versão atual **Dark** intacta, com um **toggle** acessível no header (e no menu Minha Mari) que persiste a escolha do usuário.
+### Já entregue (confirmado no código)
+- Feed Home social com saudação, StoriesBar, CategoryStrip humanas, FeedCards, faixas "Em alta" e "Perto de concluir", bloco Missões/Ligas/Lives.
+- Perfil da empresa na ordem da espec (História → Vídeo → Resumo IA → Timeline → Diário → Score → Comentários → Investir por último).
+- Componentes sociais: StoriesBar, FeedCard, CompanyHero, ResumoIA, ScoreMari (multi-eixo + nível), TimelineMarcos, DiarioFeed, CommentsThread, FollowButton.
+- Páginas: Descobrir (categorias humanas), Missões (XP por comportamento + streak + níveis Bronze→Platina), Ligas por setor, Fantasy Business, Lives (calendário estático).
+- Bottom tab social: Início · Descobrir · Missões · Ligas · Minha Mari.
+- Tabelas Supabase com RLS: `company_follows`, `company_posts`, `company_comments`, `mari_social_xp`, `mari_company_summaries`.
+- Tema White (toggle sol/lua) acabado de entregar.
+- Discurso reescrito: hero "Empresas reais crescendo agora", CTA principal "Quero ser sócio", `/investir/sobre-a-mari` recolocando o material comercial antigo.
 
-## Estratégia
+### Lacunas vs prompt mestre (o que falta)
 
-O `/investir` foi construído com muitas classes hard-coded (`bg-[#0A0A0A]`, `text-white`, `bg-black`, `text-[#D9F564]`, `border-white/10`, gradientes Volt etc.) espalhadas em ~40 arquivos. Reescrever cada classe seria caro e arriscado. Em vez disso:
+1. **Story Viewer fullscreen** — hoje clicar num story só leva pro perfil. Falta o player estilo Instagram (tela cheia, vídeo/foto/texto/indicador, auto-advance 5s, barrinhas no topo, swipe entre stories da mesma empresa e entre empresas, tap para pausar).
+2. **Stories do fundador** — espec separa "stories da empresa" de "stories do fundador". Hoje só temos um conjunto por empresa.
+3. **Onboarding de interesses** — não existe `/investir/onboarding/interesses`. Espec exige perguntar antes de KYC: "Quais negócios você gosta? Você é empresário? Setor? Cidade? Empresas que conhece?". Hoje o fluxo entra direto em KYC.
+4. **Edge function de Resumo IA real** (`mari-resumo-empresa`) — várias `mari-*` existem para CRM, mas nenhuma gera o resumo 30s + bullets para perfil de empresa a partir de `company_posts`. Hoje o `ResumoIA` no perfil é texto fixo.
+5. **Notificações de acontecimento** — espec lista: "Empresa abriu nova unidade", "Fundador publicou atualização", "Empresa concluiu rodada", "Empresa atingiu meta", "Novo contrato". Tabela `notifications` existe, mas sem trigger/conexão com `company_posts` nem com mudanças em `tokens`.
+6. **Faixas de feed faltantes** — espec lista 8 faixas; só temos 2. Faltam: "Da sua região", "Que você segue", "Recém adicionadas", "Atingindo metas", "Lives programadas (in-feed)", "Atualizações recentes".
+7. **Comentários persistidos de verdade** — `CommentsThread` só usa estado local; não lê nem grava em `company_comments` (que já existe com RLS).
+8. **Quiz diário + Comparador de empresas** — missões mencionam "responder quiz" e "comparar empresas"; nenhuma das duas telas existe.
+9. **Calendário de lives funcional** — `Lives.tsx` é estático; sem persistência, sem botão "Lembrar" funcional, sem detalhe de live, sem badge "AO VIVO" no feed/perfil.
+10. **Editor do fundador (postar story/diário/live)** — sem UI para founder publicar nada. Tabelas existem, mas sem CMS mínimo.
+11. **Badges de sequência/nível no perfil do usuário** — XP existe na tela Missões mas o painel/perfil do usuário não exibe medalhas, streak nem nível.
+12. **Sweep de copy comercial residual** — varredura final em páginas institucionais/Wallet/Reservas/Painel para remover termos "home broker", "tokenização", "equity crowdfunding" da superfície (mantendo nas páginas regulatórias).
 
-1. **Wrapper de tema com classe `mari-light`** aplicado no `InvestirShell` quando o modo White estiver ativo.
-2. **Camada de CSS de overrides** em `src/index.css` (dentro de `@layer utilities`) que, sob `.mari-light`, remapeia todas as cores hard-coded mais usadas para a paleta clara — sem tocar nos componentes.
-3. Componentes que JÁ usam tokens semânticos (`bg-background`, `text-foreground`) continuam funcionando automaticamente.
-4. Toggle persistido em `localStorage` (`mari-theme` = `dark` | `light`), default = `dark` (versão atual).
+---
 
-Não mexe em nenhuma página fora de `/investir`. Não mexe na lógica de reservas, KYC, ledger, edge functions, Supabase.
+## Plano de execução (em ordem)
 
-## Paleta White (Instagram-like)
+### Fase 1 — Conteúdo vivo e relacionamento (alto impacto, baixo risco)
 
-| Token Dark atual | Equivalente White |
-|---|---|
-| Carbon `#0A0A0A` (bg) | Branco puro `#FFFFFF` |
-| Graphite `#2A2A2A` (cards) | Cinza muito claro `#FAFAFA` / `#F4F4F5` |
-| `text-white` / Bone | Quase-preto `#0A0A0A` |
-| Volt `#D9F564` (CTA) | Volt-deep `#7BA428` (CTA preto sobre amarelo escuro legível) — para acentos visuais mantemos um Volt suave `#E8F5B8` apenas em fundos, nunca em texto. CTAs principais ficam **pretos** com texto branco (estilo Instagram "Seguir") |
-| `border-white/10` | `border-black/10` |
-| `text-white/60` | `text-black/60` |
+**1.1 Story Viewer fullscreen**
+- Novo componente `StoryViewer.tsx` (overlay 100vh, barrinhas de progresso, auto-advance, tap esquerda/direita, swipe entre empresas, ESC fecha).
+- Integrar no `StoriesBar`: clicar abre o viewer em vez de navegar pro perfil.
+- Adicionar campo `founder_avatar` opcional no seed e botão "Conhecer empresa" no rodapé do viewer.
 
-CTAs Volt → CTAs **pretos** (preenchimento `#0A0A0A`, texto branco), exceto badges/destaques onde Volt-suave funciona como background.
+**1.2 Stories do fundador (separados)**
+- `StoryItem` ganha `actor: 'company' | 'founder'`.
+- `StoriesBar` mostra anel diferente para fundador (gradiente Volt+rosa) e legenda "Fundador".
 
-## O que será feito
+**1.3 Onboarding de interesses**
+- Nova página `/investir/onboarding/interesses` com 4 micro-steps: setores favoritos (chips), é empresário?, cidade, empresas que admira (autocomplete dos seeds).
+- Persistir em `profiles` (campo `interests jsonb`) — migração curta.
+- `InvestirAuth.tsx` redireciona para `interesses` antes de `kyc` quando user novo.
+- Feed Home lê interesses pra ordenar faixas (região, setores escolhidos).
 
-### 1. Contexto de tema
-Criar `src/contexts/MariThemeContext.tsx`:
-- `useMariTheme()` → `{ theme: 'dark' | 'light', toggle, setTheme }`
-- Persiste em `localStorage.mari-theme`
-- Provider aplica/remove a classe `mari-light` no elemento raiz do shell.
+**1.4 Faixas de feed faltantes**
+- Em `FeedHome.tsx` adicionar `HighlightStrip` para: "📍 Perto de você" (filtra por cidade/UF do profile), "👀 Empresas que você segue", "🆕 Recém-chegadas na Mari" (order by created_at), "🎯 Atingindo metas" (token com `pct >= 90`), "📅 Lives agendadas" (lê tabela `lives` ou seed por enquanto), "🔔 Atualizações recentes" (últimos `company_posts` tipo `diario`).
 
-### 2. Wrapper no shell
-`src/components/investir/InvestirShell.tsx`:
-- Envolver com `<MariThemeProvider>`
-- Adicionar `className={theme === 'light' ? 'mari-light' : ''}` no container raiz do shell.
+**1.5 Comentários persistidos**
+- `CommentsThread` lê/escreve em `company_comments` quando há `company_id`; mantém fallback local para seeds.
+- Mostra `is_founder` automaticamente quando o autor é founder do listing.
 
-### 3. Toggle de tema
-- Botão sol/lua no header do `InvestirShell` (desktop) e dentro do dropdown do avatar.
-- Versão mobile: item no `BottomTabBar` → seção "Minha Mari" ganha um switch rápido, ou um FAB pequeno no header mobile.
+### Fase 2 — Inteligência e notificações
 
-### 4. Camada de overrides em `src/index.css`
-Bloco novo, claramente delimitado, ex.:
-```css
-@layer utilities {
-  .mari-light { /* ===== MARI WHITE THEME OVERRIDES ===== */
-    /* Backgrounds escuros → branco/cinza claro */
-    .bg-\[\#0A0A0A\], .bg-black, .bg-carbon { background-color: #FFFFFF !important; }
-    .bg-\[\#2A2A2A\], .bg-graphite { background-color: #F4F4F5 !important; }
-    .bg-white\/5, .bg-white\/10 { background-color: rgba(0,0,0,0.04) !important; }
-    .bg-white\/20 { background-color: rgba(0,0,0,0.08) !important; }
+**2.1 Edge function `mari-resumo-empresa`**
+- Nova função em `supabase/functions/mari-resumo-empresa/index.ts` usando Lovable AI Gateway (`google/gemini-2.5-flash`).
+- Input: `company_id`. Lê últimos 10 `company_posts` + dados do `tokens/listings`. Output: `{ summary, bullets[3] }`.
+- Grava em `mari_company_summaries` com TTL 24h. `ResumoIA` consome essa cache via RPC.
 
-    /* Texto */
-    .text-white, .text-bone, .text-\[\#FAFAF7\] { color: #0A0A0A !important; }
-    .text-white\/60, .text-white\/70, .text-white\/80 { color: rgba(10,10,10,0.65) !important; }
-    .text-white\/40, .text-white\/50 { color: rgba(10,10,10,0.5) !important; }
+**2.2 Notificações de acontecimento**
+- Trigger em `company_posts` (after insert) → cria notification para todos os `company_follows`.
+- Edge function `mari-event-notify` para eventos de `tokens` (rodada concluída, meta atingida).
+- Mensagens em linguagem humana: "🏗️ Empresa X inaugurou nova unidade", "💬 Fundador publicou uma atualização", etc.
 
-    /* Bordas */
-    .border-white\/10, .border-white\/20 { border-color: rgba(0,0,0,0.08) !important; }
-    .divide-white\/10 > * + * { border-color: rgba(0,0,0,0.08) !important; }
+### Fase 3 — Gamificação e descoberta
 
-    /* Volt CTA → preto estilo Instagram */
-    .bg-\[\#D9F564\], .bg-volt {
-      background-color: #0A0A0A !important;
-      color: #FFFFFF !important;
-    }
-    .text-\[\#D9F564\], .text-volt { color: #6B8E1A !important; } /* Volt-deep legível */
-    .border-\[\#D9F564\] { border-color: #0A0A0A !important; }
+**3.1 Quiz diário**
+- Nova rota `/investir/quiz` com 3 perguntas/dia sobre empresas seguidas. Acerto = +25 XP, grava em `mari_social_xp`.
+- Card "Quiz de hoje" no topo de `/investir/missoes`.
 
-    /* Gradientes Volt → cinza suave */
-    .from-\[\#D9F564\], .to-\[\#D9F564\] { --tw-gradient-from: #F4F4F5 !important; --tw-gradient-to: #FFFFFF !important; }
+**3.2 Comparador de empresas**
+- Nova rota `/investir/comparar` (até 3 empresas lado a lado: Score Mari por eixo, rodada, setor, indicadores). +20 XP por comparação salva.
 
-    /* Tokens semânticos do shadcn (caso usados dentro do shell) */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 4%;
-    --card: 0 0% 98%;
-    --border: 0 0% 92%;
-    --muted: 0 0% 96%;
-  }
-}
-```
-Cobertura iterativa: depois de ativar, varrer visualmente cada rota principal (`/investir`, `/investir/descobrir`, `/investir/ativo/:s`, `/investir/missoes`, `/investir/ligas`, `/investir/fantasy`, `/investir/painel`, institucionais) e adicionar overrides extras para qualquer classe hard-coded restante.
+**3.3 Badges no perfil do usuário**
+- Componente `UserBadgesStrip` (Bronze/Prata/Ouro/Platina, streak 7d/30d, primeiro comentário, primeiro seguidor, primeira reserva).
+- Renderiza no `/investir/painel` topo.
 
-### 5. Imagens e logos
-Se houver logo branca usada só no dark, condicional simples no `InvestirShell` (`theme === 'light' ? logoPreto : logoBranco`). Caso contrário, deixa CSS resolver via `filter: invert()` apenas em ícones SVG inline que ficarem invisíveis.
+### Fase 4 — Lives reais
 
-### 6. Ajustes pontuais que CSS não resolve
-- `StoriesBar` / `FeedCard` overlays escuros (gradientes em cima de fotos) → adicionar variante condicional.
-- `CompanyHero` background hero (atualmente preto puro) → no White, fundo branco com leve textura.
-Tratados depois da camada CSS, somente onde necessário.
+**4.1 Tabela `lives` (id, company_id, scheduled_at, status, embed_url)** + RLS.
+**4.2 Página de detalhe `/investir/live/:id`** com placeholder de player (iframe/YouTube live) + chat usando `company_comments`.
+**4.3 Botão "Lembrar"** persistido em tabela `live_reminders` + notification 30min antes.
+**4.4 Badge "AO VIVO"** no `StoriesBar`, `FeedCard` e `CompanyHero` quando `live.status='live'`.
+
+### Fase 5 — Editor do fundador (mínimo)
+
+**5.1 `/investir/empresa/:symbol/postar`** (gate: só founder do listing). Form simples: tipo (story/diário/live), categoria, mídia, texto. Grava em `company_posts`.
+**5.2 Botão "Publicar atualização"** no `CompanyHero` quando user é o founder.
+
+### Fase 6 — Sweep de discurso
+
+**6.1 Varredura `rg`** por: "home broker", "crowdfunding", "tokenização", "token de", "security token", "ativo digital". Substituir na superfície mantendo nas páginas regulatórias.
+**6.2 Microcopy de erros/empty states** em pt-BR humano.
+
+---
 
 ## Detalhes técnicos
 
-- **Escopo**: tudo dentro do shell `/investir`. Resto do app (PME.B3, Auth público fora do investir, etc.) **não muda**.
-- **Default**: `dark` (versão atual) para usuários novos. Toggle altera e persiste.
-- **A11y**: botão com `aria-label="Mudar para tema claro/escuro"`, ícone `Sun`/`Moon` do lucide.
-- **SSR/flicker**: app é SPA Vite, sem SSR — basta ler `localStorage` no init do provider para evitar flash.
-- **Sem regressão**: nenhuma classe é REMOVIDA dos componentes; apenas overrides condicionais. Voltar pro dark = remover a classe `mari-light`.
+- **Migrações novas**: `profiles.interests jsonb`, `lives` table + RLS + GRANTs, `live_reminders` table + RLS + GRANTs. Triggers em `company_posts` para notification fanout (com função SECURITY DEFINER).
+- **Edge functions novas**: `mari-resumo-empresa`, `mari-event-notify`. Ambas com `verify_jwt = false` quando consumidas em página pública; chamadas server-side via RPC quando precisar de auth.
+- **Sem mudança em**: ReservationModal, KYC/Suitability, ledger, wallet, compliance, sidebar PME.B3, qualquer rota fora de `/investir`.
+- **Tema White**: continua aplicado automaticamente; novos componentes seguem padrão `text-bone/bg-graphite/bg-volt` que a camada `.mari-light` já remapeia.
+- **Performance**: Story Viewer carrega lazy; faixas extras do feed usam mesmas queries já feitas (apenas filtros adicionais em memória).
 
-## Ordem de entrega
+## Ordem de entrega sugerida
 
-1. Criar `MariThemeContext` + hook.
-2. Adicionar camada `.mari-light` em `src/index.css`.
-3. Plugar provider e classe no `InvestirShell`.
-4. Adicionar toggle (header desktop + dropdown avatar + item no MinhaMari mobile).
-5. Smoke pass nas rotas principais; adicionar overrides extras conforme necessário.
-6. (Opcional) tratamento específico de heros/overlays.
+Fase 1 (1.1 → 1.5) entrega 80% do "wow" social visível. Fase 2 entrega inteligência. Fases 3–5 podem ser fatiadas em PRs separados. Fase 6 fecha o discurso.
 
-## Não inclui
+## Pergunta antes de começar
 
-- Refatorar componentes para usar tokens semânticos do shadcn (escopo maior, futuro).
-- Mudar paleta global do app fora de `/investir`.
-- Trocar fontes ou layout — só cores.
+Quer que eu entregue **tudo de uma vez** (PR grande, ~12–15 arquivos novos + 2 migrações + 2 edge functions) ou prefere fatiar **fase por fase** com checkpoint visual entre elas?

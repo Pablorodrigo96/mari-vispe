@@ -29,8 +29,8 @@ export default function InvestirAuth() {
         if (data.user) {
           await supabase.from("user_roles").insert({ user_id: data.user.id, role: "investor" as any }).then(()=>{}, ()=>{});
         }
-        toast.success("Conta criada! Complete o onboarding.");
-        navigate("/investir/onboarding/kyc");
+        toast.success("Conta criada! Vamos personalizar seu feed.");
+        navigate("/investir/onboarding/interesses");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

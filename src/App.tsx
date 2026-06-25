@@ -174,6 +174,7 @@ const InvestirWallet = lazy(() => import("./pages/investir/InvestirWallet"));
 const InvestirReservas = lazy(() => import("./pages/investir/InvestirReservas"));
 const InvestirKYC = lazy(() => import("./pages/investir/onboarding/InvestirKYC"));
 const InvestirSuitability = lazy(() => import("./pages/investir/onboarding/InvestirSuitability"));
+const InvestirInteresses = lazy(() => import("./pages/investir/onboarding/InvestirInteresses"));
 const InvestirComoFunciona = lazy(() => import("./pages/investir/InvestirComoFunciona"));
 const InvestirRiscos = lazy(() => import("./pages/investir/InvestirRiscos"));
 const InvestirRegulamentacao = lazy(() => import("./pages/investir/InvestirRegulamentacao"));
@@ -252,6 +253,7 @@ const App = () => (
             <Route path="/investir/painel" element={<InvestirDashboard />} />
             <Route path="/investir/carteira" element={<InvestirWallet />} />
             <Route path="/investir/reservas" element={<InvestirReservas />} />
+            <Route path="/investir/onboarding/interesses" element={<InvestirInteresses />} />
             <Route path="/investir/onboarding/kyc" element={<InvestirKYC />} />
             <Route path="/investir/onboarding/suitability" element={<InvestirSuitability />} />
             <Route path="/investir/como-funciona" element={<InvestirComoFunciona />} />

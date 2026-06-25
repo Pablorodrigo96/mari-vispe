@@ -48,25 +48,82 @@ export const seedCompanies: CompanyMini[] = [
 ];
 
 export function makeStoriesSeed(): StoryItem[] {
-  const base: Omit<StoryItem, "id">[] = [
-    { company: seedCompanies[0], media: photos.padaria, kind: "milestone",
+  type Base = Omit<StoryItem, "id" | "slides"> & { slides: StoryItem["slides"] };
+  const base: Base[] = [
+    {
+      company: seedCompanies[0], actor: "founder",
+      founderName: "Mariana Lopes", founderAvatar: photos.padaria,
+      media: photos.padaria, kind: "milestone",
       title: "Inauguração da 2ª unidade", body: "Abrimos hoje em Boa Vista 🎉",
-      createdAt: new Date(Date.now() - 1000 * 60 * 40).toISOString() },
-    { company: seedCompanies[1], media: photos.oficina, kind: "photo",
+      createdAt: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
+      slides: [
+        { media: photos.padaria, kind: "milestone", title: "Hoje a gente abre a 2ª padaria 🎉",
+          body: "Boa Vista, Curitiba. Pão fresco saindo a partir das 6h." },
+        { media: photos.padaria, kind: "indicator", title: "Mês fechou +41%",
+          indicator: { label: "Receita", value: "R$ 310k", delta: "+41%" } },
+        { media: photos.padaria, kind: "text", title: "Obrigada quem segue desde a 1ª unidade 💛",
+          body: "Sem vocês acompanhando, nada disso teria sentido." },
+      ],
+    },
+    {
+      company: seedCompanies[1], actor: "company",
+      media: photos.oficina, kind: "photo",
       title: "Bastidor: nova prensa hidráulica",
-      createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
-    { company: seedCompanies[2], media: photos.tech, kind: "milestone",
+      createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+      slides: [
+        { media: photos.oficina, kind: "photo", title: "Chegou a prensa nova", body: "Capacidade da oficina dobra." },
+        { media: photos.oficina, kind: "indicator", title: "Tempo médio caiu",
+          indicator: { label: "Entrega", value: "2,8 dias", delta: "-46%" } },
+      ],
+    },
+    {
+      company: seedCompanies[2], actor: "founder",
+      founderName: "Camila Ferreira", founderAvatar: photos.tech,
+      media: photos.tech, kind: "milestone",
       title: "Fechamos contrato com 3 prefeituras",
-      createdAt: new Date(Date.now() - 1000 * 60 * 200).toISOString() },
-    { company: seedCompanies[3], media: photos.industria, kind: "photo",
-      title: "Colheita de soja batendo recorde",
-      createdAt: new Date(Date.now() - 1000 * 60 * 300).toISOString() },
-    { company: seedCompanies[4], media: photos.servicos, kind: "milestone",
+      createdAt: new Date(Date.now() - 1000 * 60 * 200).toISOString(),
+      slides: [
+        { media: photos.tech, kind: "milestone", title: "3 prefeituras assinaram hoje",
+          body: "Digitalização da saúde pública no Sul." },
+        { media: photos.tech, kind: "indicator", title: "Receita recorrente nova",
+          indicator: { label: "MRR", value: "R$ 410k", delta: "+24%" } },
+      ],
+    },
+    {
+      company: seedCompanies[3], actor: "company",
+      media: photos.industria, kind: "photo",
+      title: "Colheita batendo recorde",
+      createdAt: new Date(Date.now() - 1000 * 60 * 300).toISOString(),
+      slides: [
+        { media: photos.industria, kind: "photo", title: "Safra 2026 começou",
+          body: "Plantio adiantado e clima favorável." },
+        { media: photos.industria, kind: "indicator", title: "12% acima do plano",
+          indicator: { label: "Receita safra", value: "R$ 14,2M", delta: "+12%" } },
+      ],
+    },
+    {
+      company: seedCompanies[4], actor: "founder",
+      founderName: "Bia Carvalho", founderAvatar: photos.servicos,
+      media: photos.servicos, kind: "milestone",
       title: "2.000 alunos ativos esta semana",
-      createdAt: new Date(Date.now() - 1000 * 60 * 410).toISOString() },
-    { company: seedCompanies[5], media: photos.varejo, kind: "photo",
+      createdAt: new Date(Date.now() - 1000 * 60 * 410).toISOString(),
+      slides: [
+        { media: photos.servicos, kind: "indicator", title: "Marca dos 2 mil alunos",
+          indicator: { label: "Alunos ativos", value: "2.040", delta: "+8%" } },
+        { media: photos.servicos, kind: "text", title: "Live amanhã 19h",
+          body: "Falar do novo modelo de franquia e responder perguntas." },
+      ],
+    },
+    {
+      company: seedCompanies[5], actor: "company",
+      media: photos.varejo, kind: "photo",
       title: "Nova ala pediátrica aberta",
-      createdAt: new Date(Date.now() - 1000 * 60 * 500).toISOString() },
+      createdAt: new Date(Date.now() - 1000 * 60 * 500).toISOString(),
+      slides: [
+        { media: photos.varejo, kind: "photo", title: "Pediatria inaugurada",
+          body: "+4 consultórios, +2 pediatras na equipe." },
+      ],
+    },
   ];
   return base.map((s, i) => ({ ...s, id: `story-${i}` }));
 }
