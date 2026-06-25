@@ -80,13 +80,37 @@ export function StoryViewer({
     <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl grid place-items-center">
       <div className="relative w-full h-full md:max-w-[420px] md:h-[88vh] md:rounded-3xl overflow-hidden bg-carbon shadow-2xl">
         {/* mídia */}
-        <img
-          src={current.media}
-          alt={current.title}
-          className="absolute inset-0 w-full h-full object-cover"
-          draggable={false}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/85" />
+        {current.kind === "real_video" ? (
+          <video
+            key={`${i}-${slide}`}
+            src={current.media}
+            autoPlay
+            playsInline
+            muted={false}
+            controls={false}
+            onEnded={nextSlide}
+            className="absolute inset-0 w-full h-full object-cover bg-black"
+          />
+        ) : current.kind === "instagram_embed" ? (
+          <iframe
+            src={current.media}
+            title={current.title}
+            loading="lazy"
+            allow="encrypted-media"
+            sandbox="allow-scripts allow-same-origin allow-popups"
+            className="absolute inset-0 w-full h-full bg-white"
+          />
+        ) : (
+          <img
+            src={current.media}
+            alt={current.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            draggable={false}
+          />
+        )}
+        {current.kind !== "instagram_embed" && (
+          <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/85" />
+        )}
 
         {/* progress bars */}
         <div className="absolute top-3 left-3 right-3 flex gap-1 z-20">
