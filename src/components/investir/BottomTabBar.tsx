@@ -1,13 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { Home, LineChart, Wallet, ClipboardList, User } from "lucide-react";
+import { Home, Compass, Trophy, Flame, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { to: "/investir/painel", label: "Início", icon: Home, end: true },
-  { to: "/investir/empresas", label: "Investir", icon: LineChart },
-  { to: "/investir/carteira", label: "Carteira", icon: Wallet },
-  { to: "/investir/reservas", label: "Reservas", icon: ClipboardList },
-  { to: "/investir/onboarding/kyc", label: "Conta", icon: User },
+  { to: "/investir", label: "Início", icon: Home, end: true },
+  { to: "/investir/descobrir", label: "Descobrir", icon: Compass },
+  { to: "/investir/missoes", label: "Missões", icon: Flame },
+  { to: "/investir/ligas", label: "Ligas", icon: Trophy },
+  { to: "/investir/painel", label: "Minha Mari", icon: User },
 ];
 
 export function BottomTabBar() {

@@ -5,9 +5,10 @@ import { Shield, ChevronRight, Sparkles } from "lucide-react";
 import { BottomTabBar } from "./BottomTabBar";
 
 const nav = [
-  { to: "/investir/empresas", label: "Empresas" },
-  { to: "/investir/como-funciona", label: "Como funciona" },
-  { to: "/investir/riscos", label: "Riscos" },
+  { to: "/investir/descobrir", label: "Descobrir" },
+  { to: "/investir/ligas", label: "Ligas" },
+  { to: "/investir/lives", label: "Lives" },
+  { to: "/investir/sobre-a-mari", label: "Sobre" },
 ];
 
 const authedNav = [
@@ -187,11 +188,11 @@ export function InvestirShell({
   return (
     <div className="min-h-screen bg-carbon text-bone flex flex-col">
       <InvestirHeader authed={authed} />
-      <main className={cn("flex-1", authed && "pb-20 md:pb-0")}>
+      <main className="flex-1 pb-20 md:pb-0">
         {children ?? <Outlet />}
       </main>
       {!hideFooter && <InvestirFooter />}
-      {authed && <BottomTabBar />}
+      <BottomTabBar />
     </div>
   );
 }
