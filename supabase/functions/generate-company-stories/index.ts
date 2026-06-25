@@ -158,14 +158,16 @@ Deno.serve(async (req) => {
         contentType: "image/png", upsert: true,
       });
       if (up.error) throw new Error(`upload_failed: ${up.error.message}`);
-      const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
+      // Bucket é privado — gera signed URL válida por 25h (matching expires_at + folga)
+      const { data: signed, error: sErr } = await admin.storage.from(BUCKET).createSignedUrl(path, 60 * 60 * 25);
+      if (sErr || !signed?.signedUrl) throw new Error(`sign_failed: ${sErr?.message}`);
       inserts.push({
         token_id,
         author_id: null,
         slide_order: i,
         slide_index: i,
         media_type: "image",
-        media_url: pub.publicUrl,
+        media_url: signed.signedUrl,
         caption: s.overlay.headline,
         source: "auto_generated",
         overlay: s.overlay,
