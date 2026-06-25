@@ -177,12 +177,12 @@ export default function FeedHome() {
       <section className="max-w-[1100px] mx-auto px-5 md:px-6 pt-6 md:pt-10">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-bone/55 text-xs md:text-sm">{greet} 👋</p>
-            <h1 className="text-2xl md:text-4xl font-semibold text-bone leading-tight">
-              Empresas reais <span className="text-volt">crescendo agora.</span>
+            <p className="text-bone/55 text-xs md:text-sm font-medium">{greet} 👋</p>
+            <h1 className="text-2xl md:text-4xl font-bold text-bone leading-tight tracking-tight">
+              Empresas reais <span className="m-text-gradient">crescendo agora.</span>
             </h1>
           </div>
-          <Link to="/investir/ligas" className="hidden sm:inline-flex items-center gap-1 text-xs text-bone/65 hover:text-volt">
+          <Link to="/investir/ligas" className="hidden sm:inline-flex items-center gap-1 text-xs text-bone/65 hover:text-bone font-medium">
             <Trophy className="w-3.5 h-3.5" /> Ligas <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
@@ -192,14 +192,15 @@ export default function FeedHome() {
       </section>
 
       <section className="max-w-[1100px] mx-auto px-5 md:px-6 mt-2">
-        <div className="rounded-2xl bg-gradient-to-r from-volt/10 via-volt/5 to-transparent border border-volt/20 px-4 py-3 flex items-center gap-3">
+        <div className="m-card px-4 py-3 flex items-center gap-3">
           <Sparkles className="w-4 h-4 text-volt shrink-0" />
           <p className="text-bone/85 text-xs md:text-sm">
             <strong>Instagram</strong> aproxima pessoas. <strong>LinkedIn</strong>, profissionais.
-            A <strong className="text-volt">Mari</strong> aproxima investidores e empreendedores.
+            A <strong className="m-text-gradient">Mari</strong> aproxima investidores e empreendedores.
           </p>
         </div>
       </section>
+
 
       {/* Faixas contextuais (interesses + follows) — antes do feed principal */}
       {followingPosts.length > 0 && (
