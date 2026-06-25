@@ -164,6 +164,8 @@ const Missoes = lazy(() => import("./pages/investir/Missoes"));
 const Ligas = lazy(() => import("./pages/investir/Ligas"));
 const Fantasy = lazy(() => import("./pages/investir/Fantasy"));
 const Lives = lazy(() => import("./pages/investir/Lives"));
+const Quiz = lazy(() => import("./pages/investir/Quiz"));
+const Comparar = lazy(() => import("./pages/investir/Comparar"));
 const InvestirAMariLanding = lazy(() => import("./pages/investir/sobre/InvestirAMariLanding"));
 // Legacy /investir pages (mantidas pra rotas regulatórias e fluxo de reserva)
 const InvestirListagem = lazy(() => import("./pages/investir/InvestirListagem"));
@@ -245,6 +247,8 @@ const App = () => (
             <Route path="/investir/ligas" element={<Ligas />} />
             <Route path="/investir/fantasy" element={<Fantasy />} />
             <Route path="/investir/lives" element={<Lives />} />
+            <Route path="/investir/quiz" element={<Quiz />} />
+            <Route path="/investir/comparar" element={<Comparar />} />
             <Route path="/investir/sobre-a-mari" element={<InvestirAMariLanding />} />
             {/* Legacy redirects */}
             <Route path="/investir/empresas" element={<InvestirListagem />} />

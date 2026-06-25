@@ -3492,6 +3492,24 @@ export type Database = {
         }
         Relationships: []
       }
+      mari_badges: {
+        Row: {
+          badge_code: string
+          earned_at: string
+          user_id: string
+        }
+        Insert: {
+          badge_code: string
+          earned_at?: string
+          user_id: string
+        }
+        Update: {
+          badge_code?: string
+          earned_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mari_brain_messages: {
         Row: {
           content: string
@@ -3586,6 +3604,39 @@ export type Database = {
           },
         ]
       }
+      mari_daily_quiz: {
+        Row: {
+          correct_index: number
+          created_at: string
+          explanation: string | null
+          id: string
+          options: Json
+          question: string
+          quiz_date: string
+          symbol: string | null
+        }
+        Insert: {
+          correct_index: number
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          options: Json
+          question: string
+          quiz_date?: string
+          symbol?: string | null
+        }
+        Update: {
+          correct_index?: number
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          options?: Json
+          question?: string
+          quiz_date?: string
+          symbol?: string | null
+        }
+        Relationships: []
+      }
       mari_leads: {
         Row: {
           cidade: string | null
@@ -3659,6 +3710,38 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mari_quiz_answers: {
+        Row: {
+          answered_at: string
+          choice_index: number
+          is_correct: boolean
+          quiz_id: string
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          choice_index: number
+          is_correct: boolean
+          quiz_id: string
+          user_id: string
+        }
+        Update: {
+          answered_at?: string
+          choice_index?: number
+          is_correct?: boolean
+          quiz_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mari_quiz_answers_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "mari_daily_quiz"
             referencedColumns: ["id"]
           },
         ]
@@ -8004,6 +8087,10 @@ export type Database = {
         Returns: {
           user_id: string
         }[]
+      }
+      answer_daily_quiz: {
+        Args: { p_choice: number; p_quiz_id: string }
+        Returns: Json
       }
       approve_advisor_request: {
         Args: { p_request_id: string }

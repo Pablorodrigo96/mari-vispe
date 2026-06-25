@@ -1,17 +1,21 @@
 import { InvestirShell } from "@/components/investir/InvestirShell";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Flame, CheckCircle2, Sparkles, Users, MessageCircle, BookOpen, Award } from "lucide-react";
+import { BadgesCard } from "@/components/investir/social/BadgesCard";
+import { Flame, CheckCircle2, Sparkles, Users, MessageCircle, BookOpen, Award, GitCompareArrows, ArrowRight } from "lucide-react";
 
-type Missao = { id: string; titulo: string; xp: number; done: boolean; icon: any };
+type Missao = { id: string; titulo: string; xp: number; done: boolean; icon: any; href?: string };
 
 const defaults: Missao[] = [
+  { id: "m5", titulo: "Responder o quiz do dia (+25 XP)", xp: 25, done: false, icon: Award, href: "/investir/quiz" },
   { id: "m1", titulo: "Assistir a um Resumo Mari", xp: 10, done: false, icon: Sparkles },
   { id: "m2", titulo: "Comentar em uma empresa", xp: 15, done: false, icon: MessageCircle },
   { id: "m3", titulo: "Seguir 3 empresas novas", xp: 20, done: false, icon: Users },
   { id: "m4", titulo: "Ler um Diário completo", xp: 15, done: false, icon: BookOpen },
-  { id: "m5", titulo: "Responder o quiz do dia", xp: 25, done: false, icon: Award },
+  { id: "m6", titulo: "Comparar 2 empresas lado a lado", xp: 15, done: false, icon: GitCompareArrows, href: "/investir/comparar" },
 ];
+
 
 export default function Missoes() {
   const [missoes, setMissoes] = useState<Missao[]>(defaults);
@@ -53,12 +57,10 @@ export default function Missoes() {
         </div>
 
         <h2 className="text-bone font-semibold text-lg md:text-xl mb-3">Missões de hoje</h2>
-        <ul className="space-y-2">
-          {missoes.map((m) => (
-            <li key={m.id}>
-              <button
-                onClick={() => done(m.id)}
-                disabled={m.done}
+        <ul className="space-y-2 mb-8">
+          {missoes.map((m) => {
+            const inner = (
+              <div
                 className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
                   m.done
                     ? "bg-volt/10 border-volt/30 text-bone/55"
@@ -72,11 +74,23 @@ export default function Missoes() {
                   <div className="font-medium text-sm">{m.titulo}</div>
                   <div className="text-bone/45 text-[11px]">+{m.xp} XP</div>
                 </div>
+                {m.href && !m.done && <ArrowRight className="w-4 h-4 text-volt" />}
                 {m.done && <span className="text-[10px] uppercase tracking-wider text-volt">Concluída</span>}
-              </button>
-            </li>
-          ))}
+              </div>
+            );
+            return (
+              <li key={m.id}>
+                {m.href ? (
+                  <Link to={m.href} className="block">{inner}</Link>
+                ) : (
+                  <button onClick={() => done(m.id)} disabled={m.done} className="w-full">{inner}</button>
+                )}
+              </li>
+            );
+          })}
         </ul>
+
+        <BadgesCard />
 
         <p className="text-bone/35 text-[10px] mt-6 text-center">
           XP recompensa <strong>comportamento</strong>, nunca compra. O jogo é conhecer melhor as empresas.
@@ -84,4 +98,5 @@ export default function Missoes() {
       </div>
     </InvestirShell>
   );
+
 }
