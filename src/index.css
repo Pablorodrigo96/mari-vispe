@@ -419,3 +419,9 @@
   50% { opacity: 0.4; }
 }
 
+
+/* Mari social — hide scrollbar utility for horizontal strips */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
