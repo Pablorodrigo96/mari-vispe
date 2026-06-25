@@ -6,22 +6,48 @@ import { BottomTabBar } from "./BottomTabBar";
 import { MariThemeProvider, useMariTheme } from "@/contexts/MariThemeContext";
 
 function ThemeToggle({ className }: { className?: string }) {
-  const { theme, toggle } = useMariTheme();
+  const { theme, setTheme } = useMariTheme();
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={theme === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro"}
-      title={theme === "dark" ? "Tema claro" : "Tema escuro"}
+    <div
+      role="group"
+      aria-label="Tema"
       className={cn(
-        "w-8 h-8 grid place-items-center rounded-full text-bone/70 hover:text-bone hover:bg-bone/10 transition-colors",
+        "inline-flex items-center rounded-full p-0.5 border border-bone/15 bg-bone/5",
         className,
       )}
     >
-      {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-    </button>
+      <button
+        type="button"
+        onClick={() => setTheme("dark")}
+        aria-pressed={theme === "dark"}
+        className={cn(
+          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium transition-colors",
+          theme === "dark"
+            ? "bg-bone text-carbon"
+            : "text-bone/65 hover:text-bone",
+        )}
+      >
+        <Moon className="w-3 h-3" />
+        <span className="hidden sm:inline">Escuro</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setTheme("light")}
+        aria-pressed={theme === "light"}
+        className={cn(
+          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium transition-colors",
+          theme === "light"
+            ? "bg-bone text-carbon"
+            : "text-bone/65 hover:text-bone",
+        )}
+      >
+        <Sun className="w-3 h-3" />
+        <span className="hidden sm:inline">Claro</span>
+      </button>
+    </div>
   );
 }
+
 
 
 const nav = [

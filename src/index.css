@@ -427,144 +427,318 @@
 }
 
 /* ============================================================
-   MARI WHITE THEME — Light skin scoped to /investir shell
-   Activated by adding `.mari-light` to the shell root.
-   Remaps hard-coded Carbon/Volt/Bone palette → Instagram-like
-   white surface with black CTAs. Does NOT touch the rest of app.
+   MARI LIGHT v2 — Instagram/TikTok-grade light theme
+   Scoped to `.mari-light` on the /investir shell root.
+   Strategy: define real semantic tokens (m-*) and remap legacy
+   Carbon/Volt/Bone classes to those tokens, instead of inverting
+   colors blindly. Keeps the dark theme untouched.
    ============================================================ */
 .mari-light {
   color-scheme: light;
-  background-color: #ffffff;
-  color: #0a0a0a;
+
+  /* Semantic tokens (Instagram-inspired) */
+  --m-bg: #FFFFFF;
+  --m-bg-soft: #FAFAFB;
+  --m-surface: #FFFFFF;
+  --m-surface-2: #F4F4F6;
+  --m-overlay: rgba(15, 15, 16, 0.04);
+
+  --m-text: #0F0F10;
+  --m-text-2: #3A3A40;
+  --m-text-3: #6E6E76;
+  --m-text-4: #9A9AA2;
+
+  --m-border: #ECECEE;
+  --m-border-2: #E0E0E4;
+  --m-border-strong: #0F0F10;
+
+  --m-accent: #0F0F10;
+  --m-accent-fg: #FFFFFF;
+  --m-live: #22A06B;
+  --m-live-bg: #E6F6EE;
+  --m-warn: #F59E0B;
+  --m-warn-bg: #FEF3C7;
+  --m-danger: #E11D48;
+  --m-danger-bg: #FFE4E6;
+  --m-info: #3B82F6;
+  --m-info-bg: #DBEAFE;
+  --m-pink: #BE185D;
+  --m-pink-bg: #FCE7F3;
+  --m-orange: #C2410C;
+  --m-orange-bg: #FFEDD5;
+
+  /* Instagram brand gradient (story rings, accents) */
+  --m-gradient-ig: linear-gradient(45deg,#F58529 0%,#DD2A7B 40%,#8134AF 70%,#515BD4 100%);
+  --m-shadow-card: 0 1px 2px rgba(15,15,16,0.04), 0 8px 24px -16px rgba(15,15,16,0.10);
+  --m-shadow-card-hover: 0 2px 4px rgba(15,15,16,0.06), 0 16px 32px -16px rgba(15,15,16,0.14);
+
+  /* shadcn surface tokens */
+  background-color: var(--m-bg);
+  color: var(--m-text);
   --background: 0 0% 100%;
-  --foreground: 0 0% 4%;
+  --foreground: 240 4% 6%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 4%;
+  --card-foreground: 240 4% 6%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 4%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 35%;
-  --border: 0 0% 92%;
-  --input: 0 0% 92%;
+  --popover-foreground: 240 4% 6%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 35%;
+  --border: 240 6% 92%;
+  --input: 240 6% 92%;
+
+  /* Recalibrate brand vars so any leftover Tailwind text-volt has contrast */
+  --volt: 145 65% 32%;
+  --volt-light: 145 55% 45%;
+  --gold: 145 65% 32%;
+  --carbon: 0 0% 100%;
+  --bone: 240 4% 6%;
+  --graphite: 240 5% 96%;
+  --navy: 240 4% 6%;
 }
 
-/* Backgrounds: Carbon/Graphite/Black → white/light gray */
+/* ---------- Legacy class remaps (kept for components we don't refactor) ---------- */
+
+/* Carbon/black backgrounds → white surface (with luminance tiers for /60-/90) */
 .mari-light .bg-carbon,
 .mari-light .bg-black,
-.mari-light .bg-\[\#0A0A0A\],
-.mari-light .bg-\[\#0a0a0a\],
-.mari-light .bg-\[\#000\],
-.mari-light .bg-\[\#000000\] { background-color: #ffffff !important; }
+.mari-light .bg-\[\#0A0A0A\], .mari-light .bg-\[\#0a0a0a\],
+.mari-light .bg-\[\#000\], .mari-light .bg-\[\#000000\] {
+  background-color: var(--m-bg) !important;
+}
+.mari-light .bg-carbon\/90, .mari-light .bg-carbon\/80, .mari-light .bg-carbon\/70,
+.mari-light .bg-black\/90,  .mari-light .bg-black\/80,  .mari-light .bg-black\/70 {
+  background-color: rgba(255,255,255,0.92) !important;
+  backdrop-filter: blur(12px);
+}
+.mari-light .bg-carbon\/60, .mari-light .bg-carbon\/50, .mari-light .bg-carbon\/40,
+.mari-light .bg-black\/60,  .mari-light .bg-black\/50,  .mari-light .bg-black\/40 {
+  background-color: var(--m-surface-2) !important;
+}
 
-.mari-light .bg-carbon\/90,
-.mari-light .bg-carbon\/80,
-.mari-light .bg-carbon\/70,
-.mari-light .bg-black\/90,
-.mari-light .bg-black\/80,
-.mari-light .bg-black\/70 { background-color: rgba(255,255,255,0.92) !important; }
-
-.mari-light .bg-carbon\/60,
-.mari-light .bg-carbon\/50,
-.mari-light .bg-carbon\/40,
-.mari-light .bg-black\/60,
-.mari-light .bg-black\/50,
-.mari-light .bg-black\/40 { background-color: rgba(255,255,255,0.75) !important; }
-
+/* Graphite (cards) → defined white surface with border+shadow */
 .mari-light .bg-graphite,
-.mari-light .bg-\[\#2A2A2A\],
-.mari-light .bg-\[\#1a1a1a\],
-.mari-light .bg-\[\#111\],
-.mari-light .bg-\[\#111111\] { background-color: #f4f4f5 !important; }
+.mari-light .bg-graphite\/30, .mari-light .bg-graphite\/40, .mari-light .bg-graphite\/50,
+.mari-light .bg-graphite\/60, .mari-light .bg-graphite\/70, .mari-light .bg-graphite\/80,
+.mari-light .bg-\[\#2A2A2A\], .mari-light .bg-\[\#1a1a1a\],
+.mari-light .bg-\[\#111\], .mari-light .bg-\[\#111111\] {
+  background-color: var(--m-surface) !important;
+  box-shadow: var(--m-shadow-card);
+}
 
-.mari-light .bg-graphite\/40,
-.mari-light .bg-graphite\/30,
-.mari-light .bg-graphite\/50,
-.mari-light .bg-graphite\/60,
-.mari-light .bg-graphite\/70,
-.mari-light .bg-graphite\/80 { background-color: #fafafa !important; }
+.mari-light .bg-bone\/5, .mari-light .bg-bone\/10,
+.mari-light .bg-white\/5, .mari-light .bg-white\/10 { background-color: var(--m-overlay) !important; }
+.mari-light .bg-bone\/15, .mari-light .bg-bone\/20,
+.mari-light .bg-white\/15, .mari-light .bg-white\/20 { background-color: var(--m-surface-2) !important; }
 
-.mari-light .bg-bone\/5,
-.mari-light .bg-bone\/10,
-.mari-light .bg-white\/5,
-.mari-light .bg-white\/10 { background-color: rgba(0,0,0,0.04) !important; }
-.mari-light .bg-bone\/15,
-.mari-light .bg-bone\/20,
-.mari-light .bg-white\/15,
-.mari-light .bg-white\/20 { background-color: rgba(0,0,0,0.07) !important; }
-
-/* Text: Bone/White → near-black */
+/* TEXT — high contrast, no washed-out opacity */
 .mari-light .text-bone,
 .mari-light .text-white,
-.mari-light .text-\[\#FAFAF7\],
-.mari-light .text-\[\#fafaf7\],
-.mari-light .text-\[\#fff\],
-.mari-light .text-\[\#ffffff\] { color: #0a0a0a !important; }
+.mari-light .text-\[\#FAFAF7\], .mari-light .text-\[\#fafaf7\],
+.mari-light .text-\[\#fff\],    .mari-light .text-\[\#ffffff\] { color: var(--m-text) !important; }
 
 .mari-light .text-bone\/90,
-.mari-light .text-white\/90 { color: rgba(10,10,10,0.92) !important; }
+.mari-light .text-bone\/85,
 .mari-light .text-bone\/80,
-.mari-light .text-white\/80,
+.mari-light .text-white\/90,
+.mari-light .text-white\/85,
+.mari-light .text-white\/80 { color: var(--m-text) !important; }
+
 .mari-light .text-bone\/70,
-.mari-light .text-white\/70 { color: rgba(10,10,10,0.75) !important; }
+.mari-light .text-bone\/65,
 .mari-light .text-bone\/60,
+.mari-light .text-bone\/55,
+.mari-light .text-white\/70,
+.mari-light .text-white\/65,
 .mari-light .text-white\/60,
+.mari-light .text-white\/55 { color: var(--m-text-2) !important; }
+
 .mari-light .text-bone\/50,
-.mari-light .text-white\/50 { color: rgba(10,10,10,0.6) !important; }
+.mari-light .text-bone\/45,
 .mari-light .text-bone\/40,
-.mari-light .text-white\/40,
+.mari-light .text-white\/50,
+.mari-light .text-white\/45,
+.mari-light .text-white\/40 { color: var(--m-text-3) !important; }
+
+.mari-light .text-bone\/35,
 .mari-light .text-bone\/30,
-.mari-light .text-white\/30 { color: rgba(10,10,10,0.45) !important; }
+.mari-light .text-white\/35,
+.mari-light .text-white\/30 { color: var(--m-text-4) !important; }
 
 /* Borders */
 .mari-light .border-bone\/10,
 .mari-light .border-bone\/20,
 .mari-light .border-white\/10,
-.mari-light .border-white\/20 { border-color: rgba(0,0,0,0.09) !important; }
+.mari-light .border-white\/20 { border-color: var(--m-border) !important; }
 .mari-light .border-bone\/5,
-.mari-light .border-white\/5 { border-color: rgba(0,0,0,0.05) !important; }
+.mari-light .border-white\/5 { border-color: var(--m-border) !important; }
 .mari-light .border-bone\/30,
-.mari-light .border-white\/30 { border-color: rgba(0,0,0,0.14) !important; }
+.mari-light .border-white\/30 { border-color: var(--m-border-2) !important; }
 .mari-light .divide-bone\/10 > * + *,
-.mari-light .divide-white\/10 > * + * { border-color: rgba(0,0,0,0.09) !important; }
+.mari-light .divide-white\/10 > * + * { border-color: var(--m-border) !important; }
+.mari-light .ring-volt\/60 { --tw-ring-color: var(--m-border-2) !important; }
 
-/* Volt CTAs → Instagram-style black button */
+/* Volt CTAs → Instagram-black */
 .mari-light .bg-volt,
 .mari-light .bg-volt\/90,
 .mari-light .hover\:bg-volt\/90:hover,
-.mari-light .bg-\[\#D9F564\],
-.mari-light .bg-\[\#d9f564\] {
-  background-color: #0a0a0a !important;
-  color: #ffffff !important;
+.mari-light .bg-\[\#D9F564\], .mari-light .bg-\[\#d9f564\] {
+  background-color: var(--m-accent) !important;
+  color: var(--m-accent-fg) !important;
 }
+.mari-light .bg-volt\/25,
 .mari-light .bg-volt\/20,
 .mari-light .bg-volt\/15,
-.mari-light .bg-volt\/10 { background-color: rgba(10,10,10,0.06) !important; }
+.mari-light .bg-volt\/10,
+.mari-light .bg-volt\/5,
+.mari-light .hover\:bg-volt\/25:hover { background-color: var(--m-live-bg) !important; }
 
+/* Volt text → leaf-green (real green, not olive). Used for "ao vivo", deltas, etc. */
 .mari-light .text-volt,
-.mari-light .text-volt\/90,
-.mari-light .text-volt\/80,
-.mari-light .text-volt\/70,
-.mari-light .text-\[\#D9F564\],
-.mari-light .text-\[\#d9f564\] { color: #6b8e1a !important; }
+.mari-light .text-volt\/90, .mari-light .text-volt\/80, .mari-light .text-volt\/70,
+.mari-light .text-\[\#D9F564\], .mari-light .text-\[\#d9f564\] { color: var(--m-live) !important; }
+
+.mari-light .hover\:text-volt:hover,
+.mari-light .group-hover\:text-volt:hover { color: var(--m-accent) !important; }
 
 .mari-light .border-volt,
-.mari-light .border-\[\#D9F564\] { border-color: #0a0a0a !important; }
+.mari-light .border-volt\/40,
+.mari-light .border-volt\/30,
+.mari-light .border-volt\/20,
+.mari-light .border-\[\#D9F564\] { border-color: var(--m-accent) !important; }
+.mari-light .hover\:border-volt:hover { border-color: var(--m-accent) !important; }
+.mari-light .hover\:border-volt\/40:hover { border-color: var(--m-border-strong) !important; }
 
-/* Gradients */
+/* Volt fill (svg) → leaf-green */
+.mari-light .bg-volt\/10 svg, .mari-light .text-volt svg { color: var(--m-live); }
+
+/* Gradients with carbon/volt — flatten cleanly */
 .mari-light .from-volt,
-.mari-light .from-\[\#D9F564\] { --tw-gradient-from: #f4f4f5 !important; --tw-gradient-to: rgba(244,244,245,0) !important; }
+.mari-light .from-\[\#D9F564\] { --tw-gradient-from: var(--m-surface-2) !important; --tw-gradient-to: rgba(244,244,246,0) !important; }
+.mari-light .via-volt { --tw-gradient-via: var(--m-overlay) !important; }
 .mari-light .to-volt,
-.mari-light .to-\[\#D9F564\] { --tw-gradient-to: #ffffff !important; }
+.mari-light .to-\[\#D9F564\] { --tw-gradient-to: var(--m-bg) !important; }
 .mari-light .from-carbon,
-.mari-light .from-black { --tw-gradient-from: #ffffff !important; --tw-gradient-to: rgba(255,255,255,0) !important; }
+.mari-light .from-black { --tw-gradient-from: var(--m-bg) !important; --tw-gradient-to: rgba(255,255,255,0) !important; }
 .mari-light .to-carbon,
-.mari-light .to-black { --tw-gradient-to: rgba(0,0,0,0.04) !important; }
+.mari-light .to-black { --tw-gradient-to: rgba(15,15,16,0.55) !important; }
 .mari-light .via-carbon,
-.mari-light .via-black { --tw-gradient-via: rgba(0,0,0,0.04) !important; }
+.mari-light .via-black { --tw-gradient-via: rgba(15,15,16,0.10) !important; }
 
-/* Logo chip inside header keeps Volt accent for brand recall */
+/* Pink/red tints from FeedCard / live badges keep their hue, dialed for white */
+.mari-light .bg-red-500\/20 { background-color: var(--m-danger-bg) !important; }
+.mari-light .text-red-300, .mari-light .text-red-400 { color: var(--m-danger) !important; }
+.mari-light .from-pink-500, .mari-light .via-pink-500 { --tw-gradient-from: #F58529 !important; --tw-gradient-via: #DD2A7B !important; }
+.mari-light .from-pink-400 { --tw-gradient-from: #F58529 !important; }
+.mari-light .via-rose-400, .mari-light .to-rose-400 { --tw-gradient-to: #515BD4 !important; }
+.mari-light .to-amber-300 { --tw-gradient-to: #F58529 !important; }
+.mari-light .text-pink-300 { color: var(--m-pink) !important; }
+
+/* Keep `.keep-volt` chips loyal to brand — but on white the chip is BLACK (IG-style) */
 .mari-light .keep-volt.bg-volt,
-.mari-light .keep-volt .bg-volt { background-color: #d9f564 !important; color: #0a0a0a !important; }
+.mari-light .keep-volt .bg-volt { background-color: var(--m-accent) !important; color: var(--m-accent-fg) !important; }
 .mari-light .keep-volt.text-volt,
-.mari-light .keep-volt .text-volt { color: #0a0a0a !important; }
+.mari-light .keep-volt .text-volt { color: var(--m-accent) !important; }
+.mari-light .text-carbon { color: var(--m-accent-fg) !important; }
+
+/* ---------- Utility components — DARK-FIRST defaults ---------- */
+
+.m-card {
+  background-color: rgba(42, 42, 42, 0.40);
+  border: 1px solid rgba(250, 250, 247, 0.10);
+  border-radius: 1.25rem;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.m-card-hover:hover { border-color: rgba(250, 250, 247, 0.22); }
+
+.m-cta {
+  background-color: hsl(var(--volt));
+  color: hsl(var(--carbon));
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: transform .15s ease, background-color .2s ease, filter .2s ease;
+}
+.m-cta:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
+.m-cta-outline {
+  background-color: transparent;
+  color: hsl(var(--bone));
+  border: 1.5px solid rgba(250, 250, 247, 0.25);
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.m-cta-outline:hover { background-color: rgba(250, 250, 247, 0.06); border-color: rgba(250, 250, 247, 0.45); }
+
+.m-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .15rem .55rem;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  line-height: 1.4;
+}
+.m-chip-live    { background: rgba(225,29,72,0.18); color: #FCA5A5; }
+.m-chip-round   { background: rgba(194,65,12,0.20); color: #FDBA74; }
+.m-chip-update  { background: rgba(34,160,107,0.20); color: #6EE7B7; }
+.m-chip-pink    { background: rgba(190,24,93,0.22); color: #F9A8D4; }
+.m-chip-milestone{ background: rgba(245,158,11,0.20); color: #FCD34D; }
+.m-chip-info    { background: rgba(59,130,246,0.20); color: #93C5FD; }
+.m-chip-neutral { background: rgba(250,250,247,0.10); color: rgba(250,250,247,0.90); }
+
+.m-text-gradient {
+  background: linear-gradient(135deg, hsl(var(--volt)) 0%, hsl(var(--volt-light)) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+
+.m-ring-live {
+  background: linear-gradient(45deg, #F58529 0%, #DD2A7B 40%, #8134AF 70%, #515BD4 100%);
+}
+.m-ring-default { background: rgba(250, 250, 247, 0.20); }
+.m-ring-company { background: linear-gradient(135deg, hsl(var(--volt)) 0%, hsl(var(--volt-light)) 100%); }
+
+/* ---------- LIGHT overrides (scoped to .mari-light) ---------- */
+
+.mari-light .m-card {
+  background-color: var(--m-surface);
+  border-color: var(--m-border);
+  box-shadow: var(--m-shadow-card);
+}
+.mari-light .m-card-hover:hover {
+  border-color: var(--m-border-strong);
+  box-shadow: var(--m-shadow-card-hover);
+}
+.mari-light .m-cta {
+  background-color: var(--m-accent);
+  color: var(--m-accent-fg);
+}
+.mari-light .m-cta:hover { background-color: #000; filter: none; }
+.mari-light .m-cta-outline {
+  color: var(--m-accent);
+  border-color: var(--m-accent);
+}
+.mari-light .m-cta-outline:hover { background-color: var(--m-overlay); border-color: var(--m-accent); }
+
+.mari-light .m-chip-live    { background: var(--m-danger-bg); color: var(--m-danger); }
+.mari-light .m-chip-round   { background: var(--m-orange-bg); color: var(--m-orange); }
+.mari-light .m-chip-update  { background: var(--m-live-bg);   color: var(--m-live); }
+.mari-light .m-chip-pink    { background: var(--m-pink-bg);   color: var(--m-pink); }
+.mari-light .m-chip-milestone{ background: var(--m-warn-bg);  color: var(--m-warn); }
+.mari-light .m-chip-info    { background: var(--m-info-bg);   color: var(--m-info); }
+.mari-light .m-chip-neutral { background: var(--m-surface-2); color: var(--m-text-2); }
+
+.mari-light .m-text-gradient {
+  background: var(--m-gradient-ig);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+
+.mari-light .m-ring-default { background: var(--m-border-2); }
+.mari-light .m-ring-company { background: linear-gradient(135deg, #0F0F10 0%, #22A06B 100%); }
+
+
 

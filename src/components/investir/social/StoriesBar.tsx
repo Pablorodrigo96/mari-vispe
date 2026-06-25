@@ -19,12 +19,12 @@ export function StoriesBar({ stories }: { stories: StoryItem[] }) {
                   aria-label={`Story de ${s.company.name}`}
                 >
                   <div
-                    className={`p-[2px] rounded-full ${
+                    className={`p-[2.5px] rounded-full ${
                       s.isLive
-                        ? "bg-gradient-to-tr from-pink-500 via-volt to-rose-400 animate-pulse"
+                        ? "m-ring-live animate-pulse"
                         : isFounder
-                        ? "bg-gradient-to-tr from-pink-400 via-volt to-amber-300"
-                        : "bg-gradient-to-tr from-volt via-volt to-amber-300"
+                        ? "m-ring-company"
+                        : "m-ring-default"
                     }`}
                   >
                     <div className="p-[2px] rounded-full bg-carbon relative">
@@ -34,21 +34,22 @@ export function StoriesBar({ stories }: { stories: StoryItem[] }) {
                         className="w-[70px] h-[70px] md:w-[80px] md:h-[80px] rounded-full object-cover"
                       />
                       {s.isLive && (
-                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] uppercase tracking-wider bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded-full">
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] uppercase tracking-wider bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded-full shadow-md">
                           ao vivo
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="mt-1.5 text-[11px] md:text-xs text-bone/85 text-center truncate group-hover:text-volt transition-colors">
+                  <div className="mt-2 text-[11px] md:text-xs text-bone font-medium text-center truncate">
                     {isFounder
                       ? (s.founderName?.split(" ")[0] || "Fundador")
                       : s.company.name.split(" ")[0]}
                   </div>
                   {isFounder && (
-                    <div className="text-[9px] text-pink-300 text-center -mt-0.5">fundador</div>
+                    <div className="text-[9px] text-bone/55 italic text-center -mt-0.5">fundador</div>
                   )}
                 </button>
+
               </li>
             );
           })}

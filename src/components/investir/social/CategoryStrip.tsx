@@ -9,13 +9,14 @@ export function CategoryStrip() {
           <li key={c.id} className="shrink-0">
             <Link
               to={`/investir/descobrir?cat=${c.id}`}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-bone/8 hover:bg-bone/15 border border-bone/10 text-bone/85 text-[12px] font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-bone/8 hover:bg-bone hover:text-carbon border border-bone/15 text-bone text-[12px] font-semibold transition-colors"
             >
-              <span>{c.emoji}</span>
+              <span className="text-base leading-none">{c.emoji}</span>
               {c.label}
             </Link>
           </li>
         ))}
+
       </ul>
     </div>
   );
