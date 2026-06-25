@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import { InvestirShell } from "@/components/investir/InvestirShell";
 import { CompanyHero } from "@/components/investir/social/CompanyHero";
 import { ResumoIA } from "@/components/investir/social/ResumoIA";
@@ -21,6 +21,8 @@ const fmtBRL = (n: number) =>
 
 export default function PerfilEmpresa() {
   const { symbol } = useParams<{ symbol: string }>();
+  const [searchParams] = useSearchParams();
+  const reservarParam = Number(searchParams.get("reservar") || 0);
   const [token, setToken] = useState<any>(null);
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +31,13 @@ export default function PerfilEmpresa() {
   const [aiResumo, setAiResumo] = useState<{ summary: string; bullets: { label: string; body: string }[] } | null>(null);
   const [canManageStories, setCanManageStories] = useState(false);
   const [activeStoriesCount, setActiveStoriesCount] = useState(0);
+
+  // Abrir modal automaticamente quando vier do story com ?reservar=50
+  useEffect(() => {
+    if (reservarParam > 0 && token && token.status === "primary_open") {
+      setReserveOpen(true);
+    }
+  }, [reservarParam, token]);
 
   useEffect(() => {
     if (!symbol) return;
@@ -294,7 +303,7 @@ export default function PerfilEmpresa() {
         </div>
       </div>
 
-      {token && <ReservationModal open={reserveOpen} onClose={() => setReserveOpen(false)} token={token} />}
+      {token && <ReservationModal open={reserveOpen} onClose={() => setReserveOpen(false)} token={token} initialAmount={reservarParam > 0 ? Math.max(reservarParam, token.min_ticket || 0) : undefined} />}
     </InvestirShell>
   );
 }

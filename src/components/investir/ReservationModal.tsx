@@ -31,13 +31,13 @@ function useIsMobile() {
   return m;
 }
 
-export function ReservationModal({ open, onClose, token }: { open: boolean; onClose: () => void; token: any }) {
+export function ReservationModal({ open, onClose, token, initialAmount }: { open: boolean; onClose: () => void; token: any; initialAmount?: number }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const minTicket = token?.min_ticket || 0;
   const price = token?.initial_price || 1;
 
-  const [amount, setAmount] = useState<number>(minTicket || 100);
+  const [amount, setAmount] = useState<number>(initialAmount || minTicket || 100);
   const [step, setStep] = useState<1 | 2>(1);
   const [accepted, setAccepted] = useState(false);
   const [status, setStatus] = useState<Status>("loading");
