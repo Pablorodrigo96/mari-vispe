@@ -22,25 +22,25 @@
     --primary: 0 0% 4%;
     --primary-foreground: 60 33% 97%;
 
-    --secondary: 60 10% 94%;
+    --secondary: 60 10% 92%;
     --secondary-foreground: 0 0% 4%;
 
-    --muted: 60 10% 94%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 60 10% 92%;
+    --muted-foreground: 0 0% 28%;
 
     /* Volt accent */
     /* Volt accent — `--accent` is widely used for TEXT (text-accent, ring, focus).
        On light backgrounds the bright Volt becomes unreadable, so light-mode
        --accent is a deeper Volt that hits WCAG AA. Bright Volt is preserved
        in --volt and reachable via bg-volt / text-volt utilities for surfaces. */
-    --accent: 74 70% 32%;
+    --accent: 74 75% 24%;
     --accent-foreground: 60 33% 97%;
 
     --destructive: 0 84% 50%;
     --destructive-foreground: 60 33% 97%;
 
-    --border: 0 0% 88%;
-    --input: 0 0% 88%;
+    --border: 0 0% 80%;
+    --input: 0 0% 80%;
     --ring: 74 70% 38%;
 
     --radius: 0.5rem;

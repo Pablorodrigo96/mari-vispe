@@ -16,7 +16,7 @@ import { GeneratingState } from "@/components/inteligencia/shared/GeneratingStat
 import { EmptyState } from "@/components/inteligencia/shared/EmptyState";
 import { FootnoteSource } from "@/components/inteligencia/shared/FootnoteSource";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function Inteligencia() {
   const { sectorSlug, isLoading: sectorLoading } = useUserSector();
@@ -44,12 +44,15 @@ export default function Inteligencia() {
   const { data, isLoading, isMissing, isExpired, generate, isGenerating, generateError } =
     useSectorResearch(sectorSlug);
 
-  // Refresh em background quando expirado
+  // Refresh em background uma única vez por slug quando expirado
+  // (evita loop caso o backend não consiga renovar expires_at/schema_version)
+  const refreshedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (data && isExpired && !isGenerating) {
-      generate(true);
-    }
-  }, [data, isExpired, isGenerating, generate]);
+    if (!data || !isExpired || isGenerating) return;
+    if (refreshedRef.current.has(sectorSlug)) return;
+    refreshedRef.current.add(sectorSlug);
+    generate(true);
+  }, [data, isExpired, isGenerating, generate, sectorSlug]);
 
   const setorNome = data?.setor_nome_completo || sectorSlug.replace(/-/g, " ");
 
