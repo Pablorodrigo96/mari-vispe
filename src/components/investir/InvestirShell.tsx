@@ -1,8 +1,28 @@
 import { Outlet, Link, NavLink } from "react-router-dom";
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { Shield, ChevronRight, Sparkles } from "lucide-react";
+import { Shield, ChevronRight, Sparkles, Sun, Moon } from "lucide-react";
 import { BottomTabBar } from "./BottomTabBar";
+import { MariThemeProvider, useMariTheme } from "@/contexts/MariThemeContext";
+
+function ThemeToggle({ className }: { className?: string }) {
+  const { theme, toggle } = useMariTheme();
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={theme === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro"}
+      title={theme === "dark" ? "Tema claro" : "Tema escuro"}
+      className={cn(
+        "w-8 h-8 grid place-items-center rounded-full text-bone/70 hover:text-bone hover:bg-bone/10 transition-colors",
+        className,
+      )}
+    >
+      {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+    </button>
+  );
+}
+
 
 const nav = [
   { to: "/investir/descobrir", label: "Descobrir" },
@@ -25,12 +45,13 @@ export function InvestirHeader({ authed }: { authed?: boolean }) {
           to={authed ? "/investir/painel" : "/investir"}
           className="flex items-center gap-2 font-semibold tracking-tight text-bone"
         >
-          <div className="w-7 h-7 rounded-md bg-volt grid place-items-center">
+          <div className="keep-volt w-7 h-7 rounded-md bg-volt grid place-items-center">
             <span className="text-carbon font-black text-sm">m</span>
           </div>
           <span className="text-[15px]">
-            mari<span className="text-volt">.</span>invest
+            mari<span className="keep-volt text-volt">.</span>invest
           </span>
+
         </Link>
         <nav className="hidden md:flex items-center gap-1 text-sm">
           {(authed ? authedNav : nav).map((n) => (
@@ -49,6 +70,8 @@ export function InvestirHeader({ authed }: { authed?: boolean }) {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
+
           {!authed ? (
             <>
               <Link
@@ -176,6 +199,28 @@ function FooterCol({ title, links }: { title: string; links: [string, string][] 
   );
 }
 
+function InvestirShellInner({
+  authed,
+  children,
+  hideFooter,
+}: {
+  authed?: boolean;
+  children?: ReactNode;
+  hideFooter?: boolean;
+}) {
+  const { theme } = useMariTheme();
+  return (
+    <div className={cn("min-h-screen bg-carbon text-bone flex flex-col", theme === "light" && "mari-light")}>
+      <InvestirHeader authed={authed} />
+      <main className="flex-1 pb-20 md:pb-0">
+        {children ?? <Outlet />}
+      </main>
+      {!hideFooter && <InvestirFooter />}
+      <BottomTabBar />
+    </div>
+  );
+}
+
 export function InvestirShell({
   authed = false,
   children,
@@ -186,16 +231,14 @@ export function InvestirShell({
   hideFooter?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-carbon text-bone flex flex-col">
-      <InvestirHeader authed={authed} />
-      <main className="flex-1 pb-20 md:pb-0">
-        {children ?? <Outlet />}
-      </main>
-      {!hideFooter && <InvestirFooter />}
-      <BottomTabBar />
-    </div>
+    <MariThemeProvider>
+      <InvestirShellInner authed={authed} hideFooter={hideFooter}>
+        {children}
+      </InvestirShellInner>
+    </MariThemeProvider>
   );
 }
+
 
 export function SectionEyebrow({ children }: { children: ReactNode }) {
   return (
