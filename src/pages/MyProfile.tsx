@@ -662,7 +662,7 @@ const MyProfile = () => {
                         <h3 className="font-semibold text-lg">Master</h3>
                       </div>
                       <p className="text-2xl font-bold mb-4">
-                        R$ 99<span className="text-sm font-normal text-muted-foreground">/mês</span>
+                        R$ 297<span className="text-sm font-normal text-muted-foreground">/mês</span>
                       </p>
                       <ul className="space-y-2 text-sm text-muted-foreground mb-4">
                         <li className="flex items-center gap-2">
