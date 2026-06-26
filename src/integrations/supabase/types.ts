@@ -867,6 +867,86 @@ export type Database = {
         }
         Relationships: []
       }
+      company_captables: {
+        Row: {
+          available_for_sale_pct: number
+          cnpj: string | null
+          created_at: string
+          currency: string
+          id: string
+          listing_id: string
+          nome_fantasia: string | null
+          razao_social: string | null
+          total_shares: number
+          updated_at: string
+          user_id: string
+          valuation_amount: number | null
+          valuation_at: string | null
+          valuation_source: string | null
+        }
+        Insert: {
+          available_for_sale_pct?: number
+          cnpj?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          listing_id: string
+          nome_fantasia?: string | null
+          razao_social?: string | null
+          total_shares?: number
+          updated_at?: string
+          user_id: string
+          valuation_amount?: number | null
+          valuation_at?: string | null
+          valuation_source?: string | null
+        }
+        Update: {
+          available_for_sale_pct?: number
+          cnpj?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          listing_id?: string
+          nome_fantasia?: string | null
+          razao_social?: string | null
+          total_shares?: number
+          updated_at?: string
+          user_id?: string
+          valuation_amount?: number | null
+          valuation_at?: string | null
+          valuation_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_captables_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_captables_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "listings_blind"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_captables_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "partner_opportunity_pool"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_captables_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_comments: {
         Row: {
           body: string
@@ -934,6 +1014,53 @@ export type Database = {
             columns: ["token_id"]
             isOneToOne: false
             referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_partners: {
+        Row: {
+          captable_id: string
+          created_at: string
+          documento: string | null
+          id: string
+          is_pf: boolean | null
+          nome: string
+          pct: number
+          qualificacao: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          captable_id: string
+          created_at?: string
+          documento?: string | null
+          id?: string
+          is_pf?: boolean | null
+          nome: string
+          pct?: number
+          qualificacao?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          captable_id?: string
+          created_at?: string
+          documento?: string | null
+          id?: string
+          is_pf?: boolean | null
+          nome?: string
+          pct?: number
+          qualificacao?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_partners_captable_id_fkey"
+            columns: ["captable_id"]
+            isOneToOne: false
+            referencedRelation: "company_captables"
             referencedColumns: ["id"]
           },
         ]
