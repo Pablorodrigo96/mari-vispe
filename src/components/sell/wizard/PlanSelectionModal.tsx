@@ -107,7 +107,7 @@ const PlanSelectionModal = ({
             </div>
 
             <div className="mb-6">
-              <span className="text-3xl font-bold text-foreground">R$ 697</span>
+              <span className="text-3xl font-bold text-foreground">R$ 297</span>
               <span className="text-muted-foreground">/mês</span>
             </div>
 

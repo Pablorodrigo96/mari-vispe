@@ -148,13 +148,27 @@ const ListingDetail = () => {
     const fetchListing = async () => {
       if (!id) return;
       try {
-        const { data, error } = await supabase
+        // 1) tenta a view pública (status='active')
+        const { data: pub, error: pubErr } = await supabase
           .from('public_listings')
           .select('*')
           .eq('id', id)
           .maybeSingle();
-        if (error) throw error;
-        setListing(data);
+        if (pubErr) throw pubErr;
+        if (pub) {
+          setListing(pub);
+          return;
+        }
+        // 2) fallback: tabela base — RLS libera para owner/admin/advisor.
+        // Permite que o anunciante veja o próprio rascunho/pendente e o admin
+        // abra a oportunidade direto da fila de aprovação.
+        const { data: raw, error: rawErr } = await supabase
+          .from('listings')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+        if (rawErr) throw rawErr;
+        setListing(raw as any);
       } catch (error) {
         console.error('Error fetching listing:', error);
         toast.error('Erro ao carregar anúncio');

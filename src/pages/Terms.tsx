@@ -7,10 +7,20 @@ const Terms = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-16 max-w-4xl">
-        <h1 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+        <h1 className="text-3xl md:text-4xl font-bold text-center mb-4 text-foreground">
           Termo de Uso e Política de Privacidade
         </h1>
-        
+        <p className="text-center text-sm text-muted-foreground mb-8">
+          Versão 2.0 — Junho de 2026
+        </p>
+
+        <div className="mb-10 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-300">
+          <strong>Atualização v2.0 pendente de inserção.</strong> O texto abaixo é a versão anterior e
+          permanece válido enquanto a revisão jurídica da v2.0 (Jun/2026) não é colada nesta página.
+          Para a Política de Privacidade completa em conformidade com a LGPD, acesse{' '}
+          <a href="/privacidade" className="underline font-medium">/privacidade</a>.
+        </div>
+
         <div className="space-y-10 text-muted-foreground">
           {/* Seção 1 */}
           <section>

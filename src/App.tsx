@@ -29,6 +29,7 @@ const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const HomologacaoPublica = lazy(() => import("./pages/legal/HomologacaoPublica"));
 const AssinaturaPublica = lazy(() => import("./pages/legal/AssinaturaPublica"));
 const Terms = lazy(() => import("./pages/Terms"));
+const Privacidade = lazy(() => import("./pages/Privacidade"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const AwaitingApproval = lazy(() => import("./pages/AwaitingApproval"));
 const Investors = lazy(() => import("./pages/Investors"));
@@ -235,6 +236,8 @@ const App = () => (
             <Route path="/homologacao/:token" element={<HomologacaoPublica />} />
             <Route path="/assinar/:token" element={<AssinaturaPublica />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/termos" element={<Terms />} />
+            <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/aguardando-aprovacao" element={<AwaitingApproval />} />
             <Route path="/investors" element={<Investors />} />

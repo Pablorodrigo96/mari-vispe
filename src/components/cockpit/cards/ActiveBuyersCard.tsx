@@ -16,10 +16,17 @@ export function ActiveBuyersCard({ ctx, loading }: Props) {
     enabled: !loading,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      // Count active buyer signals (anonymized) — fallback: count active mandates / buyers globally
-      const { count } = await supabase
-        .from("buyer_revealed_thetas" as any)
-        .select("buyer_id", { count: "exact", head: true });
+      // Conta compradores REAIS cadastrados e ativos. Quando há setor preferido,
+      // filtra pelo array `categories` do buyer_profiles. Sem setor, conta todos
+      // os buyers ativos. Nunca mostra placeholder fictício.
+      let q = supabase
+        .from("buyer_profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "active");
+      if (sector) {
+        q = q.contains("categories", [sector]);
+      }
+      const { count } = await q;
       return count ?? 0;
     },
   });
