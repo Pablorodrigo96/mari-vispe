@@ -60,6 +60,7 @@ const BlindTeaser = lazy(() => import("./pages/BlindTeaser"));
 const Painel = lazy(() => import("./pages/Painel"));
 const Inteligencia = lazy(() => import("./pages/Inteligencia"));
 const MyListings = lazy(() => import("./pages/MyListings"));
+const Captable = lazy(() => import("./pages/Captable"));
 const ListingCockpit = lazy(() => import("./pages/ListingCockpit"));
 const EditListing = lazy(() => import("./pages/EditListing"));
 const MyProfile = lazy(() => import("./pages/MyProfile"));
@@ -322,6 +323,7 @@ const App = () => (
               <Route path="/inteligencia" element={<Inteligencia />} />
               <Route path="/meus-anuncios" element={<MyListings />} />
               <Route path="/meus-anuncios/:id" element={<ListingCockpit />} />
+              <Route path="/captable" element={<Captable />} />
               <Route path="/editar-anuncio/:id" element={<EditListing />} />
               <Route path="/meu-perfil" element={<MyProfile />} />
               <Route path="/meus-valuations" element={<MyValuations />} />

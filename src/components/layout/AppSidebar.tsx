@@ -69,6 +69,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: Props) {
     const sellChildren: NavChild[] = [
       { name: 'Meus anúncios', href: '/meus-anuncios', icon: ClipboardList },
       { name: 'Anunciar empresa', href: '/vender', icon: Plus },
+      { name: 'Cap-table', href: '/captable', icon: ChartBar },
       { name: 'Simulador Investidor', href: '/vender/simulador-investidor', icon: TrendingUp },
       { name: 'Simulador Due Diligence', href: '/vender/due-diligence', icon: CheckSquare },
     ];
