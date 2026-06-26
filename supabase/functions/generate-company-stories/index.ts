@@ -173,7 +173,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { error: insErr } = await admin.from("company_stories").insert(inserts);
+    const { error: insErr } = await admin
+      .from("company_stories")
+      .upsert(inserts, { onConflict: "token_id,slide_index" });
     if (insErr) throw new Error(`insert_failed: ${insErr.message}`);
 
     return json({ ok: true, generated: inserts.length });
