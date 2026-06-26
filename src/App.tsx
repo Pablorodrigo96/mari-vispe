@@ -29,6 +29,7 @@ const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const HomologacaoPublica = lazy(() => import("./pages/legal/HomologacaoPublica"));
 const AssinaturaPublica = lazy(() => import("./pages/legal/AssinaturaPublica"));
 const Terms = lazy(() => import("./pages/Terms"));
+const Privacidade = lazy(() => import("./pages/Privacidade"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const AwaitingApproval = lazy(() => import("./pages/AwaitingApproval"));
 const Investors = lazy(() => import("./pages/Investors"));
