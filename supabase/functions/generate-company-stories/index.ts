@@ -142,10 +142,9 @@ Deno.serve(async (req) => {
         .gt("expires_at", new Date().toISOString())
         .limit(1);
       if (existing?.length) return json({ skipped: true, reason: "already_active" });
-    } else {
-      // Limpa auto antigos pra esse token
-      await admin.from("company_stories").delete().eq("token_id", token_id).eq("source", "auto_generated");
     }
+    // Sempre limpa auto antigos (expirados ou não) pra evitar colisão de unique (token_id, slide_index)
+    await admin.from("company_stories").delete().eq("token_id", token_id).eq("source", "auto_generated");
 
     const slides = buildSlides(token, listing);
     const inserts: any[] = [];
