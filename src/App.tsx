@@ -236,6 +236,8 @@ const App = () => (
             <Route path="/homologacao/:token" element={<HomologacaoPublica />} />
             <Route path="/assinar/:token" element={<AssinaturaPublica />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/termos" element={<Terms />} />
+            <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/aguardando-aprovacao" element={<AwaitingApproval />} />
             <Route path="/investors" element={<Investors />} />
