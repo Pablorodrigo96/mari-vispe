@@ -42,7 +42,7 @@ interface Progresso { id: string; assessment_id: string | null; ipe: number; val
 export default function EquityPlannerAssessment() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
   const [creatingRound, setCreatingRound] = useState(false);
