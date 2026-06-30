@@ -26,8 +26,10 @@ export default function EquityPlannerReport() {
   const { id } = useParams();
   const [search] = useSearchParams();
   const auto = search.get("auto") === "1";
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [assess, setAssess] = useState<any>(null);
+
   const [company, setCompany] = useState<any>(null);
   const [dims, setDims] = useState<any[]>([]);
   const [val, setVal] = useState<any>(null);
