@@ -296,10 +296,11 @@ export default function EquityPlannerNew() {
       if (fErr) throw fErr;
       if (out?.error) throw new Error(out.error);
 
-      // Se o scan ainda estava rodando, dá uns segundos pro panel já aparecer no diagnóstico
+      // Mapeamento de mercado roda em paralelo: avisa o usuário (sem bloquear navegação)
       if (marketScanStatus === "running") {
-        await new Promise((r) => setTimeout(r, 8000));
+        toast.info("Mapeamento de mercado ainda processando — aparecerá no diagnóstico em alguns segundos.");
       }
+
 
       sessionStorage.removeItem(DRAFT_KEY);
       toast.success("Diagnóstico pronto!");
