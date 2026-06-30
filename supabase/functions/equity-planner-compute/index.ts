@@ -597,8 +597,6 @@ Deno.serve(async (req) => {
         : (DERISK_DIMS.has(i.dimensao_alvo) ? "derisk" : "execucao"),
       prioridade: idx + 1,
     }));
-    if (inits.length) await supabase.from("equity_initiatives").insert(inits);
-
     // buyer map enriquecido — herda sinergias/exemplos do perfil ancorado quando IA não preencher
     const buyerArchById = new Map((buyerArchs || []).map((b: any) => [b.id, b]));
     const buyers = (parsed.buyer_map || []).slice(0, 5).map((b: any, idx: number) => {
@@ -606,7 +604,6 @@ Deno.serve(async (req) => {
       const sin = Array.isArray(b.sinergias) && b.sinergias.length ? b.sinergias : (perfil?.sinergias_padrao || []);
       const ex = Array.isArray(b.exemplos_targets) && b.exemplos_targets.length ? b.exemplos_targets : (perfil?.exemplos_targets || []);
       return {
-        assessment_id: assessmentId,
         arquetipo_comprador: ["estrategico","financeiro","individual"].includes(b.arquetipo_comprador) ? b.arquetipo_comprador : (perfil?.arquetipo_comprador || "estrategico"),
         nome_alvo: b.nome_alvo || perfil?.nome_perfil || null,
         setor_alvo: b.setor_alvo || perfil?.setor_alvo || null,
@@ -619,7 +616,6 @@ Deno.serve(async (req) => {
         prioridade: idx + 1,
       };
     });
-    if (buyers.length) await supabase.from("equity_buyer_map").insert(buyers);
 
     // veredito calibrado
     const vereditoCalc = ipeFinal >= 75 ? "vendavel_hoje"
@@ -628,7 +624,57 @@ Deno.serve(async (req) => {
                        : "inviavel_sem_reestruturacao";
     const veredito = parsed.veredito_liquidez || vereditoCalc;
 
-    // update assessment + company arquetipo
+    // progress snapshot
+    const dimSnapshot: Record<string, number> = {};
+    dimRows.forEach((d: any) => { dimSnapshot[d.dimensao] = d.score; });
+    const topDestruidoresSnap = dimRows
+      .filter((d: any) => d.destruidor_top)
+      .sort((a: any, b: any) => a.score - b.score)
+      .map((d: any) => ({ dimensao: d.dimensao, score: d.score, peso: d.peso }));
+
+    // 6.bis) PERSISTÊNCIA ATÔMICA — uma transação só (delete + inserts dim/val/bridge/inits/buyers/progress)
+    const dimRowsForRpc = dimRows.map((d: any) => ({
+      dimensao: d.dimensao,
+      score: d.score,
+      peso: d.peso,
+      evidencias: d.evidencias || [],
+      destruidor_top: !!d.destruidor_top,
+    }));
+    const initsForRpc = inits.map((i: any) => ({
+      dimensao_alvo: i.dimensao_alvo,
+      titulo: i.titulo,
+      descricao: i.descricao,
+      delta_ipe: i.delta_ipe,
+      delta_valor: i.delta_valor,
+      esforco: i.esforco,
+      prazo_meses: i.prazo_meses,
+      sprint: i.sprint,
+      status: i.status,
+      tipo: i.tipo,
+      prioridade: i.prioridade,
+    }));
+    const { error: persistErr } = await supabase.rpc("equity_compute_persist", {
+      p_assessment_id: assessmentId,
+      p_dim_rows: dimRowsForRpc,
+      p_valuation: valuationRow,
+      p_bridge_items: bridgeRows,
+      p_initiatives: initsForRpc,
+      p_buyer_map: buyers,
+      p_progress: {
+        company_id: assess.company_id,
+        ipe: ipeFinal,
+        valor: valorAtual,
+        valor_alvo: valorAlvo,
+        arquetipo_id: arqId,
+        veredito_liquidez: veredito,
+        dim_snapshot: dimSnapshot,
+        top_destruidores: topDestruidoresSnap,
+        evento: "compute",
+      },
+    });
+    if (persistErr) throw persistErr;
+
+    // update assessment + company arquetipo (após persistência atômica)
     await supabase.from("equity_assessments").update({
       arquetipo_id: arqId,
       arquetipo_sugerido: arqId,
@@ -643,25 +689,6 @@ Deno.serve(async (req) => {
       arquetipo_id: arqId,
     }).eq("id", assess.company_id);
 
-    // progress log snapshot (enriquecido — Onda 4 loop)
-    const dimSnapshot: Record<string, number> = {};
-    dimRows.forEach((d: any) => { dimSnapshot[d.dimensao] = d.score; });
-    const topDestruidoresSnap = dimRows
-      .filter((d: any) => d.destruidor_top)
-      .sort((a: any, b: any) => a.score - b.score)
-      .map((d: any) => ({ dimensao: d.dimensao, score: d.score, peso: d.peso }));
-    await supabase.from("equity_progress_log").insert({
-      company_id: assess.company_id,
-      assessment_id: assessmentId,
-      ipe: ipeFinal,
-      valor: valorAtual,
-      valor_alvo: valorAlvo,
-      arquetipo_id: arqId,
-      veredito_liquidez: veredito,
-      dim_snapshot: dimSnapshot,
-      top_destruidores: topDestruidoresSnap,
-      evento: "compute",
-    });
 
     return new Response(JSON.stringify({
       ok: true,
