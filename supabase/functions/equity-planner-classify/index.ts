@@ -5,6 +5,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { callAnthropic } from "../_shared/anthropicGateway.ts";
+import { requireAssessmentOwner } from "../_shared/equityAuth.ts";
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -31,7 +33,15 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (typeof intakeText === "string" && intakeText.length > 50000) {
+      return new Response(JSON.stringify({ error: "intake_too_large", max: 50000 }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const guard = await requireAssessmentOwner(req, assessmentId, corsHeaders);
+    if (!guard.ok) return guard.response;
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
 
     const { data: assess } = await supabase
       .from("equity_assessments")

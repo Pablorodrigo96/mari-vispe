@@ -2,11 +2,13 @@
 // Rota: /equity-planner/:id/relatorio
 // Layout otimizado para impressão (window.print → Salvar como PDF) com branding Mari.
 import { useEffect, useState } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams, Navigate } from "react-router-dom";
 import { Printer, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { DIMENSOES, ARQUETIPOS_LABEL, VEREDITO_LABEL, brl } from "@/lib/equity-planner/constants";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+
 
 const PRINT_CSS = `
   @page { size: A4; margin: 14mm 12mm; }
@@ -24,8 +26,10 @@ export default function EquityPlannerReport() {
   const { id } = useParams();
   const [search] = useSearchParams();
   const auto = search.get("auto") === "1";
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [assess, setAssess] = useState<any>(null);
+
   const [company, setCompany] = useState<any>(null);
   const [dims, setDims] = useState<any[]>([]);
   const [val, setVal] = useState<any>(null);
@@ -69,8 +73,11 @@ export default function EquityPlannerReport() {
     }
   }, [auto, loading, assess]);
 
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="h-8 w-8 animate-spin text-black" /></div>;
+  if (!user) return <Navigate to={`/auth?redirect=${encodeURIComponent(`/equity-planner/${id}/relatorio`)}`} replace />;
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="h-8 w-8 animate-spin text-black" /></div>;
   if (!assess) return <div className="min-h-screen flex items-center justify-center text-gray-500 bg-white">Diagnóstico não encontrado.</div>;
+
 
   const radarData = DIMENSOES.map((d) => ({ dim: d.label.split(" ")[0], score: dims.find((x: any) => x.dimensao === d.key)?.score ?? 0 }));
   const veredito = VEREDITO_LABEL[assess.veredito_liquidez || "vendavel_em_meses"];

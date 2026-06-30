@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, Navigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +42,7 @@ interface Progresso { id: string; assessment_id: string | null; ipe: number; val
 export default function EquityPlannerAssessment() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
   const [creatingRound, setCreatingRound] = useState(false);
@@ -327,8 +327,11 @@ export default function EquityPlannerAssessment() {
     });
   }, [inits, buyerSelecionado, dimsBoost]);
 
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-volt" /></div>;
+  if (!user) return <Navigate to={`/auth?redirect=${encodeURIComponent(`/equity-planner/${id}`)}`} replace />;
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-volt" /></div>;
   if (!assess) return <div className="min-h-screen flex items-center justify-center text-white/70">Diagnóstico não encontrado.</div>;
+
 
   const radarData = DIMENSOES.map((d) => ({
     dim: d.label.split(" ")[0],

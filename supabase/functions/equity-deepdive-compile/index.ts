@@ -3,6 +3,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { callLovableAI } from "../_shared/apiTrack.ts";
+import { requireInitiativeOwner } from "../_shared/equityAuth.ts";
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -26,6 +28,11 @@ Deno.serve(async (req) => {
   try {
     const { initiative_id } = await req.json();
     if (!initiative_id) return new Response(JSON.stringify({ error: "initiative_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const guard = await requireInitiativeOwner(req, initiative_id, corsHeaders);
+    if (!guard.ok) return guard.response;
+
+
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 

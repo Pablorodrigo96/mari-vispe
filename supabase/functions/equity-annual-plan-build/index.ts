@@ -3,6 +3,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { callLovableAI } from "../_shared/apiTrack.ts";
+import { requireAssessmentOwner } from "../_shared/equityAuth.ts";
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -44,7 +46,11 @@ Deno.serve(async (req) => {
     const { assessment_id } = await req.json();
     if (!assessment_id) return new Response(JSON.stringify({ error: "assessment_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    const guard = await requireAssessmentOwner(req, assessment_id, corsHeaders);
+    if (!guard.ok) return guard.response;
+
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
 
     const { data: assess } = await supabase.from("equity_assessments").select("*").eq("id", assessment_id).single();
     if (!assess) throw new Error("assessment not found");

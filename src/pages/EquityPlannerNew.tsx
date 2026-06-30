@@ -296,10 +296,11 @@ export default function EquityPlannerNew() {
       if (fErr) throw fErr;
       if (out?.error) throw new Error(out.error);
 
-      // Se o scan ainda estava rodando, dá uns segundos pro panel já aparecer no diagnóstico
+      // Mapeamento de mercado roda em paralelo: avisa o usuário (sem bloquear navegação)
       if (marketScanStatus === "running") {
-        await new Promise((r) => setTimeout(r, 8000));
+        toast.info("Mapeamento de mercado ainda processando — aparecerá no diagnóstico em alguns segundos.");
       }
+
 
       sessionStorage.removeItem(DRAFT_KEY);
       toast.success("Diagnóstico pronto!");
@@ -625,10 +626,15 @@ export default function EquityPlannerNew() {
             )}
             <Textarea
               value={meetingText}
-              onChange={(e) => setMeetingText(e.target.value)}
+              onChange={(e) => setMeetingText(e.target.value.slice(0, 15000))}
+              maxLength={15000}
               placeholder="Cole aqui a transcrição da reunião de diagnóstico…"
               className="bg-transparent border border-white/15 rounded-lg focus-visible:ring-0 focus-visible:border-volt text-bone placeholder:text-white/30 min-h-[340px]"
             />
+            <p className="text-[10px] text-white/40 mt-1 text-right">
+              {meetingText.length.toLocaleString("pt-BR")} / 15.000 caracteres
+            </p>
+
           </div>
         )}
 
