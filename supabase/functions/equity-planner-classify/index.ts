@@ -33,7 +33,15 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (typeof intakeText === "string" && intakeText.length > 50000) {
+      return new Response(JSON.stringify({ error: "intake_too_large", max: 50000 }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const guard = await requireAssessmentOwner(req, assessmentId, corsHeaders);
+    if (!guard.ok) return guard.response;
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
 
     const { data: assess } = await supabase
       .from("equity_assessments")
