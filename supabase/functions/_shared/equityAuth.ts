@@ -71,3 +71,42 @@ export async function requireAssessmentOwner(
 
   return { ok: true, userId: auth.userId, roles: auth.roles, ownerId: assess.user_id };
 }
+
+/**
+ * Idem requireAssessmentOwner, mas resolve a partir de initiative_id
+ * (usado pelas edge functions deep-dive).
+ */
+export async function requireInitiativeOwner(
+  req: Request,
+  initiativeId: string,
+  corsHeaders: Record<string, string>,
+): Promise<OwnerResult> {
+  if (!initiativeId) {
+    return {
+      ok: false,
+      response: new Response(JSON.stringify({ error: "initiative_id required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+    };
+  }
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
+    auth: { persistSession: false },
+  });
+  const { data: init } = await admin
+    .from("equity_initiatives")
+    .select("assessment_id")
+    .eq("id", initiativeId)
+    .maybeSingle();
+  if (!init?.assessment_id) {
+    return {
+      ok: false,
+      response: new Response(JSON.stringify({ error: "initiative_not_found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+    };
+  }
+  return requireAssessmentOwner(req, init.assessment_id, corsHeaders);
+}
+
