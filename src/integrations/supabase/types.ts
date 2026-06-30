@@ -8595,6 +8595,18 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      equity_compute_persist: {
+        Args: {
+          p_assessment_id: string
+          p_bridge_items: Json
+          p_buyer_map: Json
+          p_dim_rows: Json
+          p_initiatives: Json
+          p_progress?: Json
+          p_valuation: Json
+        }
+        Returns: Json
+      }
       expire_old_reservations: { Args: never; Returns: undefined }
       find_user_by_meta_name: { Args: { search_name: string }; Returns: string }
       fn_allocate_reservation: {
