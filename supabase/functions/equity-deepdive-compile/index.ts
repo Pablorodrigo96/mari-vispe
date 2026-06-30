@@ -29,6 +29,11 @@ Deno.serve(async (req) => {
     const { initiative_id } = await req.json();
     if (!initiative_id) return new Response(JSON.stringify({ error: "initiative_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    const guard = await requireInitiativeOwner(req, initiative_id, corsHeaders);
+    if (!guard.ok) return guard.response;
+
+
+
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     const { data: dd } = await supabase.from("equity_initiative_deepdive").select("*").eq("initiative_id", initiative_id).maybeSingle();
