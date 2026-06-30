@@ -73,8 +73,11 @@ export default function EquityPlannerReport() {
     }
   }, [auto, loading, assess]);
 
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="h-8 w-8 animate-spin text-black" /></div>;
+  if (!user) return <Navigate to={`/auth?redirect=${encodeURIComponent(`/equity-planner/${id}/relatorio`)}`} replace />;
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="h-8 w-8 animate-spin text-black" /></div>;
   if (!assess) return <div className="min-h-screen flex items-center justify-center text-gray-500 bg-white">Diagnóstico não encontrado.</div>;
+
 
   const radarData = DIMENSOES.map((d) => ({ dim: d.label.split(" ")[0], score: dims.find((x: any) => x.dimensao === d.key)?.score ?? 0 }));
   const veredito = VEREDITO_LABEL[assess.veredito_liquidez || "vendavel_em_meses"];
