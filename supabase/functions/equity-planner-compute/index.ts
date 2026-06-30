@@ -473,24 +473,8 @@ Deno.serve(async (req) => {
       valorTriangulado = Math.round(valorAtual * 0.80 + valorSde * 0.20);
     }
 
-    // 6) Persistir tudo
-    // limpar prévios
-    await supabase.from("equity_dimension_scores").delete().eq("assessment_id", assessmentId);
-    await supabase.from("equity_initiatives").delete().eq("assessment_id", assessmentId);
-    await supabase.from("equity_buyer_map").delete().eq("assessment_id", assessmentId);
-    const { data: prevVals } = await supabase.from("equity_valuations").select("id").eq("assessment_id", assessmentId);
-    if (prevVals?.length) {
-      const ids = prevVals.map((v: any) => v.id);
-      await supabase.from("equity_value_bridge_items").delete().in("valuation_id", ids);
-      await supabase.from("equity_valuations").delete().eq("assessment_id", assessmentId);
-    }
-
-    // dimensions
-    await supabase.from("equity_dimension_scores").insert(dimRows);
-
-    // valuation
-    const { data: valIns, error: vErr } = await supabase.from("equity_valuations").insert({
-      assessment_id: assessmentId,
+    // 6) Pré-montar valuation + bridge (RPC atômico é chamado mais abaixo, após iniciativas/buyers ficarem prontos)
+    const valuationRow = {
       metodo: "triangulado",
       ebitda_contabil: Number(parsed.ebitda_contabil ?? Math.max(0, ebitda - Object.values(addbacks).reduce((s: number, n: any) => s + (Number(n) || 0), 0))),
       ebitda_normalizado: ebitda,
@@ -505,18 +489,16 @@ Deno.serve(async (req) => {
       valor_triangulado: valorTriangulado,
       dcf_premissas: { wacc, cagr_5y: cagr, perpetuidade_g: gP, taxa_imposto: taxa },
       premissas: { premissas: parsed.premissas_valuation || [], ipe_alvo: ipeAlvo, multiplo_alvo: multiploAlvo, porte },
-    }).select("id").single();
-    if (vErr) throw vErr;
+    };
+    const bridgeRows = [
+      { parcela: "valor_hoje",         descricao: `EBITDA normalizado × ${multiploAtual}x`,                          delta_valor: valorAtual,        ordem: 0 },
+      { parcela: "delta_lucro",        descricao: "Ganhos de margem e receita das iniciativas",                       delta_valor: deltaLucro,        ordem: 1 },
+      { parcela: "delta_multiplo",     descricao: `IPE ${ipeFinal} → ${ipeAlvo} eleva o múltiplo`,                    delta_valor: deltaMultiplo,     ordem: 2 },
+      { parcela: "delta_crescimento",  descricao: "Prêmio por trajetória de crescimento crível",                      delta_valor: deltaCrescimento,  ordem: 3 },
+      { parcela: "premio_estrategico", descricao: `Sinergia média de ${premioMedio.toFixed(0)}% capturada do comprador-alvo`, delta_valor: premioEstrategico, ordem: 4 },
+      { parcela: "valor_alvo",         descricao: "Valor potencial pós-execução do plano",                            delta_valor: valorAlvo,         ordem: 5 },
+    ];
 
-    // bridge
-    await supabase.from("equity_value_bridge_items").insert([
-      { valuation_id: valIns.id, parcela: "valor_hoje", descricao: `EBITDA normalizado × ${multiploAtual}x`, delta_valor: valorAtual, ordem: 0 },
-      { valuation_id: valIns.id, parcela: "delta_lucro", descricao: "Ganhos de margem e receita das iniciativas", delta_valor: deltaLucro, ordem: 1 },
-      { valuation_id: valIns.id, parcela: "delta_multiplo", descricao: `IPE ${ipeFinal} → ${ipeAlvo} eleva o múltiplo`, delta_valor: deltaMultiplo, ordem: 2 },
-      { valuation_id: valIns.id, parcela: "delta_crescimento", descricao: "Prêmio por trajetória de crescimento crível", delta_valor: deltaCrescimento, ordem: 3 },
-      { valuation_id: valIns.id, parcela: "premio_estrategico", descricao: `Sinergia média de ${premioMedio.toFixed(0)}% capturada do comprador-alvo`, delta_valor: premioEstrategico, ordem: 4 },
-      { valuation_id: valIns.id, parcela: "valor_alvo", descricao: "Valor potencial pós-execução do plano", delta_valor: valorAlvo, ordem: 5 },
-    ]);
 
     // initiatives — força migração de arquétipo + reestruturação de modelo p/ arquétipos ilíquidos
     const ILIQUIDOS = new Set(["servico_profissional", "projeto_obra"]);
