@@ -327,8 +327,11 @@ export default function EquityPlannerAssessment() {
     });
   }, [inits, buyerSelecionado, dimsBoost]);
 
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-volt" /></div>;
+  if (!user) return <Navigate to={`/auth?redirect=${encodeURIComponent(`/equity-planner/${id}`)}`} replace />;
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-volt" /></div>;
   if (!assess) return <div className="min-h-screen flex items-center justify-center text-white/70">Diagnóstico não encontrado.</div>;
+
 
   const radarData = DIMENSOES.map((d) => ({
     dim: d.label.split(" ")[0],
