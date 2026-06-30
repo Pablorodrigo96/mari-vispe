@@ -46,7 +46,11 @@ Deno.serve(async (req) => {
     const { assessment_id } = await req.json();
     if (!assessment_id) return new Response(JSON.stringify({ error: "assessment_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    const guard = await requireAssessmentOwner(req, assessment_id, corsHeaders);
+    if (!guard.ok) return guard.response;
+
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
 
     const { data: assess } = await supabase.from("equity_assessments").select("*").eq("id", assessment_id).single();
     if (!assess) throw new Error("assessment not found");
