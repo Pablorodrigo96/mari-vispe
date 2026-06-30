@@ -2,11 +2,13 @@
 // Rota: /equity-planner/:id/relatorio
 // Layout otimizado para impressão (window.print → Salvar como PDF) com branding Mari.
 import { useEffect, useState } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams, Navigate } from "react-router-dom";
 import { Printer, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { DIMENSOES, ARQUETIPOS_LABEL, VEREDITO_LABEL, brl } from "@/lib/equity-planner/constants";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+
 
 const PRINT_CSS = `
   @page { size: A4; margin: 14mm 12mm; }
