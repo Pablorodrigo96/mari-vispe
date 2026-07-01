@@ -71,69 +71,35 @@ export default function EquityPlannerAssessment() {
   const load = async () => {
     if (!id) return;
     setLoading(true);
-    const { data: a } = await supabase.from("equity_assessments").select("*").eq("id", id).single();
-    if (!a) { setLoading(false); return; }
-    setAssess(a as any);
-    const [d, v, ini, bm, pl, comp] = await Promise.all([
-      supabase.from("equity_dimension_scores").select("*").eq("assessment_id", id),
-      supabase.from("equity_valuations").select("*").eq("assessment_id", id).maybeSingle(),
-      supabase.from("equity_initiatives").select("*").eq("assessment_id", id).order("prioridade"),
-      supabase.from("equity_buyer_map").select("*").eq("assessment_id", id).order("prioridade"),
-      supabase.from("equity_progress_log").select("*").eq("company_id", (a as any).company_id).order("created_at", { ascending: true }),
-      supabase.from("equity_companies").select("porte").eq("id", (a as any).company_id).maybeSingle(),
-    ]);
-    setDims((d.data as any) || []);
-    setVal((v.data as any) || null);
-    setInits((ini.data as any) || []);
-    setBuyers((bm.data as any) || []);
-    setProgresso((pl.data as any) || []);
-    const porte = (comp.data as any)?.porte || null;
-    setCompanyPorte(porte);
-
-    // Onda 7 — benchmarks de mercado
-    if ((a as any).arquetipo_id && porte) {
-      const [dimB, compB] = await Promise.all([
-        supabase.from("equity_dimension_benchmarks").select("*")
-          .eq("arquetipo_id", (a as any).arquetipo_id).eq("porte", porte),
-        supabase.from("equity_comps_benchmarks").select("*")
-          .eq("arquetipo_id", (a as any).arquetipo_id).eq("porte", porte).maybeSingle(),
-      ]);
-      setDimBenchmarks((dimB.data as any) || []);
-      setCompBench((compB.data as any) || null);
-    } else {
-      setDimBenchmarks([]); setCompBench(null);
+    // Onda C — 1 round-trip via RPC equity_assessment_full
+    const { data: full, error } = await supabase.rpc("equity_assessment_full", { p_id: id });
+    if (error || !full || (full as any).error) {
+      setLoading(false);
+      if ((full as any)?.error === "forbidden") toast.error("Você não tem acesso a este diagnóstico");
+      return;
     }
+    const f = full as any;
+    setAssess(f.assessment);
+    setDims(f.dim_scores || []);
+    setVal(f.valuation || null);
+    setBridge(f.bridge || []);
+    setInits(f.initiatives || []);
+    setBuyers(f.buyers || []);
+    setProgresso(f.progress_log || []);
+    setCompanyPorte(f.company_porte || null);
+    setDimBenchmarks(f.dim_benchmarks || []);
+    setCompBench(f.comp_bench || null);
+    setAnnualPlan(f.annual_plan || null);
+    setMarketScan(f.market_scan || null);
 
-    if (v.data) {
-      const { data: br } = await supabase.from("equity_value_bridge_items").select("*").eq("valuation_id", (v.data as any).id).order("ordem");
-      setBridge((br as any) || []);
-    }
-
-    // Onda 9 — deep dive progress + plano anual
-    const [{ data: ddRows }, { data: planRow }] = await Promise.all([
-      supabase.from("equity_initiative_deepdive").select("initiative_id, status, questions, answers").eq("assessment_id", id),
-      supabase.from("equity_annual_plan").select("*").eq("assessment_id", id).maybeSingle(),
-    ]);
     const map: Record<string, { status: string; answered: number; total: number }> = {};
-    ((ddRows as any) || []).forEach((r: any) => {
+    (f.deepdive || []).forEach((r: any) => {
       const total = Array.isArray(r.questions) ? r.questions.length : 0;
       const ans = r.answers || {};
       const answered = Object.values(ans).filter((v: any) => (v || "").toString().trim().length > 3).length;
       map[r.initiative_id] = { status: r.status, answered, total };
     });
     setDeepdiveStatus(map);
-    setAnnualPlan(planRow || null);
-
-    // Market scan (background research)
-    const { data: scanRow } = await supabase
-      .from("equity_market_scans")
-      .select("payload, status")
-      .eq("assessment_id", id)
-      .eq("status", "done")
-      .order("completed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    setMarketScan((scanRow as any)?.payload || null);
 
     setLoading(false);
   };
