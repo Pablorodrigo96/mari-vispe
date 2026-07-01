@@ -94,6 +94,15 @@ export default function MyEquityPlanners() {
             })}
           </div>
         )}
+
+        {!loading && hasMore && (
+          <div className="flex justify-center mt-6">
+            <Button variant="outline" className="bg-transparent border-volt/30 text-volt hover:bg-volt/10" disabled={loadingMore} onClick={handleLoadMore}>
+              {loadingMore ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Carregar mais
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
