@@ -16,6 +16,52 @@ export const DIMENSOES = [
 
 export type DimensaoKey = typeof DIMENSOES[number]["key"];
 
+// Grupos para UX (accordion no wizard). Cobrem as 12 dimensões, sem repetir.
+export const DIMENSAO_GROUPS: {
+  id: string;
+  label: string;
+  icon: "line-chart" | "settings" | "users" | "shield";
+  keys: DimensaoKey[];
+}[] = [
+  { id: "financeiro", label: "Financeiro", icon: "line-chart",
+    keys: ["qualidade_receita", "margem", "higiene_financeira"] },
+  { id: "operacional", label: "Operacional", icon: "settings",
+    keys: ["independencia_dono", "gestao", "processos"] },
+  { id: "comercial", label: "Comercial & mercado", icon: "users",
+    keys: ["motor_comercial", "concentracao", "narrativa", "atratividade"] },
+  { id: "governanca", label: "Governança & risco", icon: "shield",
+    keys: ["contingencias", "societario"] },
+];
+
+// Parser BRL: aceita "12.000.000", "12000000", "R$ 12 mi", "12,5", devolve número.
+export function parseBrl(s: string | number | null | undefined): number {
+  if (s === null || s === undefined) return 0;
+  if (typeof s === "number") return s;
+  const str = String(s).trim().toLowerCase().replace(/r\$\s*/g, "");
+  if (!str) return 0;
+  // sufixos mi / mil
+  if (/\bmi\b|\bmilh(ão|oes|ões)/.test(str)) {
+    const n = parseFloat(str.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."));
+    return isFinite(n) ? n * 1_000_000 : 0;
+  }
+  if (/\bmil\b/.test(str)) {
+    const n = parseFloat(str.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."));
+    return isFinite(n) ? n * 1_000 : 0;
+  }
+  // formato pt-BR: 12.000.000,50 → 12000000.50
+  const cleaned = str.replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
+  const n = parseFloat(cleaned.replace(/[^\d.-]/g, ""));
+  return isFinite(n) ? n : 0;
+}
+
+// Formatador de input BRL (mantém o dígito, insere pontos de milhar)
+export function formatBrlInput(s: string): string {
+  const digits = s.replace(/\D/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("pt-BR");
+}
+
+
 export const ARQUETIPOS_LABEL: Record<string, string> = {
   servico_profissional: "Serviço Profissional",
   projeto_obra: "Projeto / Sob Encomenda",
