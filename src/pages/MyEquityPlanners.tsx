@@ -8,24 +8,44 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ARQUETIPOS_LABEL, VEREDITO_LABEL, brl } from "@/lib/equity-planner/constants";
 
+const PAGE_SIZE = 20;
+
 export default function MyEquityPlanners() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+
+  const fetchPage = async (from: number) => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("equity_assessments")
+      .select("id, ipe_composto, arquetipo_id, veredito_liquidez, status, created_at, summary, company_id, equity_companies(razao_social, setor_livre), equity_valuations(valor_atual, valor_alvo)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    const rows = data || [];
+    setItems((prev) => from === 0 ? rows : [...prev, ...rows]);
+    setHasMore(rows.length === PAGE_SIZE);
+  };
 
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase
-        .from("equity_assessments")
-        .select("id, ipe_composto, arquetipo_id, veredito_liquidez, status, created_at, summary, company_id, equity_companies(razao_social, setor_livre), equity_valuations(valor_atual, valor_alvo)")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      setItems(data || []);
+      setLoading(true);
+      await fetchPage(0);
       setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    await fetchPage(items.length);
+    setLoadingMore(false);
+  };
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
