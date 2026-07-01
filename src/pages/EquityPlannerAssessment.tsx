@@ -412,67 +412,99 @@ export default function EquityPlannerAssessment() {
           </div>
         </div>
 
-        {/* IPE Hero */}
-        <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/20 p-6 mb-6">
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <p className="text-xs uppercase text-white/70 tracking-wider">Índice de Prontidão (IPE)</p>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-5xl font-bold text-volt">{assess.ipe_composto ?? "—"}</span>
-                <span className="text-white/70">/100</span>
+        {/* IPE Hero — Onda 3 redesign */}
+        <Card className="!bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-carbon/90 backdrop-blur-md border-volt/20 p-6 md:p-8 mb-6 overflow-hidden relative">
+          <div
+            className="absolute inset-0 opacity-[0.05] pointer-events-none"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 15% 20%, hsla(72,86%,68%,0.6) 0%, transparent 45%)",
+            }}
+          />
+          <div className="relative grid md:grid-cols-[auto,1fr,1fr] gap-6 md:gap-8 items-center">
+            {/* Radial gauge */}
+            <div className="flex justify-center md:justify-start">
+              <IpeRadial value={assess.ipe_composto} floor={piso} sublabel={`piso ${piso}`} />
+            </div>
+
+            {/* Valores */}
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] uppercase text-bone/60 tracking-[0.2em] font-semibold">
+                  Valor atual
+                </p>
+                <div className="text-3xl md:text-4xl font-bold mt-1 text-bone tabular-nums">
+                  {brl(val?.valor_atual)}
+                </div>
+                <p className="text-xs text-bone/60 mt-1">
+                  EBITDA {brl(val?.ebitda_normalizado)} × {val?.multiplo_aplicado ?? "—"}x
+                </p>
               </div>
-              <Progress value={assess.ipe_composto || 0} className="mt-3 h-2" />
-              <p className="text-xs text-white/70 mt-2">Piso de liquidez: {piso}</p>
+              <div>
+                <p className="text-[10px] uppercase text-bone/60 tracking-[0.2em] font-semibold">
+                  Valor potencial (12m)
+                </p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl md:text-4xl font-bold text-volt tabular-nums">
+                    {brl(val?.valor_alvo)}
+                  </span>
+                  {val && val.valor_alvo && val.valor_atual ? (
+                    <Badge className="bg-volt/15 text-volt border-volt/30">
+                      +{Math.round(((val.valor_alvo - val.valor_atual) / Math.max(1, val.valor_atual)) * 100)}%
+                    </Badge>
+                  ) : null}
+                </div>
+                <p className="text-xs text-bone/60 mt-1">
+                  Δ {brl((val?.valor_alvo || 0) - (val?.valor_atual || 0))} via execução do plano
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs uppercase text-white/70 tracking-wider">Valor atual</p>
-              <div className="text-3xl font-bold mt-1">{brl(val?.valor_atual)}</div>
-              <p className="text-xs text-white/70 mt-1">
-                EBITDA {brl(val?.ebitda_normalizado)} × {val?.multiplo_aplicado ?? "—"}x
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-white/70 tracking-wider">Valor potencial</p>
-              <div className="text-3xl font-bold mt-1 text-volt">{brl(val?.valor_alvo)}</div>
-              <p className="text-xs text-white/70 mt-1">
-                Δ {brl((val?.valor_alvo || 0) - (val?.valor_atual || 0))} via execução do plano
-              </p>
+
+            {/* Faixa de múltiplo */}
+            <div className="space-y-3">
+              <div>
+                <p className="text-[10px] uppercase text-bone/60 tracking-[0.2em] font-semibold mb-2">
+                  Posição na faixa do arquétipo
+                </p>
+                {val ? (
+                  <>
+                    <div className="relative h-3 bg-slate-800/80 rounded-full overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-rose-500/50 via-amber-500/50 to-emerald-500/70" />
+                      <div
+                        className="absolute top-0 h-full w-1.5 bg-volt shadow-[0_0_10px_#D9F564] rounded-full"
+                        style={{
+                          left: `${Math.max(0, Math.min(100, ((val.multiplo_aplicado - val.faixa_min) / Math.max(0.01, (val.faixa_max - val.faixa_min))) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-bone/60 mt-2">
+                      <span>{val.faixa_min}x</span>
+                      <span className="text-volt font-bold text-xs">{val.multiplo_aplicado}x hoje</span>
+                      <span>{val.faixa_max}x</span>
+                    </div>
+                    <p className="text-[10px] text-bone/50 mt-1 leading-relaxed">
+                      Subir o IPE → subir o múltiplo dentro da faixa do arquétipo.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-bone/60">Sem valuation calculado.</p>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Faixa de múltiplo visual */}
-          {val && (
-            <div className="mt-6 pt-5 border-t border-volt/10">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-xs uppercase text-white/70 tracking-wider">Posição na faixa de múltiplo do arquétipo</p>
-                <p className="text-xs text-white/70">
-                  {val.faixa_min}x — <span className="text-volt font-bold">{val.multiplo_aplicado}x hoje</span> — {val.faixa_max}x
+          {assess.summary && (
+            <div className="mt-6 pt-5 border-t border-white/10">
+              <div className="flex gap-3">
+                <div className="w-1 rounded-full bg-volt shrink-0" />
+                <p className="text-bone/80 break-words leading-relaxed text-sm md:text-base">
+                  {assess.summary}
                 </p>
-              </div>
-              <div className="relative h-3 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-rose-500/40 via-amber-500/40 to-emerald-500/60"
-                  style={{ width: "100%" }}
-                />
-                <div
-                  className="absolute top-0 h-full w-1 bg-volt shadow-[0_0_8px_#D9F564]"
-                  style={{
-                    left: `${Math.max(0, Math.min(100, ((val.multiplo_aplicado - val.faixa_min) / Math.max(0.01, (val.faixa_max - val.faixa_min))) * 100))}%`,
-                  }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-white/70 mt-1">
-                <span>zona invendável</span>
-                <span>vendável com desconto</span>
-                <span>topo da faixa + prêmio estratégico</span>
               </div>
             </div>
           )}
-
-          {assess.summary && (
-            <p className="mt-5 text-white/70 break-words border-l-2 border-volt pl-4">{assess.summary}</p>
-          )}
         </Card>
+
 
         {marketScan && (
           <Card className="!bg-carbon/90 backdrop-blur-md border-white/10 p-6 sm:p-10">
