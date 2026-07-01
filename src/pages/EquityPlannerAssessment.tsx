@@ -1039,9 +1039,14 @@ export default function EquityPlannerAssessment() {
             <Card className="!bg-slate-900/60 backdrop-blur-md border-volt/10 p-5">
               <h3 className="font-semibold mb-3">Loop de re-medição</h3>
               {progresso.length < 2 ? (
-                <p className="text-sm text-white/70 py-8 text-center">
-                  Re-meça o IPE após executar iniciativas para ver a curva de evolução.
-                </p>
+                <div className="py-4">
+                  <EmptyState
+                    title="Ainda sem histórico suficiente"
+                    description="Re-meça o IPE após executar iniciativas para ver a curva de evolução do seu equity."
+                    cta="Re-medir agora"
+                    onAction={handleRecompute}
+                  />
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={progresso.map(p => ({ data: new Date(p.created_at).toLocaleDateString("pt-BR"), IPE: p.ipe, Valor: Math.round(Number(p.valor)/1000) }))}>
