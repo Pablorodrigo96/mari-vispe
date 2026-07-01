@@ -947,7 +947,16 @@ export default function EquityPlannerAssessment() {
                   </Card>
                 );
               })}
-              {buyers.length === 0 && <p className="text-white/70 col-span-3 text-center py-10">Sem buyer map disponível.</p>}
+              {buyers.length === 0 && (
+                <div className="col-span-3">
+                  <EmptyState
+                    title="Buyer map ainda não gerado"
+                    description="Compute o diagnóstico para descobrir quem paga mais pela sua empresa, com que tese e que prêmio."
+                    cta={assess.status !== "computed" ? "Re-medir agora" : undefined}
+                    onAction={assess.status !== "computed" ? handleRecompute : undefined}
+                  />
+                </div>
+              )}
             </div>
           </TabsContent>
 
