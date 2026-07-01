@@ -160,6 +160,24 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
+    // Rate limit: 5 computes / 24h por usuário (admin/advisor ficam isentos)
+    const isPrivileged = guard.roles.includes("admin") || guard.roles.includes("advisor");
+    if (!isPrivileged) {
+      const { data: rateCount } = await supabase.rpc("equity_compute_count_24h", {
+        p_user_id: guard.userId,
+      });
+      if ((rateCount ?? 0) >= 5) {
+        return new Response(
+          JSON.stringify({ error: "rate_limited", message: "Limite de 5 diagnósticos por 24h atingido. Tente novamente amanhã." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      await supabase.from("rate_limits").insert({
+        identifier: guard.userId,
+        action: "equity_compute",
+      });
+    }
+
 
     // 1) Confirmar assessment + carregar dono + classificação
     const { data: assess, error: aErr } = await supabase

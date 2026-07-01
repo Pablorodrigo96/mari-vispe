@@ -8591,10 +8591,13 @@ export type Database = {
         }[]
       }
       eb_upsert_mandate: { Args: { p: Json }; Returns: string }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      equity_assessment_full: { Args: { p_id: string }; Returns: Json }
+      equity_compute_count_24h: { Args: { p_user_id: string }; Returns: number }
       equity_compute_persist: {
         Args: {
           p_assessment_id: string
