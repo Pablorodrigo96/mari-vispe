@@ -479,7 +479,8 @@ export default function EquityPlannerNew() {
                 (s.key === "plan" && computeStage === "compute");
               const done =
                 (s.key === "classify" && computeStage !== "classify") ||
-                (s.key === "compute" && computeStage === "done");
+                (s.key === "compute" && (computeStage as string) === "done");
+
               return (
                 <li key={s.key} className={[
                   "flex items-start gap-3 rounded-xl border p-4 transition-all",
