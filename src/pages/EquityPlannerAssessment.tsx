@@ -513,18 +513,49 @@ export default function EquityPlannerAssessment() {
         )}
 
         <Tabs defaultValue="raiox" className="w-full">
+          {(() => {
+            const planoPend = inits.filter((i) => {
+              const dd = deepdiveStatus[i.id];
+              return !dd || dd.status !== "concluida";
+            }).length;
+            const buyersCount = buyers.length;
+            const rodadasCount = progresso.length;
+            const tabItem = (v: string, Icon: any, label: string, badge?: string | number, tone?: "volt" | "amber" | "muted") => (
+              <TabsTrigger
+                value={v}
+                className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-bone/70 hover:text-bone gap-1.5"
+              >
+                <Icon className="h-4 w-4" /> {label}
+                {badge !== undefined && badge !== null && String(badge) !== "0" && (
+                  <span
+                    className={`ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold ${
+                      tone === "amber"
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                        : tone === "muted"
+                        ? "bg-white/10 text-bone/70 border border-white/15"
+                        : "bg-volt/20 text-volt border border-volt/40"
+                    } data-[state=active]:bg-carbon/20 data-[state=active]:text-carbon data-[state=active]:border-carbon/30`}
+                  >
+                    {badge}
+                  </span>
+                )}
+              </TabsTrigger>
+            );
+            return (
+              <TabsList className="bg-graphite/60 backdrop-blur border border-white/10 p-1 h-auto flex-wrap gap-1">
+                {tabItem("raiox", Activity, "Raio-X", topDestruidores.length || undefined, "amber")}
+                {tabItem("modelo", Brain, "Modelo & Liquidez")}
+                {tabItem("valor", TrendingUp, "Valor")}
+                {tabItem("plano", Target, "Plano", planoPend || undefined, "amber")}
+                {tabItem("e1a", Rocket, "Plano E1A", annualPlan ? "✓" : undefined, "volt")}
+                {tabItem("compradores", Users, "Compradores", buyersCount || undefined, "volt")}
+                {tabItem("mercado", BarChart3, "Mercado")}
+                {tabItem("docs", FileText, "Docs")}
+                {tabItem("progresso", LineIcon, "Progresso", rodadasCount || undefined, "muted")}
+              </TabsList>
+            );
+          })()}
 
-          <TabsList className="bg-graphite/60 backdrop-blur border border-white/10 p-1 h-auto flex-wrap gap-1">
-            <TabsTrigger value="raiox" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><Activity className="h-4 w-4 mr-1" /> Raio-X</TabsTrigger>
-            <TabsTrigger value="modelo" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><Brain className="h-4 w-4 mr-1" /> Modelo & Liquidez</TabsTrigger>
-            <TabsTrigger value="valor" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><TrendingUp className="h-4 w-4 mr-1" /> Valor</TabsTrigger>
-            <TabsTrigger value="plano" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><Target className="h-4 w-4 mr-1" /> Plano</TabsTrigger>
-            <TabsTrigger value="e1a" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><Rocket className="h-4 w-4 mr-1" /> Plano E1A</TabsTrigger>
-            <TabsTrigger value="compradores" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><Users className="h-4 w-4 mr-1" /> Compradores</TabsTrigger>
-            <TabsTrigger value="mercado" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><BarChart3 className="h-4 w-4 mr-1" /> Mercado</TabsTrigger>
-            <TabsTrigger value="docs" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><FileText className="h-4 w-4 mr-1" /> Docs</TabsTrigger>
-            <TabsTrigger value="progresso" className="data-[state=active]:bg-volt data-[state=active]:text-carbon text-white/80"><LineIcon className="h-4 w-4 mr-1" /> Progresso</TabsTrigger>
-          </TabsList>
 
           {/* RAIO-X */}
           <TabsContent value="raiox" className="mt-4">
